@@ -13,25 +13,28 @@ import java.util.Comparator;
 import java.util.List;
 
 /**
- * 内置扩展点 {@code nekojs:type_docs}（ADR-0001 自包含 Point 文件）。
- * merge 策略 {@link MergePolicy#append}（文档条目列表收集，无键冲突）。
+ * Built-in extension point {@code nekojs:type_docs}. The merge policy is
+ * {@link MergePolicy#append}: it collects a list of documentation entries, so no keys can
+ * conflict.
  *
- * <p>累积器 {@link Bucket} 与产物快照 {@link TypeDocsSnapshot} 同时被孪生点
- * {@code nekojs:node_type_docs}（{@link NodeTypeDocsPoint}）复用——两点共享
- * 注册面类型 {@link TypeDocsRegister}，仅收集的插件集合不同。
+ * <p>The {@link Bucket} accumulator and the {@link TypeDocsSnapshot} output are also used by the
+ * twin point {@code nekojs:node_type_docs} ({@link NodeTypeDocsPoint}). Both points share the
+ * {@link TypeDocsRegister} registration interface and differ only in which plugins they collect.
  */
 public final class TypeDocsPoint {
 
-    /** 扩展点 id（observable 契约）。 */
+    /** Extension point id. */
     public static final String ID = "nekojs:type_docs";
 
     private TypeDocsPoint() {
     }
 
-    /** 显式声明形态（与直接覆写 NekoJSPlugin 对应钩子等价收集）：插件被 {@code nekojs:type_docs} 扩展点收集。 */
+    /** Explicit declaration form: the plugin is collected by the {@code nekojs:type_docs} extension point, the
+     * same result as overriding the matching NekoJSPlugin hook directly. */
     public interface Contributor extends NekoJSPlugin {
 
-        /** 注册类型文档（为脚本侧类型补充说明/示例，进入 probe 输出与补全）。 */
+        /** Registers type documentation: descriptions and examples for script-side types. It feeds probe
+         * output and completion. */
         default void registerTypeDocs(TypeDocsRegister registry) {
         }
     }
@@ -122,18 +125,20 @@ public final class TypeDocsPoint {
         }
     }
 
-    /** 扩展点定义（由 {@link NekoBuiltinPointsPlugin} 清单注册）。 */
+    /** The extension point definition, registered from the {@link NekoBuiltinPointsPlugin} list. */
     public static final NekoPluginExtensionPoint<NekoJSPlugin, Bucket, TypeDocsSnapshot> POINT =
             NekoPluginExtensionPoint.<NekoJSPlugin, Bucket, TypeDocsSnapshot>builder(ID, NekoJSPlugin.class)
                     .merge(MergePolicy.append())
                     .initializer(context -> new Bucket())
                     .collector(NekoJSPlugin::registerTypeDocs)
                     .finish(Bucket::snapshot)
-                    // 可选时序依赖：版本树插件（NekoRegistryPointsPlugin）在 registerTypeDocs 里
-                    // 读 registry_types 产物派生 typed Builder 契约条目（ticket 15）——该点定义在
-                    // 版本树，common 不能引用其类型故用 id 字面量；common-only bootstrap 不含该
-                    // 插件（id 未注册）时不建边。缺此边时 type_docs（内置、先注册）会先于
-                    // registry_types 执行并抛 "has not finished yet"（ticket 15 启动期回归）。
+                    // Optional ordering dependency. The version-tree plugin (NekoRegistryPointsPlugin) reads the
+                    // registry_types output in registerTypeDocs to derive typed Builder entries, and that
+                    // point is defined in the version tree, so common cannot reference its type here and
+                    // uses the id string instead. A common-only bootstrap does not include that plugin, so
+                    // the id stays unregistered and no edge is added. Without this edge, type_docs runs
+                    // first because it is built in and registered earlier, and registry_types then throws
+                    // "has not finished yet".
                     .dependsOnOptionalId("nekojs:registry_types")
                     .build();
 }

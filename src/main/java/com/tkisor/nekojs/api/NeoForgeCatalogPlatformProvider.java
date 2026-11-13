@@ -78,9 +78,11 @@ public class NeoForgeCatalogPlatformProvider implements NekoCatalogPlatformProvi
     }
 
     /**
-     * 该注册表当前已绑定的标签 id（不含 {@code #} 前缀）。probe 在服务器运行时执行，数据包标签
-     * 此时已绑定；排序保证产物确定性。26.x 只有 {@code getTags()}（1.21.1 的 {@code getTagNames()}
-     * 已移除），标签未加载时为空流，probe 侧会回退成 {@code string}。
+     * The tag ids currently bound to this registry, without the {@code #} prefix. The probe runs
+     * while the server is running, when datapack tags are already bound; sorting keeps the output
+     * deterministic. 26.x only has {@code getTags()} (1.21.1's {@code getTagNames()} was removed),
+     * and the stream is empty when tags are not loaded, in which case the probe falls back to
+     * {@code string}.
      */
     private static <T> List<String> tagIds(net.minecraft.core.Registry<T> registry) {
 //? if >=26 {
@@ -95,11 +97,13 @@ public class NeoForgeCatalogPlatformProvider implements NekoCatalogPlatformProvi
     }
 
     /**
-     * 已加载 mod id：{@code "@create"} 这类命名空间过滤写法的补全来源之一。
+     * Loaded mod ids: one of the completion sources for namespace filters such as {@code "@create"}.
      *
-     * <p>取加载器的 mod 列表，覆盖「装了但没往某个注册表注册东西」的 mod；probe 再把它与注册表
-     * 条目 id 的命名空间取并集（那部分覆盖脚本 {@code event.create('mymod:x')}、数据包等不属于
-     * 任何 mod 的命名空间）。排序与去重由 {@code NekoScriptCatalog.modIds()} 统一负责。
+     * <p>It reads the loader's mod list, which covers mods that are installed but register nothing
+     * in a given registry. The probe then unions it with the namespaces of registry entry ids, which
+     * covers namespaces that belong to no mod, such as scripts using
+     * {@code event.create('mymod:x')} or datapacks. Sorting and de-duplication are handled centrally
+     * by {@code NekoScriptCatalog.modIds()}.
      */
     @Override
     public Collection<String> modIds() {

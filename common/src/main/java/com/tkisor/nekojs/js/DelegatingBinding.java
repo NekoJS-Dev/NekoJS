@@ -8,20 +8,24 @@ import java.util.LinkedHashSet;
 import java.util.Set;
 
 /**
- * 全局绑定代理：成员访问时先查 {@code extensions}（由 {@code helper} 对象提供），
- * 命中则委托 helper；否则委托 {@code targetClass} 的静态成员。
+ * Global binding proxy: on member access it first checks {@code extensions} (provided by the
+ * {@code helper} object); on a hit it delegates to the helper, otherwise it delegates to the
+ * static members of {@code targetClass}.
  *
- * <p>用途：NeoForge 平台无法给 MC 类真注入 public static 方法（Mixin 硬拒，JS Coremod
- * 依赖 standalone Nashorn 在 GraalVM Java25 缺失），于是把全局 {@code Item} 绑定为这个代理：
- * {@code Item.of(...)} 走 helper（ItemJS），其它成员委托回真正的 MC {@code Item} 类。
+ * <p>Purpose: the NeoForge platform cannot inject public static methods into MC classes (Mixin
+ * refuses it, and the JS Coremod path depends on a standalone Nashorn that GraalVM Java 25 does
+ * not provide), so the global {@code Item} binding is this proxy: {@code Item.of(...)} goes to the
+ * helper (ItemJS) and every other member delegates back to the real MC {@code Item} class.
  *
- * <p>关键实现点：GraalJS 的 {@code Value.asValue} 必须在 Polyglot Context 活跃时调用才有意义。
- * 而 {@code DelegatingBinding} 是在 mod 注册阶段（{@code registerBinding}，Context 尚未建立）构造的，
- * 所以 <b>不能</b>在构造时 {@code asValue}——必须延迟到 {@code getMember} 等方法被 GraalJS 调用时
- * （此时 Context 已活跃）再求值。否则 helper 拿到的是分离的 Value，{@code getMember} 全返回 null，
- * 导致 {@code invokeMember} 报 {@code Unknown identifier}。
+ * <p>Key implementation point: GraalJS {@code Value.asValue} is only meaningful while the
+ * Polyglot Context is active. {@code DelegatingBinding} is constructed during mod registration
+ * ({@code registerBinding}, before any Context exists), so <b>must not</b> call {@code asValue} in
+ * the constructor. It has to wait until GraalJS calls {@code getMember} and the like, when the
+ * Context is active. Otherwise the helper receives a detached Value, {@code getMember} returns
+ * null for everything and {@code invokeMember} fails with {@code Unknown identifier}.
  *
- * <p>限制：代理不是 Java Class 镜像，{@code Java.type('..Item').of()} 仍拿不到 of（非真注入）。
+ * <p>Limitation: the proxy is not a Java Class mirror, so {@code Java.type('..Item').of()} still
+ * cannot see {@code of} (this is not a real injection).
  */
 public final class DelegatingBinding implements ProxyObject {
     private final Object helperObj;
@@ -42,19 +46,23 @@ public final class DelegatingBinding implements ProxyObject {
         return extensions;
     }
 
-    /** 代理委托的目标 MC 类；probe 据此把该类的静态成员合并进全局绑定的 .d.ts。 */
+    /** Target MC class the proxy delegates to; probe merges this class's static members into the
+     * .d.ts of the global binding. */
     public Class<?> targetClass() {
         return targetClassObj;
     }
 
     /**
-     * 在 GraalJS 访问代理时（Context 活跃）才把原始对象包装成 Value。
+     * Wraps the raw objects into Values, but only while GraalJS is accessing the proxy and the
+     * Context is active.
      *
-     * <p>本代理是进程级对象（bootstrap 一次构造、跨 Context 复用），而事务式 reload 会
-     * 关闭旧 Context 并切换到新候选——缓存的 {@code Value} 归属旧 Context，之后访问会抛
-     * {@code The Context is already closed}。因此按<b>当前活跃 Context</b> 缓存：发现
-     * Context 变化（reload 切换）即重建包装。getMember 等回调由 GraalJS 在访问者线程的
-     * 活跃 Context 内调用，{@code Context.getCurrent()} 恒非 null。
+     * <p>This proxy is a process-level object: bootstrap builds it once and reuses it across
+     * Contexts, while a transactional reload closes the old Context and switches to the new
+     * candidate. A cached {@code Value} belongs to the old Context, so later access throws
+     * {@code The Context is already closed}. The cache is therefore keyed by the <b>current active
+     * Context</b>: when the Context changes (reload switch) the wrappers are rebuilt. GraalJS calls
+     * {@code getMember} and the other callbacks inside the active Context of the accessing thread,
+     * so {@code Context.getCurrent()} is never null here.
      */
     private void ensure() {
         Context current = Context.getCurrent();
@@ -92,13 +100,14 @@ public final class DelegatingBinding implements ProxyObject {
                 targetValue.getMemberKeys().forEach(keys::add);
             }
         } catch (Throwable ignored) {
-            // 某些 host 对象不支持枚举成员键，忽略——getMember 委托仍可用
+            // Some host objects cannot enumerate member keys; ignore the failure, getMember delegation
+            // still works
         }
         return keys.toArray();
     }
 
     @Override
     public void putMember(String key, Value value) {
-        // 只读绑定，禁止脚本覆盖
+        // Read-only binding: scripts cannot overwrite it
     }
 }

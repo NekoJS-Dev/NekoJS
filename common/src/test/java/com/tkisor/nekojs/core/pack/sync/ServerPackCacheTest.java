@@ -16,9 +16,10 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * 服务器包缓存落盘测试：路径穿越拒绝（{@code ../evil} 不落盘不出包目录）、
- * 落盘 → 从盘重扫 → 重算哈希与内存侧一致、盘上篡改后重算哈希变化（错配可检出）、
- * 旧文件残留清理（同 syncId 重写不残留）。
+ * Server pack cache write tests: path traversal is rejected ({@code ../evil} is not written and
+ * does not leave the pack directory), a write followed by a rescan from disk gives the same hash
+ * as the in-memory data, tampering on disk changes the recomputed hash so a mismatch can be
+ * detected, and stale files are removed when the same syncId is rewritten.
  */
 class ServerPackCacheTest {
 
@@ -41,7 +42,7 @@ class ServerPackCacheTest {
         assertEquals(MANIFEST, cached.manifestJson());
         assertEquals(
             List.of("assets/nekojs/lang/en_us.json", "client_scripts/hud.js"),
-            cached.files().stream().map(PackContentFile::relativePath).toList()); // 按路径排序
+            cached.files().stream().map(PackContentFile::relativePath).toList()); // Sorted by path.
     }
 
     @Test
@@ -53,12 +54,13 @@ class ServerPackCacheTest {
 
         ServerPackCache.persistPack(bucketRoot, "packs:evil", MANIFEST, evil);
 
-        // 逃逸文件不落盘（既不在包目录内，也不在 bucket 外）
+        // Escaping files are not written: nothing lands inside the pack directory or outside the bucket.
         assertFalse(Files.exists(bucketRoot.resolve("evil.js")));
         assertFalse(Files.exists(bucketRoot.getParent().resolve("evil.js")));
         assertFalse(Files.exists(bucketRoot.resolve("escape.js")));
 
-        // 重扫只见合法文件：哈希按盘上实际内容计算（与含逃逸文件的内存快照不同）
+        // The rescan sees only the legal file, so the hash comes from what is on disk, unlike the
+        // in-memory snapshot that still holds the escaping files.
         ServerPackCache.CachedPack cached = ServerPackCache.loadPack(bucketRoot, "packs:evil");
         assertEquals(
             List.of("client_scripts/ok.js"),
@@ -76,7 +78,7 @@ class ServerPackCacheTest {
         Files.writeString(script, "hudTampered()");
 
         String after = ServerPackCache.loadPack(bucketRoot, "packs:demo").hash();
-        assertNotEquals(before, after); // 调用方对照预期哈希即可检出篡改
+        assertNotEquals(before, after); // The caller detects tampering by comparing against the expected hash.
     }
 
     @Test
@@ -85,7 +87,8 @@ class ServerPackCacheTest {
         Path packDir = bucketRoot.resolve(SyncedPack.encodeSyncId("packs:demo"));
         Files.writeString(packDir.resolve("client_scripts").resolve("extra.js"), "stale");
 
-        // 同步到新版（少一个文件）：旧目录整删重建，extra.js 不残留
+        // Sync a new version with one file fewer: the old directory is deleted and rebuilt, so extra.js
+        // does not survive.
         List<PackContentFile> v2 = List.of(new PackContentFile("client_scripts/hud.js", "hud()".getBytes()));
         ServerPackCache.persistPack(bucketRoot, "packs:demo", MANIFEST, v2);
         assertFalse(Files.exists(packDir.resolve("client_scripts").resolve("extra.js")));

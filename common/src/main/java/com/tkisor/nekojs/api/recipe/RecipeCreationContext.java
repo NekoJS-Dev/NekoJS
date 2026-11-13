@@ -1,11 +1,12 @@
 package com.tkisor.nekojs.api.recipe;
 
 /**
- * 配方创建上下文（阶段 5：错误上下文）。
+ * Context for creating a recipe.
  *
- * <p>{@code scriptId} 为创建配方的脚本文件 id（可能为 null，如插件创建），
- * 由平台侧在脚本回调执行期间从 {@code ScriptContextRegistry} 捕获；
- * 出错时与 {@code api/type/prefix} 一起输出，便于定位脚本位置。
+ * <p>{@code scriptId} is the id of the script file that creates the recipe; it is {@code null}
+ * when something else creates the recipe, for example a plugin. The platform captures it from
+ * {@code ScriptContextRegistry} while the script callback runs. On failure it is reported
+ * together with {@code api/type/prefix} so the script location can be found.
  */
 public record RecipeCreationContext(String api, String type, String prefix, String scriptId) {
     public static RecipeCreationContext of(String api, String type, String prefix) {

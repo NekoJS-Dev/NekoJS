@@ -6,11 +6,12 @@ import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.neoforged.bus.api.Event;
 
 /**
- * 方块实体 tick 事件（{@code BlockEvents.blockEntityTick}）。
+ * Block entity tick event ({@code BlockEvents.blockEntityTick}).
  *
- * <p>原版没有对应的 NeoForge 事件；由 {@code LevelChunkBoundTickingBlockEntityMixin}
- * 在 {@code LevelChunk$BoundTickingBlockEntity.tick} HEAD 注入并 post 到
- * {@code NeoForge.EVENT_BUS}。对所有有 ticker 的方块实体触发（原版 + 脚本）。
+ * <p>Vanilla has no matching NeoForge event, so
+ * {@code LevelChunkBoundTickingBlockEntityMixin} injects at the HEAD of
+ * {@code LevelChunk$BoundTickingBlockEntity.tick} and posts to {@code NeoForge.EVENT_BUS}.
+ * It fires for every block entity that has a ticker (vanilla and script).
  */
 public class BlockEntityTickEvent extends Event {
     private final BlockEntity blockEntity;

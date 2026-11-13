@@ -108,8 +108,8 @@ public final class DynamicRegistrationBookkeeping {
     }
 
     /**
-     * Reload boundary: marks every live claim stale. Entries stay registered and
-     * tracked (stale-retain); claims that come back clear their own flag.
+     * Starts a reload: marks every live claim stale. Entries stay registered and
+     * tracked; a claim that comes back clears its own flag.
      */
     public synchronized void beginReload() {
         for (Entry entry : entries.values()) {

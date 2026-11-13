@@ -10,18 +10,17 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Defect D6 surface guard (ticket 26): every script-facing ARGB color parameter on the
- * three painter surfaces must be declared as {@link Number}. A raw {@code int} color
- * parameter saturates unsigned script literals ({@code 0xFF......} ≥ 2³¹) to
- * {@code 0x7FFFFFFF} — translucent white — at the engine conversion boundary.
+ * Guards the color parameter types on the three painter surfaces: every script-facing ARGB color
+ * parameter must be declared as {@link Number}. A raw {@code int} color parameter saturates
+ * unsigned script literals ({@code 0xFF......} ≥ 2³¹) to {@code 0x7FFFFFFF} (translucent white)
+ * when the engine converts them.
  *
  * <p>Behavioral proof lives in {@code PainterJSScriptColorBoundaryTest} (the production
  * {@code PainterJS} through a real GraalJS context) and the common
- * {@code ScriptColorBoundaryRealEngineTest} (engine conversion + normalization). The
- * hud/world contexts cannot be constructed headless (their constructors dereference a
- * live {@code Minecraft} client), so their seam types are pinned here instead: each
- * {@link Number}-typed overload must exist and its all-{@code int} color twin (the exact
- * pre-fix signature) must be gone.
+ * {@code ScriptColorBoundaryRealEngineTest} (engine conversion and normalization). The hud and
+ * world contexts cannot be constructed headless because their constructors dereference a live
+ * {@code Minecraft} client, so their parameter types are pinned here instead: each
+ * {@link Number}-typed overload must exist and its all-{@code int} color twin must be gone.
  */
 class Ticket26ColorParameterSurfaceTest {
 
@@ -62,9 +61,8 @@ class Ticket26ColorParameterSurfaceTest {
     }
 
     /**
-     * Asserts the seam resolves with {@link Number} at the color position(s) and that the
-     * signature with every color position narrowed to {@code int} — the exact pre-fix D6
-     * form — no longer exists.
+     * Asserts that the method resolves with {@link Number} at each color position, and that the
+     * signature with every color position narrowed to {@code int} no longer exists.
      */
     private static void colorSeam(Class<?> owner, String method, Class<?>... shape) {
         Method seam = assertDoesNotThrow(() -> owner.getMethod(method, shape),

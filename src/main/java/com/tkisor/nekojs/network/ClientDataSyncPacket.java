@@ -9,9 +9,9 @@ import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.Identifier;
 
 /**
- * 服务端→客户端键值数据同步包（{@code ClientData.sync} → {@code clientData}）：
- * key + JSON 文本。JSON 作为字符串传输，与 neoforge-1.21.1 的同名包线格式一致
- * （编解码各自实现，字段相同）。
+ * Server-to-client key/value data sync packet ({@code ClientData.sync} to {@code clientData}): a key
+ * plus JSON text. The JSON travels as a string, matching the wire format of the packet of the same
+ * name in neoforge-1.21.1; each side implements its own codec, with the same fields.
  */
 public record ClientDataSyncPacket(String key, String json) implements CustomPacketPayload {
 

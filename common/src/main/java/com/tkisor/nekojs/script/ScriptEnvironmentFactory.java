@@ -32,21 +32,22 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * 脚本环境工厂：接管 Context/Node/bindings/event/telemetry 初始化。
+ * Script environment factory: owns Context, Node, bindings, event, and telemetry initialization.
  *
- * <p>从 {@link ScriptManager} 的 {@code getOrCreateContext} + {@code installJavaClassLoadTelemetry}
- * 下沉而来。{@code ScriptManager} 保留 discover/load/reload/close 顶层生命周期协调，
- * 不直接承担 Context 初始化细节。
+ * <p>This logic was moved down from {@link ScriptManager}'s {@code getOrCreateContext} and
+ * {@code installJavaClassLoadTelemetry}. {@code ScriptManager} keeps the top-level discover/load/reload/close lifecycle
+ * and no longer handles Context initialization details.
  *
- * <p>{@code create(ScriptType, NekoModulePipelineCache)} 返回 {@link Environment}，包含 {@link Context}、
- * {@link com.tkisor.nekojs.core.node.NekoNodeRuntime} 和 close/unbind 语义。
- * Context 创建后在这里绑定 {@link ScriptContextRegistry}。
+ * <p>{@code create(ScriptType, NekoModulePipelineCache)} returns an {@link Environment} that holds a {@link Context},
+ * a {@link com.tkisor.nekojs.core.node.NekoNodeRuntime}, and the close/unbind semantics. The
+ * {@link ScriptContextRegistry} is bound here after the Context is created.
  */
 public final class ScriptEnvironmentFactory {
     private final ScriptEventBridge eventBridge;
     private final IPluginRuntime pluginRuntime;
     private final NekoSandboxFactory sandboxFactory;
-    /** root 拥有的 global/shared 状态域（票 10）：视图随环境安装，store 由 root 生命周期持有。 */
+    /** Global and shared state owned by the root: views are installed with an environment, while
+     *  the stores live as long as the root. */
     private final GlobalStateStores globalStores;
 
     public ScriptEnvironmentFactory(ScriptEventBridge eventBridge, IPluginRuntime pluginRuntime,
@@ -57,7 +58,7 @@ public final class ScriptEnvironmentFactory {
         this.globalStores = globalStores;
     }
 
-    /** 本工厂接线到的 root 状态域（ScriptManager 为每个环境创建 generation 视图）。 */
+    /** The root state this factory is wired to; ScriptManager creates a generation view for each environment. */
     public GlobalStateStores globalStores() {
         return globalStores;
     }
@@ -66,18 +67,21 @@ public final class ScriptEnvironmentFactory {
         return sandboxFactory.createBuiltinUiRuntime();
     }
 
-    /** 创建一个 generation 的 global/shared 视图持有者（事务=候选写集；非事务=直接提交）。 */
+    /**
+     * Creates the holder for one generation's {@code global}/{@code shared} views: a candidate write
+     * set when transactional, direct commits otherwise.
+     */
     public GenerationGlobals newGeneration(ScriptType scriptType, boolean transactional) {
         return globalStores.newGeneration(scriptType, transactional);
     }
 
     /**
-     * 创建候选/active 的裸环境：sandbox Context + node runtime，<b>不含</b>任何
-     * 事件组 / 插件 binding / schema 安装。
+     * Creates the bare environment for a candidate or active generation: a sandbox Context plus the
+     * node runtime, <b>without</b> any event groups, plugin bindings or schema installation.
      *
-     * <p>ticket 06 generation 隔离：preparation（本方法）与 binding 安装
-     * （{@link #installEnvironmentBindings}）拆分为两个阶段，reload 失败结果可区分
-     * PREPARATION 与 BINDING 阶段。
+     * <p>Generation isolation: preparation (this method) and binding installation
+     * ({@link #installEnvironmentBindings}) are two separate stages, so a failed reload can report
+     * whether it failed in the PREPARATION or in the BINDING stage.
      */
     /** Create a bare environment against the supplied generation module session. */
     public Environment createContext(ScriptType scriptType, NekoModulePipelineCache moduleSession) {
@@ -111,18 +115,20 @@ public final class ScriptEnvironmentFactory {
     }
 
     /**
-     * 把事件组绑定、插件 binding、managed global、{@code global}/{@code shared} 状态视图、
-     * binding schema 与 class-load telemetry 安装进给定 Context（BINDING 阶段）。
+     * Installs event group bindings, plugin bindings, managed globals, the {@code global}/{@code shared}
+     * state views, the binding schema and class-load telemetry into the given Context (BINDING stage).
      *
-     * <p>全部写入都以 {@code context.getBindings("js")} 为目标——candidate Context 与
-     * active Context 各自持有自己的成员表，安装失败只影响候选环境，不触碰 active。
+     * <p>Every write targets {@code context.getBindings("js")}, so a candidate Context and the active
+     * Context each own their member table; a failed installation only affects the candidate environment
+     * and never touches the active one.
      *
-     * <p>{@code global}/{@code shared}（票 10，shared 为工作名）：绑定值是<b>该 generation
-     * 的视图</b>（{@link GenerationGlobals}），不是共享 Map 实例——候选 generation 的顶层
-     * 写进候选写集，active generation 直接提交；绑定定义（名字/schema）与按 generation
-     * 创建的视图由此分开。{@code global} 是 NekoJS 状态容器；语言全局对象仍是
-     * {@code globalThis}（Node shim 的 {@code globalThis.global = globalThis} 别名只在无
-     * 绑定的 shim 语境可见——polyglot 绑定成员会遮蔽同名 globalThis 属性，实证见票 10）。
+     * <p>The value bound to {@code global}/{@code shared} is <b>that generation's view</b>
+     * ({@link GenerationGlobals}), not a shared Map instance: top-level writes from a candidate
+     * generation go into the candidate write set, and the active generation commits directly. This keeps
+     * the binding definition (name and schema) apart from the per-generation view. {@code global} is the
+     * NekoJS state container; the language global object is still {@code globalThis} (the Node shim alias
+     * {@code globalThis.global = globalThis} is visible only in shim contexts without bindings, because
+     * polyglot binding members shadow a globalThis property of the same name).
      */
     public void installEnvironmentBindings(Context context, ScriptType scriptType, GenerationGlobals globals,
                                           NekoModulePipelineCache moduleSession) {
@@ -149,8 +155,9 @@ public final class ScriptEnvironmentFactory {
                 }
             });
 
-            // 受管 global/shared 状态视图（票 10）：在插件绑定之后安装，保证状态容器语义由
-            // root 拥有的视图决定（不再有进程级共享 Map 绑定）；任意顶层 key 合法（动态容器）。
+            // Managed global/shared state views: installed after the plugin bindings, so the state container
+            // semantics come from the root-owned views (there is no process-wide shared Map binding).
+            // Any top-level key is valid; the container is dynamic.
             bindings.putMember("global", globals.globalView());
             bindings.putMember("shared", globals.sharedView());
             bindingSchema.put("global", ScriptBindingSchema.BindingMembers.dynamicContainer());
@@ -159,10 +166,12 @@ public final class ScriptEnvironmentFactory {
             bindManagedGlobals(bindings, scriptType, bindingSchema, ApiGuestErrorFactory.create(context));
             addEventGroupSchema(bindingSchema, pluginRuntime.eventGroups().values(), ScriptEventRegistry.groupsFor(scriptType));
 
-            // 未定义标识符检查的已知全局全集：以运行时 Context 真实可见的全局为准——
-            // globalThis 全量属性名（JS 内置 + console 等引擎全局）∪ polyglot 绑定键（平台装的绑定），
-            // 并补上解析器视作标识符的关键字（this/arguments/super）。单一来源都会漏：
-            // console 不在绑定键里、而 guest 侧注入的绑定不一定都在 globalThis 上。
+            // Known globals for the undefined-identifier check: whatever the runtime Context really exposes —
+            // every globalThis property name (JS built-ins plus engine globals such as console) unioned
+            // with the polyglot binding keys (bindings the platform installed), plus the keywords the
+            // parser treats as identifiers (this/arguments/super). Either source alone misses entries:
+            // console is not a binding key, and bindings the guest side injects are not all on
+            // globalThis.
             Set<String> knownGlobals;
             // Batch only guest inspection; plugin callbacks retain their caller's current Context.
             context.enter();
@@ -202,10 +211,11 @@ public final class ScriptEnvironmentFactory {
     }
 
     /**
-     * 完整创建环境（preparation + binding 两个阶段顺序执行）：创建非事务 generation
-     * 的 global/shared 视图（顶层写直接提交）。供 {@link ScriptManager} 的 active 环境
-     * 懒创建路径使用；事务式 reload 分两步调用（createContext + 传入候选 generation 的
-     * installEnvironmentBindings）以区分失败阶段。
+     * Creates a complete environment, running the preparation and binding stages in order: it creates
+     * the {@code global}/{@code shared} views of a non-transactional generation, so top-level writes
+     * commit directly. Used by the {@link ScriptManager} lazy creation path for the active environment.
+     * A transactional reload calls the two steps separately ({@code createContext}, then
+     * installEnvironmentBindings with the candidate generation) to tell the failure stages apart.
      */
     public Environment create(ScriptType scriptType, NekoModulePipelineCache moduleSession) {
         GenerationGlobals globals = newGeneration(scriptType, false);
@@ -234,8 +244,9 @@ public final class ScriptEnvironmentFactory {
     }
 
     /**
-     * 创建携带指定 generation 视图的裸环境（候选路径两步式创建的第一步；
-     * BINDING 阶段由调用方执行 {@link #installEnvironmentBindings}）。
+     * Creates a bare environment that carries the given generation view. This is the first of the two
+     * steps on the candidate path; the caller runs {@link #installEnvironmentBindings} for the BINDING
+     * stage.
      */
     /** Create a bare environment with a generation view and module session. */
     public Environment createContext(ScriptType scriptType, GenerationGlobals globals,
@@ -278,14 +289,17 @@ public final class ScriptEnvironmentFactory {
     }
 
     /**
-     * 事件组也是全局绑定（{@code ServerEvents}/{@code BlockEvents}/…由 eventBridge.bindEvents 绑定），
-     * 必须一并进入 {@link ScriptBindingSchema}：{@code EventCallbackSourceValidator} 以
-     * {@code schema.containsKey("ServerEvents")} 判定「这是事件组调用」再校验回调体，缺了这一步
-     * 事件回调 preflight（如 {@code event.recipes} 拼写检查）在生产环境整体静默失效
-     * （单测手工 register 过 schema，掩盖了这条断链）。组内合法成员 = 事件名（bus 名）。
+     * Event groups are global bindings too ({@code ServerEvents}/{@code BlockEvents}/… are bound by
+     * eventBridge.bindEvents), so they must also go into {@link ScriptBindingSchema}:
+     * {@code EventCallbackSourceValidator} uses {@code schema.containsKey("ServerEvents")} to decide
+     * that a call is an event-group call before it validates the callback body. Without this step the
+     * event callback preflight (such as the {@code event.recipes} spelling check) silently stops working
+     * in production; unit tests registered the schema by hand, which hid the gap. Valid members of a
+     * group are its event names (bus names).
      *
-     * <p>ScriptEvents 自定义事件组（{@code ScriptEventGroupJS}）成员 = 已注册定义名。
-     * 已存在的条目（环境绑定/managed 全局）不覆盖，自定义组用 {@code putIfAbsent}。
+     * <p>Members of the ScriptEvents custom groups ({@code ScriptEventGroupJS}) are the registered
+     * definition names. Existing entries (environment bindings, managed globals) are not overwritten;
+     * custom groups use {@code putIfAbsent}.
      */
     static void addEventGroupSchema(Map<String, ScriptBindingSchema.BindingMembers> schema,
                                      Iterable<EventGroup> groups,
@@ -362,10 +376,12 @@ public final class ScriptEnvironmentFactory {
     }
 
     /**
-     * 携带 out/err {@link LoggerStream}：Graal 关闭 Context 时只 detach 用户流、不 close，
-     * 由 ScriptManager 的销毁路径在 context.close() 之后补一次 close() 冲刷末行缓冲。
-     * {@code globals} 是本环境的 global/shared generation 视图持有者（裸两步式创建的第一步
-     * 为 null；ScriptManager 在环境销毁时对其做 guest 值失效清除）。
+     * Holds the out/err {@link LoggerStream}s: when Graal closes a Context it only detaches user streams
+     * and never closes them, so the ScriptManager destruction path calls close() once more after
+     * context.close() to flush the last buffered line. {@code globals} is this environment's
+     * {@code global}/{@code shared} generation view holder; it is null in the first step of the bare
+     * two-step creation, and ScriptManager clears the guest values in it when the environment is
+     * destroyed.
      */
     public record Environment(Context context, com.tkisor.nekojs.core.node.NekoNodeRuntime nodeRuntime,
                               com.tkisor.nekojs.core.log.LoggerStream outStream,

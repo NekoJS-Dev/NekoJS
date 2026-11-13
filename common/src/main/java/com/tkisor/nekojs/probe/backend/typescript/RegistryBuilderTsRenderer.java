@@ -5,10 +5,10 @@ import com.tkisor.nekojs.api.catalog.RegistryBuilderSurfaceEntry;
 import java.util.List;
 
 /**
- * typed Builder 契约条目 → TS 声明（ticket 15，AC9）。
- * 输入是 {@link RegistryBuilderSurfaceEntry}（版本树契约反射派生）；Python 侧
- * {@code RegistryBuilderPyRenderer} 从<b>同一</b>条目列表渲染，成员语义两侧一致。
- * {@link TypeScriptProbeBackend} 与 contract/golden 测试共用本渲染器。
+ * Renders typed Builder entries as TS declarations. The input is {@link RegistryBuilderSurfaceEntry},
+ * derived by contract reflection over the version tree. The Python side,
+ * {@code RegistryBuilderPyRenderer}, renders from the <b>same</b> entry list, so members mean the same
+ * thing on both sides. {@link TypeScriptProbeBackend} and the contract/golden tests share this renderer.
  */
 public final class RegistryBuilderTsRenderer {
 
@@ -40,7 +40,9 @@ public final class RegistryBuilderTsRenderer {
         return output.toString();
     }
 
-    /** 渲染 {@code @registry-builders/index.d.ts} 内容；空列表返回空串。 */
+    /**
+     * Renders the content of {@code @registry-builders/index.d.ts}; an empty list returns an empty string.
+     */
     public static String render(List<RegistryBuilderSurfaceEntry> entries) {
         if (entries == null || entries.isEmpty()) {
             return "";

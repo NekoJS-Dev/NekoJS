@@ -10,18 +10,18 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * Bookkeeping of the villager trade domain (ticket 22 AC3/AC7): the committed generation
- * number, the snapshot the last commit published and the stale/retired records ordinary
- * reloads must keep instead of deleting registry entries.
+ * Bookkeeping of the villager trade domain: the committed generation number, the snapshot the
+ * last commit published, and the stale/retired records that ordinary reloads must keep instead of
+ * deleting registry entries.
  *
- * <p>Ownership: one instance per platform assembly, held by the root-registered domain owner
- * (see {@code CandidateDomainCollector}) and exposed to the {@code VillagerTrades} query
- * binding through the process-level facade. It is not a runtime owner: no context, no
- * listeners, no lifecycle of its own — the root closes the owner that holds it.
+ * <p>Ownership: one instance per platform assembly, held by the root-registered domain owner (see
+ * {@code CandidateDomainCollector}) and exposed to the {@code VillagerTrades} query binding
+ * through the process-level facade. It is not a runtime owner: it has no context, no listeners
+ * and no lifecycle of its own, and the root closes the owner that holds it.
  *
- * <p>Every read goes through {@link #query(Context)}: the reading generation is resolved from
- * the calling script Context (candidate, superseded, killed or closed generations get an
- * explicit {@link VillagerTradeQuerySurface.Status#STALE} answer).
+ * <p>Every read goes through {@link #query(Context)}: the reading generation is resolved from the
+ * calling script Context, and candidate, superseded, killed or closed generations get an explicit
+ * {@link VillagerTradeQuerySurface.Status#STALE} answer.
  */
 public final class VillagerTradeDomainState {
 

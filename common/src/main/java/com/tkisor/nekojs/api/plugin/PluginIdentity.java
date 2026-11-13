@@ -4,11 +4,11 @@ import java.net.URI;
 import java.util.Objects;
 
 /**
- * 插件身份：ownerId、插件类名与代码来源 URI。
+ * Identity of a plugin: owner id, plugin class name and code source URI.
  *
- * @param ownerId         owner id，不能为空白
- * @param pluginClassName 插件类全限定名，不能为空白
- * @param codeSource      代码来源 URI，不能为 {@code null}
+ * @param ownerId         owner id, must not be blank
+ * @param pluginClassName fully qualified plugin class name, must not be blank
+ * @param codeSource      code source URI, must not be {@code null}
  */
 public record PluginIdentity(String ownerId, String pluginClassName, URI codeSource) {
     public PluginIdentity {

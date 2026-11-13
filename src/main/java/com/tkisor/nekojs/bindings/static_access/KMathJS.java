@@ -4,10 +4,10 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.world.phys.Vec3;
 
 /**
- * 数学常量与向量工厂（KubeJS {@code KMath} 全局的对标）。
+ * Math constants and vector factories, the counterpart of the KubeJS {@code KMath} global.
  *
- * <p>绑定为类（{@code registry.register("KMath", KMathJS.class)}），脚本直接
- * {@code KMath.PI}、{@code KMath.blockPos(1, 64, -2)}。
+ * <p>Bound as a class ({@code registry.register("KMath", KMathJS.class)}), so scripts use
+ * {@code KMath.PI} and {@code KMath.blockPos(1, 64, -2)} directly.
  */
 public final class KMathJS {
     public static final double E = Math.E;
@@ -17,12 +17,12 @@ public final class KMathJS {
 
     private KMathJS() {}
 
-    /** 角度转弧度（{@code KMath.deg(90) === Math.PI / 2}）。 */
+    /** Converts degrees to radians ({@code KMath.deg(90) === Math.PI / 2}). */
     public static double deg(double degrees) {
         return Math.toRadians(degrees);
     }
 
-    /** 弧度转角度。 */
+    /** Converts radians to degrees. */
     public static double rad(double radians) {
         return Math.toDegrees(radians);
     }

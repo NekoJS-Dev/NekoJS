@@ -4,15 +4,18 @@ import java.util.Locale;
 import java.util.Optional;
 
 /**
- * 动态注册候选类型的<b>封闭集合</b>（ticket 16，AC3）：只有 Item、SoundEvent、MobEffect
- * 三类进入候选范围，且本枚举就是全部范围——不存在「未知 type 字符串转换成注册能力」的
- * 通道（payload 成员是三个类型直达入口，不是通用 catalog；未知 type 名在成员解析期
- * 即被拒绝）。
+ * The closed set of dynamic registration candidate types. Only Item, SoundEvent and MobEffect
+ * enter the candidate range, and this enum is that whole range: there is no channel that turns an
+ * unknown type string into a registration capability. The payload members are direct entry points
+ * for the three types, not a general catalog, and an unknown type name is rejected while the
+ * member is resolved.
  *
- * <p>apiName 是脚本面成员名（{@code event.item(...)} 等，票面冻结的默认命名）；
- * registryKey 是目标注册表完整键（Adapter 请求与声明面使用）。类型只有通过目标
- * Adapter、事务与同步 gate 才可公开激活；未验证类型记录 <b>not verified</b> 并阻塞
- * 开放，不因缺测改写为 unavailable（见 baseline REPORT 能力表）。
+ * <p>{@code apiName} is the script-facing member name ({@code event.item(...)} and so on);
+ * {@code registryKey} is the full key of the target registry, used by Adapter requests and the
+ * declaration surface. A type only becomes publicly active through its target Adapter, the
+ * transaction and the sync gate. A type that has not been verified is recorded as <b>not
+ * verified</b> and blocks opening; it is never rewritten as unavailable just because tests are
+ * missing.
  */
 public enum DynamicDefinitionType {
 
@@ -30,22 +33,24 @@ public enum DynamicDefinitionType {
         this.targetTypeName = targetTypeName;
     }
 
-    /** 脚本面成员名（{@code event.<apiName>(id, cb)}）。 */
+    /** The script-facing member name, as in {@code event.<apiName>(id, cb)}. */
     public String apiName() {
         return apiName;
     }
 
-    /** 目标注册表完整键（如 {@code minecraft:item}）。 */
+    /** The full key of the target registry, such as {@code minecraft:item}. */
     public String registryKey() {
         return registryKey;
     }
 
-    /** 目标注册表元素类型简名（声明/诊断用；common 不持有 MC 类型）。 */
+    /** Simple name of the target registry element type, for declarations and diagnostics; common
+     * holds no MC types. */
     public String targetTypeName() {
         return targetTypeName;
     }
 
-    /** 按脚本成员名查找；未知名返回 empty（调用方据此拒绝，不做任何转换）。 */
+    /** Looks up a type by script member name. An unknown name returns empty, and the caller rejects
+     * it without any conversion. */
     public static Optional<DynamicDefinitionType> byApiName(String name) {
         if (name == null) return Optional.empty();
         for (DynamicDefinitionType type : values()) {
@@ -54,7 +59,8 @@ public enum DynamicDefinitionType {
         return Optional.empty();
     }
 
-    /** 全部候选类型的成员名目录（错误信息用，字典序确定）。 */
+    /** Directory of all candidate type member names, for error messages; the enum declaration order
+     * makes the text deterministic. */
     public static String apiNameDirectory() {
         StringBuilder sb = new StringBuilder("[");
         DynamicDefinitionType[] types = values();
@@ -65,7 +71,7 @@ public enum DynamicDefinitionType {
         return sb.append(']').toString();
     }
 
-    /** 小写规范化辅助（builder 字符串成员共用）。 */
+    /** Lowercase normalization helper shared by the string members of the builders. */
     static String normalizeToken(String value, String what) {
         if (value == null || value.isBlank()) {
             throw new IllegalArgumentException("Missing " + what + ": expected a non-blank string");

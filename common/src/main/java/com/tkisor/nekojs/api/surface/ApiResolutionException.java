@@ -4,28 +4,29 @@ import java.util.Map;
 import java.util.Objects;
 
 /**
- * API 解析失败时抛出的异常，携带错误码与详情。
+ * Thrown when API resolution fails. Carries an error code and details.
  *
- * <p>继承 {@link IllegalStateException}，表示运行时状态无法满足解析要求。
+ * <p>Extends {@link IllegalStateException} because the runtime state cannot satisfy the resolution.
  */
 public class ApiResolutionException extends IllegalStateException {
 
     private static final long serialVersionUID = 1L;
 
     private final String code;
-    // 诊断载荷运行时只读，异常从不跨进程序列化；保留字段（而非 transient）避免序列化时静默丢数据
+    // The diagnostic payload is read-only at runtime and the exception is never serialized across
+    // processes; the field stays non-transient so serialization cannot silently drop it
     @SuppressWarnings("serial")
     private final Map<String, String> details;
 
-    /** @param code 错误码，不能为 {@code null} */
+    /** @param code error code, must not be {@code null} */
     public ApiResolutionException(String code, String message) {
         this(code, message, Map.of());
     }
 
     /**
-     * @param code    错误码，不能为 {@code null}
-     * @param message 说明
-     * @param details 详情映射，不能为 {@code null}（拷贝为不可变映射）
+     * @param code    error code, must not be {@code null}
+     * @param message description
+     * @param details detail map, must not be {@code null} (copied into an immutable map)
      */
     public ApiResolutionException(String code, String message, Map<String, String> details) {
         super(message);
@@ -35,12 +36,12 @@ public class ApiResolutionException extends IllegalStateException {
         this.details = Map.copyOf(details);
     }
 
-    /** 返回错误码。 */
+    /** Returns the error code. */
     public String code() {
         return code;
     }
 
-    /** 返回详情（不可变映射）。 */
+    /** Returns the details (an immutable map). */
     public Map<String, String> details() {
         return details;
     }

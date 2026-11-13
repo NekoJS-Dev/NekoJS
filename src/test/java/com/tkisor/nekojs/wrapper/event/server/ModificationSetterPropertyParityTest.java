@@ -17,33 +17,39 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * GraalJS runtime contract fixture（ticket 39 AC8）：固定「显式 setter 与 JavaBean-style
- * property assignment 调用<b>同一个 setter</b>，并进入同一校验、规范化、声明与
- * definition fingerprint 路径」。
+ * GraalJS runtime fixture: an explicit setter and a JavaBean-style property
+ * assignment call <b>the same setter</b> and go through the same validation, normalization,
+ * declaration and definition fingerprint path.
  *
- * <p>事实依据（旧路径 characterization，重构前实测）：宿主视图的 property 写在
- * GraalJS 上被静默丢弃（{@code assigned,read=undefined,pending=null}，不落 setter）——
- * javadoc 示例形态从未生效（现行复现见 {@link ModificationLegacyCharacterizationTest} 的
- * 探针：普通宿主对象仍然如此）。{@link ModificationViewSurface}（ProxyObject putMember
- * seam，票 15 BuilderSurface 同款手法）把两种写法转发到同一 {@code Method}。
+ * <p>The evidence (characterization of the old path): GraalJS silently dropped a property
+ * write on a host view ({@code assigned,read=undefined,pending=null}, never reaching the
+ * setter), so the javadoc example never worked (see the probe in
+ * {@link ModificationLegacyCharacterizationTest}; a plain host object still behaves that way
+ * today). {@link ModificationViewSurface} forwards both forms to the same {@code Method}
+ * through a ProxyObject putMember hook.
  *
- * <p>本测试在真实 GraalJS Context 里钉住契约，并同时覆盖<b>两种到达形态</b>：
+ * <p>This test pins that behavior in a real GraalJS Context and covers <b>both delivery
+ * forms</b>:
  * <ul>
- *   <li>{@code surface} 包装形态（{@code ModificationViewSurface.of(view)} 投给脚本）；</li>
- *   <li><b>生产投递形态</b>：脚本函数经<b>沙盒 HostAccess</b>
- *       （{@code NekoSharedHostAccess}，{@code allowAllImplementations}）实现成
- *       {@code Consumer}，宿主以<b>裸视图</b>调用 {@code callback.accept(view)}——与
- *       {@code ItemModificationEventJS#modify} 的 {@code modifier.accept(view)} 完全同形。
- *       裸视图靠自身实现的 ProxyObject 被 GraalJS honor。</li>
+ *   <li>The {@code surface} wrapped form ({@code ModificationViewSurface.of(view)} is handed
+ *       to the script);</li>
+ *   <li>The <b>production delivery form</b>: a script function is implemented as a
+ *       {@code Consumer} through the sandbox {@code HostAccess}
+ *       ({@code NekoSharedHostAccess}, {@code allowAllImplementations}) and the host calls
+ *       {@code callback.accept(view)} with a <b>bare view</b>, exactly like
+ *       {@code ItemModificationEventJS#modify}'s {@code modifier.accept(view)}. The bare view
+ *       works because it implements ProxyObject itself, which GraalJS honors.</li>
  * </ul>
  *
- * <p>无 vanilla 注册表依赖（视图 + 声明指纹不触碰注册表）。真跑节点：本机实测
- * 26.1.2 / 26.1.2-fabric / 1.21.1 / 26.2.0 / 26.2.0-fabric（26.x 视图含 food/tool 面，
- * 1.21.1 视图只有四个基础属性——成员差异由守卫表达，基础属性 parity 面两侧一致）。
+ * <p>No vanilla registry dependency: the view and the declaration fingerprint never touch a
+ * registry. Nodes actually run: 26.1.2 / 26.1.2-fabric / 1.21.1 / 26.2.0 / 26.2.0-fabric.
+ * The 26.x view has the food and tool members; the 1.21.1 view has only the four basic
+ * properties. The guards express that member difference, and the basic-property parity face
+ * is the same on both sides.
  */
 class ModificationSetterPropertyParityTest {
 
-    /** 在真实 GraalJS Context 里对 surface 化的视图执行一段脚本（脚本是第一书写者）。 */
+    /** Runs a script against the surface-wrapped view in a real GraalJS Context; the script writes first. */
     private static ItemModificationJS evalOn(String script) {
         ItemModificationJS view = new ItemModificationJS();
         try (Context context = Context.newBuilder("js").allowAllAccess(true).build()) {
@@ -54,8 +60,9 @@ class ModificationSetterPropertyParityTest {
     }
 
     /**
-     * 生产投递形态（AC8 最危险的静默失败形态）：JS 函数 → 沙盒 {@code Consumer} → 裸视图。
-     * 与 {@code ItemModificationEventJS#modify(String, Consumer)} 的调用形状一致。
+     * The production delivery form, where a silent failure is most dangerous: a JS function
+     * becomes a sandbox {@code Consumer} that receives a bare view. The call shape matches
+     * {@code ItemModificationEventJS#modify(String, Consumer)}.
      */
     @SuppressWarnings("unchecked")
     private static ItemModificationJS evalProductionDelivery(String functionSource) {
@@ -77,7 +84,10 @@ class ModificationSetterPropertyParityTest {
         return view;
     }
 
-    /** 视图 → 声明（固定 target；不触碰注册表——注册表解析归 vanilla-gated E2E）。 */
+    /**
+     * View to declaration with a fixed target. It does not touch a registry; registry
+     * resolution belongs to the vanilla-gated end-to-end tests.
+     */
     private static ModificationDeclaration declarationOf(ItemModificationJS view) {
         return new ModificationDeclaration("item", "parity:target", view.normalizedProperties(), "parity.js");
     }
@@ -102,11 +112,14 @@ class ModificationSetterPropertyParityTest {
     }
 
     /**
-     * F1 真跑证据：生产投递形态（JS 函数 → 沙盒 Consumer → <b>裸视图</b>）与
-     * surface 包装形态产生同一规范化声明与同一 fingerprint。
+     * Production delivery (a JS function becomes a sandbox Consumer that receives a <b>bare
+     * view</b>) and the surface-wrapped form produce the same normalized declaration and the
+     * same fingerprint.
      *
-     * <p>这是最危险的静默失败形态：若 GraalJS 不 honor 裸视图的 ProxyObject（或视图没实现
-     * 它），property 写会在生产路径上被静默丢弃，而 surface 包装形态的测试仍会全绿。
+     * <p>This is the most dangerous silent-failure shape: if GraalJS did not honor the bare
+     * view's ProxyObject, or the view did not implement it, the property write would be
+     * silently dropped on the production path while tests that use the wrapped surface would
+     * still pass.
      */
     @Test
     void productionDeliveryThroughSandboxConsumerReachesTheSameSetterAndFingerprint() {
@@ -141,8 +154,9 @@ class ModificationSetterPropertyParityTest {
 
     @Test
     void writeOnlyMemberReadIsRejectedInsteadOfReturningTheSetterObject() {
-        // 视图成员当前都有配套 getter；F7 钉住表面契约本身（用一个 setter-only 替身类，
-        // ModificationViewSurface 对任意视图类反射派生成员目录）。
+        // The view members all have a matching getter right now; this test pins the surface behavior
+        // itself using a setter-only stand-in class, since ModificationViewSurface derives the
+        // member catalog of any view class by reflection.
         WriteOnlyView view = new WriteOnlyView();
         ModificationViewSurface surface = ModificationViewSurface.of(view);
         try (Context context = Context.newBuilder("js").allowAllAccess(true).build()) {
@@ -158,7 +172,7 @@ class ModificationSetterPropertyParityTest {
         assertTrue(readError.getMessage().contains("readable:"), readError.getMessage());
     }
 
-    /** setter-only 视图（F7 替身）：只有 setter，没有配套 getter。 */
+    /** A setter-only view: only a setter, no matching getter. */
     public static final class WriteOnlyView {
         Integer value;
 
@@ -169,12 +183,14 @@ class ModificationSetterPropertyParityTest {
 
     @Test
     void numericShapesNormalizeToTheSameFingerprint() {
-        // setter 侧 int/double 收窄差异不得产生不同计划：16 与 16.0 同指纹
+        // Narrowing int versus double on the setter side must not produce different plans:
+        // 16 and 16.0 give the same fingerprint
         ModificationDeclaration intShape = declarationOf(evalOn("item.maxStackSize = 16;"));
         ModificationDeclaration doubleShape = declarationOf(evalOn("item.maxStackSize = 16.0;"));
         assertEquals(fingerprintOf(intShape), fingerprintOf(doubleShape));
 
-        // 真值不同的声明指纹必须可区分（不是恒等字符串）
+        // Declarations with different values must have distinguishable fingerprints (the fingerprint
+        // is not a constant string)
         ModificationDeclaration different = declarationOf(evalOn("item.maxStackSize = 17;"));
         assertNotEquals(fingerprintOf(intShape), fingerprintOf(different));
     }
@@ -210,8 +226,9 @@ class ModificationSetterPropertyParityTest {
                 "类型不匹配错误带成员名: " + error.getMessage());
     }
 
-    // ---- 26.x 独有成员面（food/tool）：对象字面量经 property 写进入同一 setter ----
-//? if >=26 {
+    // ---- Members only on 26.x (food/tool): an object literal written as a property reaches the
+    // same setter ----
+    //? if >=26 {
     @Test
     void foodObjectLiteralViaPropertyWriteReachesTheSameSetter() {
         ModificationDeclaration viaProperty = declarationOf(evalOn(
@@ -223,7 +240,7 @@ class ModificationSetterPropertyParityTest {
         assertEquals(Boolean.TRUE, food.get("canAlwaysEat"));
         assertEquals(1.6f, ((Number) food.get("eatSeconds")).floatValue(), 1.0e-6f);
 
-        // null property 写 = 移除请求（与旧 setFood(null) 语义一致）
+        // A null property write is a removal request (same semantics as setFood(null))
         ModificationDeclaration removal = declarationOf(evalOn("item.food = null;"));
         assertTrue(removal.properties().containsKey("food") && removal.properties().get("food") == null,
                 "item.food = null 记录移除请求（不是未设置）");

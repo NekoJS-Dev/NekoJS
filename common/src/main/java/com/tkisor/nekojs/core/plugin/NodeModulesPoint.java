@@ -11,12 +11,13 @@ import java.util.Map;
 import java.util.Objects;
 
 /**
- * 内置扩展点 {@code nekojs:node_modules}（ADR-0001 自包含 Point 文件）：
- * 贡献面（Contributor）+ 定义（POINT）+ 累积器（Bucket）同处一文件。
+ * Built-in extension point {@code nekojs:node_modules}, self-contained in this file: the
+ * contributor interface, the point definition and the accumulator all live here.
  *
- * <p>插件实现 {@link Contributor} 即被本扩展点收集；merge 策略为
- * {@link MergePolicy#firstWin}（同 id 首胜 + warn）。id 常量 {@link #ID}
- * 是 observable 契约（测试与诊断依赖），从本文件读取。
+ * <p>A plugin is collected by this point when it implements {@link Contributor}. The merge
+ * policy is {@link MergePolicy#firstWin}: the first contribution for an id wins and a
+ * duplicate logs a warning. The id constant {@link #ID} is observable: tests and diagnostics
+ * read it from this file.
  */
 public final class NodeModulesPoint {
 
@@ -29,21 +30,24 @@ public final class NodeModulesPoint {
     private NodeModulesPoint() {
     }
 
-    /** 显式声明形态（与直接覆写 NekoJSPlugin 对应钩子等价收集）：插件被 {@code nekojs:node_modules} 扩展点收集。 */
+    /** Explicit declaration form: the plugin is collected by the {@code nekojs:node_modules}
+     * extension point, the same as overriding the matching NekoJSPlugin hook. */
     public interface Contributor extends NekoJSPlugin {
 
         /**
-         * 注册插件自定义 JS 模块（CommonJS 风格），脚本可通过 {@code require('moduleId')} 加载。
+         * Registers custom JS modules in CommonJS style; scripts load them with
+         * {@code require('moduleId')}.
          *
-         * <p>补全声明需另行通过 type_docs 扩展点的
-         * {@link com.tkisor.nekojs.core.plugin.TypeDocsRegister#registerManualDeclaration} 注册
-         * {@code declare module 'moduleId' {...}}（probe 输出到 {@code @manual/index.d.ts}）。
+         * <p>Completion declarations are separate: register {@code declare module 'moduleId' {...}}
+         * through {@link com.tkisor.nekojs.core.plugin.TypeDocsRegister#registerManualDeclaration}
+         * on the type_docs point, and the probe writes it to {@code @manual/index.d.ts}.
          */
         void registerNodeModules(NodeModuleRegister registry);
     }
 
     /**
-     * 累积器：同 id 首胜并告警；snapshot 后密封（finish 后不再收集，ADR-0001）。
+     * Accumulator: the first contribution for an id wins and a duplicate logs a warning.
+     * It seals after the snapshot, so nothing is collected once the point has finished.
      */
     static final class Bucket implements NodeModuleRegister, Sealable {
         private final Map<String, String> modules = new LinkedHashMap<>();
@@ -73,7 +77,8 @@ public final class NodeModulesPoint {
         }
     }
 
-    /** 扩展点定义（由 {@link NekoBuiltinPointsPlugin} 清单注册，与第三方同一条 provider 路径）。 */
+    /** Extension point definition, registered by the {@link NekoBuiltinPointsPlugin} manifest
+     * through the same provider path that third-party plugins use. */
     public static final NekoPluginExtensionPoint<NekoJSPlugin, Bucket, Map<String, String>> POINT =
             NekoPluginExtensionPoint.<NekoJSPlugin, Bucket, Map<String, String>>builder(ID, NekoJSPlugin.class)
                     .merge(POLICY)

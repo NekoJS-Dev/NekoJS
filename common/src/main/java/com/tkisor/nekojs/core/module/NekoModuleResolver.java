@@ -11,8 +11,9 @@ import java.util.Locale;
 import java.util.Set;
 
 /**
- * 实例化模块解析器：构造器接收显式文件系统根和 {@link ScriptFilePolicy}。
- * 负责 entry resolve → file module resolve → extension candidates → index fallback。
+ * Resolves module ids to files. The constructor takes the explicit file system root and the
+ * {@link ScriptFilePolicy}. Resolution runs entry resolve, then file module resolve, then
+ * extension candidates, then the index fallback.
  */
 public final class NekoModuleResolver {
     private final Path gameDir;
@@ -51,9 +52,10 @@ public final class NekoModuleResolver {
     }
 
     /**
-     * require 语义的严格解析：与 {@link #resolve} 相同，但 bare specifier 在 node_modules
-     * 未命中时**不降级为 SPECIAL**（SPECIAL 兜底只服务于 define.js 的 builtin/java: 分类），
-     * 直接抛错——对应 Node 的 {@code require.resolve} MODULE_NOT_FOUND 语义。
+     * Strict resolution for require semantics. Same as {@link #resolve}, but a bare specifier that
+     * misses in node_modules is not downgraded to SPECIAL (the SPECIAL fallback only serves the
+     * builtin/java: classification in define.js); it fails instead, matching Node's
+     * {@code require.resolve} MODULE_NOT_FOUND behavior.
      */
     public NekoResolvedModule resolveForRequire(String parentPath, String specifier) throws IOException {
         return resolveForRequire(parentPath, specifier, Set.of());

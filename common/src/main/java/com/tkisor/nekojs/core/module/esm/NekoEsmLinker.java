@@ -18,8 +18,10 @@ import java.util.Set;
 public final class NekoEsmLinker {
     private final NekoModuleResolver resolver;
     /**
-     * 传递依赖准备缓存（W3 显式注入）：link 只消费 prepared module，不复制编译语义；
-     * 构造器未给缓存时用隔离直连实例（测试/工具），生产经 module host 传入共享实例。
+     * Preparation cache shared with transitive dependencies, injected by the caller: link only
+     * consumes prepared modules and duplicates no compilation semantics. When the constructor gets
+     * no cache it uses an isolated instance (tests and tools); production passes the shared one
+     * through the module host.
      */
     private final NekoModulePipelineCache preparationCache;
 

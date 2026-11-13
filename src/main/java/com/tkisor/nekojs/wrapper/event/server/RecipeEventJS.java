@@ -196,15 +196,15 @@ public class RecipeEventJS implements RecipeLifecycleContext {
 
     public JsonElement serializeIngredient(Ingredient ingredient) {
         if (ingredient == null || ingredient.isEmpty()) return new JsonArray();
-        // #tag 原料不能走 Ingredient.CODEC encode：创建侧（BuiltInRegistries 的 owner）与
-        // 序列化侧（本次数据包加载的 RegistryOps）包装层不同实例，HolderSetCodec 的 owner
-        // 校验恒拒绝（"is not valid in current registry set"）。改写为 vanilla 合法的
-        // {"tag": ...} 引用形态——Ingredient.CODEC 的 either(TagKey, list) 分支直接接受，
-        // RecipeManagerMixin 重新 parse 时由当前 ops 解析出正确的 Named 集。
+        // A #tag ingredient cannot go through Ingredient.CODEC encode: the creation side (the BuiltInRegistries owner) and
+        // the serialization side (this data pack load's RegistryOps) wrap different instances, so HolderSetCodec's owner
+        // check always rejects it ("is not valid in current registry set"). Rewritten into the vanilla-legal
+        // {"tag": ...} reference form -- the either(TagKey, list) branch of Ingredient.CODEC accepts it directly, and
+        // when RecipeManagerMixin parses it again the current ops resolve the correct Named set.
         var tagKey = IngredientResolver.tagOriginOf(ingredient);
         if (tagKey != null) {
-            // 26.x 的 tag 紧凑形态就是 "#<id>" 裸字符串（TagKey.hashedCodec = STRING + '#' 前缀，
-            // Ingredient.CODEC 的 either 第一分支直接接受）
+            // In 26.x the compact tag form is the bare "#<id>" string (TagKey.hashedCodec = STRING with a '#' prefix,
+            // and the first either branch of Ingredient.CODEC accepts it directly)
             return new JsonPrimitive("#" + tagKey.location());
         }
         // B5: always go through Ingredient.CODEC so the JSON shape matches NF1.21.1
@@ -292,7 +292,7 @@ public class RecipeEventJS implements RecipeLifecycleContext {
     }
 
     /** Parse single element through Ingredient.CODEC — works for individual items in arrays. */
-    // items() 无等价非废弃 API（getValues().stream() 不含 custom ingredient 展开），保守保留
+    // items() has no equivalent non-deprecated API (getValues().stream() does not expand custom ingredients), so it is kept on purpose
     @SuppressWarnings("deprecation")
     private boolean testSingleIngredient(JsonElement node, Ingredient match) {
         try {
@@ -304,14 +304,14 @@ public class RecipeEventJS implements RecipeLifecycleContext {
         }
     }
 
-    // items() 无等价非废弃 API（getValues().stream() 不含 custom ingredient 展开），保守保留
+    // items() has no equivalent non-deprecated API (getValues().stream() does not expand custom ingredients), so it is kept on purpose
     @SuppressWarnings("deprecation")
     private boolean testIngredientNode(JsonElement node, Ingredient match) {
         try {
             Ingredient nodeIng = Ingredient.CODEC.parse(registries.createSerializationContext(JsonOps.INSTANCE), node).getOrThrow();
             List<String> nodeItems = nodeIng.items().map(h -> BuiltInRegistries.ITEM.getKey(h.value()).toString()).toList();
             List<String> matchItems = match.items().map(h -> BuiltInRegistries.ITEM.getKey(h.value()).toString()).toList();
-            // Partial match (B-档): non-empty intersection suffices — the size-equality guard
+            // Partial match: a non-empty intersection suffices — the size-equality guard
             // was the common "tag ingredient fails because it has more items than match" trap.
             return !nodeItems.isEmpty() && !matchItems.isEmpty() && nodeItems.stream().anyMatch(matchItems::contains);
         } catch (Exception e) {
@@ -367,9 +367,9 @@ public class RecipeEventJS implements RecipeLifecycleContext {
     }
 
     /**
-     * 阶段 4：替换输出时保留原 count（result.count 感知）。
-     * 原节点为 {@code {item, count: N}} 且替换 JSON 是单物品对象（无 count）时，
-     * 把 N 迁移到替换结果上，避免替换后数量丢失。
+     * Stage 4: keeps the original count when the output is replaced (result.count aware).
+     * When the original node is {@code {item, count: N}} and the replacement JSON is a single-item object
+     * (no count), N migrates onto the replacement result so the count is not lost.
      */
     private JsonElement replacementWithCount(JsonElement original, JsonElement replacement) {
         if (!original.isJsonObject() || !replacement.isJsonObject()) {
@@ -398,7 +398,7 @@ public class RecipeEventJS implements RecipeLifecycleContext {
         }
     }
 
-    // items() 无等价非废弃 API（getValues().stream() 不含 custom ingredient 展开），保守保留
+    // items() has no equivalent non-deprecated API (getValues().stream() does not expand custom ingredients), so it is kept on purpose
     @SuppressWarnings("deprecation")
     private boolean testOutputId(Identifier id, Ingredient match) {
         return match.items().anyMatch(holder -> BuiltInRegistries.ITEM.getKey(holder.value()).equals(id));
@@ -678,10 +678,10 @@ public class RecipeEventJS implements RecipeLifecycleContext {
         return List.of();
     }
 
-    // ---- 版本中立静态助手：供 RecipeFilter 等共享代码零守卫调用，
-    // ---- 1.21.1 孪生文件有对应实现（写 1.21.1 类名），签名保持时代中立。
+    // ---- Version-neutral static helpers, so shared code such as RecipeFilter can call them without guards;
+    // ---- the 1.21.1 twin file has a matching implementation (with 1.21.1 class names) and neutral signatures.
 
-    /** 1.21.1 双参形状的桥接：26.x 的输出 id 从配方结果模板直接读出，registries 不参与求值。 */
+    /** Bridge for the 1.21.1 two-argument shape: in 26.x the output id is read straight from the recipe result template, so registries take no part in it. */
     public static String getRecipeOutputId(Recipe<?> recipe, HolderLookup.Provider registries) {
         return getRecipeOutputId(recipe);
     }
@@ -700,17 +700,17 @@ public class RecipeEventJS implements RecipeLifecycleContext {
         return ingredient.items().map(ItemStack::new).toList();
     }
 
-    /** 配方 id 的中立访问器：26.x 的 RecipeId 需要 .identifier() 解包，1.21.1 的 holder.id() 即 id 本体。 */
+    /** Neutral accessor for a recipe id: 26.x RecipeId needs .identifier() to unwrap, while 1.21.1's holder.id() is the id itself. */
     public static Identifier recipeHolderId(RecipeHolder<?> holder) {
         return holder.id().identifier();
     }
 
-    /** 配方分组的中立访问器：26.x 为 group()、1.21.1 为 getGroup()。 */
+    /** Neutral accessor for a recipe group: group() in 26.x, getGroup() in 1.21.1. */
     public static String recipeGroup(Recipe<?> recipe) {
         return recipe.group();
     }
 
-    /** 单个配料是否命中 tag/id 过滤：26.x 配料内部是 HolderSet（isCustom / values / acceptsItem）。 */
+    /** Whether a single ingredient hits the tag/id filter: in 26.x an ingredient holds a HolderSet internally (isCustom / values / acceptsItem). */
     public static boolean ingredientMatches(Ingredient ingredient, @Nullable TagKey<Item> tagKey,
                                             @Nullable Identifier itemID, HolderLookup.Provider registries) {
         var itemRegistry = registries.lookupOrThrow(Registries.ITEM);
@@ -747,7 +747,7 @@ public class RecipeEventJS implements RecipeLifecycleContext {
                 }
             }
 //?} else {
-/*            // fabric 无 custom ingredient（isCustom 是 NeoForge patch）：全部走 values 检查
+/*            // fabric has no custom ingredient (isCustom is a NeoForge patch): everything goes through the values check
             if (isItemInHolderSet(ingredient.values, itemID, itemRegistry)) return true;
 *///?}
         }

@@ -1,4 +1,4 @@
-// TODO(fabric): fabric 侧还没有对应实现，整文件守卫等移植完成后去掉
+// fabric has no matching implementation yet; remove this whole-file guard once the port lands
 //? if neoforge {
 package com.tkisor.nekojs.platform;
 
@@ -24,13 +24,15 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * 护栏：每个 {@code *Extension} 宿主注入接口必须真的被应用——要么被 nekojs.mixins.json
- * 里列出的 mixin 实现，要么登记在 nekojs.interface_injection.json（26.x 双路径：interface
- * injection 覆盖 dev，mixin 覆盖 production）。
+ * Guard: every {@code *Extension} host injection interface must actually be applied, either by a
+ * mixin listed in nekojs.mixins.json or by an entry in nekojs.interface_injection.json
+ * (two paths on 26.x: interface injection covers dev, mixins cover production).
  *
- * <p>新增 Extension 接口而忘了配 mixin/注入条目时，脚本侧调用会整类静默失效——这是那种
- * 「编译全绿、probe 照常生成声明、运行期 NoSuchMethod」的错。接口清单从测试 classpath 的
- * classes 目录枚举（与编译来源树无关）。
+ * <p>Add an Extension interface without configuring a mixin or injection entry and calls from
+ * scripts fail silently for the whole class. Compilation stays green, the probe keeps generating
+ * declarations, and the failure only shows up as {@code NoSuchMethod} at runtime. The interface
+ * list is enumerated from the classes directory on the test classpath, independent of the source
+ * tree layout.
  */
 class ExtensionCoverageTest {
 
@@ -54,7 +56,10 @@ class ExtensionCoverageTest {
                         + " (covered: " + covered + ")");
     }
 
-    /** classpath 上 inject 包目录里的 *Extension.class（合并编译输出目录，与源码树布局无关）。 */
+    /**
+     * {@code *Extension.class} files in the inject package directory on the classpath (merged compile
+     * output, not the source tree layout).
+     */
     private static Set<String> enumerateExtensions() throws Exception {
         Set<String> out = new HashSet<>();
         ClassLoader loader = ExtensionCoverageTest.class.getClassLoader();
@@ -70,7 +75,10 @@ class ExtensionCoverageTest {
         return out;
     }
 
-    /** mixin 类实现的 inject 包接口 = mixin 路径覆盖（agent 只重写注解，implements 子句不受影响）。 */
+    /**
+     * Inject-package interfaces implemented by mixin classes count as mixin coverage (the agent only
+     * rewrites annotations, the implements clause is untouched).
+     */
     private static void collectMixinInterfaces(String configName, Set<String> covered) throws Exception {
         JsonObject root = readConfig(configName);
         String pkg = root.get("package").getAsString();
@@ -90,7 +98,7 @@ class ExtensionCoverageTest {
         }
     }
 
-    /** interface_injection.json 的 values = 注入路径覆盖（仅 26.x 有这份资源）。 */
+    /** The values of interface_injection.json count as injection coverage (only 26.x ships this resource). */
     private static void collectInterfaceInjection(Set<String> covered) throws Exception {
         InputStream in = ExtensionCoverageTest.class.getClassLoader()
                 .getResourceAsStream("nekojs.interface_injection.json");

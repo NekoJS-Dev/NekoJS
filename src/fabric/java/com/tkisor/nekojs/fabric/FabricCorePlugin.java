@@ -30,18 +30,22 @@ import com.tkisor.nekojs.js.type_adapter.Vec3Adapter;
 import java.util.List;
 
 /**
- * Fabric 侧核心插件 v1：注册<b>当前已有 fabric 桥</b>的事件组与平台无关类型适配器。
+ * Fabric-side core plugin v1: registers the Fabric bridge event groups that exist and the
+ * platform-independent type adapters.
  *
- * <p>与 NeoForge 侧 {@code NekoJSCorePlugin} 的关系：那份清单里 ServerEvents /
- * PlayerEvents 等主体组与载荷类都是 NeoForge 面（整文件守卫），fabric 端随
- * fabric 侧各事件桥落地逐个加入本清单——脚本写法跨加载器一致的前提是
- * 总线与载荷中立（{@code BlockEvents.BROKEN} 即样板）。服务端生命周期/tick/
- * 进出服/chat 与实体 joinLevel/death 已由 fabric 桥以同名组 + 中立 payload 接通。
+ * <p>Compared with the NeoForge-side {@code NekoJSCorePlugin}: in that plugin core groups like
+ * ServerEvents / PlayerEvents and the payload classes are NeoForge-specific (whole-file guards).
+ * On the Fabric side, each group is added here as its Fabric event bridge lands. Scripts can only
+ * use the same API on both loaders while the event bus and payloads stay neutral
+ * ({@code BlockEvents.BROKEN} is the model). Server lifecycle, tick, join/leave, chat and entity
+ * joinLevel/death are already wired by the Fabric bridges with the same group names and neutral
+ * payloads.
  *
- * <p>类型适配器只登记平台无关子集（配方/流体簇的 ItemStack/Ingredient 等适配器
- * 是 NeoForge 面的 crafting 类型，fabric 等价物随配方面移植再定）——适配器是
- * dispatch 字符串键（如 {@code EntityEvents.joinLevel('minecraft:zombie', ...)}）
- * 落到注册表类型的必要通道，缺失时报 "Unsupported target type"。
+ * <p>Only the platform-independent adapters are registered. The ItemStack/Ingredient adapters for
+ * recipes and fluids are NeoForge crafting types, and the Fabric equivalents follow with the
+ * recipe port. Adapters map dispatch string keys, such as
+ * {@code EntityEvents.joinLevel('minecraft:zombie', ...)}, onto registry types; without the
+ * matching adapter the dispatch reports "Unsupported target type".
  */
 public final class FabricCorePlugin implements NekoJSPlugin, EventsPoint.Contributor,
         com.tkisor.nekojs.core.plugin.ClientEventsPoint.Contributor,
@@ -53,28 +57,31 @@ public final class FabricCorePlugin implements NekoJSPlugin, EventsPoint.Contrib
                 new com.tkisor.nekojs.bindings.static_access.NativeBridgeJS()), expose -> expose.stable());
         registry.register(com.tkisor.nekojs.api.data.Binding.of("Item",
                 new com.tkisor.nekojs.bindings.static_access.ItemJS()), expose -> expose.versioned());
-        // 服务端→客户端键值推送（只读侧 clientData 由 common 内置插件注册）
+        // Server-to-client key-value push (the read-only clientData side is registered by the common
+        // built-in plugin)
         registry.register("Capabilities", new com.tkisor.nekojs.bindings.static_access.CapabilitiesJS());
         registry.register("ClientData", com.tkisor.nekojs.wrapper.clientdata.ClientDataSyncJS.class);
-        // 配方面（与 NeoForge 侧 NekoJSCorePlugin 同写法）：Ingredient 工厂 + 同名 vanilla 类
-        // 静态成员委托 + RecipeSchema 查看器绑定
+        // Recipe side (same layout as NeoForge NekoJSCorePlugin): the Ingredient factory, the same-named
+        // vanilla class with its static members delegated, and the RecipeSchema viewer binding
         registry.register(com.tkisor.nekojs.api.data.Binding.of("Ingredient",
                 new com.tkisor.nekojs.js.DelegatingBinding(new com.tkisor.nekojs.bindings.static_access.IngredientFactory(),
                         net.minecraft.world.item.crafting.Ingredient.class,
                         java.util.Set.of("of", "item", "tag", "any", "all", "not")),
                 com.tkisor.nekojs.bindings.static_access.IngredientFactory.class));
         registry.register("RecipeSchema", new com.tkisor.nekojs.bindings.RecipeSchemaBinding());
-        // 脚本自定义网络通道（Network.sendToServer/sendToPlayer/sendToAll；payload 双向
-        // 注册与 receiver 在 FabricPlayNetwork）
+        // Script-defined network channel (Network.sendToServer/sendToPlayer/sendToAll; the payload types
+        // and the receivers are registered in FabricPlayNetwork)
         registry.register("Network", com.tkisor.nekojs.wrapper.network.NetworkJS.class);
-        // ---- 基础静态绑定（与 NeoForge 侧 NekoJSCorePlugin 同名同值，纯 vanilla/中立）----
-        // 引擎侧 helper（common/static_access）
+        // ---- Basic static bindings: same names and values as NeoForge NekoJSCorePlugin, plain vanilla or
+        // neutral ----
+        // Engine-side helpers (common/static_access)
         registry.register("Color", new com.tkisor.nekojs.bindings.static_access.ColorJS());
         registry.register("UUID", new com.tkisor.nekojs.bindings.static_access.UUIDJS());
         registry.register("StringUtils", new com.tkisor.nekojs.bindings.static_access.StringUtilsJS());
         registry.register("Time", new com.tkisor.nekojs.bindings.static_access.TimeJS());
         registry.register("Utils", new com.tkisor.nekojs.bindings.static_access.UtilsJS());
-        // 数学/图标/伤害/粒子（与 NeoForge 侧同名同值；DataMap 是 NeoForge 专属，fabric 不注册）
+        // Math, icons, damage and particles (same names and values as NeoForge; DataMap is NeoForge-only
+        // and is not registered on Fabric)
         registry.register("JavaMath", Math.class);
         registry.register("KMath", com.tkisor.nekojs.bindings.static_access.KMathJS.class);
         registry.register("TextIcons", com.tkisor.nekojs.bindings.static_access.TextIcons.class);
@@ -93,9 +100,9 @@ public final class FabricCorePlugin implements NekoJSPlugin, EventsPoint.Contrib
                 com.tkisor.nekojs.bindings.static_access.ParticleOptionsJS.class));
         registry.register(com.tkisor.nekojs.api.ScriptType.TEST, "Test",
                 new com.tkisor.nekojs.bindings.static_access.TestJS());
-        // global/shared 不在此注册（票 10）：由 ScriptEnvironmentFactory 为每个 generation 安装
-        // root 拥有的视图（按 ScriptType 私有 store + 显式 shared 入口，同 NeoForge 侧）
-        // vanilla 类型/常量类
+        // global/shared are not registered here: ScriptEnvironmentFactory installs a root-owned view per
+        // generation (a private store per ScriptType plus an explicit shared entry, same as NeoForge)
+        // Vanilla types and constant classes
         registry.register("ItemStack", net.minecraft.world.item.ItemStack.class);
         registry.register("Items", net.minecraft.world.item.Items.class);
         registry.register(com.tkisor.nekojs.api.data.Binding.of("Item",
@@ -125,7 +132,8 @@ public final class FabricCorePlugin implements NekoJSPlugin, EventsPoint.Contrib
         registry.register("MobEffectInstance", net.minecraft.world.effect.MobEffectInstance.class);
         registry.register("DamageTypes", net.minecraft.world.damagesource.DamageTypes.class);
         registry.register("TriState", net.minecraft.util.TriState.class);
-        // client 类绑定（与 NeoForge 侧同款 per-ScriptType 条件；专用服务器不注册）
+        // Client class bindings (same per-ScriptType condition as NeoForge; not registered on a dedicated
+        // server)
         if (registry.scriptType() == com.tkisor.nekojs.api.ScriptType.CLIENT) {
             var i18n = com.tkisor.nekojs.api.data.Binding.of("I18n", new com.tkisor.nekojs.bindings.static_access.I18nJS(),
                     com.tkisor.nekojs.api.facade.I18nFacade.class);
@@ -141,7 +149,8 @@ public final class FabricCorePlugin implements NekoJSPlugin, EventsPoint.Contrib
 
     @Override
     public void registerRecipeNamespaces(com.tkisor.nekojs.core.plugin.RecipeNamespaceRegister registry) {
-        // minecraft 命名空间配方类型（shaped/shapeless/smeling 等 handler，与 NeoForge 侧同款）
+        // minecraft namespace recipe types (the shaped/shapeless/smelting and other handlers, same as
+        // NeoForge)
         registry.register(new com.tkisor.nekojs.api.recipe.RecipeNamespaceEntry("minecraft",
                 e -> new com.tkisor.nekojs.bindings.recipe.MinecraftRecipeHandler(
                         (com.tkisor.nekojs.wrapper.event.server.RecipeEventJS) e),
@@ -150,39 +159,42 @@ public final class FabricCorePlugin implements NekoJSPlugin, EventsPoint.Contrib
 
     @Override
     public void registerEvents(EventGroupRegistry registry) {
-        // broken：FabricBlockEventBindings 已接 PlayerBlockBreakEvents.BEFORE
+        // broken: FabricBlockEventBindings already hooks PlayerBlockBreakEvents.BEFORE
         registry.register(BlockEvents.GROUP);
-        // 自定义脚本事件的声明面（STARTUP 的 ScriptEvents.server/client，平台无关）
+        // Declaration side of custom script events (ScriptEvents.server/client from STARTUP, platform
+        // independent)
         registry.register(com.tkisor.nekojs.api.event.ScriptEvents.GROUP);
-        // 服务端生命周期 / tick / 玩家进出服 + chat：中立 payload 子集
+        // Server lifecycle, tick, player join/leave and chat: the neutral payload subset
         registry.register(FabricServerEventBindings.SERVER_EVENTS);
         registry.register(FabricServerEventBindings.PLAYER_EVENTS);
-        // 配方脚本（recipes/afterRecipes）：总线定义在节点孪生 ServerEvents，由
-        // RecipeManagerMixin 孪生 fire；同名 "ServerEvents" 组经合并与上面的生命周期总线同组
+        // Recipe scripts (recipes/afterRecipes): the bus is declared on the node's twin ServerEvents and
+        // fired by the RecipeManagerMixin twin; merging puts the same-named "ServerEvents" group in the
+        // same group as the lifecycle bus above
         registry.register(com.tkisor.nekojs.bindings.event.ServerEvents.GROUP);
-        // AI goal 注册（STARTUP）：消费端 FabricEntityEventBindings.postJoinLevel 在跑，
-        // postRegister 由 NekoJSFabricMod.initializeScripts 在 STARTUP 脚本加载后调用
+        // AI goal registration (STARTUP): the consumer FabricEntityEventBindings.postJoinLevel is running,
+        // and NekoJSFabricMod.initializeScripts calls postRegister after the STARTUP scripts load
         registry.register(com.tkisor.nekojs.bindings.event.CapabilityEvents.GROUP);
         registry.register(com.tkisor.nekojs.bindings.event.GoalEvents.GROUP);
-        // 实体 joinLevel / death / damagePre / damagePost（按实体类型 dispatch）
+        // Entity joinLevel / death / damagePre / damagePost (dispatched by entity type)
         registry.register(FabricEntityEventBindings.ENTITY_EVENTS);
-        // 物品 rightClicked（按物品 id dispatch）
+        // Item rightClicked (dispatched by item id)
         registry.register(FabricItemEventBindings.ITEM_EVENTS);
-        // 脚本自定义网络通道：server/client 总线按 channel dispatch（receiver 在
-        // FabricPlayNetwork，发送面 NetworkJS → PlayPacketDispatchers）
+        // Script-defined network channel: the server/client buses dispatch by channel (the receivers live in
+        // FabricPlayNetwork, the send side is NetworkJS to PlayPacketDispatchers)
         registry.register(com.tkisor.nekojs.bindings.event.NetworkEvents.GROUP);
-        // 维度 loaded/unloaded/tickPre/tickPost（FabricLevelEventBindings，中立 payload）
+        // Dimension loaded/unloaded/tickPre/tickPost (FabricLevelEventBindings, neutral payloads)
         registry.register(com.tkisor.nekojs.bindings.event.LevelEvents.GROUP);
-        // 命令注册（FabricCommandEventBindings：脚本向 event.dispatcher 注册命令）
+        // Command registration (FabricCommandEventBindings: scripts register commands on event.dispatcher)
         registry.register(com.tkisor.nekojs.bindings.event.CommandEvents.GROUP);
-        // 物品 tooltip（client，FabricClientEventBindings 挂 ItemTooltipCallback；组名
-        // "ItemEvents" 与 FabricItemEventBindings 的 rightClicked 组同名合并）
+        // Item tooltip (client; FabricClientEventBindings hooks ItemTooltipCallback; the group name
+        // "ItemEvents" merges with the rightClicked group from FabricItemEventBindings)
         registry.register(com.tkisor.nekojs.bindings.event.ItemEvents.GROUP);
-        // 玩家事件 mixin 面子集（容器开合/合成/烧炼/损毁/进度/实体交互/维度切换，
-        // 中立 payload；与 FabricServerEventBindings.PLAYER_EVENTS 同名合并）
+        // Mixin-side player event subset (container open/close, crafting, smelting, break, advancement,
+        // entity interaction, dimension change; neutral payloads; merges with the same-named
+        // FabricServerEventBindings.PLAYER_EVENTS)
         registry.register(com.tkisor.nekojs.bindings.event.PlayerEvents.GROUP);
-        // 实体事件 mixin 面子集（drops/finalizeSpawn/tickPre/tickPost/leaveLevel；
-        // 与 FabricEntityEventBindings.ENTITY_EVENTS 同名合并）
+        // Mixin-side entity event subset (drops/finalizeSpawn/tickPre/tickPost/leaveLevel; merges with the
+        // same-named FabricEntityEventBindings.ENTITY_EVENTS)
         registry.register(com.tkisor.nekojs.bindings.event.EntityEvents.GROUP);
         for (var group : registry.view().values()) {
             // Both ServerEvents contributors already declare their own version publication.
@@ -192,11 +204,11 @@ public final class FabricCorePlugin implements NekoJSPlugin, EventsPoint.Contrib
 
     @Override
     public void registerClientEvents(EventGroupRegistry registry) {
-        // 客户端 tick 事件（CLIENT 脚本由 NekoJSFabricClient 在 CLIENT_STARTED 加载）
+        // Client tick event (CLIENT scripts are loaded by NekoJSFabricClient on CLIENT_STARTED)
         registry.register(com.tkisor.nekojs.fabric.event.FabricClientEventBindings.CLIENT_EVENTS);
         registry.register(com.tkisor.nekojs.fabric.event.FabricClientEventBindings.CLIENT_EVENTS, expose -> expose.versioned());
-        // 脚本按键绑定（register/pressed/released/tick；孪生 KeyBindEvents，
-        // 轮询挂载在 NekoJSFabricClient）
+        // Script key bindings (register/pressed/released/tick; twin KeyBindEvents, polled by
+        // NekoJSFabricClient)
         registry.register(com.tkisor.nekojs.bindings.event.client.KeyBindEvents.GROUP);
         registry.register(com.tkisor.nekojs.bindings.event.client.KeyBindEvents.GROUP, expose -> expose.versioned());
     }
@@ -214,7 +226,8 @@ public final class FabricCorePlugin implements NekoJSPlugin, EventsPoint.Contrib
         registry.register(new CompoundTagAdapter());
         registry.register(new TagKeyAdapter());
         registry.register(new ItemAdapter());
-        // alias：ItemLike 参数复用 Item 适配器的输入形状（id 字符串等），值转成 Item 后 asItem 适配
+        // alias: ItemLike parameters reuse the Item adapter input shape (id strings and so on); the value is
+        // converted to an Item first and then adapted through asItem
         registry.registerAlias(net.minecraft.world.level.ItemLike.class,
                 net.minecraft.world.item.Item.class, net.minecraft.world.item.Item::asItem);
         registry.register(new MobEffectAdapter());
@@ -223,12 +236,12 @@ public final class FabricCorePlugin implements NekoJSPlugin, EventsPoint.Contrib
         registry.register(new ParticleTypeAdapter());
         registry.register(new BlockEntityTypeAdapter());
         registry.register(new CreativeModeTabAdapter());
-        // 配方面（共享树已随配方面移植去守卫）：物品栈/原料/过滤器/配方 JSON 值
+        // Recipe-side (shared tree ported with recipe side to guard): ItemStack/Ingredient/Filter/Recipe JSON values
         registry.register(new com.tkisor.nekojs.js.type_adapter.ItemStackAdapter());
         registry.register(new com.tkisor.nekojs.js.type_adapter.IngredientAdapter());
         registry.register(new com.tkisor.nekojs.js.type_adapter.RecipeFilterAdapter());
         registry.register(new com.tkisor.nekojs.js.type_adapter.RecipeJsonValueAdapter());
-        // 自动注册表适配器兜底：没手写适配器的 vanilla 注册表类型动态补字符串 id 转换
+        // Automatic registry adapter fallback: dynamically adds string ID conversion for vanilla registry types without manual adapters
         com.tkisor.nekojs.js.type_adapter.RegistryAutoAdapterScanner.installInto(
                 registry, List.of(net.minecraft.core.registries.BuiltInRegistries.class));
     }

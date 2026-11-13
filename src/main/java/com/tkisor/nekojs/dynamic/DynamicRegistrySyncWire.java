@@ -23,28 +23,28 @@ import net.neoforged.neoforge.network.handling.IPayloadContext;
 import java.util.function.Consumer;
 
 /**
- * Ticket 21 platform wiring (server assembly + event driving): binds the ticket 21 batch
- * transaction engine to the existing {@link DynamicRegistryFacadeRuntime}
- * (bindActivationEngine seam) and provides the lifecycle/participant/reply event entries.
- * This class is the whole platform assembly of the dynamic registry face on >=26 NeoForge
- * — the shared listener files (ServerEventListener/PlayerEventListener) are not touched.
+ * Server assembly for dynamic registry sync: binds the batch transaction engine to the
+ * existing {@link DynamicRegistryFacadeRuntime} and provides the lifecycle, participant and
+ * reply event entries. This class is the whole platform assembly of the dynamic registry
+ * face on NeoForge 26 and later; the shared listener files (ServerEventListener/
+ * PlayerEventListener) are not touched.
  *
- * <p><b>Bind timing is order-independent</b>: binding happens at
- * {@code ServerAboutToStart} (when the gate is on); there is no ordering guarantee
- * against {@code ServerEventListener#onServerAboutToStart}'s fireInitialCollection — the
- * facade's pendingCandidates is a pull queue, so an engine bound after the initial
- * collection picks up the same batch at the next {@link #onServerTickPost} pump
- * (the lastStagedPlanGeneration watermark prevents double staging).
+ * <p><b>Binding order does not matter</b>: binding happens at {@code ServerAboutToStart}
+ * (when the gate is on), with no ordering guarantee against
+ * {@code ServerEventListener#onServerAboutToStart}'s fireInitialCollection. The facade's
+ * pendingCandidates is a pull queue, so an engine bound after the initial collection picks
+ * up the same batch at the next {@link #onServerTickPost} pump (the
+ * lastStagedPlanGeneration watermark prevents double staging).
  *
- * <p><b>Gate</b>: the existing {@code engine.toml} {@code [dynamicRegistry]} toggle (the
- * same switch as the legacy direct-injection path). Disabled means no engine is bound —
- * this face stays exactly the ticket 16 inert surface (declarations + ledger) and
- * activation stays gated (capability table keeps the not-verified wording until the
- * maintainer ruling plus real-machine verification).
+ * <p><b>Gate</b>: the existing {@code engine.toml} {@code [dynamicRegistry]} toggle, the
+ * same switch as the legacy direct-injection path. Disabled means no engine is bound; the
+ * face then keeps the declarations and ledger only, and activation stays gated (the
+ * capability table keeps the not-verified wording until a maintainer ruling plus real-machine
+ * verification).
  *
- * <p><b>Threading discipline</b> (ticket 17 receive side): network thread receipt →
- * {@code enqueueWork} onto the server main thread → only then into the coordinator (the
- * coordinator is owner-thread-only by contract, not thread-safe).
+ * <p><b>Threading</b>: the network thread receives the message, {@code enqueueWork} moves it
+ * to the server main thread, and only then does it enter the coordinator (which is
+ * owner-thread-only, not thread-safe).
  */
 @EventBusSubscriber(modid = NekoJS.MODID)
 public final class DynamicRegistrySyncWire {

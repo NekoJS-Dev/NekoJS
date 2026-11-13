@@ -6,7 +6,7 @@ import graal.graalvm.polyglot.Context;
 import graal.graalvm.polyglot.Value;
 
 /**
- * {@code ScriptEvents.server/client} 的回调载荷：脚本在其中声明自定义事件。
+ * Payload of the {@code ScriptEvents.server/client} callback: a script declares custom events inside it.
  *
  * <pre>
  * ScriptEvents.server(event => event.register('MyEvents', 'bossKilled'))
@@ -15,7 +15,10 @@ import graal.graalvm.polyglot.Value;
  */
 public class ScriptEventRegistrationEvent {
 
-    /** 拿不到当前 Context 时的来源 id：per-file STARTUP reload 会退化成整类型清理。 */
+    /**
+     * Source id used when the current Context is unavailable: a per-file STARTUP reload then
+     * degrades to clearing the whole type.
+     */
     private static final String UNKNOWN_SOURCE = "nekojs:startup/script_events";
 
     private final ScriptType targetType;
@@ -30,7 +33,7 @@ public class ScriptEventRegistrationEvent {
         return targetType;
     }
 
-    /** 对象形态：{@code { group, name }}。 */
+    /** Object form: {@code { group, name }}. */
     public void register(Object config) {
         Value cfg = config == null ? null : Value.asValue(config);
         if (cfg == null || !cfg.hasMembers()) {
@@ -42,7 +45,7 @@ public class ScriptEventRegistrationEvent {
         register(asString(cfg.getMember("group"), "group"), asString(cfg.getMember("name"), "name"));
     }
 
-    /** 位置形态：{@code register('MyEvents', 'bossKilled')}。 */
+    /** Positional form: {@code register('MyEvents', 'bossKilled')}. */
     public void register(String groupName, String eventName) {
         registrar.register(targetType, groupName, eventName, currentSourceScriptId());
     }
@@ -60,8 +63,9 @@ public class ScriptEventRegistrationEvent {
     }
 
     /**
-     * 注册来源脚本 id：本方法只在脚本回调内（Context 活跃）被调用，
-     * 取当前 Context 的 currentScriptId —— per-file STARTUP reload 按来源清理靠它。
+     * Source script id of the registration. Only called inside a script callback, while a Context is
+     * active. It reads the current Context's currentScriptId, which is what lets a per-file STARTUP
+     * reload clean up by source.
      */
     private static String currentSourceScriptId() {
         Context current = Context.getCurrent();

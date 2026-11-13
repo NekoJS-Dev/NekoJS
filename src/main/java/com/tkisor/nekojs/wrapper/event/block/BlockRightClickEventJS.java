@@ -9,14 +9,16 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
 
 /**
- * 玩家右键方块事件（{@code BlockEvents.rightClicked}）的加载器中立载荷。
+ * Loader-neutral payload for the player right-click block event
+ * ({@code BlockEvents.rightClicked}).
  *
- * <p>NeoForge 侧直传原生 {@code PlayerInteractEvent.RightClickBlock}（成员同形：
- * getPlayer/getLevel/getPos/getHand，state 由 pos 解析）；fabric 侧由
- * {@code FabricBlockEventBindings} 从 {@code UseBlockCallback} 转换。
+ * <p>NeoForge passes its native {@code PlayerInteractEvent.RightClickBlock} straight through
+ * (same members: getPlayer/getLevel/getPos/getHand, with state resolved from pos); fabric
+ * converts {@code UseBlockCallback} in {@code FabricBlockEventBindings}.
  *
- * <p>可取消：监听器返回 {@code true} 时，NeoForge 侧取消原生事件，fabric 侧回调返回
- * {@code SUCCESS}（跳过后续交互处理）。仅服务端触发（绑定处过滤客户端交互）。
+ * <p>Cancellable: when a listener returns {@code true}, NeoForge cancels the native event and
+ * fabric returns {@code SUCCESS} from the callback, which skips the remaining interaction
+ * handling. Fires on the server only (the binding filters client interactions).
  */
 @Doc("Fired when a player right-clicks a block (BlockEvents.rightClicked).")
 @Doc("Return true to consume the interaction.")

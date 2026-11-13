@@ -223,7 +223,7 @@ class ApiSurfaceBootstrapTest {
                 "test-contract.json", "sha256:test", "sha256:test");
     }
 
-    /** 合成一个空 portable-core 预览契约（替代已删除的 ApiContractReader.emptyVerifiedCorePreview）。 */
+    /** Builds an empty portable-core preview contract for tests. */
     private static VerifiedApiContract emptyPortablePreview(URI codeSource) {
         ApiContractIdentity identity = new ApiContractIdentity(
                 "nekojs-core", ApiContractKind.PORTABLE, "portable-core", ApiVersion.parse("0.0.0"));

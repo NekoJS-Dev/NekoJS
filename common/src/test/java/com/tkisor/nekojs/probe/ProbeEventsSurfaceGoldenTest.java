@@ -40,24 +40,25 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * 票 14 AC5：{@link ProbeEvents} 限定为 Probe 扩展面——事件进入真实 catalog/declaration
- * golden，且不创建通用运行时事件或第二事件 bus。
+ * {@link ProbeEvents} is limited to the Probe extension surface: its events reach the real
+ * catalog/declaration goldens, and it creates no general runtime events and no second event bus.
  *
- * <p>钉住的契约：
+ * <p>What the test pins down:
  * <ul>
- *   <li>{@code ProbeEvents.GROUP} 的成员集合冻结为 4 条 probe-only 总线
- *       （modifyType/assignType/addGlobal/snippets），全部 SERVER side；</li>
- *   <li>catalog 派生（{@link NekoScriptCatalog#events}）：恰好 4 条、每条一次，
- *       payload 事件类 = probe 扩展事件；</li>
- *   <li>TS 声明 golden（{@code nekojs/probe/probe-events.expected.d.ts}，经
- *       {@code :common:regenerateGoldens} 显式再生成）：SERVER 侧包含全部 4 个成员，
- *       CLIENT 侧一条都没有（side 过滤不产生重复/错侧声明）；</li>
- *   <li>Python 声明（同一 entry 列表驱动）：4 个成员各恰好一次。</li>
+ *   <li>the member set of {@code ProbeEvents.GROUP} is frozen at 4 probe-only buses
+ *       (modifyType/assignType/addGlobal/snippets), all on the SERVER side;</li>
+ *   <li>catalog derivation ({@link NekoScriptCatalog#events}): exactly 4 entries, each once, with
+ *       the probe extension event classes as payload;</li>
+ *   <li>the TS declaration golden ({@code nekojs/probe/probe-events.expected.d.ts}, regenerated
+ *       explicitly through {@code :common:regenerateGoldens}): the SERVER side contains all 4
+ *       members and the CLIENT side contains none (side filtering produces no duplicate or
+ *       wrong-side declarations);</li>
+ *   <li>the Python declaration (driven by the same entry list): each of the 4 members exactly once.</li>
  * </ul>
  *
- * <p>这些总线只在 probe 管线（{@code ProbeCoordinator}/{@code ProbeIrBuilder}）post，
- * 不承载任何游戏运行时事件——「不变成通用运行时事件」由成员集合冻结 + 唯一 post 来源
- * 保证（见本票 REPORT 的旁路清单）。
+ * <p>Only the probe pipeline ({@code ProbeCoordinator}/{@code ProbeIrBuilder}) posts on these buses,
+ * and they carry no game runtime events. The frozen member set plus the single post site is what
+ * keeps them from turning into general runtime events.
  */
 class ProbeEventsSurfaceGoldenTest {
 
@@ -117,7 +118,8 @@ class ProbeEventsSurfaceGoldenTest {
         assertEquals(resource("probe-events.expected.d.ts"), normalize(actual),
                 "ProbeEvents TS declaration golden changed; regenerate + review via :common:regenerateGoldens");
 
-        // golden 的可读性断言：4 个成员各恰好一次，且都是真实 payload 类型（非 any）
+        // Readability assertions on the golden: each of the 4 members appears exactly once, and all of them
+        // use real payload types (not any).
         for (String member : PROBE_ONLY_MEMBERS) {
             assertEquals(1, count("function " + member + "(", actual),
                     member + " must be declared exactly once");
@@ -158,9 +160,12 @@ class ProbeEventsSurfaceGoldenTest {
         }
     }
 
-    // ---- golden 支撑（与 LegacyProbeCompatibilityTest 同一机制） ----
+    // ---- Golden support (same mechanism as LegacyProbeCompatibilityTest) ----
 
-    /** 重生成模式（-Dnekojs.golden.regenerate=true）：实际产物覆盖写回 golden 后跳过断言。 */
+    /**
+     * Regeneration mode (-Dnekojs.golden.regenerate=true): writes the actual output over the golden,
+     * then skips the assertion.
+     */
     private static void maybeRegenerate(String name, String actual) throws Exception {
         if (!ProbeGoldenSupport.regenerateEnabled()) return;
         Path dir = ProbeGoldenSupport.resourceDir(ProbeEventsSurfaceGoldenTest.class, "/nekojs/probe/");

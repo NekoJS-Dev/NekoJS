@@ -6,9 +6,10 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.gen.Accessor;
 
 /**
- * 暴露配置/游玩阶段监听器持有的 {@link Connection}：vanilla 里是 protected 字段，
- * fabric networking API 也不转发（NeoForge 侧的 {@code IPayloadContext#connection()} 有）。
- * 包分发需要它做内存连接判定（单人/局域网主机自己的连接不参与同步）。
+ * Exposes the {@link Connection} held by the configuration/play packet listener. It is a protected
+ * field in vanilla, and the Fabric networking API does not forward it (NeoForge's
+ * {@code IPayloadContext#connection()} does). Packet distribution needs it to test for a memory
+ * connection: the singleplayer/LAN host's own connection does not take part in syncing.
  */
 @Mixin(ServerCommonPacketListenerImpl.class)
 public interface ServerCommonPacketListenerAccessor {

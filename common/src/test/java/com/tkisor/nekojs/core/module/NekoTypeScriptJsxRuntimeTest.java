@@ -39,12 +39,15 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * 票据 12 AC2 / AC3 / AC5 / AC7：TS 擦除不改变运行时值与导出形状；JSX/TSX element、fragment
- * 与 automatic runtime 保持既有行为；跨 import 的执行期异常经 source map 回到原始
- * TS/JSX/TSX 位置并保留模块身份；TS/JSX/TSX 与 JS/CJS/ESM 混合 import 的身份与错误归属可追踪。
+ * Covers the runtime side of .ts, .jsx and .tsx. TS erasure leaves runtime values and export shape
+ * unchanged; JSX/TSX elements, fragments and the automatic runtime behave as before;
+ * execution-time exceptions that cross an import map back through the source map to the original
+ * TS/JSX/TSX position while keeping the module identity; mixed imports of TS/JSX/TSX with
+ * JS/CJS/ESM keep both module identity and error attribution traceable.
  *
- * <p>观测点是最高调用者 seam：{@code loadEntry}/{@code loadEntryAsync} 的返回值、异常对象字段
- * （stage/owner/sourcePath/sourceLine/sourceColumn/moduleId）与 guest cause。
+ * <p>Observations are made at the top-level caller: the value returned by
+ * {@code loadEntry}/{@code loadEntryAsync}, the exception object fields
+ * (stage/owner/sourcePath/sourceLine/sourceColumn/moduleId) and the guest cause.
  */
 class NekoTypeScriptJsxRuntimeTest {
 
@@ -104,7 +107,7 @@ class NekoTypeScriptJsxRuntimeTest {
         return file;
     }
 
-    // ---- AC2: erasure preserves runtime values, control flow and export shape ----
+    // ---- Erasure preserves runtime values, control flow and export shape ----
 
     @Test
     void labelFontReachesMeasurementAndProfileResizeWithoutGuestRerender() throws Exception {
@@ -289,7 +292,7 @@ class NekoTypeScriptJsxRuntimeTest {
         assertEquals("div", jsx.getMember("view").getMember("tag").asString());
     }
 
-    // ---- AC3: JSX/TSX element, fragment and automatic runtime ----
+    // ---- JSX/TSX element, fragment and automatic runtime ----
 
     @Test
     void classicRuntimeLowersElementsFragmentsAndChildren() throws Exception {
@@ -344,7 +347,7 @@ class NekoTypeScriptJsxRuntimeTest {
                 "automatic fragment must use the Fragment identity");
     }
 
-    // ---- AC5: execution-time errors map back to authored TS/JSX/TSX positions ----
+    // ---- Execution-time errors map back to authored TS/JSX/TSX positions ----
 
     @Test
     void runtimeFailureInTranspiledModuleReportsAuthoredLineAndIdentity() throws Exception {
@@ -369,11 +372,10 @@ class NekoTypeScriptJsxRuntimeTest {
     }
 
     /**
-     * Review-round-1 F-AC4: the lowered-JS syntax error is only detectable once the executor
-     * compiles the prepared code, so {@code cache.prepare} must succeed and the diagnostic is
-     * produced by the host's {@code NekoEsmLinkException} mapping — not by the upstream prepare
-     * branch. This test fails if the mapping branch is removed, because the raw guest position is
-     * the generated line.
+     * A syntax error in the lowered JS only surfaces when the executor compiles the prepared code, so
+     * {@code cache.prepare} must succeed and the diagnostic comes from the host's
+     * {@code NekoEsmLinkException} mapping, not from the upstream prepare branch. This test fails if
+     * that mapping branch is removed, because the raw guest position is the generated line.
      */
     @Test
     void loweredJsSyntaxErrorIsMappedAfterPreparationSucceeded() throws Exception {
@@ -438,7 +440,7 @@ class NekoTypeScriptJsxRuntimeTest {
         assertTrue(staged.sourceColumn() > 0, staged.detail());
     }
 
-    // ---- AC7: mixed TS/JSX/TSX and JS/CJS/ESM imports stay traceable ----
+    // ---- Mixed TS/JSX/TSX and JS/CJS/ESM imports stay traceable ----
 
     @Test
     void mixedImportsResolveAndPreserveModuleIdentity() throws Exception {
@@ -498,9 +500,9 @@ class NekoTypeScriptJsxRuntimeTest {
                 "a nested transpiled failure must name the failing child, not the synthetic interop module: "
                         + staged.detail());
         assertEquals("server_scripts/src/mixed-boom-child.tsx", staged.moduleId().replace('\\', '/'));
-        // 该位置过去是 -1（“interop 包装的子模块失败没有 guest location”）。宿主现在按 guest 栈帧
-        // 选择「能解析到 authored 位置」的那一帧，因此这里能给出子模块真实的 throw 行 3；
-        // 归因仍属于子模块，不是合成的 interop 模块。
+        // The host picks the guest stack frame that resolves to an authored position, so this reports the
+        // child's real throw line 3. The failure still belongs to the child, not to the synthetic interop
+        // module.
         assertEquals(3, staged.sourceLine(),
                 "the interop-wrapped child failure must report the child's authored throw line: " + staged.detail());
         assertTrue(staged.sourceColumn() > 0, staged.detail());
@@ -520,10 +522,10 @@ class NekoTypeScriptJsxRuntimeTest {
         NekoModuleError staged = NekoModulePipelinePrepareTest.assertStaged(
                 failure, NekoModuleError.Stage.EXECUTE, NekoModuleError.OWNER_EXECUTION);
         assertTrue(String.valueOf(staged.getMessage()).contains("dynamic-child-boom"), String.valueOf(staged));
-        // Known limitation (recorded in the closure record): a literal dynamic import of a failing
-        // CommonJS child loses the child's module identity at Graal's promise/host boundary, so the
-        // failure is attributed to the importing entry with no invented location. The synchronous
-        // interop path above does preserve the child identity.
+        // Known limitation: a literal dynamic import of a failing CommonJS child loses the child's module
+        // identity when the promise crosses back to the host, so the failure is attributed to the
+        // importing entry with no invented location. The synchronous interop path above does preserve
+        // the child identity.
         assertEquals("server_scripts/src/dynamic-boom-entry.ts", staged.sourcePath().replace('\\', '/'),
                 staged.detail());
         assertEquals(-1, staged.sourceLine(),

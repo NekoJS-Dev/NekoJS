@@ -35,7 +35,7 @@ public record CapabilityDefinition(
         }
     }
 
-    /** 兼容构造：未声明 status 时默认 {@link CapabilityStatus#SUPPORTED}。 */
+    /** Compatibility constructor: defaults to {@link CapabilityStatus#SUPPORTED} when no status is declared. */
     public CapabilityDefinition(
             String name,
             ApiVersion contractVersion,

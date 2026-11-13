@@ -10,25 +10,24 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * Generation-scoped candidate plan for the client post-effect declaration lifecycle
- * (ticket 28): {@code ClientEvents.postEffects} listeners collect declarations while the
- * candidate generation is being built, and only the joint commit point turns them into the
- * active generation.
+ * Candidate plan for the client post-effect declaration lifecycle, scoped to one generation:
+ * {@code ClientEvents.postEffects} listeners collect declarations while the candidate generation
+ * is built, and only the joint commit point turns them into the active generation.
  *
- * <p><b>Inert by construction.</b> This class lives in {@code common} and holds no
- * Minecraft, loader, renderer or resource type: collecting a batch cannot mount a
- * production listener, activate a post chain or touch the current client frame. The
- * platform Adapter ({@code PostEffectDomainOwner}) owns every renderer/resource effect and
- * applies them exactly once from {@link #publish()}.
+ * <p><b>Inert by construction.</b> This class lives in {@code common} and holds no Minecraft,
+ * loader, renderer or resource type. Collecting a batch cannot mount a production listener,
+ * activate a post chain or touch the current client frame. The platform Adapter
+ * ({@code PostEffectDomainOwner}) owns every renderer and resource effect and applies them
+ * exactly once from {@link #publish()}.
  *
- * <p><b>Whole-batch failure.</b> A collection error poisons the plan, so joint preflight
- * rejects the whole batch, the candidate is discarded and the previously active generation
- * keeps serving ({@code PostEffectDomainOwner.Outcome.BLOCKED}). No partial commit exists.
+ * <p><b>Whole-batch failure.</b> A collection error poisons the plan, so the joint preflight
+ * rejects the whole batch, the candidate is discarded and the generation that was active before
+ * keeps serving ({@code PostEffectDomainOwner.Outcome.BLOCKED}). There is no partial commit.
  *
- * <p><b>Retire semantics.</b> {@link #beginBatch} records which ids the previously active
- * generation owns; {@link #finish()} keeps every collected install and retires every
- * previous id the candidate did not declare. Retirement releases the old generation's
- * renderer/resource state instead of leaving a silently stale runtime definition.
+ * <p><b>Retire semantics.</b> {@link #beginBatch} records which ids the generation that was
+ * active before owns. {@link #finish()} keeps every collected install and retires every previous id
+ * the candidate did not declare. Retirement releases the old generation's renderer and resource
+ * state instead of leaving a silently stale runtime definition.
  */
 public final class PostEffectCandidatePlan implements CandidateStatePlan {
 
@@ -116,7 +115,8 @@ public final class PostEffectCandidatePlan implements CandidateStatePlan {
     public synchronized List<PostEffectDeclaration> finish() {
         if (finished) return declarations;
         List<PostEffectDeclaration> result = new ArrayList<>(installs.values());
-        // 显式 unregister 先于「旧 generation 未再声明」的隐式退役，两者并集去重。
+        // Explicit unregister entries come first, then the implicit retire of ids the old generation no
+        // longer declares; the union drops duplicates.
         for (String explicit : explicitlyRetired) {
             result.add(PostEffectDeclaration.retire(explicit));
         }

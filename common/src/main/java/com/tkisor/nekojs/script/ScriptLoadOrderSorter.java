@@ -12,30 +12,37 @@ import java.util.Map;
 import java.util.function.Predicate;
 
 /**
- * 求解脚本的加载顺序：以 {@link ScriptProperty#PRIORITY} 降序稳定排序为主序，
- * 在同 priority 内对 {@link ScriptProperty#AFTER} 声明的依赖做稳定的拓扑排序（Kahn 算法）。
+ * Works out the order scripts load in. The main order is a stable sort by
+ * {@link ScriptProperty#PRIORITY} from high to low; within one priority, scripts that declare
+ * {@link ScriptProperty#AFTER} dependencies are topologically sorted with Kahn's algorithm, keeping
+ * ties stable.
  *
- * <p>{@code after:} 引用解析规则（宽松处理）：
+ * <p>Rules for resolving an {@code after:} reference (lenient):
  * <ul>
- * <li>{@code aaa/bbb.js} —— 相对脚本类型根目录；</li>
- * <li>{@code ./ccc.js} —— 相对声明脚本所在目录；</li>
- * <li>{@code aaa/*} —— 脚本类型根目录 {@code aaa/} 下的所有文件；</li>
- * <li>允许带 {@code nekojs/}、{@code nekojs:<类型>/} 或 {@code <类型>/} 前缀，反斜杠视为 {@code /}；</li>
- * <li>未知引用被忽略并记入诊断；循环依赖回退到原始稳定顺序。</li>
+ * <li>{@code aaa/bbb.js} — relative to the script type root;</li>
+ * <li>{@code ./ccc.js} — relative to the directory of the declaring script;</li>
+ * <li>{@code aaa/*} — every file under the script type root {@code aaa/};</li>
+ * <li>a {@code nekojs/}, {@code nekojs:<type>/} or {@code <type>/} prefix is allowed, and a
+ * backslash counts as {@code /};</li>
+ * <li>unknown references are ignored and recorded in the diagnostics; cyclic dependencies fall back
+ * to the original stable order.</li>
  * </ul>
  *
- * <p>依赖边只在「同 priority 组内、双方都会执行（{@code shouldRun}）」的脚本之间生效；
- * 指向其他 priority 组或不会执行脚本的引用是合法的，静默忽略。
+ * <p>A dependency edge only applies between scripts in the same priority group that will both run
+ * ({@code shouldRun}). A reference to another priority group or to a script that will not run is
+ * allowed and silently ignored.
  *
- * <p>确定性：无法由 {@code after} 决定的脚本保持 priority 稳定排序后的原始相对顺序
- * （即发现顺序，等价于路径字典序）；因此结果与输入批次顺序一致地可复现。
+ * <p>Determinism: scripts that {@code after} cannot order keep their original relative order after
+ * the stable priority sort (the discovery order, which matches path lexicographic order), so the
+ * result is reproducible from the input batch order.
  */
 final class ScriptLoadOrderSorter {
 
     private ScriptLoadOrderSorter() {
     }
 
-    /** 一次排序的诊断结果：是否出现问题，以及可拼接成日志的描述片段。 */
+    /** Diagnostics of one sort pass: whether problems occurred, plus description fragments that can be
+     * joined into a log line. */
     static final class Result {
         private final List<String> problems;
 
@@ -56,10 +63,12 @@ final class ScriptLoadOrderSorter {
         }
     }
 
-    /** 单个解析后的 {@code after} 引用：{@code key} 是脚本根目录下的相对路径，{@code glob} 表示目录通配。 */
+    /** One resolved {@code after} reference: {@code key} is a path relative to the script root, and
+     * {@code glob} marks a directory wildcard. */
     private record Ref(String key, boolean glob) {
 
-        /** 该引用是否命中批次中的任何脚本 key（无论其 priority / 是否运行）。 */
+        /** Whether this reference matches any script key in the batch, whatever its priority or whether it
+         * runs. */
         boolean known(Map<String, Boolean> knownKeys) {
             if (!glob) {
                 return knownKeys.containsKey(key);
@@ -81,31 +90,33 @@ final class ScriptLoadOrderSorter {
     }
 
     /**
-     * 原地重排脚本列表：先按 priority 降序稳定排序，再在每个相同 priority 的组内应用
-     * {@code after:} 依赖的稳定拓扑排序。
+     * Reorders the script list in place: first a stable sort by priority from high to low, then a stable
+     * topological sort of the {@code after:} dependencies within each group of equal priority.
      *
-     * @param scripts   待排序的脚本批次（同一次 {@code loadScriptsInto} 的入参），会被原地重排
-     * @param shouldRun 判断脚本是否会真正执行的谓词（{@link ScriptContainer#shouldRun()}）；
-     *                  只有双方都会执行的依赖边才生效
-     * @return 诊断结果；无问题时 {@link Result#hasProblems()} 为 {@code false}
+     * @param scripts   the script batch to sort (the same list passed to {@code loadScriptsInto}); it is
+     *                  reordered in place
+     * @param shouldRun decides whether a script will really run ({@link ScriptContainer#shouldRun()});
+     *                  a dependency edge only applies when both sides run
+     * @return the diagnostics; when there are no problems, {@link Result#hasProblems()} is {@code false}
      */
     static Result applyAfterOrder(List<ScriptContainer> scripts, Predicate<ScriptContainer> shouldRun) {
         List<String> problems = new ArrayList<>();
 
-        // 1. priority 降序稳定排序（主序，行为与旧实现完全一致）
+        // 1. Stable sort by priority from high to low; this sets the main order.
         scripts.sort((s1, s2) -> {
             int p1 = s1.properties.getOrDefault(ScriptProperty.PRIORITY);
             int p2 = s2.properties.getOrDefault(ScriptProperty.PRIORITY);
             return Integer.compare(p2, p1);
         });
 
-        // 2. 全批次已知 key 集合：用于区分「未知引用」（告警）与「已知但不同 priority / 不运行」（静默）
+        // 2. Known keys of the whole batch: tells an unknown reference (warned) apart from a known one in
+        // another priority group or in a script that does not run (silent).
         Map<String, Boolean> knownKeys = new HashMap<>();
         for (ScriptContainer script : scripts) {
             knownKeys.putIfAbsent(keyOf(script), shouldRun.test(script));
         }
 
-        // 3. 对每个 priority 组做稳定拓扑排序
+        // 3. Stable topological sort of each priority group.
         int i = 0;
         while (i < scripts.size()) {
             int priority = scripts.get(i).properties.getOrDefault(ScriptProperty.PRIORITY);
@@ -170,13 +181,13 @@ final class ScriptLoadOrderSorter {
         scripts.addAll(ordered);
     }
 
-    /** 对 {@code [from, to)} 区间（同一 priority）做稳定拓扑排序并写回。 */
+    /** Stable topological sort of the {@code [from, to)} range (one priority), written back in place. */
     private static void topoSortGroup(List<ScriptContainer> scripts, int from, int to,
                                       Predicate<ScriptContainer> shouldRun,
                                       Map<String, Boolean> knownKeys, List<String> problems) {
         int n = to - from;
 
-        // key → 组内下标（仅会执行的脚本能作为依赖目标）
+        // key → index within the group; only scripts that run can be dependency targets.
         Map<String, Integer> indexByKey = new HashMap<>();
         for (int k = from; k < to; k++) {
             ScriptContainer script = scripts.get(k);
@@ -203,7 +214,8 @@ final class ScriptLoadOrderSorter {
                     unresolved.add(display(declarer) + " → " + raw.trim());
                     continue;
                 }
-                // 未命中同组可执行目标（在别的 priority 组 / 不会执行 / 仅自引用）：合法，静默忽略
+                // No runnable target in this group (another priority group, a script that does not run, or a
+                // self-reference only): allowed, silently ignored.
                 if (ref.glob()) {
                     for (Map.Entry<String, Integer> entry : indexByKey.entrySet()) {
                         if (ref.matchesKey(entry.getKey()) && entry.getValue() != k - from) {
@@ -223,10 +235,12 @@ final class ScriptLoadOrderSorter {
             problems.add(formatProblems(unresolved.size() + " 个 after 引用无法解析，已忽略", unresolved));
         }
 
-        // 原始稳定顺序快照：成环时整组回退用（见下方 sorted.size() < n 分支）
+        // Snapshot of the original stable order, used to fall back for the whole group on a cycle
+        // (see the sorted.size() < n branch below).
         List<ScriptContainer> originalOrder = new ArrayList<>(scripts.subList(from, to));
 
-        // Kahn：初始就绪队列按组内原始顺序入队，保证结果稳定确定
+        // Kahn: fill the initial ready queue in the group's original order, which keeps the result
+        // stable and deterministic.
         ArrayDeque<Integer> ready = new ArrayDeque<>();
         for (int k = 0; k < n; k++) {
             if (inDegree[k] == 0) {
@@ -246,9 +260,10 @@ final class ScriptLoadOrderSorter {
         }
 
         if (sorted.size() < n) {
-            // 循环依赖：整组回退到原始稳定顺序（类文档承诺），而不是把环成员追加到
-            // 已排序节点之后 —— 后者会打乱无关脚本的相对位置（如把无依赖的脚本挤到
-            // 最前）并破坏 after 语义。
+            // Cyclic dependency: the whole group falls back to the original stable order, as the class
+            // documentation promises, instead of appending the cycle members after the already sorted
+            // ones. Appending would move unrelated scripts (it pushes independent scripts to the
+            // front) and break the after semantics.
             List<String> cycled = new ArrayList<>();
             for (int k = 0; k < n; k++) {
                 if (inDegree[k] > 0) {
@@ -270,7 +285,8 @@ final class ScriptLoadOrderSorter {
         inDegree[dependent]++;
     }
 
-    /** 解析单个 {@code after} 引用；无法解析（绝对路径 / 越出根目录 / 非法路径）时返回 {@code null}。 */
+    /** Resolves one {@code after} reference; returns {@code null} when it cannot be resolved (absolute
+     * path, escaping the root, or an invalid path). */
     private static Ref resolve(String raw, ScriptContainer declarer) {
         String r = raw.trim().replace('\\', '/');
         if (r.isEmpty()) {
@@ -320,14 +336,16 @@ final class ScriptLoadOrderSorter {
     }
 
     /**
-     * 脚本在类型作用域下的相对 key（正斜杠分隔），与 {@link com.tkisor.nekojs.api.ScriptType#makeId}
-     * 及 {@link ScriptPack#idPathPrefix()} 的拼法一致：以发现阶段算好的 {@link ScriptId} 为
-     * 单一来源，去掉开头的类型段——平铺脚本为 {@code foo/bar.js}，包脚本为
-     * {@code packs/<id>/foo/bar.js}。
+     * The script's relative key inside its type scope, with forward slashes, spelled the same way as
+     * {@link com.tkisor.nekojs.api.ScriptType#makeId} and {@link ScriptPack#idPathPrefix()}. It takes
+     * the {@link ScriptId} computed during discovery as the single source and strips the leading type
+     * segment: a flat script becomes {@code foo/bar.js}, a pack script becomes
+     * {@code packs/<id>/foo/bar.js}.
      *
-     * <p>旧实现用 {@code type.path.relativize(script.path)}：包脚本不在类型根下，会得到
-     * {@code ../packs/...} 形式的 key，被 {@link #resolve} 的 {@code ..} 越界检查拒绝——
-     * {@code after:} 指向包内脚本、以及包内脚本的 {@code ./sibling.js} 相对引用全部静默失效。
+     * <p>A pack script does not live under the type root, so relativizing against the type root would
+     * produce {@code ../packs/...} keys, which the {@code ..} escape check in {@link #resolve} rejects.
+     * That silently drops both {@code after:} references into a pack and the {@code ./sibling.js}
+     * references inside a pack.
      */
     private static String keyOf(ScriptContainer script) {
         String path = script.id.path();

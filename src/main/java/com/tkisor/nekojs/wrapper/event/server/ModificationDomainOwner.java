@@ -26,65 +26,67 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Item/Block modification 的 domain owner 与平台 Adapter（ticket 39）：
- * <b>root 授权的既有 domain owner</b>——实例由平台装配创建并经
- * {@code NekoRuntimeRoot#registerDomainCollector} 注册（root 持有生命周期，进程级归类：
- * item 默认组件与 block Properties 在注册期冻结、从不下变，基线是进程级例外但按 root
- * 生命周期持有，root close 恢复并清空——独立测试 root 不互相污染）。不是新的公开
- * Modification Runtime / 第二框架：只实现 common 的
- * {@link CandidateDomainCollector}（收集挂载点）与 {@link ModificationApplier}（应用接缝）。
+ * Collects, validates, and applies item and block property modifications on the server.
  *
- * <p>两个合法收集点：
+ * <p>Platform assembly creates one instance per runtime root and registers it via
+ * {@code NekoRuntimeRoot#registerDomainCollector}. Item default components and block properties
+ * are process-wide and fixed at registration, so original baselines are captured on first use,
+ * owned for the lifetime of the root, and restored and cleared when {@link #close()} runs so
+ * separate test roots stay isolated.
+ *
+ * <p>Collection runs at two points:
  * <ul>
- *   <li><b>事务 reload（DOMAIN_PLAN）</b>：{@link #collect} 把收集事件派发进<b>候选</b>的
- *       挂起监听器，产出 inert {@link ModificationCandidatePlan} 挂入联合边界——与
- *       global/shared 顶层写集联合成功或失败（AC9）；</li>
- *   <li><b>初始 generation（服务器 about-to-start）</b>：{@link #applyInitialPlan} 把收集
- *       事件派发给 active 总线，preflight 通过后在同一 owner 内应用（无旧 active 时
- *       「旧值」= vanilla 基线；不通过 → 整批 blocked，保持 vanilla，无部分修改）。</li>
+ *   <li><b>Transactional reload ({@code DOMAIN_PLAN}):</b> {@link #collect} dispatches collection
+ *       events to pending candidate listeners and registers an inert
+ *       {@link ModificationCandidatePlan} that succeeds or fails atomically with
+ *       {@code global}/shared top-level state.</li>
+ *   <li><b>Initial generation (server about-to-start):</b> {@link #applyInitialPlan} dispatches
+ *       collection events to active listeners, preflights the resulting plan, and applies it; if
+ *       preflight fails, the whole batch is rejected and vanilla baselines remain untouched.</li>
  * </ul>
  *
- * <p>应用契约（AC7）：先恢复全部 NekoJS 持有基线，再按声明顺序应用完整新计划——
- * 声明移除的修改在成功 reload 后回到基线（旧 item 路径的静默 stale 不再出现）。
- * 恢复/apply 只承诺 NekoJS 拥有且已证明可恢复的字段（item 默认组件 Map、block 六属性
- * 的三处副本）；不承诺回滚其他 mod、世界、网络或文件副作用（spec 09 外部副作用边界）。
- * 26.x 与 1.21.1 的组件发布机制差异（bindComponents vs 反射字段）在各自
- * {@code ItemModificationEventJS} 成对文件；block 半边是 26.x 独有（1.21.1 无此总线）。
+ * <p>Applying a plan first restores every baseline held by NekoJS and then applies all new
+ * declarations in order, so removed declarations revert to their baseline values on reload.
+ * Only fields owned by NekoJS are restored (the item default component map and the three copies
+ * of block properties); side effects in other mods, worlds, network state, or files are not
+ * rolled back. Differences between 26.x and 1.21.1 item component updates ({@code bindComponents}
+ * vs. reflected fields) live in each version's {@code ItemModificationEventJS}; block modification
+ * exists only on 26.x.
  */
 public final class ModificationDomainOwner implements CandidateDomainCollector, ModificationApplier, AutoCloseable {
 
-    /** 收集器标识（与 {@code ModificationCandidatePlan.DOMAIN} 对齐）。 */
+    /** Collector identifier (aligned with {@code ModificationCandidatePlan.DOMAIN}). */
     public static final String DOMAIN = ModificationCandidatePlan.DOMAIN;
 
-    /** 26.x 组件上限：{@code Item#ABSOLUTE_MAX_STACK_SIZE}。 */
+    /** 26.x component limit: {@code Item#ABSOLUTE_MAX_STACK_SIZE}. */
     private static final int MAX_STACK_SIZE_LIMIT = 99;
 
-    /** item 原始组件基线（进程级例外：默认组件注册期冻结；实例字段，root 持有）。 */
+    /** Original item default components captured before first modification, held per runtime root. */
     private final Map<String, DataComponentMap> itemBaselines = new java.util.LinkedHashMap<>();
-    /** block 原始属性基线（26.x 独有；含原始光照函数）。 */
+    /** Original block property snapshots on 26.x, including the original light-emission functions. */
     private final Map<String, BlockModificationJS.PropertySnapshot> blockBaselines = new java.util.LinkedHashMap<>();
-    /** fireResistant 应用需要的 damage type registry（26.x DAMAGE_RESISTANT 面）；about-to-start 绑定。 */
+    /** Server bound at about-to-start, providing the damage type registry needed by {@code fireResistant}. */
     private volatile MinecraftServer boundServer;
-    /** 最近一次结局（诊断公开面：区分 active / blocked / recovery-failed / restored）。 */
+    /** Most recent collection/application outcome exposed for diagnostics. */
     private volatile Diagnostics lastDiagnostics = new Diagnostics(Outcome.INITIAL, "none", 0, 0, List.of(), null);
-    /** 最近成功应用的计划指纹（初始 generation 收集的等价跳过依据）。 */
+    /** Fingerprint of the last successfully applied plan, used to skip duplicate startup runs. */
     private volatile String lastAppliedFingerprint;
 
-    /** 最近一次成功发布的声明快照，用于新玩家登录后的 client catch-up。 */
+    /** Snapshot of the last successfully published declaration, used for client catch-up after a new player logs in. */
     private volatile List<ModificationDeclaration> activeDeclarations = List.of();
     private volatile long syncGeneration;
 
     public ModificationDomainOwner() {
     }
 
-    // ---- server 绑定（fireResistant 的 registry access 来源） ----
+    // ---- Server binding (source of registry access for fireResistant) ----
 
-    /** 服务器 about-to-start 绑定（早于任何事务 reload 的 DOMAIN_PLAN 可能需要它）。 */
+    /** Server about-to-start binding (may be required by DOMAIN_PLAN before any transaction reload). */
     public void bindServer(MinecraftServer server) {
         this.boundServer = server;
     }
 
-    /** 服务器停止解除绑定。 */
+    /** Unbinds when the server stops. */
     public void clearServer() {
         this.boundServer = null;
     }
@@ -129,13 +131,13 @@ public final class ModificationDomainOwner implements CandidateDomainCollector, 
         handle.registerPlan(plan);
     }
 
-    // ---- 初始 generation（服务器启动收集点） ----
+    // ---- Initial generation (server startup collection) ----
 
     /**
-     * 初始 generation 的收集 + 预检 + 应用（旧 {@code ItemModificationEventJS.fire} /
-     * {@code BlockModificationEventJS.fire} 的收口替代）：收集事件派发给 active 总线
-     * 监听器；preflight 失败 → 整批 blocked（保持 vanilla/既有值，无部分修改），诊断
-     * 记录首个错误；与上一次成功应用指纹相同则跳过重放（等价幂等，不产生第二次应用）。
+     * Collects, preflights, and applies modifications for the initial generation by dispatching
+     * to active listeners. If preflight fails, the entire batch is blocked without partial changes
+     * and the error is recorded in diagnostics. Skips re-applying if the plan fingerprint matches
+     * the last successfully applied plan.
      */
     public void applyInitialPlan(MinecraftServer server) {
         bindServer(server);
@@ -167,7 +169,7 @@ public final class ModificationDomainOwner implements CandidateDomainCollector, 
         apply(plan.declarations(), "startup");
     }
 
-    // ---- ModificationApplier：联合预检 / 应用 ----
+    // ---- ModificationApplier: preflight and apply ----
 
     @Override
     public String adapterId() {
@@ -213,7 +215,7 @@ public final class ModificationDomainOwner implements CandidateDomainCollector, 
                     + ": stackable items cannot be damageable (set maxStackSize = 1)");
         }
         if (Boolean.TRUE.equals(properties.get("fireResistant")) && boundServer == null) {
-            // Adapter 拒绝：26.x DAMAGE_RESISTANT 需要 damage type registry（server 未绑定）
+            // 26.x DAMAGE_RESISTANT requires the damage type registry from a bound server.
             throw new IllegalArgumentException(
                     "fireResistant = true needs a bound server (damage type registry); blocked at: "
                             + declaration.targetId());
@@ -246,10 +248,10 @@ public final class ModificationDomainOwner implements CandidateDomainCollector, 
     }
 
     /**
-     * 应用（commit 点 / 初始 generation）：恢复全部 NekoJS 持有基线 → 按声明顺序应用
-     * 完整新计划（同目标后声明整体替换前声明——从基线叠加，保持旧可观察顺序）。
-     * preflight 通过后仍意外抛出时：尽力恢复基线、诊断 RECOVERY_FAILED、异常上抛
-     * （{@code CandidateStatePlan#publish} 契约路径：计划部分副作用不承诺深回滚）。
+     * Restores all baselines held by NekoJS and then applies the new plan in declaration order
+     * (each declaration builds on the baseline, so a later declaration for the same target
+     * replaces earlier ones). If an unexpected error occurs after preflight, attempts to restore
+     * baselines, records {@link Outcome#RECOVERY_FAILED}, and rethrows.
      */
     @Override
     public void apply(List<ModificationDeclaration> declarations) {
@@ -259,7 +261,7 @@ public final class ModificationDomainOwner implements CandidateDomainCollector, 
     private void apply(List<ModificationDeclaration> declarations, String source) {
         List<String> restored = new ArrayList<>();
         try {
-            // (1) 恢复 NekoJS 持有基线（声明移除语义：不再声明的目标回到原值）
+            // (1) Restore NekoJS baselines so targets omitted from the new plan return to original values
             for (Map.Entry<String, DataComponentMap> entry : itemBaselines.entrySet()) {
                 Item item = resolveItem(entry.getKey());
                 if (item != null) {
@@ -274,7 +276,7 @@ public final class ModificationDomainOwner implements CandidateDomainCollector, 
                     restored.add("block:" + entry.getKey());
                 }
             }
-            // (2) 按声明顺序应用（每条从基线叠加）
+            // (2) Apply declarations in order, each starting from baseline
             for (ModificationDeclaration declaration : declarations) {
                 switch (declaration.kind()) {
                     case "item" -> applyItem(declaration);
@@ -295,7 +297,7 @@ public final class ModificationDomainOwner implements CandidateDomainCollector, 
                         source, countKind(declarations, "item"), countKind(declarations, "block"));
             }
         } catch (Throwable t) {
-            // 尽力恢复后仍如实报告（不宣称成功；静默 stale 不算成功）
+            // Best-effort baseline restore before reporting the failure
             try {
                 for (Map.Entry<String, DataComponentMap> entry : itemBaselines.entrySet()) {
                     Item item = resolveItem(entry.getKey());
@@ -308,8 +310,8 @@ public final class ModificationDomainOwner implements CandidateDomainCollector, 
             } catch (Throwable suppressed) {
                 t.addSuppressed(suppressed);
             }
-            // 失败批次不产生「最近成功应用」：复位指纹，避免下次启动收集按等价跳过
-            // 误报 SKIPPED_IDENTICAL 掩盖「实际停在基线」的事实（AC7：静默 stale 不算成功）
+            // Clear the last applied fingerprint so a subsequent run will not treat a failed batch
+            // as SKIPPED_IDENTICAL while targets actually sit at baseline.
             lastAppliedFingerprint = null;
             lastDiagnostics = new Diagnostics(Outcome.RECOVERY_FAILED, source,
                     countKind(declarations, "item"), countKind(declarations, "block"),
@@ -331,7 +333,7 @@ public final class ModificationDomainOwner implements CandidateDomainCollector, 
         ItemModificationEventJS.applyComponents(item, builder.build());
     }
 
-    /** 声明属性 → 组件写入（包内可见：ItemModificationComponentsTest 直接驱动生产应用路径）。 */
+    /** Applies normalized item properties to the component builder; package-private for {@code ItemModificationComponentsTest}. */
     void applyItemProperties(DataComponentMap.Builder builder, DataComponentMap base,
             Map<String, Object> properties) {
         if (properties.containsKey("maxStackSize")) {
@@ -397,7 +399,7 @@ public final class ModificationDomainOwner implements CandidateDomainCollector, 
         view.applyTo(block);
     }
 
-    /** item 基线（首改时捕获原始组件；此后恒为同一份进程级基线）。 */
+    /** Returns the item's baseline components, capturing them on first modification. */
     private DataComponentMap baselineItemComponents(String targetId, Item item) {
         return itemBaselines.computeIfAbsent(targetId, key -> item.components());
     }
@@ -413,8 +415,8 @@ public final class ModificationDomainOwner implements CandidateDomainCollector, 
     }
 
     /**
-     * 26.x 走 DAMAGE_RESISTANT 组件（指向 IS_FIRE damage type tag），需要 registry access。
-     * 与 vanilla {@code Item.Properties#fireResistant()} 同构。
+     * Builds a 26.x {@code DAMAGE_RESISTANT} component backed by the {@code IS_FIRE} damage type
+     * tag from the server's registry access, matching vanilla {@code Item.Properties#fireResistant()}.
      */
     private DamageResistant createFireResistance() {
         MinecraftServer server = boundServer;
@@ -439,14 +441,14 @@ public final class ModificationDomainOwner implements CandidateDomainCollector, 
         return (int) declarations.stream().filter(d -> d.kind().equals(kind)).count();
     }
 
-    // ---- 诊断（公开观察面） ----
+    // ---- Diagnostics ----
 
-    /** 最近一次收集/应用结局。 */
+    /** Returns diagnostics for the most recent collection or apply run. */
     public Diagnostics lastDiagnostics() {
         return lastDiagnostics;
     }
 
-    /** root close：恢复全部持有基线并清空（独立测试 root 从干净状态开始）。 */
+    /** Restores all captured baselines and clears state when the runtime root closes. */
     @Override
     public void close() {
         try {
@@ -466,23 +468,23 @@ public final class ModificationDomainOwner implements CandidateDomainCollector, 
         }
     }
 
-    /** 修改域结局（诊断区分 active / blocked / recovery-failed / restored，AC7）。 */
+    /** Outcome of the most recent modification collection or apply run. */
     public enum Outcome {
-        /** 尚无收集/应用发生。 */
+        /** No collection or apply has run yet. */
         INITIAL,
-        /** 新计划已应用（active 修改 = 该计划）。 */
+        /** A non-empty plan was applied. */
         APPLIED,
-        /** 空计划应用：基线已恢复（声明移除语义的成功形态）。 */
+        /** An empty plan was applied and captured baselines were restored. */
         RESTORED,
-        /** 与最近成功应用等价的初始收集被跳过（幂等，不产生第二次应用）。 */
+        /** Startup collection matched the last applied plan and was skipped. */
         SKIPPED_IDENTICAL,
-        /** 预检拒绝：整批未提交，既有值保持。 */
+        /** Preflight rejected the plan; existing values were left unchanged. */
         BLOCKED,
-        /** 应用/恢复意外失败：已尽力恢复，不宣称成功。 */
+        /** Applying or restoring failed unexpectedly after best-effort baseline recovery. */
         RECOVERY_FAILED
     }
 
-    /** 修改域最近一次结局的观察记录（公开诊断面）。 */
+    /** Diagnostic snapshot of the most recent modification run. */
     public record Diagnostics(Outcome outcome, String source, int itemDeclarations, int blockDeclarations,
                               List<String> restoredTargets, String detail) {
     }

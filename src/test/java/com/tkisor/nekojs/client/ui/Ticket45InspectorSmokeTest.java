@@ -24,12 +24,11 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Ticket 45 NeoForge host-side inspector smoke scenarios, executable without a live
- * client: the adapter's collect path ({@code focusedIds} plus the shared
- * {@link InspectorSnapshots} read/decorate) runs against host-object snapshot data and a
- * real {@link DiskPackUiResourceResolver}, and the difference report ranks a controlled
- * drift. Real-client frame capture on NeoForge 26.2 is NOT RUN in this environment (no
- * Minecraft client); this suite pins the contract the client run would exercise.
+ * NeoForge host-side inspector smoke scenarios that run without a live client: the adapter's
+ * collect path ({@code focusedIds} plus the shared {@link InspectorSnapshots} read/decorate) runs
+ * against host-object snapshot data and a real {@link DiskPackUiResourceResolver}, and the
+ * difference report ranks a controlled drift. Real-client frame capture on NeoForge 26.2 is NOT RUN
+ * here (there is no Minecraft client); this suite pins what that run would check.
  */
 class Ticket45InspectorSmokeTest {
 

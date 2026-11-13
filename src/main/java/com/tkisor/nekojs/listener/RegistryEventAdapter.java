@@ -21,29 +21,34 @@ import net.neoforged.neoforge.registries.RegisterEvent;
 import java.util.function.Supplier;
 
 /**
- * 通用注册表的 NeoForge 适配层（ADR-0004 三层解耦的平台层；ticket 15 起为
- * {@link StartupRegistryRuntime} 的薄接线）：收集、校验、指纹、抽干与连带投递
- * 都在 Runtime（版本树共享 MC-facing 层——持有 MC 类型令牌做校验/键表达，不创建 MC 对象，
- * MC/loader 对象创建只发生在本类与 fabric 对应物这样的 Adapter）；本类只把 {@link RegisterEvent} 的各 pass 接到
- * {@code runtime.drainFor}（对象以 Supplier 注册，由平台在注册冻结前构建）。
+ * NeoForge adapter for the general-purpose registries. It is a thin wiring layer over
+ * {@link StartupRegistryRuntime}: collection, validation, fingerprinting, draining and the delivery
+ * of dependent entries all happen in the runtime that the version trees share. The runtime holds MC
+ * type tokens to validate and key entries but creates no MC objects; MC and loader objects are only
+ * created here and in the Fabric counterpart. This class connects each pass of {@link RegisterEvent}
+ * to {@code runtime.drainFor}; objects are registered as Suppliers and built by the platform before
+ * registration is frozen.
  *
- * <p>epoch：每轮游戏启动（mod 构造期）{@link #beginBoot()} 换新 Runtime，
- * 上一轮残留被丢弃并诊断——失败不留下可污染下一轮启动的进程级暂存（AC2）。
+ * <p>Epoch: each game start (mod construction) swaps in a fresh runtime through {@link #beginBoot()}.
+ * Leftovers from the previous run are dropped and reported, so a failure never leaves process-wide
+ * staging behind that could poison the next start.
  *
- * <p>另承接注册表体系的两个后置平台事件：实体属性表（builder build 期记账）
- * 与创造标签页内容（{@code ItemBuilder} groupTab 的分配）。
+ * <p>Also handles two later platform events on the registry side: the entity attribute table,
+ * recorded while the builder is built, and creative tab contents, the {@code ItemBuilder} groupTab
+ * assignment.
  */
 public final class RegistryEventAdapter {
     private RegistryEventAdapter() {}
 
     private static volatile StartupRegistryRuntime runtime = new StartupRegistryRuntime(nodeLabel());
 
-    /** 当前 epoch 的 Runtime（注册 pass 接线用）。 */
+    /** The runtime for the current epoch, used when wiring the registration passes. */
     public static StartupRegistryRuntime runtime() {
         return runtime;
     }
 
-    /** 新一轮游戏启动：换新 epoch；上一轮若有未清空暂存，先丢弃并记录诊断。 */
+    /** Starts a new game boot and installs a fresh epoch. If the previous runtime still holds
+     * undrained staging, that staging is discarded and reported first. */
     public static void beginBoot() {
         StartupRegistryRuntime previous = runtime;
         if (previous != null && !previous.isFullyDrained()) {
@@ -64,24 +69,26 @@ public final class RegistryEventAdapter {
                                 error.node(), error.source(), error.message()));
     }
 
-    /** load-complete 诊断：收集了却未被任何 pass 消化的内容（注册表名写错 / 目标 pass 先于来源）。 */
+    /** Load-complete diagnostics: entries that were collected but no pass consumed, because a registry
+     * name is misspelled or the target pass runs before the source. */
     public static void onLoadComplete() {
         runtime.reportUndelivered(message -> NekoJS.LOGGER.error("{}", message));
     }
 
-    /** 实体属性表：builder build 期记账，本事件（注册完成后）统一挂载。 */
+    /** Entity attribute table: recorded while the builder is built and attached here in one go, after
+     * registration has completed. */
     public static void onEntityAttributeCreation(EntityAttributeCreationEvent event) {
         EntityTypeBuilder.drainPendingAttributes().forEach(event::put);
     }
 
     /**
-     * 创造标签页内容构建：把 {@link ItemBuilder#GROUP_ASSIGNMENTS} 里分配到当前
-     * 标签页的物品追加进去（脚本经 {@code b.groupTab = 'tab_id'} 分配）。
-     * 在所有注册完成之后触发，故可安全从 {@link BuiltInRegistries#ITEM} 解析。
+     * Creative tab contents: appends the items that {@link ItemBuilder#GROUP_ASSIGNMENTS} assigns to
+     * the current tab; scripts assign them with {@code b.groupTab = 'tab_id'}. The event fires after
+     * all registration is done, so items can safely be resolved from {@link BuiltInRegistries#ITEM}.
      */
     public static void onBuildCreativeTabContents(BuildCreativeModeTabContentsEvent event) {
-        // 26.x: ResourceKey.identifier()（Identifier 已重命名为 Identifier）
-//? if >=26 {
+        // 26.x: ResourceKey.identifier() (the type was renamed to Identifier)
+        //? if >=26 {
         var tabId = event.getTabKey().identifier();
 //?} else {
         /*var tabId = event.getTabKey().identifier();
@@ -92,8 +99,8 @@ public final class RegistryEventAdapter {
     }
 
     private static void acceptCreativeTabEntry(BuildCreativeModeTabContentsEvent event, Identifier itemId) {
-        // 26.x: Registry.get(Identifier) 返回 Optional<Reference<Item>>，取 .value()
-//? if >=26 {
+        // 26.x: Registry.get(Identifier) returns Optional<Reference<Item>>, so take .value()
+        //? if >=26 {
         Item item = BuiltInRegistries.ITEM.get(itemId).map(Holder::value).orElse(null);
 //?} else {
         /*Item item = BuiltInRegistries.ITEM.get(itemId);

@@ -1,6 +1,6 @@
-// 26.x/1.21.1 共享测试树：id 构造经版本守卫（26.x RecipeHolder 吃 ResourceKey，1.21.1 吃
-// Identifier）；filter 只读 holder id，recipe 值不参与（传 null，两侧 record 均不校验）。
-//? if neoforge {
+// Shared test tree for 26.x and 1.21.1: id construction goes through version guards, because
+// RecipeHolder takes a ResourceKey on 26.x and an Identifier on 1.21.1. Filters only read the
+// holder id and never the recipe value, which is passed as null; neither record validates it.
 package com.tkisor.nekojs.api.recipe;
 
 import com.tkisor.nekojs.wrapper.event.server.RecipeEventJS;
@@ -16,13 +16,13 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Ticket 23 AC2 filter-application fixture: the {@link RecipeFilter} combinators applied to a
- * recipe holder decide which recipes a modify/remove call sees. Id-based filters and their
- * and/or/not combinators only read the holder id, so they run wherever {@code RecipeHolder}
- * can initialize (see {@link com.tkisor.nekojs.testfixture.VanillaRegistryProbe}: bare 26.x
- * JVMs skip, 1.21.1 bare JVMs and ModDev unitTest environments run) via the version-neutral
- * {@link RecipeEventJS#recipeHolderId} seam; output/input/type filters need live registries
- * and stay with the runtime smoke evidence (ticket 34).
+ * Filter application fixture: the {@link RecipeFilter} combinators applied to a recipe holder
+ * decide which recipes a modify or remove call sees. Id-based filters and their and/or/not
+ * combinators only read the holder id, so through the version-neutral
+ * {@link RecipeEventJS#recipeHolderId} accessor they run wherever {@code RecipeHolder} can
+ * initialize (see {@link com.tkisor.nekojs.testfixture.VanillaRegistryProbe}: bare 26.x JVMs skip,
+ * 1.21.1 bare JVMs and ModDev unitTest environments run). Output, input and type filters need live
+ * registries and are covered by the runtime smoke tests.
  */
 class RecipeFilterApplicationTest {
 
@@ -145,7 +145,7 @@ class RecipeFilterApplicationTest {
 
     @Test
     void versionNeutralHolderIdAccessorKeepsBothErasOnOneShape() {
-        // recipeHolderId is the seam the filters use across eras; pin its toString form.
+        // recipeHolderId is what the filters use across versions; pin its toString form.
         assertEquals("nekojs:machine", RecipeEventJS.recipeHolderId(holder("nekojs:machine")).toString());
     }
 }

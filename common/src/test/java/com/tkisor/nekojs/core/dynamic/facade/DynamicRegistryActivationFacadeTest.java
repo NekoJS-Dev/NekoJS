@@ -24,14 +24,11 @@ import java.util.Map;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * Ticket 21 facade integration (real {@link ScriptManager} transactional reload +
- * real GraalJS, same harness as ticket 16): the activation engine bound to
- * {@link DynamicRegistryFacadeRuntime} turns committed declaration batches into
- * batch transactions, while every candidate failure keeps the ticket 16 joint
- * boundary semantics — nothing is staged, the previously activated state keeps
- * serving. Candidate script failure (thrown guest exception, and watchdog kills
- * via the same {@code noteCollectionError} poison path) never publishes, hence
- * never stages.
+ * Facade integration test with a real {@link ScriptManager} transactional reload and real GraalJS: the
+ * activation engine bound to {@link DynamicRegistryFacadeRuntime} turns committed declaration batches into
+ * batch transactions, while a candidate failure leaves nothing staged and the activated state keeps serving.
+ * A candidate script failure (a thrown guest exception, or a watchdog kill through the same
+ * {@code noteCollectionError} poison path) never publishes, so it never stages anything.
  */
 class DynamicRegistryActivationFacadeTest {
 
@@ -169,8 +166,8 @@ class DynamicRegistryActivationFacadeTest {
             Map<String, String> oldLive = Map.copyOf(adapter.live);
             int sentBeforeFailure = transport.sent.size();
 
-            // candidate script failure: the joint reload boundary fails, the batch is
-            // never published, hence never staged — the old active state keeps serving
+            // A candidate script failure makes the reload fail: the batch is never published, so it is never staged,
+            // and the active state keeps serving.
             harness.writeScript("main.js", """
                     DynamicRegistryEvents.dynamicRegistry(event => {
                         event.item('mymod:sapphire', b => { b.setMaxStackSize(8) });

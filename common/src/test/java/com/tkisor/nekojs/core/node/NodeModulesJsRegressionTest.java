@@ -25,11 +25,12 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * nekojs/node 内置模块的端到端回归：真实安装 manifest 到 GraalJS Context，
- * 在 guest 侧验证以下修复面——assert.rejects/doesNotReject 调用 fn、
- * deepEqual 宽松语义、path.parse/format 普通对象化与 posix/win32 独立语义、
- * buffer base64/hex/base64url 编码与字符串 needle、fs.lstat 与 withFileTypes、
- * os.EOL 平台化、module.isBuiltin、events.errorMonitor、process.exit/stdout。
+ * End-to-end regression for the nekojs/node built-in modules: installs the real manifest into a
+ * GraalJS Context and checks these behaviors on the guest side: assert.rejects/doesNotReject
+ * calling fn, deepEqual's loose semantics, path.parse/format returning plain objects with separate
+ * posix and win32 semantics, buffer base64/hex/base64url encoding and string needles, fs.lstat and
+ * withFileTypes, os.EOL per platform, module.isBuiltin, events.errorMonitor, and process.exit and
+ * process.stdout.
  */
 class NodeModulesJsRegressionTest {
 
@@ -67,7 +68,8 @@ class NodeModulesJsRegressionTest {
             context.eval("js", js);
         }
 
-        /** 模拟 ScriptManager.flushTestTimers 的驱动循环，并强制排空 promise 微任务队列。 */
+        /** Mirrors the drive loop of ScriptManager.flushTestTimers and forces the promise microtask queue to
+         * drain. */
         void drainTimers() throws InterruptedException {
             for (int i = 0; i < 1000 && runtime.hasPendingTimers(); i++) {
                 runtime.flushReadyTimers();
@@ -149,8 +151,8 @@ class NodeModulesJsRegressionTest {
             assertTrue(installed.marks.contains("nextTick.ran"), "marks: " + installed.marks);
             assertTrue(installed.marks.contains("blob.text:ab"), "marks: " + installed.marks);
             assertFalse(installed.marks.contains("dnr.throw.false-pass"), "marks: " + installed.marks);
-            // nextTick 自建微任务队列：先于其后注册的普通微任务执行（GraalJS 无 queueMicrotask，
-            // 此前 nextTick 退化为 setImmediate 要等一个游戏 tick）
+            // nextTick keeps its own microtask queue, so its callbacks run before plain microtasks registered
+            // after them. GraalJS has no queueMicrotask, and setImmediate would wait for a game tick.
             assertTrue(installed.marks.indexOf("order:tick") < installed.marks.indexOf("order:promise"), "marks: " + installed.marks);
             assertTrue(installed.marks.contains("order:microtask"), "marks: " + installed.marks);
         }
@@ -385,7 +387,8 @@ new buffer.Blob(['a', 'b']).text().then((t) => marks.add('blob.text:' + t))
 new buffer.Blob(['ab']).arrayBuffer().then((ab) => marks.add('blob.ab:' + ab.byteLength))
 """;
 
-    /** 循环 require：修复前缓存晚于执行，A↔B 互引无限重入至 StackOverflowError；Node 语义是返回部分 exports。 */
+    /** Circular require between A and B must terminate and return partial exports, as Node does,
+     * instead of recursing until StackOverflowError. */
     private static final String CIRCULAR_REQUIRE_JS = """
 const out = globalThis.__out
 const marks = globalThis.__marks

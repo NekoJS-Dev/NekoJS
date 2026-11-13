@@ -1,4 +1,4 @@
-// TODO(fabric): fabric 侧还没有对应实现，整文件守卫等移植完成后去掉
+// fabric has no implementation yet; the whole file stays guarded until the port is done
 //? if neoforge {
 package com.tkisor.nekojs.bindings.event;
 

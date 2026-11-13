@@ -56,20 +56,20 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * ticket 06 characterization + generation 契约测试：钉住 /nekojs reload 的候选环境行为，
- * 并在 06 实施后作为行为保持的锚。
+ * Characterizes the candidate generation behavior of {@code /nekojs reload} and pins it so later
+ * changes cannot break it.
  *
- * <p>Phase 1（characterization）先以<strong>当前实现</strong>的行为写断言；Phase 2/3 改造为
- * candidate generation 隔离 + 单一 commit 点后，把其中因 AC 改进而失效的断言更新为新契约
- * （每处更新在注释中标注 ticket 06）。以下行为<strong>不</strong>随后续 phase 改变：
- * 成功 reload 的脚本重跑、失败保留旧 Context、commit 后无双执行、timer 生产分发单一归属。
+ * <p>These behaviors must not change: a successful reload re-runs the scripts, a failed reload
+ * keeps the old {@code Context}, nothing executes twice after commit, and the production timer
+ * dispatch has exactly one owner.
  */
 class ScriptReloadGenerationTest {
 
-    /** 监听器事件 payload。 */
+    /** Listener event payload. */
     public static final class TestEvent {}
 
-    /** 注入脚本的计数器绑定：按 tag 分别计数，用于区分旧/新 generation 的回调来源。 */
+    /** Counter binding injected into scripts: counts per tag, so callbacks from the old and the new
+     * generation can be told apart. */
     public static final class Counter {
         private final Map<String, AtomicInteger> hits = new ConcurrentHashMap<>();
 
@@ -101,7 +101,8 @@ class ScriptReloadGenerationTest {
             for (let i = 0; i < 1_000_000_000 && Date.now() < cancellationDeadline; i++) {}
             """;
 
-    /** 注入脚本的 Java 侧事件触发器：脚本执行中途同步 post 生产事件（AC1 观察点）。 */
+    /** Java-side event trigger injected into scripts: posts a production event synchronously while a
+     * script is running. */
     public static final class Trigger implements AutoCloseable {
         private volatile Runnable action = () -> {};
 
@@ -119,17 +120,19 @@ class ScriptReloadGenerationTest {
         }
     }
 
-    /** 提供一个真实 {@link EventGroup}（TestEvents.ping / TestEvents.lang 总线）的 bridge，脚本可注册监听器。 */
+    /** Bridge over a real {@link EventGroup} (the TestEvents.ping and TestEvents.lang buses) that
+     * scripts can register listeners on. */
     static final class TestEventBridge implements ScriptEventBridge {
         final EventGroup group = EventGroup.of("TestEvents");
         final EventBusJS<TestEvent, Void> pingBus;
-        /** dispatch 总线（String key）：供「非法 dispatch key」失败注入用例（审查 A1）。 */
+        /** Dispatch bus with a String key, used by the illegal dispatch key failure injection case. */
         final EventBusJS<TestEvent, String> langBus;
         final List<ScriptType> bindEventsCalls = new CopyOnWriteArrayList<>();
         final List<ScriptType> clearListenersCalls = new CopyOnWriteArrayList<>();
-        /** 每次 clearListeners 时刻的 active runtime 快照（commit 顺序断言用，见 AC4 补证用例）。 */
+        /** Snapshot of the active runtime at each clearListeners call, used to assert the commit order. */
         final List<Object> runtimeAtSweep = new CopyOnWriteArrayList<>();
-        /** 由 {@link ManagerHarness} 在构造末尾回填，供 clearListeners 读取 owner 状态。 */
+        /** Filled in by {@link ManagerHarness} at the end of its constructor so clearListeners can read
+         * the owner state. */
         volatile ScriptManager manager;
 
         TestEventBridge() {
@@ -153,7 +156,7 @@ class ScriptReloadGenerationTest {
             group.clearListeners(type);
         }
 
-        /** 触发一次生产事件分发，返回各监听器执行后 Counter 的观察由测试负责。 */
+        /** Fires one production event dispatch; the test checks the Counter afterwards. */
         void postTestEvent() {
             pingBus.post(new TestEvent());
         }
@@ -195,7 +198,7 @@ class ScriptReloadGenerationTest {
 
         @Override
         public Map<String, EventGroup> eventGroups() {
-            // 与 bridge 持有同一组实例：schema 收割与 bindEvents 指向同一条总线
+            // Holds the same group instance as the bridge, so schema collection and bindEvents use one bus
             return Map.of("TestEvents", sharedGroup);
         }
 
@@ -245,7 +248,8 @@ class ScriptReloadGenerationTest {
         return impl;
     }
 
-    /** 测试 manager 装配：真实 bridge（可注册监听器）+ Counter/Trigger 绑定 + 真实 Graal 环境。 */
+    /** Test manager wiring: a real bridge that accepts listeners, the Counter and Trigger bindings,
+     * and a real Graal engine. */
     private static final class ManagerHarness implements AutoCloseable {
         final Engine engine = Engine.newBuilder().build();
         final TestEventBridge bridge = new TestEventBridge();
@@ -351,8 +355,8 @@ class ScriptReloadGenerationTest {
     }
 
     /**
-     * 成功 reload：脚本在新 generation 重跑一次，marker 记录 v1 → v2；
-     * commit 后同一事件只由新 generation 监听器执行一次（无双执行）。
+     * Successful reload: the scripts run once in the new generation and the markers record v1 -> v2.
+     * After commit the same event is handled only by the new generation's listener, exactly once.
      */
     @Test
     void successfulReloadRunsScriptsOnceAndSingleExecutionAfterCommit() throws Exception {
@@ -385,8 +389,8 @@ class ScriptReloadGenerationTest {
     }
 
     /**
-     * External candidate cancellation preserves the active Context, script state, and listeners
-     * (ticket 06 generation isolation, AC2/AC3).
+     * External cancellation of a candidate preserves the active Context, the script state and the
+     * listeners.
      */
     @Test
     void failedReloadKeepsOldContextAndScriptState() throws Exception {
@@ -415,7 +419,8 @@ class ScriptReloadGenerationTest {
                     "old entry must not re-run after failed reload");
             assertEquals(2, harness.counter.hitsOf("v1-listener"),
                     "active listener must keep receiving events after candidate failure (ticket 06 AC2)");
-            // AC3：失败结果外部可见地携带 generation / phase / owner / domain（无修复指引）
+            // The failure is visible outside with its generation, phase, owner and domain; it carries no fix-up
+            // hints
             assertInstanceOf(com.tkisor.nekojs.core.lifecycle.NekoReloadException.class, failure);
             var report = ((com.tkisor.nekojs.core.lifecycle.NekoReloadException) failure).report();
             assertEquals(com.tkisor.nekojs.core.lifecycle.ReloadPhase.EXECUTION, report.phase());
@@ -531,8 +536,9 @@ class ScriptReloadGenerationTest {
     }
 
     /**
-     * 失败 reload 后 active 监听器仍在总线上（ticket 06：候选监听器只收集，
-     * 失败随候选丢弃，active 的生产路由不动）。
+     * After a failed reload the active listeners are still on the bus: candidate listeners are only
+     * collected, a failure discards them with the candidate, and the active production routing is
+     * left alone.
      */
     @Test
     void failedReloadKeepsActiveListenersOnBus() throws Exception {
@@ -549,8 +555,8 @@ class ScriptReloadGenerationTest {
     }
 
     /**
-     * candidate 隔离：失败 reload 时候选注册的监听器不得留在总线上（只收集、未激活），
-     * active 监听器不受影响。
+     * Candidate isolation: listeners registered by a failed reload never stay on the bus, because
+     * they were only collected and never activated, and the active listeners are unaffected.
      */
     @Test
     void failedReloadDiscardsCandidateListenersOnly() throws Exception {
@@ -573,8 +579,9 @@ class ScriptReloadGenerationTest {
     }
 
     /**
-     * commit 后 timer 生产分发单一归属：旧 generation 的 interval 随 commit 取消，
-     * 新 generation 的 interval 继续被生产 flush 分发，同一 tick 不双执行。
+     * After commit the production timer dispatch belongs to one generation only: the old generation's
+     * interval is cancelled at commit and the new generation's interval keeps being dispatched by
+     * the production flush, so no tick runs twice.
      */
     @Test
     void afterCommitProductionTimerDispatchBelongsToNewGenerationOnly() throws Exception {
@@ -604,10 +611,10 @@ class ScriptReloadGenerationTest {
     }
 
     /**
-     * bindEvents / clearListeners 生命周期计数：initial load 只 bind 一次；
-     * 失败 reload（ticket 06）不触碰总线——监听器清扫只发生在 commit 点；
-     * 成功 reload 的清扫恰好一次（旧 generation 停止接收新 callback 的观测面），
-     * 且清扫后只有新 generation 的监听器在总线上（无累积、无双注册）。
+     * Counts bindEvents and clearListeners over the lifecycle: the initial load binds once, a failed
+     * reload never touches the bus because the sweep only happens at the commit point, a successful
+     * reload sweeps exactly once, and afterwards only the new generation's listeners are on the bus
+     * (no leftovers, no double registration).
      */
     @Test
     void bridgeLifecycleCallCounts() throws Exception {
@@ -622,7 +629,7 @@ class ScriptReloadGenerationTest {
             assertTrue(harness.bridge.clearListenersCalls.isEmpty(),
                     "failed reload must not clear any listeners (ticket 06: sweep happens only at commit)");
 
-            // 成功 reload：完整清扫恰好一次（在 commit 点），随后只有新 generation 的监听器
+            // Successful reload: one full sweep at the commit point, then only the new generation's listeners
             harness.writeScript("entry.js", "TestEvents.ping(function (event) { Counter.hit('v2'); });\n");
             harness.reload();
             assertEquals(List.of(ScriptType.SERVER), harness.bridge.clearListenersCalls,
@@ -635,8 +642,9 @@ class ScriptReloadGenerationTest {
     }
 
     /**
-     * AC1：candidate 执行期间，真实生产事件仍由 active 监听器执行；
-     * 候选监听器（已注册进候选收集器）不得接收 commit 前的生产事件。
+     * While a candidate runs, real production events are still handled by the active listeners.
+     * Candidate listeners, already registered in the candidate collector, must not receive
+     * production events before commit.
      */
     @Test
     void candidatePhaseEventsServedByActiveGeneration() throws Exception {
@@ -660,7 +668,8 @@ class ScriptReloadGenerationTest {
     }
 
     /**
-     * 连续多次 commit：每个 generation 只执行一次、旧 Context 关闭、generation 单调递增。
+     * Consecutive commits: each generation executes once, the old Context is closed, and the
+     * generation number increases monotonically.
      */
     @Test
     void consecutiveCommitsKeepSingleExecutionAndCloseOldContext() throws Exception {
@@ -687,7 +696,7 @@ class ScriptReloadGenerationTest {
             assertEquals(0, harness.counter.hitsOf("v2"), "generation v2 swept at the next commit");
             assertEquals(1, harness.counter.hitsOf("v3"), "only the newest generation executes, exactly once");
 
-            // 旧 generation 的 Context 已随 commit 关闭（释放的可观察结果）
+            // The old generation's Context was closed at commit, which is the observable side of the release
             assertThrows(Exception.class, () -> contextV1.eval("js", "1 + 1"),
                     "old generation context must be closed at commit");
             assertThrows(Exception.class, () -> contextV2.eval("js", "1 + 1"),
@@ -698,8 +707,9 @@ class ScriptReloadGenerationTest {
     }
 
     /**
-     * AC5（提交面）：候选注册的 pending timer 随 generation 提交——commit 后由生产
-     * flush 分发（一次）。候选执行期间的 timer 只进候选收集器，不提前进入生产路由。
+     * Commit side: a pending timer registered by the candidate is committed with the generation and
+     * dispatched once by the production flush after commit. Timers registered while the candidate
+     * runs only enter the candidate collector and never reach the production routing early.
      */
     @Test
     void pendingCandidateTimerCommittedWithGeneration() throws Exception {
@@ -707,8 +717,9 @@ class ScriptReloadGenerationTest {
             harness.writeScript("entry.js", "Counter.hit('v1-entry');\n");
             harness.loadAndRun();
 
-            // 候选脚本（.mjs：顶层 await）：注册 200ms 一次性 timer（commit 时仍未就绪 → 只被收集），
-            // await 一个 0ms timer 证明候选执行路径上的 timer 回调可用（TLA 恢复）
+            // Candidate script (.mjs with top-level await): registers a 200ms one-shot timer, which is still
+            // pending at commit and is therefore only collected; awaiting a 0ms timer proves a timer
+            // callback works on the candidate execution path (top-level await resumption)
             harness.writeScript("entry.mjs", """
                     Counter.hit('v2-entry');
                     setTimeout(function () { Counter.hit('v2-timer'); }, 200);
@@ -728,7 +739,8 @@ class ScriptReloadGenerationTest {
         }
     }
 
-    /** AC5（丢弃面）：失败候选的 pending timer 随候选关闭，永不进入生产分发。 */
+    /** Discard side: a pending timer of a failed candidate closes with the candidate and never
+     * reaches production dispatch. */
     @Test
     void pendingCandidateTimerDiscardedWithFailedCandidate() throws Exception {
         try (ManagerHarness harness = new ManagerHarness(testConfig())) {
@@ -754,9 +766,9 @@ class ScriptReloadGenerationTest {
     }
 
     /**
-     * AC5（TEST 面）：TEST 的候选测试 callback 在测试 harness 中执行——candidate
-     * 监听器 commit 后激活、pending timer 由 flushTestTimers 冲刷；失败重载后旧
-     * TEST 环境仍可用。
+     * TEST side: candidate test callbacks for the TEST type run in the test harness. Candidate
+     * listeners activate after commit, pending timers are flushed by flushTestTimers, and the old
+     * TEST environment stays usable after a failed reload.
      */
     @Test
     void testTypeCandidateCallbacksRunInHarness() throws Exception {
@@ -787,16 +799,20 @@ class ScriptReloadGenerationTest {
     }
 
     /**
-     * 审查 A1（commit 点不可回滚）回归：候选监听器激活期会做的工作——dispatch key 的
-     * {@code Value.as(keyType)} 转换（非法 key 会抛）——必须在<strong>候选期</strong>完成。
+     * Regression for the non-rollback commit point: work done while candidate listeners activate,
+     * such as the {@code Value.as(keyType)} conversion of a dispatch key (an illegal key throws),
+     * must finish during the <strong>candidate phase</strong>.
      *
-     * <p>改造前的缺陷形态：key 转换推迟到 {@code commitGeneration} 的激活循环里，抛出的
-     * 非 {@code NekoReloadException} 不被外层 catch 接住 → {@code discardCandidate} 不执行，
-     * 而旧监听器已被清扫、{@code runtime} 已指向候选 → 候选资源泄漏 + 半激活 generation。
+     * <p>If the conversion were deferred into the activation loop of {@code commitGeneration}, an
+     * exception that is not a {@code NekoReloadException} would escape the outer catch, so
+     * {@code discardCandidate} would not run while the old listeners were already swept and
+     * {@code runtime} already pointed at the candidate: leaked candidate resources and a
+     * half-activated generation.
      *
-     * <p>本用例断言：非法 key 在候选 EVENT_PLAN 阶段失败并走丢弃路径——
-     * 失败结果含 generation/phase/source location/owner/domain；候选 Context/timer/挂起注册
-     * 全部关闭；active 的 runtime、scripts、generation、监听器原样可用。
+     * <p>This test asserts that an illegal key fails in the candidate EVENT_PLAN phase and takes the
+     * discard path: the failure carries generation, phase, source location, owner and domain; the
+     * candidate Context, timers and pending registrations are all closed; the active runtime,
+     * scripts, generation and listeners remain usable.
      */
     @Test
     void illegalDispatchKeyFailsCandidatePlanAndPreservesActive() throws Exception {
@@ -812,8 +828,9 @@ class ScriptReloadGenerationTest {
             int activeHits = harness.counter.hitsOf("v1-listener");
             assertEquals(1, activeHits, "active listener must be live before the failing reload");
 
-            // 候选执行期捕获候选 Context（失败后据此断言候选资源确实被关闭）；同时 post 一次
-            // 生产事件，证明候选阶段的对外行为仍由 active 服务（AC1）。
+            // Capture the candidate Context while the candidate runs, so the assertions after the failure can
+            // check that candidate resources were really closed; also post one production event to show
+            // that the active generation still serves traffic during the candidate phase.
             AtomicReference<Context> candidateRef = new AtomicReference<>();
             harness.trigger.bind(() -> {
                 candidateRef.set(candidateContextOf(harness.manager));
@@ -843,7 +860,8 @@ class ScriptReloadGenerationTest {
             assertEquals(0, harness.counter.hitsOf("v2-listener"),
                     "candidate listener must never become live");
 
-            // active 原样：runtime / scripts / generation / Context / 监听器全部不变
+            // The active side is untouched: runtime, scripts, generation, Context and listeners are all
+            // unchanged
             assertSame(activeRuntime, runtimeOf(harness.manager), "active runtime must be untouched");
             assertSame(activeScripts, scriptsOf(harness.manager), "active scripts must be untouched");
             assertEquals(activeGeneration, harness.manager.generationId(),
@@ -853,7 +871,8 @@ class ScriptReloadGenerationTest {
             assertEquals(activeHits + 2, harness.counter.hitsOf("v1-listener"),
                     "active listener must keep receiving events after the discarded candidate");
 
-            // 候选全部资源关闭：Context 关闭并解除登记、挂起注册清空、候选 timer 永不进入生产分发
+            // All candidate resources are closed: the Context is closed and unregistered, pending registrations
+            // are cleared, and candidate timers never reach production dispatch
             Context candidate = candidateRef.get();
             assertTrue(candidate != null,
                     "candidate context must have been observable during candidate execution");
@@ -871,8 +890,9 @@ class ScriptReloadGenerationTest {
     }
 
     /**
-     * AC2: an externally cancelled candidate must close its Context and unregister it from
-     * {@code CONTEXT_TO_MANAGER}; active retention alone would not rule out candidate leaks.
+     * An externally cancelled candidate must close its Context and unregister it from
+     * {@code CONTEXT_TO_MANAGER}; keeping it in the active side alone would not rule out candidate
+     * leaks.
      */
     @Test
     void killedCandidateContextIsClosedAndUnregistered() throws Exception {
@@ -900,12 +920,14 @@ class ScriptReloadGenerationTest {
     }
 
     /**
-     * AC4 补证（审查要求补一条断言释放顺序的测试）：commit 的监听器清扫发生在候选
-     * runtime 发布<strong>之前</strong>——清扫时刻读到的仍是旧 runtime。因此总线在任一
-     * 时刻都不同时持有两代监听器，「同一事件旧新双重执行」不可能发生。
+     * Asserts the release order: the listener sweep at commit happens <strong>before</strong> the
+     * candidate runtime is published, so the sweep still reads the old runtime. The bus therefore
+     * never holds both generations at once, and the same event cannot run twice on old and new
+     * listeners.
      *
-     * <p>timer → Context → streams 的释放顺序没有外部观察点（那是 {@code closeRuntimeResources}
-     * 内部的代码顺序，且届时旧环境已从全部生产路由上摘除），见 REPORT 的说明。
+     * <p>The release order of timer, Context and streams has no external observation point: it is
+     * the code order inside {@code closeRuntimeResources}, and by then the old environment is
+     * already detached from all production routing.
      */
     @Test
     void commitSweepsOldListenersBeforePublishingNewRuntime() throws Exception {

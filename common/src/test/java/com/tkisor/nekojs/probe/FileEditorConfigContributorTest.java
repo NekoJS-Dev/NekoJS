@@ -15,8 +15,9 @@ import java.util.Map;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * {@link FileEditorConfigContributor} 的合并行为：probe 拥有的键（paths 对应键、include、typeRoots、
- * JSX 运行时键）替换为最新值，用户键/未知键保留；pyrightconfig fresh 附带默认、既有去重。
+ * Merge behaviour of {@link FileEditorConfigContributor}: keys owned by the probe (the paths keys,
+ * include, typeRoots and the JSX runtime keys) are replaced with the latest values, while user and
+ * unknown keys are kept. A fresh pyrightconfig gets the defaults, and existing entries are deduped.
  */
 class FileEditorConfigContributorTest {
 
@@ -39,11 +40,11 @@ class FileEditorConfigContributorTest {
                 Map.of("java:*", List.of("../../.neko_probe/typescript/@package/*")));
 
         String out = Files.readString(jsconfig);
-        // probe 键被替换为新值
+        // The probe keys are replaced with the new values
         assertTrue(out.contains("../../.neko_probe/typescript/@package/*"), out);
         assertFalse(out.contains("../../.neko_probe/@package/*"),
                 "stale probe value must be replaced: " + out);
-        // 用户别名 + 其他 compilerOptions 键 + 未知顶层键均保留
+        // The user alias, the other compilerOptions keys and the unknown top-level key all survive
         assertTrue(out.contains("my-alias"), out);
         assertTrue(out.contains("ESNext"), out);
         assertTrue(out.contains("myExtra"), out);
@@ -51,7 +52,7 @@ class FileEditorConfigContributorTest {
 
     @Test
     void mergeJsConfigPaths_freshFile_createsStructure(@TempDir Path temp) throws IOException {
-        Path jsconfig = temp.resolve("a/b/jsconfig.json"); // 不存在 + 父目录缺失
+        Path jsconfig = temp.resolve("a/b/jsconfig.json"); // The file does not exist and its parent directory is missing
         new FileEditorConfigContributor().mergeJsConfigPaths(jsconfig,
                 Map.of("java:*", List.of("typescript/@package/*"), "@special/*", List.of("typescript/@special/*")));
 
@@ -78,12 +79,12 @@ class FileEditorConfigContributorTest {
                         "../../.neko_probe/typescript/@manual/**/*.d.ts"));
 
         String out = Files.readString(jsconfig);
-        // probe 条目刷新 + 用户条目保留
+        // Probe entries are refreshed and user entries are kept
         assertTrue(out.contains("../../.neko_probe/typescript/@package/**/*.d.ts"), out);
         assertTrue(out.contains("../../.neko_probe/typescript/@manual/**/*.d.ts"), out);
         assertFalse(out.contains("../../.neko_probe/@package"), "stale probe value must be replaced: " + out);
         assertTrue(out.contains("\"src\""), "user include entry must survive (refresh-managed merge): " + out);
-        // 其他键（compilerOptions + 未知顶层键）保留
+        // The other keys (compilerOptions and the unknown top-level key) are kept
         assertTrue(out.contains("ESNext"), out);
         assertTrue(out.contains("myExtra"), out);
     }
@@ -104,13 +105,13 @@ class FileEditorConfigContributorTest {
                 List.of("../../.neko_probe/typescript/@package", "../node_modules/@types"));
 
         String out = Files.readString(jsconfig);
-        // probe 条目刷新 + 用户条目保留
+        // Probe entries are refreshed and user entries are kept
         assertTrue(out.contains("../../.neko_probe/typescript/@package"), out);
         assertTrue(out.contains("../node_modules/@types"), out);
         assertFalse(out.contains("../../.neko_probe/@package"),
                 "stale probe value must be replaced: " + out);
         assertTrue(out.contains("./my-types"), "user typeRoots entry must survive (refresh-managed merge): " + out);
-        // 其他键保留
+        // The other keys are kept
         assertTrue(out.contains("ESNext"), out);
         assertTrue(out.contains("myExtra"), out);
     }
@@ -135,12 +136,12 @@ class FileEditorConfigContributorTest {
                         List.of("../../.neko_probe/typescript/@package")));
 
         String out = Files.readString(jsconfig);
-        // jsx 运行时键被引擎配置校正为 TS 自动运行时
+        // The jsx runtime keys are set to the TypeScript automatic runtime that the engine configures
         assertTrue(out.contains("\"jsx\": \"react-jsx\""), out);
         assertTrue(out.contains("\"jsxImportSource\": \"nekojs\""), out);
         assertFalse(out.contains("jsxFactory"), "classic factory keys must be removed: " + out);
         assertFalse(out.contains("jsxFragmentFactory"), "classic factory keys must be removed: " + out);
-        // 用户键保留
+        // User keys are kept
         assertTrue(out.contains("ESNext"), out);
         assertTrue(out.contains("myExtra"), out);
     }
@@ -148,7 +149,8 @@ class FileEditorConfigContributorTest {
     @Test
     void mergeJsConfig_classicRuntimeRestoresClassicJsxKeys(@TempDir Path temp) throws IOException {
         Path jsconfig = temp.resolve("jsconfig.json");
-        // 既有 jsconfig 停留在旧的 automatic 模式（用户已在 engine.toml 关闭开关）
+        // The existing jsconfig is still in automatic runtime mode, while the user has turned the switch
+        // off in engine.toml
         Files.writeString(jsconfig, """
                 {
                   "compilerOptions": {
@@ -163,16 +165,17 @@ class FileEditorConfigContributorTest {
                         Map.of("java:*", List.of("../../.neko_probe/typescript/@package/*"))));
 
         String out = Files.readString(jsconfig);
-        // jsx 运行时键被引擎配置校正回经典全局工厂模式
+        // The jsx runtime keys are set back to the classic global factory mode that the engine configures
         assertTrue(out.contains("\"jsx\": \"react\""), out);
         assertTrue(out.contains("\"jsxFactory\": \"__nekoJsxFactory\""), out);
         assertTrue(out.contains("\"jsxFragmentFactory\": \"__nekoJsxFragment\""), out);
         assertFalse(out.contains("jsxImportSource"), "automatic-runtime key must be removed: " + out);
-        // paths 合并本身的行为不受影响
+        // The paths merge itself is unaffected
         assertTrue(out.contains("../../.neko_probe/typescript/@package/*"), out);
     }
 
-    /** 临时翻转 {@link ClassFilter#INSTANCE} 的 jsxAutomaticRuntime，结束后恢复（静态状态，必须 try/finally）。 */
+    /** Flips {@link ClassFilter#INSTANCE} jsxAutomaticRuntime for one call and restores it at the end
+     * (static state, so try/finally is required). */
     private static void withJsxAutomaticRuntime(boolean automatic, Runnable body) {
         SandboxConfig prev = ClassFilter.INSTANCE.config();
         try {
@@ -208,7 +211,7 @@ class FileEditorConfigContributorTest {
 
         String out = Files.readString(cfg);
         assertTrue(out.contains("strict"), "user's typeCheckingMode must be preserved: " + out);
-        // 去重：.neko_probe/python 只出现一次
+        // Dedup: .neko_probe/python appears only once
         int count = out.split("\\.neko_probe/python", -1).length - 1;
         assertEquals(1, count, "extraPaths must dedup: " + out);
         assertTrue(out.contains("../other"), "existing user extraPath preserved: " + out);
@@ -268,16 +271,16 @@ class FileEditorConfigContributorTest {
                         EditorConfigContributor.VscodeSettingMerge.SET)));
 
         String out = Files.readString(cfg);
-        // SET_IF_ABSENT：用户显式选的 Jedi 不被覆盖
+        // SET_IF_ABSENT: the user's explicit Jedi choice is not overwritten
         assertTrue(out.contains("\"languageServer\": \"Jedi\""), "user languageServer kept: " + out);
-        // EXTEND_STRING_ARRAY：用户路径保留 + probe 路径去重追加
+        // EXTEND_STRING_ARRAY: user paths are kept and the probe path is appended once
         assertTrue(out.contains("../user-lib"), "user extraPath kept: " + out);
         assertTrue(out.contains("../.neko_probe/python"), "probe extraPath added: " + out);
         assertEquals(1, out.split("\\.neko_probe/python", -1).length - 1,
                 "extraPaths must dedup: " + out);
-        // SET：probe 拥有的叶子替换
+        // SET: the leaf owned by the probe is replaced
         assertTrue(out.contains("\"typeCheckingMode\": \"basic\""), "SET leaf written: " + out);
-        // 既有其它键（其它 backend 键 + 用户键）全部保留
+        // All other existing keys (other backend keys and user keys) are kept
         assertTrue(out.contains("diagnosticMode"), "sibling analysis key kept: " + out);
         assertTrue(out.contains("typescript.tsdk"), "other backend key kept: " + out);
         assertTrue(out.contains("userTop"), "unknown top-level key kept: " + out);
@@ -290,7 +293,7 @@ class FileEditorConfigContributorTest {
         Files.writeString(cfg, "{ \"files.exclude\": { \"**/.git\": true, \"my.log\": false } }");
 
         var contributor = new FileEditorConfigContributor();
-        // 模拟 TS backend 与 Python backend 向同一个 files.exclude 各注入自己的条目
+        // Simulates the TS backend and the Python backend each adding its own entry to the same files.exclude
         contributor.mergeVscodeSettings(cfg, List.of(new EditorConfigContributor.VscodeSetting(
                 "files.exclude", Map.of("**/.neko_probe/typescript", true),
                 EditorConfigContributor.VscodeSettingMerge.MERGE_OBJECT)));
@@ -317,7 +320,7 @@ class FileEditorConfigContributorTest {
         assertTrue(out.contains("console.log($1)"), "body written: " + out);
         assertTrue(out.contains("log it"), "description written: " + out);
 
-        // 二次合并：新增片段 + 保留首个
+        // Second merge: the new snippet is added and the first one is kept
         new FileEditorConfigContributor().mergeVscodeSnippets(file, List.of(
                 new Snippet("if", "iff", "if ($1) {\n  $2\n}", null)));
         String out2 = Files.readString(file);

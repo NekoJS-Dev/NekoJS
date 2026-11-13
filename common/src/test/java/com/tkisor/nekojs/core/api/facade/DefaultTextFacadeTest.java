@@ -93,12 +93,12 @@ class DefaultTextFacadeTest {
     @Test
     void styleMethodsProduceStyledValueAndChainMerges() {
         TextValue base = text.of("hi");
-        // 单个样式产生 Styled，内部值保留原字面量
+        // A single style change produces Styled, and the wrapped value keeps the original literal
         TextValue.Styled bold = assertInstanceOf(TextValue.Styled.class, text.bold(base, true));
         assertEquals(TextValue.literal("hi"), bold.value());
         assertTrue(bold.style().bold());
 
-        // 链式调用在已有样式上合并，不丢失 bold
+        // A chained call merges into the existing style and keeps bold
         TextValue.Styled boldRed = assertInstanceOf(TextValue.Styled.class, text.color(bold, "red"));
         assertTrue(boldRed.style().bold());
         assertEquals("red", boldRed.style().color());
@@ -114,7 +114,8 @@ class DefaultTextFacadeTest {
 
     @Test
     void emptyStyleIsNoOp() {
-        // 全空样式判定为空；任何显式样式（哪怕 bold=false）都使样式非空
+        // An all-empty style counts as empty; any explicitly set style, even bold=false, makes it
+        // non-empty
         assertTrue(TextStyle.empty().isEmpty());
         TextValue.Styled styled = assertInstanceOf(TextValue.Styled.class, text.bold(text.of("x"), false));
         assertFalse(styled.style().isEmpty());
@@ -144,7 +145,8 @@ class DefaultTextFacadeTest {
 
     @Test
     void sequenceAcceptsStyledChildren() {
-        // Styled 子项应作为单个规范元素进入 Sequence（不被展开、不被拒绝）
+        // A Styled child enters a Sequence as one normalized element: it is neither expanded nor
+        // rejected
         TextValue red = text.color(text.of("a"), "red");
         TextValue seq = text.ofValues(List.of(red, text.of("b")));
         assertInstanceOf(TextValue.Sequence.class, seq);
@@ -153,7 +155,7 @@ class DefaultTextFacadeTest {
 
     @Test
     void colorShortcutsApplyNamedColors() {
-        // 16 色 KubeJS 风格快捷方法：等价于 .color('<命名色>')
+        // 16 KubeJS-style color shortcuts, each equivalent to .color('<named color>')
         assertEquals("black", styledColor(text.black(text.of("x"))));
         assertEquals("dark_blue", styledColor(text.darkBlue(text.of("x"))));
         assertEquals("dark_green", styledColor(text.darkGreen(text.of("x"))));

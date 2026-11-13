@@ -12,16 +12,21 @@ import java.util.function.Consumer;
 import java.util.function.Predicate;
 
 /**
- * {@code probe.modify_type} 事件中针对单个 {@link TypeDecl} 的链式编辑器。由
- * {@link ProbeModifyTypeEventJS#forClass(String)} 取得；任一编辑操作都会把所属 TypeDecl 标记为
- * {@code mutated}，probe backend 随后只对这些类重新渲染并覆盖声明缓存。
+ * Chainable editor for a single {@link TypeDecl} in the {@code probe.modify_type} event. You get one from
+ * {@link ProbeModifyTypeEventJS#forClass(String)}. Any edit marks the owning TypeDecl as
+ * {@code mutated}, and the probe backend then re-renders only those classes and overwrites their cached
+ * declarations.
  *
- * <p><b>方法名定位</b>：按名操作作用于该类中**所有同名**方法/构造器（含重载）——这契合「整类改名」语义。
- * 找不到目标成员时为**静默 no-op**（DEBUG 日志），可用 {@link #hasMethod}/{@link #hasField} 预先判空。
+ * <p><b>Addressing by method name</b>: an operation by name applies to every method or constructor of
+ * that class with the same name, overloads included, which matches the "rename the whole class"
+ * semantics. When no target member exists the call is a silent no-op that only logs at DEBUG, so you can
+ * check {@link #hasMethod}/{@link #hasField} first.
  *
- * <p><b>类型入参</b>：接受字符串或 {@link com.tkisor.nekojs.api.surface.ApiTypeRef}。含 {@code .} 的字符串
- * 当 Java 全限定名（SYMBOL），否则当原始类型名（{@code "string"}/{@code "number"}/{@code "boolean"} …）。
- * 复杂类型用 {@link ProbeModifyTypeEventJS#array}/{@link ProbeModifyTypeEventJS#union} 构造后传入。
+ * <p><b>Type arguments</b>: a type argument is either a string or an
+ * {@link com.tkisor.nekojs.api.surface.ApiTypeRef}. A string containing {@code .} is treated as a Java
+ * fully qualified name (SYMBOL); any other string is treated as a primitive type name
+ * ({@code "string"}/{@code "number"}/{@code "boolean"} ...). Build complex types with
+ * {@link ProbeModifyTypeEventJS#array}/{@link ProbeModifyTypeEventJS#union} and pass the result.
  */
 public final class ClassEditor {
     private final TypeDecl decl;
@@ -34,16 +39,16 @@ public final class ClassEditor {
         decl.mutated = true;
     }
 
-    // ==================== 类级 ====================
+    // ==================== Class level ====================
 
-    /** 隐藏整个类（渲染为空声明）。 */
+    /** Hides the whole class (rendered as an empty declaration). */
     public ClassEditor hide() {
         touched();
         decl.hidden = true;
         return this;
     }
 
-    /** 覆盖类文档。 */
+    /** Replaces the class documentation. */
     public ClassEditor setDoc(String doc) {
         touched();
         decl.docs.clear();
@@ -51,37 +56,37 @@ public final class ClassEditor {
         return this;
     }
 
-    /** 重命名类（TS/Python 输出的类名换成 newName；enum 的自引用同步改名）。 */
+    /** Renames the class: the TS/Python output uses the new name, and an enum's self-references are renamed too. */
     public ClassEditor renameClass(String newName) {
         touched();
         decl.renameTo = newName;
         return this;
     }
 
-    /** 改父类类型。 */
+    /** Changes the superclass type. */
     public ClassEditor changeSuper(Object type) {
         touched();
         decl.superType = ProbeModifyTypeEventJS.override(decl.superType, type);
         return this;
     }
 
-    // ==================== 方法级 ====================
+    // ==================== Method level ====================
 
     public boolean hasMethod(String name) {
         return !matchingMethods(name).isEmpty();
     }
 
-    /** 重命名方法（影响所有同名重载）。 */
+    /** Renames a method (affects every overload with that name). */
     public ClassEditor renameMethod(String name, String newName) {
         return editMethods(name, m -> m.renameTo = newName);
     }
 
-    /** 隐藏方法（所有同名重载）。 */
+    /** Hides a method (all overloads with that name). */
     public ClassEditor hideMethod(String name) {
         return editMethods(name, m -> m.hidden = true);
     }
 
-    /** 覆盖方法文档（所有同名重载）。 */
+    /** Replaces a method's documentation (all overloads with that name). */
     public ClassEditor setMethodDoc(String name, String doc) {
         return editMethods(name, m -> {
             m.docs.clear();
@@ -89,12 +94,12 @@ public final class ClassEditor {
         });
     }
 
-    /** 改方法返回类型（所有同名重载）。 */
+    /** Changes a method's return type (all overloads with that name). */
     public ClassEditor changeReturnType(String name, Object type) {
         return editMethods(name, m -> m.returnType = ProbeModifyTypeEventJS.override(m.returnType, type));
     }
 
-    /** 按下标改方法参数类型（作用于每个有该下标参数的同名重载）。 */
+    /** Changes the type of the parameter at the given position (every overload with that name that has a parameter there). */
     public ClassEditor changeParamType(String name, int index, Object type) {
         return editMethods(name, m -> index >= 0 && index < m.params.size(), m -> {
             if (index >= 0 && index < m.params.size()) {
@@ -104,7 +109,7 @@ public final class ClassEditor {
         });
     }
 
-    /** 按参数名改方法参数类型（所有同名重载中名字匹配的参数）。 */
+    /** Changes a parameter type by name (every parameter with that name in all overloads). */
     public ClassEditor changeParamType(String name, String paramName, Object type) {
         return editMethods(name, m -> m.params.stream().anyMatch(p -> paramName.equals(p.name)), m -> {
             for (var p : m.params) {
@@ -115,14 +120,14 @@ public final class ClassEditor {
         });
     }
 
-    /** 按参数名重命名方法参数。 */
+    /** Renames a method parameter by name. */
     public ClassEditor renameParam(String name, String paramName, String newName) {
         return editMethods(name, m -> m.params.stream().anyMatch(p -> paramName.equals(p.name)), m -> {
             for (var p : m.params) if (paramName.equals(p.name)) p.name = newName;
         });
     }
 
-    /** 按下标移除方法参数。 */
+    /** Removes a method parameter by index. */
     public ClassEditor removeParam(String name, int index) {
         return editMethods(name, m -> index >= 0 && index < m.params.size(), m -> {
             if (index >= 0 && index < m.params.size()) m.params.remove(index);
@@ -130,9 +135,10 @@ public final class ClassEditor {
     }
 
     /**
-     * 把指定参数标记为 TS 可选（渲染为 {@code name?: type}）。可选参数必须居尾：若其后还有
-     * 必选参数，产出形如 {@code (a: string, b?: number, c: string)} 的非法签名 → 立即抛
-     * {@link IllegalStateException}（varargs 渲染为 {@code name?: T[]}，同样视为可选）。
+     * Marks the named parameter as optional in TypeScript (rendered as {@code name?: type}). Optional
+     * parameters must come last: if a required parameter follows, the signature would be invalid, as in
+     * {@code (a: string, b?: number, c: string)}, so this throws {@link IllegalStateException}
+     * immediately. Varargs count as optional too (rendered as {@code name?: T[]}).
      */
     public ClassEditor markOptional(String name, String paramName) {
         return editMethods(name, m -> m.params.stream().anyMatch(p -> paramName.equals(p.name)), m -> {
@@ -141,8 +147,9 @@ public final class ClassEditor {
         });
     }
 
-    /** 追加一个参数到方法末尾（所有同名重载）。追加的是必选参数：若前面已有可选/varargs 参数
-     *  会形成非法签名，立即抛 {@link IllegalStateException}。 */
+    /** Appends a parameter to the end of the method (all overloads with that name). The new parameter
+     *  is required: if an optional or varargs parameter already comes before it, the signature would be
+     *  invalid, so this throws {@link IllegalStateException} immediately. */
     public ClassEditor addParam(String name, String paramName, Object type) {
         return editMethods(name, m -> {
             TypeSlot slot = ProbeModifyTypeEventJS.override(null, type);
@@ -152,9 +159,10 @@ public final class ClassEditor {
     }
 
     /**
-     * 校验参数表不存在「可选参数后跟必选参数」（含 varargs——渲染为 {@code name?: T[]} 视为可选）。
-     * 编辑期失败优于静默产出 TS/Python 都无法解析的声明；异常由 probe.modify_type 事件的外层
-     * try/catch 记录为 error，不会中断游戏。
+     * Checks that no required parameter follows an optional one (varargs count as optional, rendered as
+     * {@code name?: T[]}). Failing during the edit beats silently emitting a declaration that neither TS
+     * nor Python can parse. The outer try/catch of the probe.modify_type event records the exception as
+     * an error and the game keeps running.
      */
     private void validateOptionalParamsTrail(MethodDecl m, String op) {
         boolean seenOptional = false;
@@ -170,16 +178,17 @@ public final class ClassEditor {
     }
 
     /**
-     * 新增一个实例方法。{@code paramSpecs} 每个元素是 {@code "type"}（参数名自动 arg0/arg1…）
-     * 或 {@code "name:type"}（按第一个 ':' 切分；无 ':' 当纯类型、名字自动）。
-     * 参数名含非法字符不校验（宿主对象信任调用方），但空参数名/空类型抛 IllegalArgumentException；
-     * {@code paramSpecs} 为 null 视为无参数。
+     * Adds an instance method. Each {@code paramSpecs} entry is either {@code "type"} (the parameter name
+     * becomes arg0/arg1...) or {@code "name:type"} (split at the first ':' ; without a ':' the text is a
+     * plain type and the name is generated). Parameter names with illegal characters are not validated
+     * because the host trusts the caller, but an empty name or empty type throws IllegalArgumentException.
+     * A null {@code paramSpecs} means no parameters.
      */
     public ClassEditor addMethod(String name, Object returnType, Object... paramSpecs) {
         return addMethodInternal(name, returnType, false, paramSpecs);
     }
 
-    /** 新增一个静态方法（语义同 {@link #addMethod}，isStatic = true）。 */
+    /** Adds a static method (same semantics as {@link #addMethod}, with isStatic = true). */
     public ClassEditor addStaticMethod(String name, Object returnType, Object... paramSpecs) {
         return addMethodInternal(name, returnType, true, paramSpecs);
     }
@@ -196,7 +205,7 @@ public final class ClassEditor {
                     throw new IllegalArgumentException("param spec must be a String, got: "
                             + (spec == null ? "null" : spec.getClass().getName()));
                 }
-                // 按第一个 ':' 切分；无 ':' → 纯类型，参数名自动 arg<序号>
+                // Split at the first ':' ; without a ':' the text is a plain type and the name becomes arg<index>
                 int colon = text.indexOf(':');
                 String pName;
                 String pType;
@@ -221,7 +230,7 @@ public final class ClassEditor {
         return this;
     }
 
-    // ==================== 字段级 ====================
+    // ==================== Field level ====================
 
     public boolean hasField(String name) {
         for (FieldDecl f : decl.fields) if (f.name.equals(name)) return true;
@@ -247,7 +256,7 @@ public final class ClassEditor {
         });
     }
 
-    // ==================== 内部 ====================
+    // ==================== Internals ====================
 
     private List<MethodDecl> matchingMethods(String name) {
         List<MethodDecl> out = new ArrayList<>();

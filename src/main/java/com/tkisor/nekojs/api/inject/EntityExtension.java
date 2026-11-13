@@ -41,13 +41,14 @@ public interface EntityExtension extends EntitySpec {
         return false;
     }
 
-    /** 实体类型注册 id。@Remap 避免与原生 int getId() 零参碰撞。 */
+    /** The entity type registry id. @Remap avoids colliding with the native zero-argument int getId(). */
     @Remap("getRegistryId")
     default String neko$getId() {
         return BuiltInRegistries.ENTITY_TYPE.getKey(self().getType()).toString();
     }
 
-    // neko$getX/Y/Z 已删除——NF 原生 Entity 有零参 getX()/getY()/getZ()，JS 直接用原生
+    // neko$getX/Y/Z was removed: NF's native Entity has zero-argument getX()/getY()/getZ(), so JS
+    // should use the native methods.
 
     @Override
     default void neko$teleport(double x, double y, double z) {

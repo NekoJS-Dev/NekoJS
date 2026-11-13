@@ -26,25 +26,28 @@ import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 /**
- * 服务端事件面的 fabric 桥 v1：生命周期（aboutToStart/starting/started/stopping/stopped）、
- * 服务端 tick（tickPre/tickPost）、玩家进出服（loggedIn/loggedOut）。
+ * Provide Fabric bridges for server events: lifecycle (aboutToStart, starting, started, stopping, stopped),
+ * server ticks (tickPre, tickPost), and player connection events (loggedIn, loggedOut).
  *
- * <p>组名与总线名和 NeoForge 侧一致（同名组经 EventGroupRegistry 合并，fabric 节点上
- * NeoForge 核心插件不加载，无重复）；payload 为中立类，成员名对齐契约 getter 约定。
- * SERVER 脚本首次加载挂在 SERVER_STARTING（NeoForge 侧在 datapack reload listener
- * 注册期做，时机等价：都在世界装载完成后、STARTED 之前）。
+ * <p>The group and bus names are consistent with NeoForge. Since identical groups are merged
+ * via {@code EventGroupRegistry} and the NeoForge core plugin does not load on Fabric, there are no duplicates.
+ * Payloads are neutral classes, and member names adhere to contract getter conventions.
+ * SERVER scripts are initially loaded at {@code SERVER_STARTING} (this is equivalent to the NeoForge
+ * datapack reload listener registration time: both occur after world loading completes and before {@code STARTED}).
  *
- * <p>NeoForge 侧这些总线直传原生事件——两类 payload 成员同形（getServer/getPlayer），
- * 脚本无感；后续批次把 NeoForge 侧也切到中立 payload 后即完全同型。
+ * <p>On NeoForge, these buses pass native events directly. The payload members are isomorphic
+ * (getServer/getPlayer), so scripts remain agnostic. Once NeoForge payloads are also switched to
+ * neutral payloads in subsequent batches, they will be completely type-equivalent.
  *
- * <p><b>时机差异（fabric 已知）</b>：fabric 没有 NeoForge「Starting」（世界装载后、
- * Done 前）的等价事件，{@code starting} 与 {@code aboutToStart} 都在 fabric
- * SERVER_STARTING（世界装载<b>前</b>）触发——此时 {@code server.getPlayerList()}
- * 尚为 null，脚本请到 {@code started} 再访问玩家列表。
+ * <p><b>Known Fabric Timing Differences</b>: Fabric lacks an event equivalent to the NeoForge
+ * "Starting" (which occurs after world loading but before completion). {@code starting} and
+ * {@code aboutToStart} are both triggered at {@code SERVER_STARTING} (<b>before</b> world loading)
+ * on Fabric. At this point, {@code server.getPlayerList()} is null. Please wait until {@code started}
+ * to access the player list.
  */
 public final class FabricServerEventBindings {
 
-    /** 与 NeoForge 侧 bindings/event/ServerEvents 同名（fabric 子集）。 */
+    /** Share the name with the NeoForge bindings/event/ServerEvents (Fabric subset). */
     public static final EventGroup SERVER_EVENTS = EventGroup.of("ServerEvents").expose(api -> api.versioned());
 
     public static final EventBusJS<ServerLifecycleEventJS, Void> ABOUT_TO_START =
@@ -68,32 +71,33 @@ public final class FabricServerEventBindings {
                             event -> new StableServerTickEvent(event.getServer().getTickCount()))
                             .scriptTypes(ScriptType.SERVER));
 
-    // ---- 资源/生命周期面（第 15 批；NeoForge 侧直传原生事件，fabric 侧纯回调 + 中立载荷）----
+    // ---- Resource/Lifecycle (Batch 15; NeoForge passes native events, Fabric uses callbacks + neutral payload) ----
 
     /**
-     * 数据包同步（server 脚本）：{@code ServerLifecycleEvents.SYNC_DATA_PACK_CONTENTS}
-     * 转换。player 为 null 表示 reload 后的全体玩家（与 NF OnDatapackSyncEvent 一致）。
+     * Map to {@code ServerLifecycleEvents.SYNC_DATA_PACK_CONTENTS} for data pack synchronization
+     * in server scripts. A null player represents all players after a reload (consistent with the NF OnDatapackSyncEvent).
      */
     public static final EventBusJS<DatapackSyncEventJS, Void> DATAPACK_SYNC =
             SERVER_EVENTS.server("datapackSync", DatapackSyncEventJS.class);
 
     /**
-     * 标签更新（server 脚本）：{@code CommonLifecycleEvents.TAGS_LOADED} 转换
-     * （fabric impl 经 ReloadableServerResourcesMixin 在服务端资源装载完成时触发，
-     * 时机与 NF TagsUpdatedEvent 对齐；NF 原生的 UpdateCause 无 fabric 对应）。
+     * Map to {@code CommonLifecycleEvents.TAGS_LOADED} for tag updates in server scripts.
+     * (The Fabric implementation is triggered via {@code ReloadableServerResourcesMixin} when server resources
+     * are loaded, aligning with the NF TagsUpdatedEvent; native NF {@code UpdateCause} has no Fabric equivalent).
      */
     public static final EventBusJS<TagUpdatedEventJS, Void> TAGS_UPDATED =
             SERVER_EVENTS.server("tagsUpdated", TagUpdatedEventJS.class);
 
     /**
-     * 战利品表装载（server 脚本）：{@code LootTableEvents.MODIFY} 转换。
-     * 语义差异（记录）：NF 是整表 get/set 且可取消；fabric 是 builder 原地修改、
-     * 不可取消——载荷 javadoc 与移植台账双记录。
+     * Map to {@code LootTableEvents.MODIFY} for loot table loading in server scripts.
+     * Note semantic differences: NF allows whole-table get/set and is cancellable; Fabric uses
+     * in-place builder modification and is not cancellable. This is documented in both the payload
+     * Javadoc and the migration ledger.
      */
     public static final EventBusJS<LootTableLoadEventJS, Void> LOOT_TABLE_LOAD =
             SERVER_EVENTS.server("lootTableLoad", LootTableLoadEventJS.class);
 
-    /** 与 NeoForge 侧 bindings/event/PlayerEvents 同名（fabric 子集）。 */
+    /** Share the name with the NeoForge bindings/event/PlayerEvents (Fabric subset). */
     public static final EventGroup PLAYER_EVENTS = EventGroup.of("PlayerEvents");
 
     public static final EventBusJS<PlayerLifecycleEventJS, Void> LOGGED_IN =
@@ -109,21 +113,21 @@ public final class FabricServerEventBindings {
     public static final EventBusJS<PlayerRespawnEventJS, Void> RESPAWNED =
             PLAYER_EVENTS.server("respawned", PlayerRespawnEventJS.class);
 
-    /** chat：中立 payload（player/username/message 字符串，契约可移植成员）。 */
+    /** Chat: Neutral payload (player, username, message string; contract-compatible members). */
     public static final EventBusJS<com.tkisor.nekojs.wrapper.event.player.ServerChatEventJS, Void> CHAT =
             PLAYER_EVENTS.server("chat", com.tkisor.nekojs.wrapper.event.player.ServerChatEventJS.class);
 
-    /** 等待下一个 tick 末 post loggedIn 的玩家（见 {@link #register} 中的时机说明）。 */
+    /** Wait for the player to post loggedIn at the end of the next tick (see timing notes in {@link #register}). */
     private static final Queue<ServerPlayer> PENDING_LOGINS = new ConcurrentLinkedQueue<>();
 
     /**
-     * 当前运行中的服务器实例（SERVER_STARTING 设、SERVER_STOPPED 清）。
-     * fabric-api 无 {@code ServerLifecycleHooks#getCurrentServer} 等价物，配方 mixin 的
-     * 广播段（RecipeManagerMixin 孪生）从这里取 server 找 gamemaster 玩家。
+     * Current server instance (set on SERVER_STARTING, cleared on SERVER_STOPPED).
+     * Fabric-API lacks an equivalent to {@code ServerLifecycleHooks#getCurrentServer}.
+     * Recipe mixins use this to locate the server to find gamemaster players.
      */
     private static volatile MinecraftServer currentServer;
 
-    /** @return 当前服务器实例；不在服务器生命周期内（纯客户端未开世界等）为 {@code null}。 */
+    /** @return Current server instance; null if not within the server lifecycle (e.g., pure client, no world loaded). */
     public static MinecraftServer currentServer() {
         return currentServer;
     }
@@ -138,7 +142,7 @@ public final class FabricServerEventBindings {
     }
 
     /**
-     * @param loadServerScripts SERVER 脚本首次加载动作（{@code NekoRuntimeRoot.reload(SERVER)}）
+     * @param loadServerScripts Action for initial SERVER script loading ({@code NekoRuntimeRoot.reload(SERVER)}).
      */
     public static void register(Runnable loadServerScripts,
             java.util.function.Supplier<com.tkisor.nekojs.core.lifecycle.NekoRuntimeRoot> rootSupplier) {
@@ -157,9 +161,9 @@ public final class FabricServerEventBindings {
                     server.getWorldPath(net.minecraft.world.level.storage.LevelResource.ROOT));
             loadServerScripts.run();
             ABOUT_TO_START.post(new ServerLifecycleEventJS(server));
-            // 与 NeoForge 侧 ServerEventListener#onServerAboutToStart 同位次：
-            // aboutToStart 事件之后、starting 之前收集并应用物品/方块属性修改（票 39
-            // 初始 generation 收集点；事务 reload 的重放在 DOMAIN_PLAN 阶段联合应用）
+            // Same order as ServerEventListener#onServerAboutToStart on NeoForge: collect and apply item and
+            // block property modifications after aboutToStart but before starting. The first collection
+            // happens at generation; transaction reload replays are applied together in the DOMAIN_PLAN phase.
             com.tkisor.nekojs.core.lifecycle.NekoRuntimeRoot root = rootSupplier.get();
             com.tkisor.nekojs.core.lifecycle.CandidateDomainCollector modificationCollector =
                     root == null ? null
@@ -189,10 +193,10 @@ public final class FabricServerEventBindings {
                 listener -> ServerLifecycleEvents.SERVER_STOPPING.register(server ->
                         listener.accept(new ServerLifecycleEventJS(server))));
         ServerLifecycleEvents.SERVER_STOPPED.register(server -> {
-            // 未来得及 post 的登录不带进下一个服务器实例（单人退出世界再进）
+            // Logins not yet posted are not carried into the next server instance (e.g., singleplayer exiting and re-entering the world).
             PENDING_LOGINS.clear();
             currentServer = null;
-            // 修改域的 server 绑定随服务器实例失效（基线是进程级例外，保留到 root close）
+            // Domain-specific server bindings expire when the server instance does (baseline is process-level exception, kept until root close).
             com.tkisor.nekojs.core.lifecycle.NekoRuntimeRoot root = rootSupplier.get();
             if (root != null) {
                 com.tkisor.nekojs.core.lifecycle.CandidateDomainCollector collector =
@@ -220,8 +224,8 @@ public final class FabricServerEventBindings {
                 TICK_PRE,
                 listener -> ServerTickEvents.START_SERVER_TICK.register(listener::accept),
                 ServerTickEventJS::new);
-        // 玩家 tick：fabric-api 无 per-player tick 事件，在服务端 tick 首尾遍历
-        //（NeoForge 侧 PlayerTickEvent.Pre/Post 同为服务端 tick 驱动，时机等价）
+        // Player tick: Fabric-API has no per-player tick event; traverse at the start and end of server ticks
+        // (NeoForge PlayerTickEvent.Pre/Post are also driven by server ticks, so timing is equivalent).
         ServerTickEvents.START_SERVER_TICK.register(server -> {
             for (ServerPlayer player : server.getPlayerList().getPlayers()) {
                 PLAYER_TICK_PRE.post(new PlayerTickEventJS(player));
@@ -239,38 +243,38 @@ public final class FabricServerEventBindings {
                 PLAYER_TICK_POST.post(new PlayerTickEventJS(player));
             }
         });
-        // 克隆/重生：fabric COPY_FROM（数据拷贝点，对齐 PlayerEvent.Clone）与
-        // AFTER_RESPAWN（重生完成）。alive = 旧实体仍存活（末地返回式重生）
+        // Clone/Respawn: Fabric COPY_FROM (data copy point, aligns with PlayerEvent.Clone) and
+        // AFTER_RESPAWN (respawn completion). alive = old entity still alive (e.g., end return respawn).
         bridge.bind(CLONED,
                 listener -> ServerPlayerEvents.COPY_FROM.register((oldPlayer, newPlayer, alive) ->
                         listener.accept(new PlayerCloneEventJS(newPlayer, oldPlayer, alive))));
         bridge.bind(RESPAWNED,
                 listener -> ServerPlayerEvents.AFTER_RESPAWN.register((oldPlayer, newPlayer, alive) ->
                         listener.accept(new PlayerRespawnEventJS(newPlayer, oldPlayer, alive))));
-        // fabric 的 JOIN 在 PlayerList#placeNewPlayer 中途触发（语义是"可以给这个连接发包了"），
-        // 此刻玩家还没进 server.getPlayerList()——NeoForge 的 PlayerLoggedInEvent 是进列表之后。
-        // 因此排到下一个 tick 末再 post：否则脚本在 loggedIn 里做的全服广播（ClientData.sync 等）
-        // 会静默漏掉刚进来的这个人。server.execute 不行——同线程会内联执行。
+        // Fabric's JOIN triggers in the middle of PlayerList#placeNewPlayer (semantic: "packets can be sent to this connection"),
+        // at which point the player is not yet in server.getPlayerList()—NeoForge's PlayerLoggedInEvent is after entering the list.
+        // Therefore, defer until the end of the next tick: otherwise, server-wide broadcasts made by scripts in loggedIn
+        // (e.g., ClientData.sync) will silently miss this player. server.execute does not work—it is inline on the same thread.
         ServerPlayConnectionEvents.JOIN.register((handler, sender, server) ->
                 PENDING_LOGINS.add(handler.player));
         ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> {
-            // 同一 tick 内进又出：撤掉排队中的 loggedIn，避免 loggedOut 先于 loggedIn
+            // Joined and left in the same tick: remove from pending loggedIn queue to avoid loggedOut preceding loggedIn.
             if (PENDING_LOGINS.remove(handler.player)) return;
             LOGGED_OUT.post(new PlayerLifecycleEventJS(handler.player));
         });
-        // 数据包同步：player=null = reload 后的全体玩家（与 NF OnDatapackSyncEvent 语义一致）
+        // Datapack synchronization: player=null = all players after reload (semantic consistent with NF OnDatapackSyncEvent).
         ServerLifecycleEvents.SYNC_DATA_PACK_CONTENTS.register((player, hasJoinedBefore) -> {
             MinecraftServer server = currentServer;
             if (server != null) {
                 DATAPACK_SYNC.post(new DatapackSyncEventJS(player, server.getPlayerList()));
             }
         });
-        // 标签更新：fabric TAGS_LOADED（RegistryAccess, updated）——TAGS_UPDATED 载荷的
-        // shouldUpdateStaticData 承载 updated（NF 的 UpdateCause 无 fabric 对应，差异记录）
+        // Tag updates: Fabric TAGS_LOADED (RegistryAccess, updated)—TAGS_UPDATED payload's
+        // shouldUpdateStaticData carries updated (NF UpdateCause has no Fabric equivalent; differences recorded).
         bridge.bind(TAGS_UPDATED,
                 listener -> CommonLifecycleEvents.TAGS_LOADED.register((registries, updated) ->
                         listener.accept(new TagUpdatedEventJS(registries, updated))));
-        // 战利品表装载：per-table MODIFY（builder 模式；NF 侧为整表 get/set + 可取消，差异记录）
+        // Loot table load: per-table MODIFY (builder pattern; NF is whole-table get/set + cancellable; differences recorded).
         bridge.bind(LOOT_TABLE_LOAD,
                 listener -> LootTableEvents.MODIFY.register((key, tableBuilder, source, registries) ->
                         listener.accept(new LootTableLoadEventJS(

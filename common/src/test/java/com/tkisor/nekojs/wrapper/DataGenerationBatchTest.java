@@ -21,12 +21,12 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Ticket 23 AC6/AC7 fixtures for the non-Assets data generation batch: candidate staging,
- * validation (path inclusion / duplicate-key+overwrite policy / JSON structure / read-back),
- * atomic publish with rollback, failure retention and user-file protection.
+ * Tests the non-Assets data generation batch: candidate staging, validation (path inclusion,
+ * duplicate-key and overwrite policy, JSON structure, read-back), atomic publish with rollback,
+ * failure retention and user-file protection.
  *
- * <p>All assertions observe the public file tree and the generator's read-back — no private
- * state is asserted beyond the documented {@link DataGenerationBatch.PublishResult}.
+ * <p>All assertions observe the public file tree and the generator's read-back; the only
+ * non-public state asserted is the documented {@link DataGenerationBatch.PublishResult}.
  */
 class DataGenerationBatchTest {
 

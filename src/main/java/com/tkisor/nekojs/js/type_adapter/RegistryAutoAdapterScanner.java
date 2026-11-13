@@ -19,19 +19,22 @@ import java.util.List;
 import java.util.Set;
 
 /**
- * 自动注册表适配器扫描器：扫 holder 类里的 {@code public static final Registry<T>} /
- * {@code ResourceKey<Registry<T>>} 字段（后者经根注册表解析成 Registry 对象），
- * 对"没有专属适配器的注册表类型"动态实例化 {@link SimpleRegistryBasedAdapter} 并注册——
- * 脚本侧任何注册表类型参数都能直接传字符串 id，零 per-type 代码
- * （KubeJS {@code RegistryType.Scanner} 的对标；NekoJS 没有 Mixin 那条路，走静态字段反射）。
+ * Scans holder classes for {@code public static final Registry<T>} and
+ * {@code ResourceKey<Registry<T>>} fields; a ResourceKey is resolved through the root registry into a
+ * Registry object. For every registry type without a dedicated adapter it instantiates a
+ * {@link SimpleRegistryBasedAdapter} and registers it, so any registry-typed script parameter accepts
+ * a string id with no per-type code. This is the NekoJS counterpart of KubeJS
+ * {@code RegistryType.Scanner}: there is no Mixin path here, so it uses static field reflection.
  *
- * <p>去重：目标类型已有适配器（手写或同轮扫描已注册）就跳过，手写适配器行为零变化；
- * 动态适配器走 {@code AbstractJSTypeAdapter} 默认 LOWEST 优先级，永远让位于手写。
+ * <p>Deduplication: a target type that already has an adapter (hand-written, or registered earlier in
+ * the same scan round) is skipped, so hand-written adapters keep their behavior. Dynamic adapters use
+ * the default LOWEST precedence of {@code AbstractJSTypeAdapter} and always yield to hand-written ones.
  *
- * <p>失败语义：字段不可读、注册表对象为 null、泛型实参不可解析（裸泛型/嵌套通配符）、
- * 目标类型本身是注册表（根注册表 {@code Registry<Registry<?>>}）——全部静默跳过并记
- * debug 日志，绝不阻断启动。mod/插件的额外 holder 类经
- * {@code installInto(registry, List.of(MyRegistries.class))} 贡献，不需要新插件钩子。
+ * <p>Failures are silent and never block startup: an unreadable field, a null registry object, a type
+ * argument that cannot be resolved (raw generic or nested wildcard), or a target type that is itself a
+ * registry (the root registry {@code Registry<Registry<?>>}) is skipped and logged at debug level.
+ * Mods and plugins contribute extra holder classes through
+ * {@code installInto(registry, List.of(MyRegistries.class))}, with no new plugin hook.
  */
 public final class RegistryAutoAdapterScanner {
     private static final Logger LOGGER = LoggerFactory.getLogger(RegistryAutoAdapterScanner.class);
@@ -56,8 +59,9 @@ public final class RegistryAutoAdapterScanner {
         if (Registry.class.isAssignableFrom(field.getType())) {
             registerFromHolder(registry, covered, field.getGenericType(), () -> readStatic(field, Registry.class));
         } else if (ResourceKey.class.isAssignableFrom(field.getType())) {
-            // vanilla Registries 类只发 ResourceKey——经根注册表解析成 Registry 对象再注册；
-            // 根注册表查不到（裸 JVM / 未 bootstrap）则静默跳过
+            // The vanilla Registries class exposes only ResourceKeys, so resolve them through the root registry
+            // into Registry objects before registering; skip silently when the root registry cannot resolve
+            // them (bare JVM, no bootstrap)
             registerFromHolder(registry, covered, keyTargetRegistryType(field.getGenericType()),
                     () -> resolveFromRoot(readStatic(field, ResourceKey.class)));
         }
@@ -66,9 +70,9 @@ public final class RegistryAutoAdapterScanner {
     private static void registerFromHolder(JSTypeAdapterRegistry registry, Set<Class<?>> covered,
             Type registryType, java.util.function.Supplier<Registry<?>> source) {
         Class<?> valueType = registryValueType(registryType);
-        if (valueType == null) return; // 裸泛型 / 类型实参不是 Class
-        if (Registry.class.isAssignableFrom(valueType)) return; // 根注册表等
-        if (!covered.add(valueType)) return; // 已有专属适配器（手写 adapter 优先）
+        if (valueType == null) return; // Raw generic, or a type argument that is not a Class
+        if (Registry.class.isAssignableFrom(valueType)) return; // The root registry and the like
+        if (!covered.add(valueType)) return; // A dedicated adapter already exists (hand-written adapters win)
 
         Registry<?> registryObject;
         try {
@@ -95,8 +99,9 @@ public final class RegistryAutoAdapterScanner {
     @SuppressWarnings({"unchecked", "rawtypes"})
     private static Registry<?> resolveFromRoot(ResourceKey<?> key) {
         if (key == null) return null;
-        // REGISTRY 声明为 Registry<? extends Registry<?>>——通配捕获让泛型调用不可行，
-        // 走 raw 调用并兼容两种返回形态（26.x 的 get 返回 Optional，旧版返回可空对象）
+        // REGISTRY is declared as Registry<? extends Registry<?>>: wildcard capture makes the generic call
+        // impossible, so this calls it raw and accepts both return shapes (26.x get returns Optional,
+        // older versions return a nullable object)
         Object resolved = ((Registry) BuiltInRegistries.REGISTRY).get(key);
         if (resolved instanceof java.util.Optional<?> optional) {
             return (Registry<?>) optional.orElse(null);
@@ -104,7 +109,7 @@ public final class RegistryAutoAdapterScanner {
         return (Registry<?>) resolved;
     }
 
-    /** 取 {@code ResourceKey<Registry<T>>} 的内层 {@code Registry<T>} 类型；形态不符返回 null。 */
+    /** Returns the inner {@code Registry<T>} type of {@code ResourceKey<Registry<T>>}; null if the shape differs. */
     private static Type keyTargetRegistryType(Type genericType) {
         if (genericType instanceof ParameterizedType parameterized
                 && parameterized.getActualTypeArguments()[0] instanceof ParameterizedType inner
@@ -126,7 +131,7 @@ public final class RegistryAutoAdapterScanner {
         }
     }
 
-    /** 取 {@code Registry<T>} 的第一个类型实参；解析不了返回 null。 */
+    /** Returns the first type argument of {@code Registry<T>}; returns null when it cannot be resolved. */
     private static Class<?> registryValueType(Type genericType) {
         if (genericType instanceof ParameterizedType parameterized) {
             Type argument = parameterized.getActualTypeArguments()[0];

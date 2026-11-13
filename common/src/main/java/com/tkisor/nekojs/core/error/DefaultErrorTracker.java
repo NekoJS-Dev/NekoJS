@@ -25,11 +25,11 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArraySet;
 
 /**
- * 默认 {@link ErrorTracker} 实现：持有脚本错误状态为实例字段。
+ * Default {@link ErrorTracker} implementation: it keeps script error state in instance fields.
  *
- * <p>构造器接收 {@link NekoJSPaths}（脚本路径 relativize / source 查找）和
- * {@link SandboxConfig}（concise log 开关）。源码位置格式化 helper 为实例方法，
- * 供 {@link ScriptError} 复用。
+ * <p>The constructor accepts {@link NekoJSPaths} (for script path relativization/source lookup) and
+ * {@link SandboxConfig} (for concise log toggling). The source location formatting helpers are
+ * instance methods so {@link ScriptError} can reuse them.
  */
 public final class DefaultErrorTracker implements ErrorTracker {
     private static final Set<String> HOST_FRAME_BLACKLIST = Set.of(
@@ -40,11 +40,13 @@ public final class DefaultErrorTracker implements ErrorTracker {
             "com.tkisor.nekojs.script.ScriptManager"
     );
     /**
-     * 运行时回调错误（rt/ 前缀）容量上限。非 PolyglotException 去重键含
-     * {@code hash(class+message)}，消息随时间变化的回调错误（如带时间戳/随机数的报错）
-     * 每个新消息都会新增记录，使 {@link #errors} 无界增长。镜像
-     * {@link SourceMapRegistry#CACHE_HARD_CAP} 的 4096 上限模式：超过上限时清空其它
-     * 运行时回调错误、保留最近一条；脚本自身错误按 scriptId 存储、天然有界，不受影响。
+     * Upper bound on runtime callback errors (the {@code rt/} prefix). For non-PolyglotException
+     * errors the dedup key includes {@code hash(class+message)}, so a callback error whose message
+     * changes over time (a timestamp or random value in the text) adds a new record for every new
+     * message and would let {@link #errors} grow without bound. This mirrors the 4096 cap pattern
+     * of {@link SourceMapRegistry#CACHE_HARD_CAP}: once the limit is exceeded, the other runtime
+     * callback errors are cleared and the most recent one is kept. A script's own errors are
+     * stored by scriptId and are naturally bounded, so the cap does not affect them.
      */
     private static final int MAX_RUNTIME_CALLBACK_ERRORS = 4096;
     private final Map<ScriptId, ScriptError> errors = new ConcurrentHashMap<>();
@@ -56,7 +58,7 @@ public final class DefaultErrorTracker implements ErrorTracker {
     private final Map<ScriptType, ModuleViews> activeModuleViews = new ConcurrentHashMap<>();
     private final Map<Context, ModuleViews> contextModuleViews = new ConcurrentHashMap<>();
 
-    /** One environment's source-map/virtual-module view with the generation it belongs to (ticket 30). */
+    /** One environment's source-map/virtual-module view together with the generation it belongs to. */
     record ModuleViews(NekoSourceMapView sourceMaps, NekoVirtualModuleView virtualModules,
                        long generation, boolean candidate) {}
 
@@ -116,9 +118,8 @@ public final class DefaultErrorTracker implements ErrorTracker {
     }
 
     /**
-     * Ticket 30: publish the active view with its generation attribution. Errors freeze that
-     * generation at record time, so later generation switches never rewrite recorded history
-     * (mis-attribution guard).
+     * Publishes the active view with the generation it belongs to. Errors freeze that generation
+     * at record time, so a later generation switch never rewrites recorded history.
      */
     public void activateModuleViews(ScriptType type, Context context, NekoModulePipelineCache moduleSession,
                                     long generation) {
@@ -141,7 +142,8 @@ public final class DefaultErrorTracker implements ErrorTracker {
         activateCandidateModuleViews(type, context, moduleSession, -1L);
     }
 
-    /** Ticket 30: bind the candidate view to its candidate generation; staged errors freeze that generation and the candidate flag. */
+    /** Binds the candidate view to its candidate generation; staged errors freeze that generation and
+     * the candidate flag. */
     public void activateCandidateModuleViews(ScriptType type, Context context,
                                               NekoModulePipelineCache moduleSession, long candidateGeneration) {
         if (type == null || context == null || moduleSession == null) return;
@@ -247,8 +249,9 @@ public final class DefaultErrorTracker implements ErrorTracker {
 
         String eventPath = pathStr;
         ScriptId runtimeId = eventErrorId(currentType, eventPath);
-        // 先去重（只比对轻量签名，不读取源码文件）：命中同一错误时仅递增频次，
-        // 避免高频回调（如 20Hz tick 循环）每次错误都重建 ScriptError 并重读源码文件。
+        // Deduplicate first, comparing only the lightweight signature and never reading a source file:
+        // a hit on the same error only increments its count, so a high-frequency callback (such as a
+        // 20Hz tick loop) does not rebuild the ScriptError and re-read the source file on every error.
         boolean[] created = new boolean[1];
         long[] previousCountHolder = new long[1];
         ScriptError scriptError = errorStore.compute(runtimeId, (ignored, previous) -> {
@@ -263,24 +266,27 @@ public final class DefaultErrorTracker implements ErrorTracker {
             return ScriptError.create(context, currentType, runtimeId, eventPath, throwable, this, callbackKind);
         });
 
-        // 容量上限（仅超限时触发一次过滤，正常有界路径零开销）：ConcurrentHashMap.size()
-        // 为 O(1)，超限后清空其它运行时回调错误、保留当前这条，防止消息持续变化的
-        // 回调错误无界增长。脚本自身错误（scriptId 非 rt/ 前缀）不受影响。
+        // Cap check, which only does work once the limit is exceeded so the normal bounded path costs
+        // nothing: ConcurrentHashMap.size() is O(1), and over the limit the other runtime callback
+        // errors are cleared and the current one is kept, so callback errors with continuously
+        // changing messages cannot grow without bound. A script's own errors (scriptId without the
+        // rt/ prefix) are not affected.
         if (errorStore.size() > MAX_RUNTIME_CALLBACK_ERRORS) {
             errorStore.entrySet().removeIf(entry -> isRuntimeCallbackError(entry.getKey()) && !entry.getKey().equals(runtimeId));
         }
 
         if (shouldLogOccurrence(created[0], previousCountHolder[0], scriptError.getOccurrenceCount())) {
-            // 唯一的控制台输出点：经 CollapsingAppender 写入 per-type 日志文件并镜像到主控制台。
-            // Log history consumes the same frozen record (ticket 30): the describe() line
-            // carries phase/owner/generation attribution next to the legacy detail text, so
-            // logs, panel and report present the same core fields.
+            // The only console output point: it writes through CollapsingAppender into the per-type log file
+            // and mirrors to the main console. The log line consumes the same frozen record, so the
+            // describe() line carries phase/owner/generation next to the detail text and logs, panel
+            // and report present the same core fields.
             String detail = scriptError.getLogDetailText(config.conciseScriptErrorLogs())
                     + "\n" + scriptError.diagnostic().describe();
             String kind = callbackKind == null || callbackKind.isBlank() ? "callback" : callbackKind;
-            // 不再直接写 NekoJS.LOGGER，避免同一条回调错误在控制台重复输出。
-            // 高频重复错误按里程碑节流：新建时记录，此后仅在 1→2、4→5、24→25、…、99→100、
-            // 199→200 等跨越里程碑时记录，避免 20Hz tick 回调刷屏。
+            // Do not write NekoJS.LOGGER directly, so the same callback error is not printed twice.
+            // High-frequency repeated errors are throttled by milestone: a new error is always
+            // recorded, and from then on it is recorded only when the count crosses 1→2, 4→5, 24→25,
+            // …, 99→100, 199→200, so a 20Hz tick callback cannot flood the log.
             com.tkisor.nekojs.script.ScriptTypeEnv.logger(currentType).error("Script {} callback exception:\n{}", kind, detail);
         }
     }
@@ -338,10 +344,9 @@ public final class DefaultErrorTracker implements ErrorTracker {
     }
 
     /**
-     * Ticket 30 non-GUI seam: read-only snapshot of the frozen records of the current public
-     * error set. Log history and the dashboard packet derive from these records instead of
-     * re-deriving error fields; candidate errors stay out of this snapshot until the commit
-     * point publishes them.
+     * Read-only snapshot of the frozen records of the current public error set. Log history and
+     * the dashboard packet are derived from these records instead of re-deriving error fields;
+     * candidate errors stay out of this snapshot until the commit point publishes them.
      */
     public List<ScriptDiagnosticRecord> diagnostics() {
         return errors.values().stream().map(ScriptError::diagnostic).toList();
@@ -358,7 +363,8 @@ public final class DefaultErrorTracker implements ErrorTracker {
         return new ScriptId("nekojs", "rt/" + type.name() + "/" + pathStr.replace(':', '_'));
     }
 
-    /** 运行时回调错误 id 以 {@code rt/} 开头；脚本自身错误 id 为 {@code <type>_scripts/...} 相对路径。 */
+    /** Runtime callback error ids start with {@code rt/}; a script's own error id is a
+     * {@code <type>_scripts/...} relative path. */
     private static boolean isRuntimeCallbackError(ScriptId id) {
         return id != null && id.path().startsWith("rt/");
     }
@@ -372,13 +378,15 @@ public final class DefaultErrorTracker implements ErrorTracker {
     }
 
     /**
-     * 判断本次回调错误出现是否需要写日志。新建错误（{@code created}）必须记录一次；
-     * 重复错误仅在出现次数跨越里程碑时记录。里程碑为 1, 2, 5, 10, 25, 50, 100，
-     * 之后按 100 的倍数翻倍（100, 200, 400, ...）。
+     * Whether this occurrence of a callback error needs a log line. A newly created error
+     * ({@code created}) is always recorded once; a repeated error is recorded only when its
+     * occurrence count crosses a milestone. Milestones are 1, 2, 5, 10, 25, 50, 100, and after
+     * 100 every doubling (100, 200, 400, ...).
      *
-     * @param created       本次出现是否新建了错误记录（而非命中已有记录）
-     * @param previousCount 本次出现前的频次（新建时为 0）
-     * @param newCount      本次出现后的频次
+     * @param created       whether this occurrence created a new error record instead of hitting an
+     *                      existing one
+     * @param previousCount count before this occurrence (0 when the error was just created)
+     * @param newCount      frequency after this occurrence
      */
     static boolean shouldLogOccurrence(boolean created, long previousCount, long newCount) {
         if (created) {
@@ -408,7 +416,7 @@ public final class DefaultErrorTracker implements ErrorTracker {
         return milestone;
     }
 
-    /* ================= 源码位置格式化 helper（实例方法，使用注入 paths） ================= */
+    /* ================= Source location formatting helpers (instance methods, using injected paths) ================= */
 
     public SourceSection getBestSourceLocation(PolyglotException e) {
         if (e.getSourceLocation() != null) {

@@ -17,10 +17,11 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * {@link OnceRegistry} run-once 守卫逻辑回归：首次 runOnce 抢占成功、重复调用跳过、
- * clear/clearAll 重置、并发下每 key 恰好一个胜者；标记刻意随进程存活（不随"reload"清除）。
- * 附带用真实 Graal Context 验证 {@code once}/{@code clearOnce} 绑定
- * （{@link OnceJS} ProxyExecutable）的参数校验与回调执行语义。
+ * Covers the run-once guard in {@link OnceRegistry}: the first runOnce claims the key, later calls
+ * skip it, clear and clearAll reset the marker, and under concurrency exactly one caller wins per
+ * key. Markers deliberately live as long as the process and are not cleared by a "reload".
+ * Also checks the {@code once} and {@code clearOnce} bindings ({@link OnceJS} ProxyExecutable)
+ * against a real Graal Context: argument validation and callback execution.
  */
 class OnceRegistryTest {
 
@@ -59,8 +60,9 @@ class OnceRegistryTest {
 
     @Test
     void sharedMarkersSurviveReloadSimulation() {
-        // reload 重建的是脚本 Context，标记表是进程级单例：模拟"reload"（关掉旧 Context
-        // 重开新 Context 再走一遍 once 流程）后标记仍在、回调不再执行
+        // A reload rebuilds the script Context, while the marker table is a process-wide singleton.
+        // Simulate a reload by closing the old Context, opening a new one and running the once flow
+        // again: the marker is still there and the callback does not run again.
         assertTrue(OnceRegistry.SHARED.runOnce("persist"));
         context.close();
         context = Context.newBuilder("js").allowAllAccess(true).build();
@@ -76,7 +78,8 @@ class OnceRegistryTest {
         assertTrue(registry.clear("only"), "清除已存在的标记应返回 true");
         assertFalse(registry.has("only"));
         assertTrue(registry.runOnce("only"), "清除后 runOnce 重新返回 true");
-        // runOnce 已重新落下标记，先清掉再验证“清除不存在的标记返回 false”
+        // runOnce has set the marker again, so clear it first, then check that clearing an unknown
+        // marker returns false.
         registry.clear("only");
         assertFalse(registry.clear("only"), "清除不存在的标记应返回 false");
     }
@@ -99,7 +102,8 @@ class OnceRegistryTest {
 
     @Test
     void resolveKeyIsIdentityForNow() {
-        // v1 seam：key 全局原样返回；接入脚本所有者前缀后此断言需更新
+        // The key is currently returned unchanged; update this assertion once a script owner prefix is
+        // added.
         assertEquals("myInit", registry.resolveKey("myInit"));
     }
 
@@ -128,19 +132,21 @@ class OnceRegistryTest {
         assertEquals(rounds, wins[0], "每个 key 恰好一个并发调用者胜出");
     }
 
-    /* ================= once / clearOnce 绑定（Graal Context） ================= */
+    /* ================= once and clearOnce bindings (Graal Context) ================= */
 
     @Test
     void onceBindingExecutesCallbackOnlyFirstTime() {
         List<String> calls = new ArrayList<>();
-        // 记录数组注入 JS 全局，回调体内引用，验证回调确实被执行
+        // Inject the recording list into the JS global and reference it from the callback body, so the
+        // test can see that the callback really ran.
         context.getBindings("js").putMember("callsMarker", calls);
         Value callback = context.eval("js", "(function() { callsMarker.add('run'); return 'did'; })");
 
         Object first = OnceJS.ONCE.execute(Value.asValue("boot"), callback);
         Object second = OnceJS.ONCE.execute(Value.asValue("boot"), callback);
 
-        // ProxyExecutable 的返回值对 JS 侧就是回调返回值；Java 测试视角下包在 Graal Value 里
+        // For JS the ProxyExecutable return value is the callback result; from the Java test it is
+        // wrapped in a Graal Value.
         assertEquals("did", ((Value) first).asString(), "首次调用应执行回调并透传返回值");
         assertNull(second, "二次调用跳过回调，返回 null");
         assertEquals(List.of("run"), calls, "回调只执行一次");

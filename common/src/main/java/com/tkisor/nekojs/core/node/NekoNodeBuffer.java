@@ -44,8 +44,9 @@ public final class NekoNodeBuffer {
         }
         String normalized = normalizeEncoding(encoding);
         return switch (normalized) {
-            // Node 的 base64 解码是宽松的（忽略非法字符），MimeDecoder 与之最接近；
-            // base64/hex/base64url 不是 Charset，走专用解码而不是 charset() 的 Charset.forName
+            // Node decodes base64 leniently (invalid characters are ignored), so MimeDecoder is the
+            // closest match; base64/hex/base64url are not charsets and go through their own decoders
+            // instead of Charset.forName
             case "base64" -> new NekoNodeBuffer(Base64.getMimeDecoder().decode(value));
             case "base64url" -> new NekoNodeBuffer(Base64.getUrlDecoder().decode(value));
             case "hex" -> new NekoNodeBuffer(hexToBytes(value));
@@ -341,7 +342,10 @@ public final class NekoNodeBuffer {
         return builder.toString();
     }
 
-    /** 宽松 hex 解码：忽略非 hex 字符，奇数位丢弃末尾半字节（与 Node 行为一致）。 */
+    /**
+     * Lenient hex decoding: non-hex characters are ignored and an odd digit count drops the
+     * trailing half byte, matching Node.
+     */
     private static byte[] hexToBytes(String value) {
         StringBuilder digits = new StringBuilder(value.length());
         for (int i = 0; i < value.length(); i++) {

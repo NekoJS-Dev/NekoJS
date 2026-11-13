@@ -2,12 +2,12 @@ package com.tkisor.nekojs.core.compiler;
 
 /**
  * Compile-time (erase/lower) diagnostic that keeps the authored line/column of the source it was
- * raised for. Language frontends already know the exact index; this type carries it across the
- * preparation seam so {@code NekoModuleError} can publish the authored position instead of only a
+ * raised for. Language frontends already know the exact index; this type carries it through
+ * preparation so {@code NekoModuleError} can publish the authored position instead of only a
  * formatted message.
  *
- * <p>Extends {@link IllegalArgumentException} and preserves the exact message text of the previous
- * plain exceptions, so existing message-based assertions are unaffected.
+ * <p>Extends {@link IllegalArgumentException} and keeps the exact message text of the plain
+ * exceptions it replaces, so existing message-based assertions are unaffected.
  */
 public final class NekoCompileException extends IllegalArgumentException {
     private static final long serialVersionUID = 1L;

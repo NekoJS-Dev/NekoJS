@@ -89,8 +89,9 @@ public interface BindingRegistry {
         @Override
         public boolean register(Binding binding) {
             if (bindings.containsKey(binding.name())) {
-                // 首胜语义：同名绑定以先注册者为准，后注册者（通常是第三方插件）被静默挤掉，
-                // 这里打 warn 让插件作者能感知到注册被拒绝，而不是毫无知觉
+                // First wins: the binding registered first keeps the name, and later registrations
+                // (usually from third-party plugins) are silently dropped. Log a warning so the plugin
+                // author can see that the registration was rejected.
                 LOGGER.warn(
                         "[NEKO-4001] 同名绑定 '{}' 已注册，后者被忽略（首胜），被拒绝绑定的 valueType: {} — duplicate binding name ignored",
                         binding.name(),

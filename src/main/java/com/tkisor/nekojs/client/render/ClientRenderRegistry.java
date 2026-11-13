@@ -16,95 +16,110 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * 脚本侧 HUD / 世界渲染器注册表：{@code ClientEvents.hudRender}/{@code worldRender}
- * 注册的回调按 id 记账（owner scriptId + layer + priority + Graal Value），
- * 平台渲染钩子（{@link ClientRenderEvents}）每帧按 (layer, priority) 排序分发。
+ * Registry of script HUD and world renderers: callbacks registered through
+ * {@code ClientEvents.hudRender}/{@code worldRender} are recorded by id (owner scriptId,
+ * layer, priority and Graal Value), and the platform render hooks ({@link ClientRenderEvents})
+ * dispatch them sorted by (layer, priority) every frame.
  *
- * <p>generation 语义（票 26 AC4）：候选 generation 的脚本执行期注册<b>不</b>进生产表，
- * 而是收进该候选的 {@link Candidate} 批次（inert：渲染钩子看不到）；commit 点由
- * {@link Candidate#publish()} 整批换装，候选失败/取消时旧 active 的渲染器继续服务。
- * 初始加载、击杀重建与单文件 reload 走非事务路径：由新 generation Context 的首个注册
- * 换装整表，同一 Context 的后续注册只覆盖同 id 条目（见 {@link #beginActiveGeneration}）。
+ * <p>Generation semantics: renderer registrations made while a candidate generation's scripts
+ * run do <b>not</b> go into the production tables. They are collected into that candidate's
+ * {@link Candidate} batch, which is inert (render hooks cannot see it). At the commit point
+ * {@link Candidate#publish()} swaps the whole tables, and if the candidate fails or is
+ * cancelled the renderers of the old active generation keep serving. Initial load, kill and
+ * rebuild, and single-file reload take the non-transactional path: the first registration from
+ * the new generation's Context swaps the whole table, and later registrations from the same
+ * Context only replace entries with the same id (see {@link #beginActiveGeneration}).
  *
- * <p>容错与清理语义（对齐 {@code EventBusJS} 的监听器执行路径）：
+ * <p>Error handling and cleanup follow the listener execution path of {@code EventBusJS}:
  * <ul>
- *   <li>单个回调抛错经 {@link ScriptErrorReporter} 记录，不中断同帧其它渲染器；</li>
- *   <li>回调 Value 所属 Graal Context 已死亡（语句上限关闭等）时跳过分发并移除条目
- *       （自清理，泄漏有界到下一次事件）；</li>
- *   <li>换装点只有两个：候选 commit 点、新 active Context 的首个注册。没有「脚本加载前
- *       整表清空」的独立清理点（那会连旧 active 一起清掉，见票 26 AC4）。</li>
+ *   <li>a throwing callback is recorded through {@link ScriptErrorReporter} and does not stop
+ *       the other renderers in the same frame;</li>
+ *   <li>when the Graal Context that owns a callback Value is dead (statement limit hit, for
+ *       example), dispatch skips the entry and removes it (self-cleanup, so a leak lasts at
+ *       most until the next event);</li>
+ *   <li>there are only two swap points: the candidate commit point and the first registration
+ *       of a new active Context. There is no separate "clear the whole table before scripts
+ *       load" step, since that would clear the old active renderers as well.</li>
  * </ul>
  *
- * <p>本类不引用任何 Minecraft 客户端类型，渲染上下文对象由版本侧监听器构造后透传
- * （{@link HudRenderContextJS}/{@link WorldRenderContextJS}）。
+ * <p>This class references no Minecraft client type; the version-side listener builds the
+ * render context object and passes it through ({@link HudRenderContextJS}/
+ * {@link WorldRenderContextJS}).
  */
 public final class ClientRenderRegistry {
-    /** HUD 渲染层：BACKGROUND 在原版 HUD 之前（RenderGuiEvent.Pre），NORMAL/FOREGROUND 在其后。 */
+    /** HUD render layer: BACKGROUND runs before the vanilla HUD (RenderGuiEvent.Pre), NORMAL and FOREGROUND after it. */
     public enum HudLayer {
         BACKGROUND, NORMAL, FOREGROUND
     }
 
-    /** 世界渲染层：EARLY → 半透明方块后，NORMAL → 天气后，LATE → 关卡渲染收尾。 */
+    /** World render layer: EARLY after translucent blocks, NORMAL after weather, LATE at the end of level rendering. */
     public enum WorldLayer {
         EARLY, NORMAL, LATE
     }
 
     /**
-     * id → 渲染器条目。读写都在客户端 owner thread（脚本加载与渲染分发同属 Render 线程），
-     * 用 ConcurrentHashMap 只为容纳整批换装期间的一次遍历快照，不代表存在跨线程写竞争。
+     * id to renderer entry. Reads and writes all happen on the client owner thread (script
+     * loading and render dispatch both run on the Render thread); ConcurrentHashMap only
+     * tolerates one traversal snapshot while a whole batch is swapped in, and does not mean there
+     * is cross-thread write contention.
      */
     private static final Map<String, Entry> HUD_RENDERERS = new ConcurrentHashMap<>();
     private static final Map<String, Entry> WORLD_RENDERERS = new ConcurrentHashMap<>();
 
     /**
-     * 候选 generation 的挂起批次：key = 构建中的候选 Context。The batch exists only during
-     * candidate construction: removed at the commit point via {@link Candidate#publish()},
-     * and on candidate failure/cancellation removed at failure time via
-     * {@link CandidateStatePlan#discard()} (ticket 27 AC4) instead of lingering until the
-     * first registration of the next candidate round prunes it.
+     * Pending batches of candidate generations, keyed by the candidate Context under
+     * construction. The batch exists only during candidate construction: it is removed at the
+     * commit point through {@link Candidate#publish()}, and on candidate failure or
+     * cancellation it is removed right then through {@link CandidateStatePlan#discard()}
+     * instead of lingering until the first registration of the next candidate round prunes it.
      */
     private static final Map<Context, Candidate> CANDIDATE_BATCHES = new ConcurrentHashMap<>();
 
-    /** 生产表当前所属的 generation Context（非事务路径的换装判据）。 */
+    /** Context of the generation that owns the production tables; the non-transactional path checks
+     * it to decide when to swap the tables. */
     private static final java.util.Set<Context> activeContexts = ConcurrentHashMap.newKeySet();
 
-    /** 候选批次的领域标识（收集器与候选计划共用，进入候选联合边界的 domain 归因）。 */
+    /** Domain id of the candidate batch, shared by the collector and the candidate plan and used for
+     * domain attribution in candidate failures. */
     static final String CANDIDATE_DOMAIN = "client-render-registration";
 
     private ClientRenderRegistry() {
     }
 
-    /** 注册（或按 id 替换）一个 HUD 渲染器；回调形态 {@code (ctx, graphics) => void}。 */
+    /** Registers a HUD renderer, or replaces the one with the same id; the callback shape is
+     * {@code (ctx, graphics) => void}. */
     public static void registerHud(String id, String scriptId, Context context, HudLayer layer, int priority, Value callback) {
         register(Kind.HUD, id, scriptId, context, layer.ordinal(), priority, callback);
     }
 
-    /** 注册（或按 id 替换）一个世界渲染器；回调形态 {@code (ctx) => void}。 */
+    /** Registers a world renderer, or replaces the one with the same id; the callback shape is {@code (ctx) => void}. */
     public static void registerWorld(String id, String scriptId, Context context, WorldLayer layer, int priority, Value callback) {
         register(Kind.WORLD, id, scriptId, context, layer.ordinal(), priority, callback);
     }
 
-    /** 按 id 移除 HUD 渲染器；存在且移除成功返回 {@code true}。 */
+    /** Removes the HUD renderer with this id; returns {@code true} when it existed and was removed. */
     public static boolean unregisterHud(String id) {
         return HUD_RENDERERS.remove(id) != null;
     }
 
-    /** 按 id 移除世界渲染器；存在且移除成功返回 {@code true}。 */
+    /** Removes the world renderer with this id; returns {@code true} when it existed and was removed. */
     public static boolean unregisterWorld(String id) {
         return WORLD_RENDERERS.remove(id) != null;
     }
 
-    /** 指定 HUD 层是否至少有一个存活渲染器（渲染事件每帧触发，无监听时零开销快路径）。 */
+    /** Returns whether the HUD layer has at least one live renderer. The render event fires every
+     * frame, so this keeps the no-listener path cheap. */
     public static boolean hasHud(HudLayer layer) {
         return hasListener(HUD_RENDERERS, layer.ordinal());
     }
 
-    /** 指定世界层是否至少有一个存活渲染器。 */
+    /** Returns whether the world layer has at least one live renderer. */
     public static boolean hasWorld(WorldLayer layer) {
         return hasListener(WORLD_RENDERERS, layer.ordinal());
     }
 
-    /** 清空全部 HUD / 世界渲染器，并释放 generation 身份（下一次注册即新 generation）。 */
+    /** Clears all HUD and world renderers and releases the generation identity, so the next
+     * registration starts a new generation. */
     public static void clearAll() {
         HUD_RENDERERS.clear();
         WORLD_RENDERERS.clear();
@@ -113,30 +128,31 @@ public final class ClientRenderRegistry {
     }
 
     /**
-     * Read-only lifecycle observation seam: how many pending candidate registration batches
-     * exist right now. A committed or failed/cancelled candidate leaves none behind — the
-     * batch is inert bookkeeping tied to a candidate Context, and a nonzero count after a
-     * candidate ended means candidate resources were not fully released (ticket 27 AC4).
-     * Deliberately a count: the map, its Context keys and the registered callbacks stay private.
+     * Read-only lifecycle query: how many pending candidate registration batches exist right
+     * now. A committed, failed or cancelled candidate leaves none behind, because the batch is
+     * inert bookkeeping tied to a candidate Context; a nonzero count after a candidate ended
+     * means candidate resources were not fully released. This is deliberately only a count: the
+     * map, its Context keys and the registered callbacks stay private.
      */
     public static int pendingCandidateRegistrations() {
         return CANDIDATE_BATCHES.size();
     }
 
     /**
-     * 分发指定 HUD 层的渲染器：按 priority 升序执行，回调参数为 {@code (ctx, graphics)}。
-     * 单个回调抛错只记录不中断；Context 已死的条目跳过并移除。
+     * Dispatches the renderers of the given HUD layer in ascending priority order, calling each
+     * with {@code (ctx, graphics)}. A throwing callback is only recorded and does not stop the
+     * others; entries whose Context is dead are skipped and removed.
      */
     public static void dispatchHud(HudLayer layer, Object ctx, Object graphics) {
         dispatch(HUD_RENDERERS, layer.ordinal(), "hudRender", ctx, graphics);
     }
 
-    /** 分发指定世界层的渲染器：按 priority 升序执行，回调参数为 {@code (ctx)}。 */
+    /** Dispatches the renderers of the given world layer in ascending priority order, calling each with {@code (ctx)}. */
     public static void dispatchWorld(WorldLayer layer, Object ctx) {
         dispatch(WORLD_RENDERERS, layer.ordinal(), "worldRender", ctx, null);
     }
 
-    // ---- 注册路由：候选批次 vs 生产表 ----
+    // ---- Registration routing: candidate batch or production table ----
 
     private enum Kind {
         HUD, WORLD
@@ -147,8 +163,9 @@ public final class ClientRenderRegistry {
     }
 
     /**
-     * 路由一次脚本注册：来源 Context 属于构建中的候选 generation 时收进候选批次并返回；
-     * 否则认领/复用当前 active generation 后写入生产表。
+     * Routes one script registration: when the source Context belongs to a candidate generation
+     * under construction, the entry goes into the candidate batch. Otherwise the current active
+     * generation is claimed or reused and the entry is written to the production table.
      */
     private static void register(Kind kind, String id, String scriptId, Context context,
                                  int layer, int priority, Value callback) {
@@ -160,9 +177,11 @@ public final class ClientRenderRegistry {
     }
 
     /**
-     * 候选收集：{@code context} 是构建中的候选 Context 时，把条目放进该候选的 inert 批次
-     * （生产表不动，渲染钩子看不到），批次随候选挂在 {@code CandidateStatePlan} 联合边界上，
-     * commit 点整批发布、失败/取消随候选丢弃。返回 {@code false} 表示不是候选注册。
+     * Candidate collection: when {@code context} is a candidate Context under construction, the
+     * entry goes into that candidate's inert batch, so the production tables stay untouched and
+     * render hooks cannot see it. The batch hangs off the candidate's {@code CandidateStatePlan},
+     * is published as a whole at the commit point and is dropped with the candidate on failure
+     * or cancellation. Returns {@code false} when this is not a candidate registration.
      */
     private static boolean collectIntoCandidate(Kind kind, String id, Entry entry, Context context) {
         if (context == null) {
@@ -172,7 +191,7 @@ public final class ClientRenderRegistry {
         if (batch == null) {
             Candidate fresh = new Candidate(context);
             if (!ScriptManager.registerCandidatePlan(context, fresh)) {
-                // 非候选 Context（初始加载 / 击杀重建 / 单文件 reload）：生产表路径
+                // Non-candidate Context (initial load, kill and rebuild, single-file reload): production table path
                 return false;
             }
             // Each participant owns its batch; teardown releases failed candidates.
@@ -185,12 +204,15 @@ public final class ClientRenderRegistry {
     }
 
     /**
-     * 领域收集器入口（DOMAIN_PLAN 阶段）：把本候选的批次挂上候选的联合预检/发布边界。
+     * Domain collector entry point (DOMAIN_PLAN phase): attaches this candidate's batch to the
+     * candidate's preflight and publish steps.
      *
-     * <p>注册<b>无条件</b>发生，空批次也要注册——「新 generation 不再注册任何渲染器」正是
-     * 旧渲染器退役的唯一路径，只有空批次也走到 commit 点，生产表才会被换成空表
-     * （{@link com.tkisor.nekojs.core.lifecycle.CandidateDomainCollector} 的空计划契约）。
-     * 首次注册时已在候选执行期注册过同一批次实例的，这里不重复注册。
+     * <p>Registration happens <b>unconditionally</b>, even for an empty batch: "the new
+     * generation registers no renderer at all" is the only path that retires the old renderers,
+     * and only an empty batch that also reaches the commit point turns the production tables
+     * into empty tables (the empty-plan rule of
+     * {@link com.tkisor.nekojs.core.lifecycle.CandidateDomainCollector}). When the same batch
+     * instance was already registered during candidate execution, it is not registered again.
      */
     static void registerCandidateBatch(Context context,
             com.tkisor.nekojs.core.lifecycle.CandidateDomainCollector.Handle handle) {
@@ -238,12 +260,16 @@ public final class ClientRenderRegistry {
     }
 
     /**
-     * 认领生产表所属的 generation：首个来自新 Context 的注册换装整表。初始加载与击杀重建
-     * 各有一个新 Context（脚本以同一批来源重跑）；单文件 reload 复用当前 active Context，
-     * 因此不会清掉同代其它渲染器。候选 commit 由 {@link Candidate#publish()} 设置同一身份。
+     * Claims the generation that owns the production tables: the first registration from a new
+     * Context swaps the whole table. Initial load and kill and rebuild each get their own new
+     * Context (the scripts rerun from the same set of sources), while a single-file reload
+     * reuses the current active Context, so it does not clear the other renderers of the same
+     * generation. The candidate commit sets the same identity through
+     * {@link Candidate#publish()}.
      *
-     * <p>换装与渲染分发都在客户端 owner thread（F3+T 资源 reload 与
-     * {@code ClientReloadExecutor} 都转投 Render 线程），故 clear + put 之间无并发读。
+     * <p>Table swaps and render dispatch both run on the client owner thread (an F3+T resource
+     * reload and {@code ClientReloadExecutor} both hand off to the Render thread), so nothing
+     * reads the table between clear and put.
      */
     private static void beginActiveGeneration(Context context) {
         if (context == null || activeContexts.contains(context)) {
@@ -271,7 +297,8 @@ public final class ClientRenderRegistry {
                 continue;
             }
             if (ScriptManager.isContextDead(entry.context())) {
-                // 自清理：死 Context 上的闭包不可能再执行，安全移除（仅当仍是同一 id 的条目）
+                // Self-cleanup: a closure on a dead Context can never run again, so remove it safely (only if
+                // the entry under this id is still the same one)
                 map.remove(e.getKey(), entry);
                 continue;
             }
@@ -322,18 +349,21 @@ public final class ClientRenderRegistry {
     }
 
     /**
-     * 一个候选 generation 收集到的渲染器注册（inert：只按 id 记账，不触碰生产表）。
+     * Renderer registrations collected for one candidate generation (inert: it only records ids
+     * and never touches the production tables).
      *
-     * <p>只挂在候选的 {@code CandidateStatePlan} 联合边界上：preflight 阶段无可拒绝条件
-     * （payload 校验在 {@code RenderRegistrationBusJS#execute} 的收集点完成，非法 id/layer/
-     * callback 当场失败），故它只为 commit 点服务；失败或取消时随候选一起丢弃，旧 active
-     * 渲染器不受影响（票 26 AC4）。
+     * <p>It only hangs off the candidate's {@code CandidateStatePlan}. Preflight has nothing to
+     * reject, because payload validation happens at the collection point in
+     * {@code RenderRegistrationBusJS#execute}, where an invalid id, layer or callback fails right
+     * away, so this batch only serves the commit point. On failure or cancellation it is dropped
+     * with the candidate and the old active renderers are not affected.
      */
     private static final class Candidate implements CandidateStatePlan {
 
         private final Context context;
 
-        /** 是否已挂上候选的联合边界（执行期首个注册或 DOMAIN_PLAN 收集二选一，不重复）。 */
+        /** Whether the batch is already attached to the candidate's plan: either the first registration
+         * during execution or the DOMAIN_PLAN collection attaches it, never both. */
         private boolean registered;
         private boolean delegated;
         private boolean published;
@@ -353,14 +383,17 @@ public final class ClientRenderRegistry {
             return CANDIDATE_DOMAIN;
         }
 
-        /** 本批无候选期可拒绝条件（见类注释）：只为参与 commit 点换装。 */
+        /** This batch has nothing to reject at the candidate phase (see the class comment); it exists
+         * only for the commit-time swap. */
         @Override
         public void preflight() {
         }
 
         /**
-         * commit 点（owner thread）：整批换装生产表。旧 generation 中本批未声明的 id 随
-         * clear 一并退役，不再有陈旧渲染器；契约要求 publish 不抛出（两个批量操作都不抛）。
+         * Commit point (owner thread): swaps the whole production tables for this batch. Ids the
+         * old generation declared but this batch does not are cleared too, so no stale renderer
+         * remains. The plan contract requires publish not to throw, and neither bulk operation
+         * does.
          */
         @Override
         public void publish() {
@@ -375,11 +408,11 @@ public final class ClientRenderRegistry {
         }
 
         /**
-         * Candidate failure/cancellation (the discardCandidate path, owner thread): release
-         * the inert batch at failure time instead of letting it linger keyed by the dead
-         * candidate Context until the next round prunes it. The production renderer tables
-         * are untouched — publish never ran, so the old active keeps serving (ticket 27 AC4).
-         * Idempotent and non-throwing per the plan contract.
+         * Candidate failure or cancellation (the discardCandidate path, owner thread): releases
+         * the inert batch right away instead of letting it linger keyed by the dead candidate
+         * Context until the next round prunes it. The production renderer tables are untouched
+         * because publish never ran, so the old active generation keeps serving. Idempotent and
+         * non-throwing per the plan contract.
          */
         @Override
         public void discard() {

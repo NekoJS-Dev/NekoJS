@@ -1,8 +1,9 @@
 package com.tkisor.nekojs.api;
 
 /**
- * 脚本类型。契约枚举只承载名称与谓词语义；引擎侧环境（脚本目录、logger、日志文件、
- * 脚本 id）见 {@code ScriptTypeEnv}（common 引擎，契约抽薄，ADR-0007）。
+ * Script types. This contract enum carries only the names and the predicate semantics; the
+ * engine-side environment (script directory, logger, log file, script id) lives in
+ * {@code ScriptTypeEnv}.
  */
 public enum ScriptType implements ScriptTypePredicate {
     STARTUP("startup", "NekoJS Startup"),
@@ -60,7 +61,7 @@ public enum ScriptType implements ScriptTypePredicate {
     private static final java.util.List<ScriptType> AUTO_LOAD_TYPES = java.util.List.of(STARTUP, SERVER, CLIENT);
 
     /**
-     * 获取所有需要被动态加载执行的脚本类型。
+     * Returns every script type that must be loaded and executed at runtime.
      */
     public static java.util.List<ScriptType> all() {
         return EXECUTABLE_TYPES;

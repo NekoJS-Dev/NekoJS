@@ -27,11 +27,11 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 /**
- * 票据 11 AC1 + AC2：{@link NekoModulePipeline#prepare} 最高调用者测试。
+ * Public entry point test for {@link NekoModulePipeline#prepare}.
  *
- * <p>JS/CJS/ESM 输入产生正确的 language id、module mode、可执行 code、可解析的 identity
- * source map 与稳定 cache key；prepared module 不可变（record + final
- * 组件 + 篡改即 key 变化）。
+ * <p>JS, CJS and ESM input produce the right language id, module mode, executable code, a
+ * resolvable identity source map and a stable cache key. The prepared module is immutable: it is a
+ * record with final components, and tampering changes the key.
  */
 class NekoModulePipelinePrepareTest {
 
@@ -184,10 +184,11 @@ class NekoModulePipelinePrepareTest {
             assertTrue(Modifier.isFinal(field.getModifiers()), "component must be final: " + field.getName());
         }
         NekoPreparedModule module = NekoPreparedModule.commonJs("const a = 1;", null);
-        // 依赖表不可变：Resolution/Cache 无法通过取到的 record 改写依赖图输入。
+        // The dependency table is immutable: Resolution/Cache cannot rewrite the dependency graph input
+        // through the record it received.
         assertThrows(UnsupportedOperationException.class,
                 () -> module.cjsRecord().staticDependencies().add("evil"));
-        // 反射篡改即变红：final 组件不接受反射写入。
+        // Reflective tampering fails immediately: final components reject reflective writes.
         Field codeField = NekoPreparedModule.class.getDeclaredField("code");
         codeField.setAccessible(true);
         assertThrows(Exception.class, () -> codeField.set(module, "tampered"),
@@ -198,7 +199,8 @@ class NekoModulePipelinePrepareTest {
     void tamperingWithCodeChangesCacheKey() {
         NekoPreparedModule original = NekoPreparedModule.commonJs("javascript", "server_scripts/t.js",
                 "module.exports = 1;", null, com.tkisor.nekojs.core.module.cjs.CjsModuleRecord.EMPTY);
-        // “修改”只能构造新实例；新实例 key 必然不同——旧 key 无法指向被篡改内容。
+        // A change can only build a new instance, and a new instance always has a different key, so the old
+        // key can never point at tampered content.
         NekoPreparedModule tampered = new NekoPreparedModule(original.languageId(), original.sourcePath(),
                 "module.exports = 2;", original.sourceMap(), original.mode(), original.esmAst(),
                 original.cjsRecord(), original.prependedLineCount(), null);

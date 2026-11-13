@@ -29,12 +29,12 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Ticket 23 AC4/AC5 fixtures: the plugin {@code generateData} hook and the script
- * {@code ServerEvents.generateData} event aggregate into ONE data generation path
- * ({@link PluginGenerationHooks#runGenerateData}) — plugins fire before scripts, both share
- * the same generator instance, both stage into the same candidate area, and a single
- * validation+publish closes the batch. Contributor attribution (plugin id / script phase) and
- * failure isolation (throwing plugin) are observable through the published artifacts.
+ * Fixtures for the data generation path: the plugin {@code generateData} hook and the script
+ * {@code ServerEvents.generateData} event both run through
+ * {@link PluginGenerationHooks#runGenerateData}. Plugins fire before scripts; both share the
+ * same generator instance, both stage into the same candidate area, and one validation and
+ * publish call closes the batch. The published artifacts show which contributor produced an
+ * entry (plugin id or script phase) and show that a throwing plugin is isolated.
  */
 class DataGenerationAggregationTest {
 

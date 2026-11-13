@@ -7,16 +7,18 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 
 /**
- * 物品实体拾取事件（{@code ItemEvents.canPickUp / pickedUpPre / pickedUp}）的**加载器中立**载荷。
+ * Loader-neutral payload for the item entity pickup event
+ * ({@code ItemEvents.canPickUp / pickedUpPre / pickedUp}).
  *
- * <p>成员名对齐 NeoForge 原生 {@code ItemEntityPickupEvent} 的 getter
- * （getPlayer / getItemEntity / getItem）。fabric 侧由
- * {@code FabricItemEventBindingsV2} + {@code MixinItemEntityPickup} 从
- * {@code ItemEntity#playerTouch} 转换（Pre 在方法入口、Post 在拾取成功后）。
+ * <p>The member names follow the getters of NeoForge native
+ * {@code ItemEntityPickupEvent} (getPlayer / getItemEntity / getItem). On fabric,
+ * {@code FabricItemEventBindingsV2} + {@code MixinItemEntityPickup} convert
+ * {@code ItemEntity#playerTouch} (Pre at the method entry, Post after a successful pickup).
  *
- * <p>取消语义：{@code canPickUp} / {@code pickedUpPre}（别名）可取消——监听器
- * {@code return true} 阻止本次拾取（对应 NeoForge Pre 的取消，fabric 侧等价于
- * 跳过整个 {@code playerTouch} 流程）；{@code pickedUp} 为成功后通知，不可取消。
+ * <p>Cancel semantics: {@code canPickUp} / {@code pickedUpPre} (an alias) are cancellable;
+ * a listener {@code return true} prevents this pickup, which matches cancelling NeoForge Pre
+ * and on fabric skips the whole {@code playerTouch} flow. {@code pickedUp} is the
+ * after-success notification and is not cancellable.
  */
 @Doc("Fired when a player is about to pick up / has picked up an item entity (ItemEvents.canPickUp / pickedUpPre / pickedUp).")
 @Doc("canPickUp / pickedUpPre are cancellable: return true to prevent the pickup. pickedUp is not cancellable.")

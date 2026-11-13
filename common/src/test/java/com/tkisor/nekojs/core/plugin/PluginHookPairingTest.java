@@ -21,33 +21,41 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * 双形态模型配对不变式（ADR-0010）：{@link NekoJSPlugin} 是内置 Point 的<b>门面投影</b>，
- * Point 文件是唯一<b>事实源</b>。本测试机械化守护配对协议——加收集型通道必须三件套同改
- * （Point 文件 + 基接口 default 钩子 + 内置清单一行 + 本测试配对表），漏一件即红，
- * 防止基接口退化为无事实源的 V1 式胖接口。
+ * Pairing rules for the two-part model: {@link NekoJSPlugin} projects the built-in Points, and a
+ * Point file is the single source of truth. This test guards the pairing protocol mechanically. A
+ * new collecting channel needs four changes together (the Point file, the default hook on the base
+ * interface, one line in the built-in list, and one row in the pairing table here); missing one
+ * turns the test red. That keeps the base interface from growing back into a fat interface with
+ * no source of truth.
  *
- * <p>五条不变式：
+ * <p>Five rules:
  * <ol>
- *   <li>内置清单（{@link NekoBuiltinPointsPlugin}）注册的收集型扩展点 id 集合与配对表完全一致；</li>
- *   <li>每个收集型点的 {@code pluginType()} 为 {@code NekoJSPlugin.class}——收集面 = 所有插件，
- *       覆写即参与，空 default 为 no-op（显式 implements Contributor 与覆写基接口等价）；</li>
- *   <li>每个配对钩子真实声明在基接口上，且为 default（非 abstract，未覆写即按默认体参与）；</li>
- *   <li>基接口的 {@code register*} 方法集合 = 配对钩子 ∪ 直调豁免（{@code registerApiSurface}）——
- *       出现无配对的新 {@code register*} 即红；</li>
- *   <li>每个点的 collector 定义在自己的 Point 文件里（lambda 运行时类携带定义类名，
- *       防跨文件复制粘贴指错钩子）。</li>
+ *   <li>The collecting point ids registered by the built-in list
+ *       ({@link NekoBuiltinPointsPlugin}) match the pairing table exactly;</li>
+ *   <li>Every collecting point reports {@code NekoJSPlugin.class} from {@code pluginType()}, so it
+ *       collects from all plugins; overriding takes part, an empty default is a no-op, and an
+ *       explicit implements Contributor is equivalent to overriding the base interface;</li>
+ *   <li>Every paired hook is declared on the base interface and is default (not abstract: without
+ *       an override, the default body takes part);</li>
+ *   <li>The base interface's {@code register*} methods equal the paired hooks plus the direct-call
+ *       exception ({@code registerApiSurface}); a new {@code register*} method without a pairing
+ *       turns the test red;</li>
+ *   <li>Each point defines its collector in its own Point file (the lambda's runtime class carries
+ *       the defining class name, which catches a collector pasted into another Point file).</li>
  * </ol>
  *
- * <p>回调族直调钩子（{@code init} 族 / {@code attachXxxData} / {@code generateXxx} /
- * {@code modifyWorkspaceConfig} / {@code beforeRecipeLoading} / {@code afterRecipes}）不以
- * {@code register} 开头，天然在守卫范围之外。配对表以扩展点 id 为键：bindings /
- * script_properties 两点是闭包工厂（无静态 POINT 常量），实例身份不可作键。
+ * <p>Direct-call hooks of the callback families ({@code init}, {@code attachXxxData},
+ * {@code generateXxx}, {@code modifyWorkspaceConfig}, {@code beforeRecipeLoading},
+ * {@code afterRecipes}) do not start with {@code register} and stay outside this check. The
+ * pairing table is keyed by extension point id: bindings and script_properties are closure
+ * factories with no static POINT constant, so their instance identity cannot serve as the key.
  */
 class PluginHookPairingTest {
 
     /**
-     * 配对表：收集型内置点单条目（扩展点 id + 门面钩子 + 签名 + 定义类）。加通道三件套时
-     * 在此追加一行即可，签名与钩子声明同源维护。
+     * Pairing table with one row per collecting built-in point: extension point id, facade hook,
+     * signature and defining class. Adding a channel means adding a row here, and the signature is
+     * kept in sync with the hook declaration.
      */
     private record Channel(String pointId, String hook, String pointClass, List<String> paramTypes) {
     }
@@ -68,7 +76,10 @@ class PluginHookPairingTest {
             new Channel(LifecyclePoint.ID, "registerLifecycleHooks", "LifecyclePoint", List.of("PluginLifecycleRegister")),
             new Channel(ProbeBackendsPoint.ID, "registerProbeBackends", "ProbeBackendsPoint", List.of("ProbeBackendRegistry")));
 
-    /** 基接口上唯一的非收集型 {@code register} 钩子（bootstrap 直调，见 NekoPluginBootstrap）。 */
+    /**
+     * The only non-collecting {@code register} hook on the base interface; bootstrap calls it
+     * directly (see NekoPluginBootstrap).
+     */
     private static final String DIRECT_CALLED_REGISTER_HOOK = "registerApiSurface";
 
     @Test
@@ -126,10 +137,12 @@ class PluginHookPairingTest {
     }
 
     /**
-     * collector 必须定义在自己的 Point 文件里。实现依据：lambda/方法引用的运行时类名携带
-     * 定义类 FQCN（HotSpot 形如 {@code <定义类>$$Lambda/0x…}，JDK 9+ 的 hidden class 稳定形态）；
-     * 剥掉 {@code $Lambda} 后缀即得定义类。跨文件复制粘贴 collector（如 EventsPoint 的
-     * collector 被贴进 ClientEventsPoint）会命中别的定义类而变红。
+     * A collector must be defined in its own Point file. A lambda or method reference carries the
+     * defining class FQCN in its runtime class name (on HotSpot it looks like
+     * {@code <defining class>$$Lambda/0x…}, the stable hidden class form since JDK 9), so
+     * stripping the {@code $Lambda} suffix gives the defining class. A collector pasted across
+     * files (the EventsPoint collector pasted into ClientEventsPoint, say) lands in another
+     * defining class and fails the check.
      */
     @Test
     void collectorsAreDeclaredInTheirOwnPointFiles() {
@@ -148,10 +161,13 @@ class PluginHookPairingTest {
         }
     }
 
-    /** 捕获 {@link NekoBuiltinPointsPlugin} 清单注册的全部内置点（handle 位置返回 null，收集期无人消费）。 */
+    /**
+     * Captures every built-in point registered by the {@link NekoBuiltinPointsPlugin} list. The
+     * handle slot returns null because nothing consumes it during collection.
+     */
     private static List<NekoPluginExtensionPoint<?, ?, ?>> captureBuiltinRegistrations() {
         List<NekoPluginExtensionPoint<?, ?, ?>> captured = new ArrayList<>();
-        // SAM 方法带泛型类型参数，lambda 无法实现，用匿名类
+        // The SAM method declares generic type parameters, which a lambda cannot implement, so use an anonymous class
         NekoPluginExtensionRegistry registry = new NekoPluginExtensionRegistry() {
             @Override
             public <P extends NekoJSPlugin, A, R> NekoPluginExtensionHandle<R> register(

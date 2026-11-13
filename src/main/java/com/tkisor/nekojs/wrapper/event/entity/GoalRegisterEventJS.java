@@ -9,11 +9,12 @@ import net.minecraft.world.entity.EntityType;
 import java.util.function.Consumer;
 
 /**
- * {@code GoalEvents.register}（startup）事件对象：按实体类型注册内置 AI goal。
+ * Event object for {@code GoalEvents.register} (startup scripts): registers the built-in AI
+ * goals of an entity type.
  */
 @Doc("Event given to GoalEvents.register callbacks (startup scripts) for registering built-in AI goals on entity types.")
 public class GoalRegisterEventJS {
-    /** 按实体类型取 goal builder（需自行调用 {@code register()} 生效）。 */
+    /** Starts a goal builder for the given entity type; call {@code register()} yourself to apply it. */
     @Doc("Starts a goal builder for the given entity type; call builder.register() to apply.")
     @Param(name = "type", value = "the entity type to register goals for")
     @Return("a GoalBuilderJS bound to the entity type; not registered until register() is called")
@@ -21,7 +22,7 @@ public class GoalRegisterEventJS {
         return GoalRegistry.builder().forType(type);
     }
 
-    /** 按实体 id 取 goal builder（需自行调用 {@code register()} 生效）。 */
+    /** Starts a goal builder for the entity type with the given id; call {@code register()} yourself to apply it. */
     @Doc("Starts a goal builder for the entity type with the given id; call builder.register() to apply.")
     @Param(name = "id", value = "entity type id like 'minecraft:zombie'")
     @Return("a GoalBuilderJS bound to the entity type; not registered until register() is called")
@@ -29,7 +30,7 @@ public class GoalRegisterEventJS {
         return GoalRegistry.builder().forType(id);
     }
 
-    /** 按实体类型 + 回调注册（回调返回后自动 {@code register()}）。 */
+    /** Registers goals on an entity type through a callback; {@code register()} runs after the callback returns. */
     @Doc("Registers goals on the given entity type via a builder callback; register() runs automatically afterwards.")
     @Param(name = "type", value = "the entity type to register goals for")
     @Param(name = "consumer", value = "callback receiving the GoalBuilderJS to configure")
@@ -39,7 +40,7 @@ public class GoalRegisterEventJS {
         builder.register();
     }
 
-    /** 按实体 id + 回调注册（回调返回后自动 {@code register()}）。 */
+    /** Registers goals on an entity type id through a callback; {@code register()} runs after the callback returns. */
     @Doc("Registers goals on the entity type with the given id via a builder callback; register() runs automatically afterwards.")
     @Param(name = "id", value = "entity type id like 'minecraft:zombie'")
     @Param(name = "consumer", value = "callback receiving the GoalBuilderJS to configure")

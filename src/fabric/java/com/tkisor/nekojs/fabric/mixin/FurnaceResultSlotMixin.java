@@ -11,21 +11,25 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 /**
- * 玩家烧炼事件（{@code PlayerEvents.smelted}，按产物 id dispatch）的 fabric 钩子。
+ * Fabric hook for the player smelting event ({@code PlayerEvents.smelted}, dispatched by result
+ * item id).
  *
- * <p>NeoForge 26.1.2 触发点：{@code FurnaceResultSlot#checkTakeAchievements} 内
- * {@code if (removeCount != 0) { ... awardUsedRecipesAndPopExperience ...
- * firePlayerSmeltedEvent(player, carried, removeCount) }}（userdev 补丁实证）——
- * 不是「ServerPlayerRecipes 奖励点」：26.1.2 里该 vanilla 类已改名为
- * {@code net.minecraft.stats.ServerRecipeBook}（addRecipes 由
- * {@code ServerPlayer#awardRecipes} 调用，语义是配方书入库而非烧炼取件，会误触发）。
- * fabric 对齐 NeoForge 同一点（熔炉/高炉/烟熏炉取件；营火无取件槽不触发——与 NeoForge 相同）。
+ * <p>On NeoForge 26.1.2 the event fires inside {@code FurnaceResultSlot#checkTakeAchievements},
+ * in {@code if (removeCount != 0) { ... awardUsedRecipesAndPopExperience ...
+ * firePlayerSmeltedEvent(player, carried, removeCount) }} (from the userdev patch). The reward
+ * point in {@code ServerPlayerRecipes} is not the right place: in 26.1.2 that vanilla class is
+ * now {@code net.minecraft.stats.ServerRecipeBook}, whose addRecipes runs from
+ * {@code ServerPlayer#awardRecipes} to store recipes in the recipe book, not to take smelted
+ * items, so it would fire at the wrong time. This mixin uses the same point as NeoForge, so it
+ * fires for furnace, blast furnace and smoker takes; a campfire has no result slot and does not
+ * fire, the same as on NeoForge.
  *
- * <p>注入点（javap -c minecraft-merged-deobf-26.1.2 实证）：{@code checkTakeAchievements}
- * 是 protected 具体方法；方法体为 {@code carried.onCraftedBy(player, removeCount)}
- * {@code + awardUsedRecipesAndPopExperience} 后 {@code removeCount = 0} 重置。HEAD 注入
- * （同 NeoForge 的 removeCount != 0 条件；此刻 removeCount 已完成累计、onCraftedBy 尚未执行）。
- * defaultRequire=1：方法被重构时硬失败。
+ * <p>Injection point (checked with javap on minecraft-merged-deobf-26.1.2):
+ * {@code checkTakeAchievements} is a protected concrete method. Its body runs
+ * {@code carried.onCraftedBy(player, removeCount)} and {@code awardUsedRecipesAndPopExperience},
+ * then resets {@code removeCount = 0}. HEAD runs under the same {@code removeCount != 0}
+ * condition as NeoForge; at that point removeCount is already accumulated and onCraftedBy has
+ * not run yet. defaultRequire=1 makes a refactored method fail hard.
  */
 @Mixin(FurnaceResultSlot.class)
 public abstract class FurnaceResultSlotMixin {

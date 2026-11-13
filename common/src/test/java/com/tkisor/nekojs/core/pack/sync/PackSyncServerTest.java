@@ -18,8 +18,9 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * 服务端 gather 测试：仅收集 enabled && clientSync 的 GLOBAL/WORLD 包，
- * syncId/哈希/manifest 原文构造正确；engine.toml 开关读取。
+ * Server gather tests: only GLOBAL/WORLD packs that are enabled and have clientSync set are
+ * collected, the syncId, hash and raw manifest are built correctly, and the engine.toml
+ * switches are read.
  */
 class PackSyncServerTest {
 
@@ -85,7 +86,7 @@ class PackSyncServerTest {
 
     @Test
     void enabledAndModeReadFromEngineConfig() {
-        assertFalse(PackSyncServer.enabled()); // 默认 off
+        assertFalse(PackSyncServer.enabled()); // Off by default.
         config("hashOnly");
         assertTrue(PackSyncServer.enabled());
         assertTrue(PackSyncServer.hashOnly());

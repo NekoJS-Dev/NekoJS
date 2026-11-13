@@ -12,38 +12,41 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
- * Defect D6 regression (ticket 26): script-side ARGB color literals are unsigned JS
- * numbers ≥ 2³¹ ({@code 0xFFFFFF00} = 4294967040). This suite pins both halves of the
- * boundary contract on the real GraalJS engine:
+ * Regression test: script-side ARGB color literals are unsigned JS numbers ≥ 2³¹
+ * ({@code 0xFFFFFF00} = 4294967040). This suite pins both halves of the behavior on
+ * the real GraalJS engine:
  *
  * <ul>
- *   <li><b>Mechanism (characterization)</b>: a host method that declares the color as a
- *       Java {@code int} receives {@code Integer.MAX_VALUE} — the engine's number→int
- *       host conversion saturates instead of wrapping, which is why the pre-fix painters
- *       rendered {@code 0xFF......} colors as translucent white. Production code must not
- *       rely on this; script-facing color parameters declare {@link Number}.</li>
- *   <li><b>Fix seam</b>: a {@link Number}-typed color parameter receives the true value,
- *       and {@link UiColor#argbBits(Number)} reads it as ARGB bits (unsigned literals
- *       wrap to negative int32s, Java int32 bit patterns pass through unchanged).</li>
+ *   <li><b>Engine behavior</b>: a host method that declares the color as a Java
+ *       {@code int} receives {@code Integer.MAX_VALUE} — the engine's number to int
+ *       host conversion saturates instead of wrapping, which is why a painter with an
+ *       {@code int} parameter rendered {@code 0xFF......} colors as translucent white.
+ *       Production code must not rely on this; script-facing color parameters declare
+ *       {@link Number}.</li>
+ *   <li><b>Fixed behavior</b>: a {@link Number}-typed color parameter receives the
+ *       true value, and {@link UiColor#argbBits(Number)} reads it as ARGB bits
+ *       (unsigned literals wrap to negative int32s, Java int32 bit patterns pass
+ *       through unchanged).</li>
  * </ul>
  *
- * <p>Test geometry: a real GraalJS {@link Context} wired like {@code NekoSandboxFactory.build}
- * (same {@link NekoSharedHostAccess} + {@link ClassFilter} + interop options, precedent
- * {@code DataGeneratorJsJsonRealEngineTest}); the probes expose the exact seam shapes a
- * production binding goes through and are called from JS. The full painter seam over the
- * production {@code PainterJS} is covered in the version-tree suite
+ * <p>Test geometry: a real GraalJS {@link Context} wired like
+ * {@code NekoSandboxFactory.build} (same {@link NekoSharedHostAccess} +
+ * {@link ClassFilter} + interop options, precedent
+ * {@code DataGeneratorJsJsonRealEngineTest}); the probes expose the exact parameter
+ * shapes a production binding goes through and are called from JS. The full painter
+ * path over the production {@code PainterJS} is covered in the version-tree suite
  * {@code PainterJSScriptColorBoundaryTest}.
  */
 class ScriptColorBoundaryRealEngineTest {
 
-    /** Host probe with the pre-fix seam shape: a raw {@code int} color parameter. */
+    /** Host probe that takes the color as a raw {@code int} parameter. */
     public static final class IntColorSeamProbe {
         public int color(int color) {
             return color;
         }
     }
 
-    /** Host probe with the fixed seam shape: a {@link Number} color normalized to ARGB bits. */
+    /** Host probe that takes the color as a {@link Number} and normalizes it to ARGB bits. */
     public static final class NumberColorSeamProbe {
         public int color(Number color) {
             return UiColor.argbBits(color);
@@ -69,10 +72,10 @@ class ScriptColorBoundaryRealEngineTest {
     }
 
     /**
-     * Mechanism characterization: the engine's number→int host conversion saturates
-     * out-of-range values to {@code Integer.MAX_VALUE} (= {@code 0x7FFFFFFF}, translucent
-     * white) instead of wrapping to the int32 bits. If a Graal upgrade ever changes this,
-     * this assertion flags the re-evaluation; production seams do not rely on it.
+     * Pins the engine's number to int host conversion: out-of-range values saturate to
+     * {@code Integer.MAX_VALUE} (= {@code 0x7FFFFFFF}, translucent white) instead of
+     * wrapping to the int32 bits. If a Graal upgrade changes this, the assertion flags
+     * that the suite needs review; production code does not rely on it.
      */
     @Test
     void intParametersSaturateInsteadOfWrapping() {
@@ -84,7 +87,7 @@ class ScriptColorBoundaryRealEngineTest {
         }
     }
 
-    /** The defect's headline case through the fixed seam: yellow arrives as its int32 bits. */
+    /** The main case through a {@link Number} parameter: yellow arrives as its int32 bits. */
     @Test
     void uint32LiteralsArriveAsArgbBitsThroughNumberSeam() {
         try (Context context = newScriptContext(new NumberColorSeamProbe())) {

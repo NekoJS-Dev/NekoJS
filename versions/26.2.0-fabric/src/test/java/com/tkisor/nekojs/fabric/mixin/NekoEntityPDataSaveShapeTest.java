@@ -18,26 +18,30 @@ import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * 票 18 AC1 存档兼容 fixture（fabric 节点本地，两 fabric 节点同体分发）：实体 pdata 的
- * 存档形状——外层 {@code NeoForgeData}（NeoForge 容器键）下挂 NekoJS 的
- * {@code NekoJSPersistentData} 子键——以<b>生产 mixin 的真实方法体</b>（反射调
- * {@code neko$loadPData}/{@code neko$savePData}，不是复制品）钉住：
+ * Entity pdata save-shape fixture, node-local on fabric and shipped in the same body to both fabric
+ * nodes. The saved shape is an outer {@code NeoForgeData} container (the NeoForge container key)
+ * holding NekoJS's {@code NekoJSPersistentData} child key. The test pins that shape with the real
+ * method body of the production mixin, reflecting into {@code neko$loadPData}/{@code neko$savePData}
+ * rather than a copy:
  * <ul>
- *   <li>旧 NeoForge 存档 fixture（literal NBT，含 vanilla 字段 + NeoForgeData 容器）
- *       在 fabric 上回读出同样的 pdata 内容——跨 loader 存档迁移不丢；</li>
- *   <li>fabric 写出形状与 NeoForge patched {@code Entity#addAdditionalSaveData} 的
- *       {@code storeNullable("NeoForgeData", ...)} 同形（NeoForge 侧读路径
- *       {@code getPersistentData()} 即读该容器）；</li>
- *   <li>空 pdata 不写 {@code NeoForgeData} 键；缺 {@code NeoForgeData} 的存档回读为空。</li>
+ *   <li>an old NeoForge save fixture (literal NBT with vanilla fields plus the NeoForgeData
+ *       container) reads back the same pdata content on fabric, so saves survive a cross-loader
+ *       move;</li>
+ *   <li>the shape fabric writes matches {@code storeNullable("NeoForgeData", ...)} in the NeoForge
+ *       patched {@code Entity#addAdditionalSaveData}; the NeoForge read path
+ *       {@code getPersistentData()} reads that container;</li>
+ *   <li>empty pdata writes no {@code NeoForgeData} key, and a save without {@code NeoForgeData}
+ *       reads back as empty.</li>
  * </ul>
- * key 常量（{@code NekoJSPersistentData}）经 {@link EntityExtension#NEKO_PDATA_KEY} 公开
- * 常量断言；容器键经行为断言（写出/读入的 tag 形状）。
+ * The key constant ({@code NekoJSPersistentData}) is asserted through the public
+ * {@link EntityExtension#NEKO_PDATA_KEY} constant; the container key is asserted behaviourally
+ * through the tag shape that is written and read back.
  */
 class NekoEntityPDataSaveShapeTest {
 
-    // ---- 旧存档 literal fixture ----
+    // ---- literal fixture for an old save ----
 
-    /** 旧 NeoForge 存档：vanilla 字段 + NeoForge patched Entity 写出的 NeoForgeData 容器。 */
+    /** An old NeoForge save: vanilla fields plus the NeoForgeData container written by the NeoForge patched Entity. */
     private static CompoundTag oldNeoForgeSave() {
         CompoundTag nekoPData = new CompoundTag();
         nekoPData.putInt("mana", 303);
@@ -46,7 +50,7 @@ class NekoEntityPDataSaveShapeTest {
 
         CompoundTag neoForgeData = new CompoundTag();
         neoForgeData.put(EntityExtension.NEKO_PDATA_KEY, nekoPData.copy());
-        // NeoForge 容器里可能还有其它 mod 的键——NekoJS 只动自己的子键
+        // The NeoForge container can hold keys from other mods too. NekoJS touches only its own child key.
         neoForgeData.putInt("SomeOtherModsKey", 7);
 
         CompoundTag save = new CompoundTag();
@@ -56,7 +60,7 @@ class NekoEntityPDataSaveShapeTest {
         return save;
     }
 
-    /** 缺 NeoForgeData 的旧存档（未装 NekoJS 时期的 vanilla/fabric 存档）。 */
+    /** An old save with no NeoForgeData: a vanilla or fabric save from before NekoJS was installed. */
     private static CompoundTag vanillaOnlySave() {
         CompoundTag save = new CompoundTag();
         save.putString("id", "minecraft:cow");
@@ -64,7 +68,8 @@ class NekoEntityPDataSaveShapeTest {
         return save;
     }
 
-    // ---- 生产 mixin 驱动（反射：@Inject 处理器是 private，测试直接执行其方法体） ----
+    // ---- Production mixin driver (reflection: the @Inject handler is private, so the test runs its
+    // method body directly) ----
 
     private static final class DrivenMixin extends NekoEntityPDataMixin {
     }
@@ -92,7 +97,7 @@ class NekoEntityPDataSaveShapeTest {
         }
     }
 
-    // ---- 回读：旧存档 fixture → pdata 内容不变 ----
+    // ---- Read back: an old save fixture produces unchanged pdata ----
 
     @Test
     void oldNeoForgeSaveReadsBackOnFabric() throws Exception {
@@ -116,7 +121,7 @@ class NekoEntityPDataSaveShapeTest {
         assertTrue(mixin.neko$getPDataRoot().isEmpty(), "no NeoForgeData container means no pdata");
     }
 
-    // ---- 写出：形状与 NeoForge patched Entity 同形 ----
+    // ---- Writing: the shape matches the NeoForge patched Entity ----
 
     @Test
     void saveWritesTheCrossLoaderCompatibleShape() throws Exception {
@@ -143,11 +148,11 @@ class NekoEntityPDataSaveShapeTest {
     @Test
     void nullRootWritesNoContainerKey() throws Exception {
         DrivenMixin mixin = new DrivenMixin();
-        // load 未跑过（全新实体的形态）：root 字段为 null → 不写
+        // load never ran (the shape of a brand-new entity): the root field is null, so nothing is written
         assertFalse(save(mixin).contains("NeoForgeData"));
     }
 
-    /** 写读往返：fabric 写出 → fabric 回读，pdata 内容逐项不变（幂等）。 */
+    /** Save then load on fabric: every pdata entry comes back unchanged, so the round trip is idempotent. */
     @Test
     void saveLoadRoundTripIsStable() throws Exception {
         DrivenMixin writer = new DrivenMixin();
@@ -163,7 +168,10 @@ class NekoEntityPDataSaveShapeTest {
         assertEquals(pdata, reader.neko$getPDataRoot().getCompound(EntityExtension.NEKO_PDATA_KEY).orElseThrow());
     }
 
-    /** 防御拷贝语义：容器写回后改源头不影响已存内容（与平台 Access 面同契约）。 */
+    /**
+     * Defensive copy: mutating the source tag after the store leaves the saved copy unchanged, the same
+     * rule the platform accessors follow.
+     */
     @Test
     void savedShapeIsIndependentOfTheSourceTag() throws Exception {
         DrivenMixin mixin = new DrivenMixin();
@@ -172,7 +180,7 @@ class NekoEntityPDataSaveShapeTest {
         writeRoot(mixin, pdata);
         CompoundTag saved = save(mixin);
 
-        pdata.putInt("a", 99); // 改源头
+        pdata.putInt("a", 99); // change the source tag
         CompoundTag stored = saved.getCompound("NeoForgeData").orElseThrow()
                 .getCompound(EntityExtension.NEKO_PDATA_KEY).orElseThrow();
         assertEquals(1, stored.getIntOr("a", -1), "saved copy must not alias the source tag");

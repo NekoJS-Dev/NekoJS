@@ -255,7 +255,7 @@ class NativeInputFrameRegressionTest {
                     """);
             RecordingGraphics graphics = graphics();
             fixture.screen.extractRenderState(graphics, -1, -1, 0);
-            // Native pixels use nearest rectangle boundaries, not independently rounded origin and size.
+            // Native pixels use nearest rectangle edges, not independently rounded origin and size.
             // Logical [12.75, 73.25) x [12.75, 33.25) becomes pixel [13, 73) x [13, 33).
             assertFrame(graphics, 13, 13, 60, 20, 0xFF707780);
         }

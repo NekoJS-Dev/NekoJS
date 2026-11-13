@@ -3,12 +3,12 @@ package com.tkisor.nekojs.api.surface;
 import java.util.Objects;
 
 /**
- * API 签名中的一个参数：名称、类型、是否可选、是否可变参数。
+ * One parameter of an API signature: name, type, optional flag and varargs flag.
  *
- * @param name     参数名，不能为 {@code null}
- * @param type     参数类型，不能为 {@code null}
- * @param optional 是否可选
- * @param varargs  是否为可变参数（须位于末位）
+ * @param name     parameter name, must not be {@code null}
+ * @param type     parameter type, must not be {@code null}
+ * @param optional whether the parameter is optional
+ * @param varargs  whether this is a varargs parameter (must come last)
  */
 public record ApiParameter(String name, ApiTypeRef type, boolean optional, boolean varargs) {
     public ApiParameter {

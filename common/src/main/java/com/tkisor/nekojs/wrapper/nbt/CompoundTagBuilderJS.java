@@ -13,27 +13,29 @@ import java.util.Map;
 import java.util.Objects;
 
 /**
- * NBT 复合标签构建器（链式，产出不可变 {@link NbtValue.CompoundValue}）。
+ * Chainable builder for NBT compound tags. It produces an immutable
+ * {@link NbtValue.CompoundValue}.
  *
- * <p>实现 {@link CompoundBuilder} 接口（定义在 common-api），使 {@code NbtFacade.compound()}
- * 能返回有类型的接口而非裸 {@code Object}。
+ * <p>It implements the {@link CompoundBuilder} interface declared in common-api, so
+ * {@code NbtFacade.compound()} can return a typed interface instead of a bare {@code Object}.
  *
- * <p>脚本通过 {@code NBT.compound()} 或直接 {@code new CompoundTagBuilderJS()} 创建，
- * 用 {@code put/putByte/putInt/.../putCompound/putList} 累积条目，{@code build()}
- * 产出不可变 {@link NbtValue}，可经平台层 adapter / codec 转为 MC {@code CompoundTag}，
- * 或经 {@code NBT.toSnbt} 序列化。
+ * <p>Scripts create one with {@code NBT.compound()} or {@code new CompoundTagBuilderJS()}, add
+ * entries with {@code put/putByte/putInt/.../putCompound/putList}, and call {@code build()} to
+ * get an immutable {@link NbtValue}. A platform adapter or codec can turn that value into an MC
+ * {@code CompoundTag}, or {@code NBT.toSnbt} can serialize it.
  *
- * <p>放 common 层（无 MC 依赖）；值类型由 {@link NbtValue} sealed record 体系承载。
+ * <p>Lives in common and has no MC dependency. The value types come from the sealed record
+ * hierarchy of {@link NbtValue}.
  */
 @Doc("Chainable NBT compound builder producing immutable compound values.")
 public final class CompoundTagBuilderJS implements CompoundBuilder {
     private final Map<String, NbtValue> entries = new LinkedHashMap<>();
 
-    /** 创建空构建器。 */
+    /** Creates an empty builder. */
     @Doc("Creates an empty compound builder.")
     public CompoundTagBuilderJS() {}
 
-    /** 放入任意已构建的 {@link NbtValue}。 */
+    /** Puts an already-built {@link NbtValue} under the key. */
     @Override
     @Doc("Stores an already-built NbtValue under the key.")
     @Param(name = "key", value = "entry key; overwrites an existing entry with the same key")
@@ -44,7 +46,7 @@ public final class CompoundTagBuilderJS implements CompoundBuilder {
         return this;
     }
 
-    /** 放入 byte 值。 */
+    /** Puts a byte value. */
     @Override
     @Doc("Stores a byte value under the key.")
     @Param(name = "key", value = "entry key; overwrites an existing entry with the same key")
@@ -53,7 +55,7 @@ public final class CompoundTagBuilderJS implements CompoundBuilder {
         return put(key, new NbtValue.ByteValue(value));
     }
 
-    /** 放入 short 值。 */
+    /** Puts a short value. */
     @Override
     @Doc("Stores a short value under the key.")
     @Param(name = "key", value = "entry key; overwrites an existing entry with the same key")
@@ -62,7 +64,7 @@ public final class CompoundTagBuilderJS implements CompoundBuilder {
         return put(key, new NbtValue.ShortValue(value));
     }
 
-    /** 放入 int 值。 */
+    /** Puts an int value. */
     @Override
     @Doc("Stores an int value under the key.")
     @Param(name = "key", value = "entry key; overwrites an existing entry with the same key")
@@ -71,7 +73,7 @@ public final class CompoundTagBuilderJS implements CompoundBuilder {
         return put(key, new NbtValue.IntValue(value));
     }
 
-    /** 放入 long 值。 */
+    /** Puts a long value. */
     @Override
     @Doc("Stores a long value under the key.")
     @Param(name = "key", value = "entry key; overwrites an existing entry with the same key")
@@ -80,7 +82,7 @@ public final class CompoundTagBuilderJS implements CompoundBuilder {
         return put(key, new NbtValue.LongValue(value));
     }
 
-    /** 放入 float 值。 */
+    /** Puts a float value. */
     @Override
     @Doc("Stores a float value under the key.")
     @Param(name = "key", value = "entry key; overwrites an existing entry with the same key")
@@ -89,7 +91,7 @@ public final class CompoundTagBuilderJS implements CompoundBuilder {
         return put(key, new NbtValue.FloatValue(value));
     }
 
-    /** 放入 double 值。 */
+    /** Puts a double value. */
     @Override
     @Doc("Stores a double value under the key.")
     @Param(name = "key", value = "entry key; overwrites an existing entry with the same key")
@@ -98,7 +100,7 @@ public final class CompoundTagBuilderJS implements CompoundBuilder {
         return put(key, new NbtValue.DoubleValue(value));
     }
 
-    /** 放入字符串。 */
+    /** Puts a string value. */
     @Override
     @Doc("Stores a string value under the key.")
     @Param(name = "key", value = "entry key; overwrites an existing entry with the same key")
@@ -108,7 +110,7 @@ public final class CompoundTagBuilderJS implements CompoundBuilder {
         return put(key, new NbtValue.StringValue(Objects.requireNonNull(value, "value")));
     }
 
-    /** 放入 byte 数组。 */
+    /** Puts a byte array. */
     @Override
     @Doc("Stores a byte array under the key.")
     @Param(name = "key", value = "entry key; overwrites an existing entry with the same key")
@@ -118,7 +120,7 @@ public final class CompoundTagBuilderJS implements CompoundBuilder {
         return put(key, NbtValue.byteArray(values));
     }
 
-    /** 放入 int 数组。 */
+    /** Puts an int array. */
     @Override
     @Doc("Stores an int array under the key.")
     @Param(name = "key", value = "entry key; overwrites an existing entry with the same key")
@@ -128,7 +130,7 @@ public final class CompoundTagBuilderJS implements CompoundBuilder {
         return put(key, NbtValue.intArray(values));
     }
 
-    /** 放入嵌套复合标签（由另一个 builder 构建）。 */
+    /** Puts a nested compound tag, built by another builder. */
     @Override
     @Doc("Stores a nested compound built by another builder under the key.")
     @Param(name = "key", value = "entry key; overwrites an existing entry with the same key")
@@ -138,7 +140,7 @@ public final class CompoundTagBuilderJS implements CompoundBuilder {
         return put(key, Objects.requireNonNull(builder, "builder").build());
     }
 
-    /** 放入列表（元素为已构建的 {@link NbtValue}）。 */
+    /** Puts a list whose elements are already-built {@link NbtValue}s. */
     @Override
     @Doc("Stores a list of built NbtValues under the key.")
     @Param(name = "key", value = "entry key; overwrites an existing entry with the same key")
@@ -148,7 +150,7 @@ public final class CompoundTagBuilderJS implements CompoundBuilder {
         return put(key, NbtValue.list(Objects.requireNonNull(values, "values")));
     }
 
-    /** 放入列表（可变参数）。 */
+    /** Puts a list passed as varargs. */
     @Override
     @Doc("Stores a list built from the given NbtValue arguments under the key.")
     @Param(name = "key", value = "entry key; overwrites an existing entry with the same key")
@@ -158,7 +160,7 @@ public final class CompoundTagBuilderJS implements CompoundBuilder {
         return put(key, NbtValue.list(List.of(Objects.requireNonNull(values, "values"))));
     }
 
-    /** 是否包含指定 key。 */
+    /** Tells whether an entry with the key exists. */
     @Doc("Checks whether the compound contains an entry for the key.")
     @Param(name = "key", value = "entry key to look up")
     @Return("true when the key is present")
@@ -166,14 +168,14 @@ public final class CompoundTagBuilderJS implements CompoundBuilder {
         return entries.containsKey(key);
     }
 
-    /** 已收集的条目数。 */
+    /** Returns the number of entries collected so far. */
     @Doc("Returns the number of entries collected so far.")
     @Return("entry count")
     public int size() {
         return entries.size();
     }
 
-    /** 构建为不可变 {@link NbtValue.CompoundValue}。 */
+    /** Builds the entries into an immutable {@link NbtValue.CompoundValue}. */
     @Doc("Builds the collected entries into a compound value.")
     @Return("immutable snapshot; later builder changes are not reflected")
     public NbtValue.CompoundValue build() {

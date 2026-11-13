@@ -183,7 +183,8 @@ class MinecraftRecipeSchemaScannerTest {
                     "Declaration assertions passed; runtime requires vanilla item components unavailable in this bare JVM.\n");
             return;
         }
-        // Invoke the real handler through the same generic argument-conversion seam without bootstrapping a global namespace service.
+        // Calls the real handler through the same generic argument-conversion path, without
+        // bootstrapping a global namespace service.
         var registries = RegistryAccess.fromRegistryOfRegistries(BuiltInRegistries.REGISTRY);
         var event = new RecipeEventJS(Map.of(), registries, discovered);
         var handler = new MinecraftRecipeHandler(event);

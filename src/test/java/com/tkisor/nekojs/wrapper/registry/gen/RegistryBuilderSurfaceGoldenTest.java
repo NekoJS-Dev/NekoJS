@@ -15,38 +15,43 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * typed Builder 契约面 golden（ticket 15 AC7/AC9）：真实 builder 类经
- * {@link RegistryBuilderContract} 反射 → {@link RegistryBuilderSurfaces#derive}
- * （生产 {@code registerTypeDocs} 的同一派生函数）→ TS declaration
- * （{@link RegistryBuilderTsRenderer}，probe 后端 {@code @registry-builders/index.d.ts}
- * 的同一渲染器）。runtime member（{@link BuilderSurface}）、definition fingerprint、
- * TS/Python declaration 与本 golden 由<b>同一契约反射输入</b>派生，不手写第二份成员表。
+ * Golden for the typed Builder contract surface. Real builder classes go through
+ * {@link RegistryBuilderContract} reflection into {@link RegistryBuilderSurfaces#derive}, the
+ * same derive function production {@code registerTypeDocs} uses, and then into a TS declaration
+ * through {@link RegistryBuilderTsRenderer}, the same renderer the probe backend uses for
+ * {@code @registry-builders/index.d.ts}. Runtime members ({@link BuilderSurface}), the definition
+ * fingerprint, the TS and Python declarations and this golden all derive from that one contract
+ * reflection input, so no second member table is written by hand.
  *
- * <p>golden 只冻结 <b>loader 无关面</b>（12 个内置 builder 类型）：流体体系是 NeoForge 面
- * （{@code FluidBuilder} 整文件 loader 守卫），其条目不进 golden，NeoForge 侧由守卫内的
- * 内存断言覆盖。26.x 与 1.21.1 的成员面有真实差异（1.21.1 的六个版本化 builder 未实现
- * TaggableBuilder、painting 无 author/title、potion effect 重载形状不同），按版本各冻一份
- * golden（守卫选择）。普通测试只读 golden；更新路径＝改输入（builder 类）→ 重跑本测试取得
- * 实际输出 → 手工比对并更新 golden → 在 baseline REPORT「golden 差异」小节留旧新 diff、
- * 原因、影响与审阅记录（root 树 golden 无 regenerate 开关，query 域 ticket 25 同款流程，
- * 见 managed-surface REGENERATE.md §1 表尾注）。
+ * <p>The golden freezes only the loader-independent surface, the 12 built-in builder types. The
+ * fluid system is NeoForge-only ({@code FluidBuilder} sits entirely behind a loader guard), so
+ * its entries stay out of the golden and the NeoForge side asserts them in memory inside the
+ * guard. 26.x and 1.21.1 differ in real ways: on 1.21.1 the six versioned builders do not
+ * implement TaggableBuilder, painting has no author/title, and the potion effect overloads have
+ * a different shape. Each version therefore freezes its own golden file, selected by the guards.
+ * Ordinary tests only read the golden. To update it, change the input (the builder classes),
+ * rerun this test for the actual output, compare by hand and update the golden, then record the
+ * old and new diff, the reason, the impact and the review in the "golden differences" section
+ * of the baseline REPORT. The root-tree golden has no regenerate switch; follow the same process
+ * used for the managed surface (see managed-surface REGENERATE.md §1).
  */
 class RegistryBuilderSurfaceGoldenTest {
 
-    /** loader 无关的注册表键（golden 冻结面）；fluid 走 NeoForge 守卫内断言。 */
+    /** A loader-independent registry key, part of the frozen golden surface. Fluids are asserted in the NeoForge guard. */
     private static final String FLUID_KEY = "minecraft:fluid";
     private static final String GOLDEN;
     static {
 //? if >=26 {
         GOLDEN = "/golden/registry/startup-builders.d.ts";
 //?} else {
-        /*// 1.21.1 的 builder 成员面与 26.x 有真实差异（TaggableBuilder 未实现、painting 无
-        // author/title、potion effect 重载形状），golden 按版本各冻一份（REPORT 五节点差异表）
+        /*// 1.21.1 builder members differ from 26.x (TaggableBuilder not implemented, painting has no
+        // author/title, potion effect overload shape differs), so each version freezes its own
+        // golden (see the five-node difference table in the REPORT)
         GOLDEN = "/golden/registry/startup-builders-1.21.1.d.ts";
-*///?}
+         *///?}
     }
 
-    /** 与生产 NekoRegistryPointsPlugin.registerRegistryTypes 同一注册清单/顺序（builder 类是契约输入）。 */
+    /** The same registry list and order as production NekoRegistryPointsPlugin.registerRegistryTypes. */
     private static RegistryTypesPoint.RegistryTypes productionShapeTypes() {
         RegistryTypesPoint.RegistryTypesCollector collector = new RegistryTypesPoint.RegistryTypesCollector();
         collector.registerType(net.minecraft.core.registries.Registries.SOUND_EVENT, "basic", SoundEventBuilder.class, SoundEventBuilder::new);
@@ -76,7 +81,7 @@ class RegistryBuilderSurfaceGoldenTest {
         return new RegistryTypesPoint.RegistryTypes(collector.byRegistry, collector.defaults, collector.builderClasses);
     }
 
-    /** loader 无关条目（golden 冻结面）。 */
+    /** The loader-independent entries, which the golden freezes. */
     private static List<RegistryBuilderSurfaceEntry> loaderIndependentEntries() {
         List<RegistryBuilderSurfaceEntry> entries = new ArrayList<>();
         for (RegistryBuilderSurfaceEntry entry : RegistryBuilderSurfaces.derive(productionShapeTypes())) {
@@ -93,8 +98,10 @@ class RegistryBuilderSurfaceGoldenTest {
         String second = RegistryBuilderTsRenderer.render(loaderIndependentEntries());
         assertEquals(first, second, "同一契约输入的重复渲染必须逐字节稳定");
 
-        // 字节级为主 gate（审查 F4：只做 normalize 比较会放过空白/注释漂移）；
-        // 行尾统一 LF（checkout autocrlf 容忍），失败时降级为内容级 diff 便于定位
+        // The byte-level comparison is the main gate; comparing normalized text alone would let
+        // whitespace and comment drift through. Line endings are normalized to LF so a checkout
+        // with autocrlf still passes. On failure the diagnostic falls back to a content-level
+        // diff, which makes the difference easier to locate.
         String golden = readGolden().replace("\r\n", "\n");
         if (!golden.equals(first)) {
             java.nio.file.Path report = java.nio.file.Path.of("build", "nekojs-gates",
@@ -106,7 +113,7 @@ class RegistryBuilderSurfaceGoldenTest {
         }
     }
 
-    /** 字节级不一致时的诊断信息：首个差异行 + 内容级（去空白/注释）是否一致的结论。 */
+    /** Byte-level mismatch diagnostic: the first differing line and whether stripped content still matches. */
     private static String byteLevelMismatch(String golden, String actual) {
         String[] goldenLines = golden.split("\n", -1);
         String[] actualLines = actual.split("\n", -1);
@@ -132,7 +139,8 @@ class RegistryBuilderSurfaceGoldenTest {
                 "两侧 builder 列表同源同序");
         assertEquals(memberNames(ts), memberNames(py),
                 "两侧成员名序列逐条相同（同一契约条目驱动，AC4）");
-        // Python 不入 golden（ticket 09 惯例：Python 确定性/parity 在内存断言）——但稳定性仍钉住
+        // Python is not part of the golden; its determinism and parity are asserted in memory. Its
+        // byte-level stability is still pinned here.
         assertEquals(py, RegistryBuilderPyRenderer.render(entries), "Python 渲染逐字节稳定");
     }
 
@@ -212,7 +220,7 @@ class RegistryBuilderSurfaceGoldenTest {
         }
     }
 
-    /** 声明头（TS {@code interface X} / Py {@code class X}）的 builder 名序列。 */
+    /** The builder names in the declaration headers (TS {@code interface X} / Py {@code class X}). */
     private static List<String> headerNames(String rendered, String header) {
         List<String> names = new ArrayList<>();
         for (String line : rendered.split("\n", -1)) {
@@ -224,7 +232,7 @@ class RegistryBuilderSurfaceGoldenTest {
         return names;
     }
 
-    /** 4 空格缩进成员行归一为成员名（readonly/def 前缀剥掉；取 ':' 或 '(' 前的首 token）。 */
+    /** Normalizes a 4-space member line to its member name: drop readonly/def, keep the first token. */
     private static List<String> memberNames(String rendered) {
         List<String> names = new ArrayList<>();
         for (String line : rendered.split("\n", -1)) {

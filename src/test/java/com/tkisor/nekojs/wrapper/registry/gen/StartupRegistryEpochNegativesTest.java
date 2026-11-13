@@ -19,20 +19,26 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * PR37 收集与冻结边界负例（ticket 15 最后一条 AC）+ epoch 隔离（AC2）：
+ * Negative cases for collection and freezing, plus epoch isolation:
  * <ul>
- *   <li>Builder 配置 callback 抛错 → 不得留下可被 drain 的半成品（先配置后入库）；</li>
- *   <li>drain 后底层收集容器的变化不得修改已发布快照（{@code DrainResult} 冻结）；</li>
- *   <li>只读 live view（{@code undrainedLiveView}）是防御性副本，不冒充冻结结果；</li>
- *   <li>失败 epoch 不留进程级暂存污染下一轮启动（新 epoch 从空仓库开始）；</li>
- *   <li>任意 Supplier 的内部可变状态不被误称为深不可变（supplier 原样转发，不快照其产物）。</li>
+ *   <li>A Builder configuration callback that throws must not leave a half-built entry that
+ *       drain could pick up: the builder is configured before it is stored;</li>
+ *   <li>Changes to the underlying collection container after a drain must not modify the
+ *       published snapshot ({@code DrainResult} is frozen);</li>
+ *   <li>The read-only live view ({@code undrainedLiveView}) is a defensive copy, not a
+ *       frozen result;</li>
+ *   <li>A failed epoch leaves no process-level leftovers that could pollute the next
+ *       startup: a new epoch starts from an empty repository;</li>
+ *   <li>Mutable state inside an arbitrary Supplier is not claimed to be deeply immutable:
+ *       the supplier is forwarded as is and its product is not snapshotted.</li>
  * </ul>
  */
 class StartupRegistryEpochNegativesTest {
 
     private static final String NODE = "negative-test-node";
 
-    /** 供 JS 记录收集期异常（EventBusJS 捕获监听器异常，不向上抛）。public：Graal host 访问要求。 */
+    /** Lets JS record exceptions thrown during collection; EventBusJS catches listener
+     * exceptions and does not rethrow them. Public because Graal host access requires it. */
     public static final class ErrorLog {
         final List<String> messages = new ArrayList<>();
 
@@ -78,12 +84,13 @@ class StartupRegistryEpochNegativesTest {
                         """);
                 runtime.collectOnce(new RegistryEventJS(runtime.repository(), NODE, testInfos(), testTypes()));
             } finally {
-                // 断言失败也不泄漏静态绑定（审查 F5）
+                // Unbind even when an assertion fails, so no static binding leaks.
                 com.tkisor.nekojs.script.ScriptContextRegistry.unbind(context);
             }
         }
 
-        // EventGroupJS/EventBusJS 把监听器异常捕获并继续：完整条目保留、半成品不入库
+        // EventGroupJS/EventBusJS catch listener exceptions and carry on: complete entries are kept,
+        // half-built ones never reach the repository.
         var view = runtime.undrainedLiveView();
         assertEquals(List.of(Identifier.parse("mymod:complete")), view.get(Registries.SOUND_EVENT),
                 "抛错的 builder 不入库；完整条目保留");
@@ -107,7 +114,8 @@ class StartupRegistryEpochNegativesTest {
                 context.eval("js", "RegistryEvents.register(event => { event.soundEvent('mymod:first', b => { }) });");
                 runtime.collectOnce(new RegistryEventJS(runtime.repository(), NODE, testInfos(), testTypes()));
                 var first = runtime.drainFor(Registries.SOUND_EVENT, new RecordingSink());
-                // 快照之后底层收集容器再变化（同名同注册表的新声明，经直接仓库 seam 注入）
+                // Change the underlying collection container after the snapshot: a new declaration with the
+                // same name in the same registry, added straight to the repository.
                 runtime.repository().add(Registries.SOUND_EVENT,
                         new SoundEventBuilder(Identifier.parse("mymod:second")), "basic", "post-snapshot");
 
@@ -118,7 +126,7 @@ class StartupRegistryEpochNegativesTest {
                 assertEquals(1, runtime.drainFor(Registries.SOUND_EVENT, new RecordingSink()).registered().size(),
                         "后到的声明进下一轮 drain，不改写上一轮结果");
             } finally {
-                // 断言失败也不泄漏静态绑定（审查 F5）
+                // Unbind even when an assertion fails, so no static binding leaks.
                 com.tkisor.nekojs.script.ScriptContextRegistry.unbind(context);
             }
         }
@@ -132,7 +140,8 @@ class StartupRegistryEpochNegativesTest {
 
         var view = runtime.undrainedLiveView();
         assertEquals(1, view.get(Registries.SOUND_EVENT).size());
-        // 防御性副本：外部无法通过视图改动 runtime 状态（内层列表不可变；map 是副本，写入不回灌）
+        // Defensive copy: callers cannot change runtime state through the view. The inner lists are
+        // immutable, and the map is a copy, so writes to it are never written back.
         assertThrows(UnsupportedOperationException.class, () -> view.get(Registries.SOUND_EVENT).clear());
         view.put(Registries.SOUND_EVENT, List.of());
         assertEquals(1, runtime.undrainedLiveView().get(Registries.SOUND_EVENT).size(),
@@ -156,7 +165,8 @@ class StartupRegistryEpochNegativesTest {
         assertTrue(diagnostics.get(0).contains(NODE), "诊断带节点");
         assertFalse(failedBoot.isFullyDrained(), "失败 epoch 确有暂存（测试前提）");
 
-        // 下一轮 boot：新 epoch 从空仓库开始（adapter 的 beginBoot 即此语义 + 丢弃诊断日志）
+        // Next boot: a new epoch starts from an empty repository, which is what the adapter's
+        // beginBoot does, and the diagnostic log is dropped.
         StartupRegistryRuntime nextBoot = new StartupRegistryRuntime(NODE);
         assertTrue(nextBoot.isFullyDrained(), "新一轮启动不被上一轮的进程级暂存污染");
         assertTrue(nextBoot.undrainedLiveView().isEmpty());
@@ -165,7 +175,8 @@ class StartupRegistryEpochNegativesTest {
 
     @Test
     void arbitrarySupplierMutableStateIsForwardedNotSnapshot() {
-        // 裸 supplier 的内部可变状态不被深拷贝/快照：Runtime 只在执行时做非空+类型校验
+        // Mutable state inside a bare supplier is neither deep-copied nor snapshotted. The Runtime only
+        // checks non-null and the type when it runs the supplier.
         java.util.List<String> box = new ArrayList<>(List.of("before"));
         RegistryRepository repository = new RegistryRepository();
         RegistryObjectBuilder<Object> supplier = new RegistryObjectBuilder<>(Identifier.parse("mymod:mutable")) {
@@ -180,14 +191,15 @@ class StartupRegistryEpochNegativesTest {
         RecordingSink sink = new RecordingSink();
         var first = runtime.drainFor(Registries.SOUND_EVENT, sink);
         box.set(0, "after");
-        // 已 drain 的执行结果不因 supplier 内部状态变化而重放/改写
+        // A drained result is not replayed or rewritten when the supplier's internal state changes.
         assertEquals("before", sink.built.get("minecraft:sound_event|mymod:mutable"));
         assertEquals(1, first.registered().size());
-        // 指纹不承诺覆盖任意 supplier 的副作用（裸 supplier 记 additional:式来源标记）
+        // The fingerprint makes no promise to cover the side effects of an arbitrary supplier. A bare
+        // supplier records an "additional:" style origin marker.
         assertEquals("test", first.registered().get(0).origin());
     }
 
-    /** 记录式 sink（与 EndToEnd 测试同款）。 */
+    /** Recording sink, the same one the end-to-end test uses. */
     static class RecordingSink implements StartupRegistryRuntime.RegistrySink {
         final List<String> registered = new ArrayList<>();
         final java.util.Map<String, Object> built = new java.util.LinkedHashMap<>();

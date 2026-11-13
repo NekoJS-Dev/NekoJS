@@ -8,8 +8,9 @@ import net.minecraft.network.chat.MutableComponent;
 public class NekoErrorUIHelper {
 
     /**
-     * @param errorCount 当前错误总数——由调用方传入（两加载器的 runtime root 各自持有
-     *                   error tracker，本类不绑任一入口类）
+     * @param errorCount the current error total, passed in by the caller (the runtime root of
+     *                   each loader holds its own error tracker, so this class binds to no
+     *                   entry point)
      */
     public static Component getErrorComponent(int errorCount) {
         MutableComponent main = Component.translatable("nekojs.error.tracker.warning", errorCount);

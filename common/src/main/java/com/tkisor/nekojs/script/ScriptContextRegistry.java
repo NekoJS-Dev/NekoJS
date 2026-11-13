@@ -11,17 +11,18 @@ import java.util.Objects;
 import java.util.WeakHashMap;
 
 /**
- * 窄 {@link Context} 身份注册表：提供 {@code scriptTypeOf} / {@code currentScriptIdOf} /
- * {@code switchCurrentScriptId} 等窄能力，不暴露 {@link com.tkisor.nekojs.script.ScriptManager}。
+ * Narrow registry that maps a {@link Context} to a script: it offers {@code scriptTypeOf},
+ * {@code currentScriptIdOf}, {@code switchCurrentScriptId} and nothing that exposes
+ * {@link com.tkisor.nekojs.script.ScriptManager}.
  *
- * <p>静态 framework seam，供 api 层 callback（{@code EventBusJS}）和 core 层 callback
- * （{@code NekoNodeTimers}）使用。
+ * <p>Static entry point used by callbacks in the api layer ({@code EventBusJS}) and the core layer
+ * ({@code NekoNodeTimers}).
  *
  * <ul>
- *   <li>不实现 {@code managerOf(Context)}。</li>
- *   <li>不返回 {@code NekoCoreContext} / {@code NekoRuntimeRoot} / {@code NekoJS} / {@code ScriptManager}。</li>
- *   <li>不提供泛型 lookup。</li>
- *   <li>{@link #unbind(Context)} 必须在 {@code ScriptManager.close()} / reset 路径调用。</li>
+ *   <li>Does not implement {@code managerOf(Context)}.</li>
+ *   <li>Does not return {@code NekoCoreContext}, {@code NekoRuntimeRoot}, {@code NekoJS} or {@code ScriptManager}.</li>
+ *   <li>Offers no generic lookup.</li>
+ *   <li>{@link #unbind(Context)} must be called on the {@code ScriptManager.close()} and reset paths.</li>
  * </ul>
  */
 public final class ScriptContextRegistry {
@@ -29,19 +30,20 @@ public final class ScriptContextRegistry {
     private static final Map<Context, String> contextToScriptId = Collections.synchronizedMap(new WeakHashMap<>());
 
     /**
-     * 按 Context 缓存 js 全局 bindings，避免每次 setCurrentScriptId 都重新解析
-     * {@code context.getBindings("js")}。
+     * Caches the js global bindings per Context, so setCurrentScriptId does not resolve
+     * {@code context.getBindings("js")} again every time.
      *
-     * <p>注意：{@link Value} 会强引用其所属 {@link Context}，因此本表条目构成
-     * 「value 引用 key」的自引用，必须依赖 {@link #unbind(Context)} 在 close/reset
-     * 路径清除（与既有约定一致），否则对应 Context 无法被 GC。
+     * <p>A {@link Value} holds a strong reference to its {@link Context}, so each entry here refers
+     * from the value back to its key. {@link #unbind(Context)} must remove the entry on the close
+     * and reset paths, otherwise the Context never becomes eligible for GC.
      */
     private static final Map<Context, Value> contextToBindings = Collections.synchronizedMap(new WeakHashMap<>());
 
     /**
-     * 记录「已实际写入 JS 全局 {@code __nekoCurrentScriptId} 的最后一个 id」，
-     * 值未变化时跳过重复的跨 interop 写。仅在遥测开启期间维护；遥测关闭期间
-     * 主动清除，保证遥测重新启用后第一次写入一定落地（不残留旧值）。
+     * Last id actually written to the JS global {@code __nekoCurrentScriptId}. Skips a repeated
+     * cross-interop write when the value has not changed. Maintained only while telemetry is on; it
+     * is cleared while telemetry is off so the first write after telemetry comes back always lands
+     * and no stale value remains.
      */
     private static final Map<Context, String> lastWrittenScriptId = Collections.synchronizedMap(new WeakHashMap<>());
 
@@ -91,21 +93,22 @@ public final class ScriptContextRegistry {
     }
 
     /**
-     * 把当前 script id 同步到 JS 全局 {@code __nekoCurrentScriptId}。
+     * Copies the current script id to the JS global {@code __nekoCurrentScriptId}.
      *
-     * <p>该全局唯一的读者是 JavaClassLoadTelemetry 的 JS 侧钩子（见
-     * {@code ScriptEnvironmentFactory#installJavaClassLoadTelemetry}，遥测关闭时根本不安装）。
-     * 而本方法处于每次监听器分发 / 恢复的热路径，遥测关闭时写全局纯属浪费，
-     * 故先用 {@link JavaClassLoadTelemetry#isEnabled()}（仅 volatile 读）短路。
+     * <p>The only reader of that global is the JS hook of JavaClassLoadTelemetry (see
+     * {@code ScriptEnvironmentFactory#installJavaClassLoadTelemetry}; it is not installed at all
+     * while telemetry is off). This method runs on the hot path of every listener dispatch and
+     * resume, so writing the global with telemetry off is pure waste. It therefore short-circuits on
+     * {@link JavaClassLoadTelemetry#isEnabled()}, which is a volatile read.
      *
-     * <p>注意 {@code contextToScriptId} 镜像不受此影响——EventBusJS / NekoNodeTimers /
-     * RecipeJsonBuilder 等非遥测读者始终读取最新值。Context 创建后仅本类写该全局
-     * （ScriptEnvironmentFactory 只在 create() 初始化时写 null），因此去重缓存
-     * 「遥测持续开启期间 == 全局实际值」成立。
+     * <p>The {@code contextToScriptId} mirror is unaffected. Readers outside telemetry, such as
+     * EventBusJS, NekoNodeTimers and RecipeJsonBuilder, always see the latest value. Only this class
+     * writes the global after a Context is created (ScriptEnvironmentFactory writes null once during
+     * create()), so while telemetry stays on the deduplication cache equals the actual global value.
      */
     private static void publishScriptIdGlobal(Context context, String scriptId) {
         if (!JavaClassLoadTelemetry.isEnabled()) {
-            // 同时作废去重缓存，避免遥测重新启用后跳过本应落地的写入
+            // Drop the deduplication entry too, so a write after telemetry comes back is not skipped
             lastWrittenScriptId.remove(context);
             return;
         }

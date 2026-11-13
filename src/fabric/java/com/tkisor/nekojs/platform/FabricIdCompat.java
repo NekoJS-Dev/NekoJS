@@ -4,11 +4,13 @@ import com.tkisor.nekojs.api.data.NekoId;
 import net.minecraft.resources.Identifier;
 
 /**
- * Fabric 侧 {@link NekoIdCompat.Adapter}：只碰原版 API，与 NeoForge 侧同源。
+ * Fabric-side {@link NekoIdCompat.Adapter}: it only touches vanilla API and matches the NeoForge
+ * side.
  *
- * <p>注意：26.1+ 原版类名是 {@code Identifier}（1.21.x 叫 {@code ResourceLocation}）。
- * fabric 分支目前只有 26.1.2 一个节点，故直接写 26.x 形态；将来加 1.21.1 节点时，
- * 这一处交给控制器的 `mc_renames` replacements 处理，与 NeoForge 侧同一套规则。
+ * <p>The vanilla class is {@code Identifier} from 26.1 on (it was {@code ResourceLocation} in
+ * 1.21.x). The Fabric branch currently has a single node, 26.1.2, so the 26.x form is written
+ * directly. When a 1.21.1 node is added, the controller's `mc_renames` replacements handle this
+ * spot with the same rules as the NeoForge side.
  */
 public final class FabricIdCompat implements NekoIdCompat.Adapter {
     @Override

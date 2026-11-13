@@ -1,4 +1,5 @@
-// TODO(fabric): fabric 侧还没有对应实现，整文件守卫等移植完成后去掉
+// TODO(fabric): the fabric side has no matching implementation yet; remove this whole-file guard
+// once the port is done
 //? if neoforge {
 //? if >=26 {
 package com.tkisor.nekojs.wrapper.event.server;
@@ -31,21 +32,26 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * {@link ItemModificationJS} 的 food / tool / attackDamage / attackSpeed 属性写入数据组件的
- * 行为（JS 对象字面量按 GraalJS 默认转换以 {@code Map<String, Object>} 形式构造）。
+ * How {@link ItemModificationJS} writes the food, tool, attackDamage and attackSpeed properties into
+ * data components. A JS object literal arrives as a {@code Map<String, Object>} under GraalJS's
+ * default conversion.
  *
- * <p>票 39 起驱动<b>生产应用路径</b>：视图 → 规范化声明 → {@code ModificationDomainOwner}
- * 的组件写入（Adapter 的真实代码），每次 apply 都在“物品原始组件 base + addAll(base) 的
- * builder”上叠加，对应 commit 点「先恢复基线、再按声明顺序应用」的组件半边。
+ * <p>The tests drive the <b>production apply path</b>: view, normalised declaration, then the
+ * component write of {@code ModificationDomainOwner}, which is the Adapter's real code. Every apply
+ * layers onto a builder built from the item's original component base plus {@code addAll(base)},
+ * which is the component half of the commit point that restores the baseline first and then applies
+ * declarations in order.
  *
- * <p>裸 JUnit 无 FML bootstrap：方块注册表为空，tool 的“全方块生效”HolderSet 只能做
- * 结构断言（规则数/字段值），catch-all 匹配所有方块的行为由 in-game 验证覆盖。
+ * <p>Bare JUnit has no FML bootstrap, so the block registry is empty. The tool's "applies to all
+ * blocks" {@code HolderSet} can only be checked structurally there (rule count and field values);
+ * in-game verification covers the catch-all matching every block.
  */
 class ItemModificationComponentsTest {
 
     @BeforeAll
     static void requireVanillaRegistries() {
-        // DataComponents/Attributes 类初始化依赖 BuiltInRegistries；无 FML Loader 的裸 JUnit 跳过
+        // DataComponents/Attributes class initialisation needs BuiltInRegistries, so a bare JUnit run
+        // without the FML Loader is skipped
         org.junit.jupiter.api.Assumptions.assumeTrue(
                 com.tkisor.nekojs.testfixture.VanillaRegistryProbe.available(),
                 "component constants need vanilla registries (no FML loader in bare JUnit)");
@@ -64,10 +70,11 @@ class ItemModificationComponentsTest {
 
         FoodProperties food = result.get(DataComponents.FOOD);
         assertEquals(4, food.nutrition());
-        // saturation 是系数语义：绝对饱和度 = nutrition * saturation * 2
+        // saturation is a coefficient: absolute saturation = nutrition * saturation * 2
         assertEquals(4 * 0.6F * 2.0F, food.saturation(), 1.0e-6F);
         assertTrue(food.canAlwaysEat());
-        // FOOD 本身不触发右键进食，没有 CONSUMABLE 的物品必须补一个（默认 1.6 秒）
+        // FOOD alone does not trigger a right-click eat, so an item without CONSUMABLE must
+        // get one (default 1.6 seconds)
         Consumable consumable = result.get(DataComponents.CONSUMABLE);
         assertEquals(Consumable.DEFAULT_CONSUME_SECONDS, consumable.consumeSeconds());
     }
@@ -121,7 +128,8 @@ class ItemModificationComponentsTest {
 
     @Test
     void nullFoodKeepsDrinkOnlyConsumable() {
-        // 药水一类：有 CONSUMABLE 没有 FOOD——移除食物不能顺带毁掉饮用功能
+        // Potions and the like have CONSUMABLE but no FOOD: removing food must not take the
+        // drink action down with it
         DataComponentMap base = DataComponentMap.builder()
             .set(DataComponents.CONSUMABLE, Consumable.builder().build())
             .build();
@@ -159,12 +167,12 @@ class ItemModificationComponentsTest {
 
         ItemAttributeModifiers out = apply(mod, swordBase()).get(DataComponents.ATTRIBUTE_MODIFIERS);
 
-        // 伤害条目被替换，攻速/击退条目原样保留
+        // The damage entry is replaced; the attack speed and knockback entries stay as they were
         assertEquals(3, out.modifiers().size());
         assertEquals(7.0, out.compute(Attributes.ATTACK_DAMAGE, 0.0, EquipmentSlot.MAINHAND), 1.0e-9);
         assertEquals(-2.4, out.compute(Attributes.ATTACK_SPEED, 0.0, EquipmentSlot.MAINHAND), 1.0e-9);
         assertEquals(1.0, out.compute(Attributes.ATTACK_KNOCKBACK, 0.0, EquipmentSlot.MAINHAND), 1.0e-9);
-        // 条目细节：base_attack_damage / ADD_VALUE / 主手，且只作用于主手
+        // Entry details: base_attack_damage, ADD_VALUE, mainhand, and it applies to the mainhand only
         ItemAttributeModifiers.Entry damage = entryOf(out, Attributes.ATTACK_DAMAGE);
         assertTrue(damage.modifier().is(Item.BASE_ATTACK_DAMAGE_ID));
         assertEquals(AttributeModifier.Operation.ADD_VALUE, damage.modifier().operation());
@@ -224,7 +232,8 @@ class ItemModificationComponentsTest {
 
         Tool tool = apply(mod, emptyBase()).get(DataComponents.TOOL);
 
-        // 单条 catch-all 规则：速度 + 正确工具掉落（空注册表下无法断言匹配范围，见类注释）
+        // A single catch-all rule: speed plus drops with the correct tool (with an empty registry
+        // the matching scope cannot be asserted, see the class comment)
         assertEquals(1, tool.rules().size());
         Tool.Rule rule = tool.rules().getFirst();
         assertEquals(6.0F, rule.speed().orElseThrow().floatValue());
@@ -272,8 +281,10 @@ class ItemModificationComponentsTest {
         DataComponentMap afterFirst = apply(first, pristine);
         assertEquals(8, afterFirst.get(DataComponents.FOOD).nutrition());
 
-        // reload：脚本改了主意（只剩 stack size），事件先回到快照再叠加——第一次的
-        // food/attackDamage 修改不残留，原始组件（营养 4 的食物、3.0 伤害）原样回来
+        // Reload: the script changed its mind (only stack size left), so the event returns to the
+        // snapshot first and then stacks on top. The first round's food and attackDamage
+        // modifications leave nothing behind, and the original components come back as they were
+        // (food with nutrition 4, damage 3.0)
         ItemModificationJS second = new ItemModificationJS();
         second.setMaxStackSize(16);
         DataComponentMap afterSecond = apply(second, pristine);
@@ -287,8 +298,8 @@ class ItemModificationComponentsTest {
     // -------------------------------------------------------------- helpers
 
     /**
-     * 生产应用路径（票 39）：视图 → 规范化声明 → {@code ModificationDomainOwner} 的组件写入。
-     * 与旧复刻等价，但现在直接覆盖 Adapter 的真实应用代码。
+     * The production application path: view -> normalized declaration -> component writes in
+     * {@code ModificationDomainOwner}. It covers the Adapter's real application code directly.
      */
     private static DataComponentMap apply(ItemModificationJS mod, DataComponentMap base) {
         DataComponentMap.Builder builder = DataComponentMap.builder().addAll(base);
@@ -307,7 +318,10 @@ class ItemModificationComponentsTest {
             .build();
     }
 
-    /** 剑形态的 ATTRIBUTE_MODIFIERS：伤害 3.0、攻速 -2.4，外加一条无关属性验证保留。 */
+    /**
+     * ATTRIBUTE_MODIFIERS in sword form: damage 3.0, attack speed -2.4, plus one unrelated
+     * attribute to check preservation.
+     */
     private static DataComponentMap swordBase() {
         ItemAttributeModifiers sword = ItemAttributeModifiers.builder()
             .add(Attributes.ATTACK_DAMAGE,

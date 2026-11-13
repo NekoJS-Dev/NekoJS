@@ -23,11 +23,14 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 
 /**
- * 共享 IR 构建与 probe.* 覆盖事件（包内组件，从 {@link ProbeCoordinator} 抽出）。无状态，全静态。
+ * Builds the shared IR and fires the probe.* override events. This is the package-private
+ * component that {@link ProbeCoordinator} calls; it is stateless and fully static.
  *
- * <p>固定顺序契约：先应用 {@code probe.assign_type}（全局类型重定向，标记受影响类 mutated），
- * 再触发 {@code probe.modify_type}（参数级编辑）——{@code modify_type} 显式设置的槽不被
- * {@code assign_type} 二次覆盖（有 {@code ProbeCoordinatorHardeningTest#assignTypeAppliedBeforeModifyTypeExplicitEdit} 回归）。
+ * <p>Fixed order: apply {@code probe.assign_type} (global type redirection, which marks the
+ * affected classes mutated), then fire {@code probe.modify_type} (parameter-level edits). A slot
+ * that {@code modify_type} sets explicitly is not overwritten a second time by
+ * {@code assign_type} ({@code ProbeCoordinatorHardeningTest#assignTypeAppliedBeforeModifyTypeExplicitEdit}
+ * guards this).
  */
 final class ProbeIrBuilder {
 
@@ -35,14 +38,18 @@ final class ProbeIrBuilder {
     }
 
     /**
-     * 构建共享 IR（TypeReflector 反射每个收集到的类），依次：应用 {@code probe.assign_type}（全局类型重定向，
-     * 标记受影响类 mutated）→ 触发 {@code probe.modify_type}（参数级编辑）。反射失败的类被跳过。
-     * 返回不可变 IR 列表（已含编辑）。{@code assignMap} 为空时跳过应用步骤。
-     * 事件监听器抛异常时继续（best-effort），但把「部分应用」风险写入 {@code warnings} 供调用方感知。
+     * Builds the shared IR by reflecting every collected class with TypeReflector, then applies
+     * {@code probe.assign_type} (global type redirection, which marks the affected classes
+     * mutated) and fires {@code probe.modify_type} (parameter-level edits). Classes that fail to
+     * reflect are skipped. Returns an immutable IR list that already contains the edits. When
+     * {@code assignMap} is empty the apply step is skipped. When an event listener throws, the
+     * build continues (best-effort) but writes the risk of a partial application into
+     * {@code warnings} for the caller.
      *
-     * <p>反射阶段并行执行（传入共享线程池，每类一个任务），随后按**原始收集顺序**（BFS 序）
-     * 汇总进 LinkedHashMap，保证 {@code List.copyOf(ir.values())} 与串行版本顺序一致；
-     * assign_type / modify_type 仍在 map 建完后串行执行（事件触发顺序不变）。
+     * <p>Reflection runs in parallel (one task per class on the shared pool). The results are then
+     * collected into a LinkedHashMap in the original collection order (BFS order), so
+     * {@code List.copyOf(ir.values())} keeps the same order as the serial version. assign_type
+     * and modify_type still run serially once the map is built, so event firing order is unchanged.
      */
     static List<TypeDecl> buildAndMutateIr(Collection<Class<?>> collected, Map<String, ApiTypeRef> assignMap,
                                             ExecutorService pool, List<String> warnings) {
@@ -51,19 +58,22 @@ final class ProbeIrBuilder {
 
         Map<String, TypeDecl> ir = new LinkedHashMap<>();
         {
-            // 每类一个反射任务；TypeReflector 无实例状态，各任务新建实例（线程内独立）
+            // One reflection task per class. TypeReflector has no instance state, so each task
+            // creates its own instance and stays independent within its thread.
             List<Future<TypeDecl>> futures = new ArrayList<>(ordered.size());
             for (Class<?> c : ordered) {
                 futures.add(pool.submit(() -> new TypeReflector().reflect(c)));
             }
-            // 按原始收集顺序汇总：LinkedHashMap 插入序即 collectClasses 的 BFS 序，后续 List.copyOf 稳定
+            // Collect in the original collection order: LinkedHashMap insertion order is the
+            // collectClasses BFS order, so the later List.copyOf is stable.
             for (int i = 0; i < futures.size(); i++) {
                 String fqn = ordered.get(i).getName();
                 try {
                     ir.put(fqn, futures.get(i).get());
                 } catch (InterruptedException e) {
-                    // 中断不能当「反射失败」吞掉：恢复中断标志并向上传播，probe 立刻终止
-                    // （携带半截 IR 继续渲染会把残缺产物提交到磁盘）
+                    // An interrupt must not be swallowed as a reflection failure: restore the
+                    // interrupt flag and rethrow so the probe stops at once. Carrying a half-built
+                    // IR on into rendering would commit incomplete artifacts to disk.
                     Thread.currentThread().interrupt();
                     futures.forEach(pending -> pending.cancel(true));
                     throw new IllegalStateException("Interrupted while building shared probe IR", e);
@@ -81,11 +91,13 @@ final class ProbeIrBuilder {
                 }
             }
         }
-        // 1. assign_type：先重定向反射产出的类型（标记受影响类 mutated，TS 会重渲染）
+        // 1. assign_type: redirect the reflected types first and mark the affected classes
+        // mutated, so TS renders them again.
         if (assignMap != null && !assignMap.isEmpty()) {
             for (TypeDecl d : ir.values()) ProbeAssignTypeEventJS.applyTo(d, assignMap);
         }
-        // 2. modify_type：参数级编辑（在 assign 之后；modify_type 显式设置的类型不被 assign 二次覆盖）
+        // 2. modify_type: parameter-level edits, applied after assign. A type that modify_type sets
+        // explicitly is not overwritten a second time by assign.
         if (!ir.isEmpty() && ProbeEvents.MODIFY_TYPE.hasListeners()) {
             try {
                 ProbeEvents.MODIFY_TYPE.post(new ProbeModifyTypeEventJS(ir));
@@ -97,7 +109,10 @@ final class ProbeIrBuilder {
         return List.copyOf(ir.values());
     }
 
-    /** 触发 {@code probe.assign_type} 一次，返回收集到的「Java FQN → 自定义类型」映射。 */
+    /**
+     * Fires {@code probe.assign_type} once and returns the collected mapping from Java FQN to
+     * custom type.
+     */
     static Map<String, ApiTypeRef> fireAssignType(List<String> warnings) {
         ProbeAssignTypeEventJS ev = new ProbeAssignTypeEventJS();
         try {
@@ -109,7 +124,10 @@ final class ProbeIrBuilder {
         return ev.assignments();
     }
 
-    /** 触发 {@code probe.add_global} 与 {@code probe.snippets}（各有监听器才触发），返回捆绑结果。 */
+    /**
+     * Fires {@code probe.add_global} and {@code probe.snippets}, each only when it has listeners,
+     * and returns the combined result.
+     */
     static ProbeOverrides fireOverrides(List<String> warnings) {
         List<GlobalDecl> globals = List.of();
         List<Snippet> snippets = List.of();

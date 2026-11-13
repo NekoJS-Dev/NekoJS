@@ -4,18 +4,19 @@ import com.tkisor.nekojs.api.annotation.RemapByPrefix;
 import com.tkisor.nekojs.api.spec.PlatformAvailability;
 
 /**
- * Block 跨平台统一扩展规范。
+ * Cross-platform extension interface for Block.
  *
- * <p>各平台的 {@code BlockExtension} 必须 {@code extends BlockSpec}。
+ * <p>Each platform's {@code BlockExtension} must {@code extends BlockSpec}.
  *
- * <p>{@code getId()} 在 NF 是实例零参 vs 原生 static 一参（arity 不同，安全），
- * 在 CR 原生无实例 getId（用 ForgeRegistries），故可进 spec。
+ * <p>{@code getId()} is safe to put in a spec: on NF the neko version is a no-arg instance method
+ * while the native one is a static method taking one argument (different arity), and on CR there
+ * is no instance {@code getId()} (that goes through {@code ForgeRegistries}).
  */
 @RemapByPrefix("neko$")
 @PlatformAvailability(PlatformAvailability.Scope.ALL)
 public interface BlockSpec {
 
-    /** 方块注册 id（如 "minecraft:stone"）。 */
+    /** Block registry id (for example "minecraft:stone"). */
     default String neko$getId() {
         throw new UnsupportedOperationException("BlockSpec.neko$getId not implemented");
     }

@@ -24,14 +24,15 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * {@link RegistryAutoAdapterScanner}：发现/去重/跳过语义。
+ * {@link RegistryAutoAdapterScanner}: discovery, deduplication and skip semantics.
  *
- * <p>合成 holder 类（裸 JVM）测字段过滤与去重；vanilla 注册表真值路径经
- * {@link VanillaRegistryProbe} assume-skip——裸 JVM 无 FML Loader 时跳过而非失败。
+ * <p>Synthetic holder classes (bare JVM) cover field filtering and deduplication. The real vanilla
+ * registry path runs through {@link VanillaRegistryProbe} and is assume-skipped, so a bare JVM
+ * without an FML loader skips instead of failing.
  */
 class RegistryAutoAdapterScannerTest {
 
-    /** 合成 holder：覆盖各种应跳过的字段形态（裸 JVM 可跑，不触碰注册表内容）。 */
+    /** Synthetic holder: covers the field shapes that must be skipped (runs on a bare JVM and touches no registry contents). */
     static class SyntheticHolders {
         public static final java.util.Set<String> NOT_A_REGISTRY = java.util.Set.of();
 
@@ -101,12 +102,15 @@ class RegistryAutoAdapterScannerTest {
         }
     }
 
-    /** ResourceKey 形态 holder：vanilla Registries 类的字段形态（经根注册表解析）。 */
+    /**
+     * A holder with vanilla {@code Registries}-style fields: {@code ResourceKey} constants that
+     * resolve through a root registry.
+     */
     static class SyntheticKeyHolder {
         public static final ResourceKey<Registry<Fluid>> FLUID = Registries.FLUID;
     }
 
-    /** 根注册表里不存在的 key：裸 JVM 应静默跳过。 */
+    /** A key whose root registry does not exist: a bare JVM must skip it silently. */
     static class SyntheticUnresolvableKeyHolder {
         public static final ResourceKey<Registry<String>> NOT_A_REAL_REGISTRY =
                 ResourceKey.create(
@@ -128,8 +132,8 @@ class RegistryAutoAdapterScannerTest {
         Assumptions.assumeTrue(VanillaRegistryProbe.available());
         JSTypeAdapterRegistry.Impl registry = new JSTypeAdapterRegistry.Impl();
 
-        // Registries（ResourceKey 形态）与 BuiltInRegistries（Registry 形态）覆盖同一批
-        // vanilla 类型——去重集合保证 Fluid 只注册一次
+        // Registries (ResourceKey form) and BuiltInRegistries (Registry form) cover the same vanilla
+        // types; the dedup set makes Fluid register only once.
         RegistryAutoAdapterScanner.installInto(registry,
                 List.of(BuiltInRegistries.class, SyntheticKeyHolder.class));
 

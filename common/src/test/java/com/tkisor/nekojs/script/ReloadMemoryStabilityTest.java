@@ -40,22 +40,25 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * 验收：连续 50 次事务式 reload 的内存稳定性（不单调增长）。
+ * Checks that 50 consecutive transactional reloads keep memory stable instead of growing.
  *
- * <p>每次 reload 创建候选 Graal Context、执行 ESM 入口（虚拟 ESM registry + prepared
- * pipeline cache + source map 全部走一遍）、提交后关闭旧 Context。已知的历史泄漏源：
- * CONTEXT_TO_MANAGER / ScriptContextRegistry 残留（close 路径已保证 remove/unbind）、
- * NekoEsmVirtualModuleRegistry generation 计数无界（clear(type) 已重置）。
+ * <p>Each reload creates a candidate Graal Context, runs the ESM entry (the virtual ESM registry,
+ * prepared pipeline cache, and source maps all take part), and closes the old Context after the
+ * commit. Known leak sources: leftover CONTEXT_TO_MANAGER / ScriptContextRegistry entries (the close
+ * path now removes and unbinds them) and the unbounded generation count in
+ * NekoEsmVirtualModuleRegistry (clear(type) resets it).
  *
- * <p>断言策略：每 10 次 reload 后强制 GC 取 used-heap 窗口值；最后一个窗口不得比第一个
- * 窗口高出容差（容差覆盖 JIT/Graal 内部结构的一次性暖机，不允许持续增长趋势）。
- * 窗口序列打印到 stdout，便于 CI 失败时诊断。
+ * <p>Assertion strategy: after every 10 reloads, force a GC and sample the used heap as one window.
+ * The last window must not exceed the first by more than the tolerance; the tolerance covers the
+ * one-time warm-up of JIT and Graal internals, and a sustained growth trend is not allowed. The
+ * window sequence is printed to stdout so a CI failure can be diagnosed.
  */
 class ReloadMemoryStabilityTest {
 
     private static final int RELOADS = 50;
     private static final int WINDOW = 10;
-    /** 允许的一次性暖机增长上限；持续泄漏（每轮恒定增量）会远超它。 */
+    /** Upper bound for the one-time warm-up growth; a real leak, which adds a fixed amount per reload,
+     * goes far beyond it. */
     private static final long TOLERANCE_BYTES = 32L * 1024 * 1024;
 
     public static final class Recorder {
@@ -90,7 +93,8 @@ class ReloadMemoryStabilityTest {
 
     @BeforeAll
     static void initPlatform() {
-        // 固定非临时 gameDir：FileAppender 持有日志句柄直到 JVM 退出，@TempDir 会因清理失败挂掉
+        // A fixed, non-temporary gameDir: FileAppender holds the log file handle until the JVM exits, so
+        // cleanup of @TempDir fails
         Path gameDir = Path.of(System.getProperty("java.io.tmpdir"), "nekojs-test-gamedir");
         TestPlatformInit.ensureInitialized(gameDir);
     }
@@ -165,7 +169,8 @@ class ReloadMemoryStabilityTest {
                         + ((last - first) / 1024) + " KB over the first window (" + (first / 1024)
                         + " KB) — sustained per-reload leak; windows="
                         + java.util.Arrays.toString(java.util.Arrays.stream(windows).map(w -> w / 1024).toArray()));
-        // 额外诊断：中间窗口若已出现单调递增趋势，打印警告（不判失败，避免 GC 噪声误报）
+        // Extra diagnosis: warn when a middle window already rises over the previous one (no failure, so GC
+        // noise does not cause false alarms)
         for (int i = 1; i < windows.length; i++) {
             if (windows[i] > windows[i - 1]) {
                 System.out.printf("[ReloadMemoryStability] note: window %d (%d KB) > window %d (%d KB)%n",

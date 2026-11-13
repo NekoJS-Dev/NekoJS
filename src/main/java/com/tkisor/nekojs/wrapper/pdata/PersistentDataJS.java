@@ -1,5 +1,5 @@
-// 26.x 实现，本文件不应再出现版本守卫。1.21.1 的实现是 versions/1.21.1/src 下的同名文件，
-// 改本文件行为时须同步它。
+// 26.x implementation; no version guard should appear in this file again. The 1.21.1 implementation is the
+// file of the same name under versions/1.21.1/src, so changing this file's behavior means updating it too.
 package com.tkisor.nekojs.wrapper.pdata;
 
 import net.minecraft.nbt.CompoundTag;
@@ -117,8 +117,9 @@ public class PersistentDataJS {
     }
 
     /**
-     * 批量编辑事务：在一次 copy 上执行多次修改，结束统一写回，避免连续 {@code putXxx} 的多次 copy+写回。
-     * 脚本示例：{@code entity.pdata.edit(tag => { tag.putInt("a",1); tag.putString("b","x"); })}
+     * Batch edit transaction: runs several modifications on one copy and writes back once at the end, avoiding the
+     * copy and write-back of a run of {@code putXxx} calls. Script example:
+     * {@code entity.pdata.edit(tag => { tag.putInt("a",1); tag.putString("b","x"); })}
      */
     public PersistentDataJS edit(Consumer<CompoundTag> editor) {
         ensureWritable();

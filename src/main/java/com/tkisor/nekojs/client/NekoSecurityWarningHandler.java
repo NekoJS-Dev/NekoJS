@@ -96,8 +96,9 @@ public class NekoSecurityWarningHandler {
         }
 
         if (ClassFilter.INSTANCE.config().allowAsm()) {
-            // asm 与 fsWrite 段之间的 "\n\n" 分隔与 threads/reflection 段一致；
-            // 1.21.1 旧副本漏了它（asm+fsWrite 同时开启时两段挤在一起），统一为有分隔。
+            // The "\n\n" separator between the asm and fsWrite sections matches the threads/reflection sections;
+            // a 1.21.1 copy missed it, so the two sections ran together when asm and fsWrite were both
+            // enabled; every copy now has the separator.
             text.append(Component.translatable("nekojs.security.detail.asm.title").withStyle(ChatFormatting.RED))
                     .append(Component.literal("\n"))
                     .append(Component.translatable("nekojs.security.detail.asm.desc").withStyle(ChatFormatting.WHITE))

@@ -19,9 +19,9 @@ import java.util.Set;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * 覆盖 {@code scan.mode}（SMART/FULL/NONE）与 {@code scan.forceScanMods} 在
- * {@link ProbeCoordinator#collectClasses} / {@link ProbeCoordinator#run} 中的兑现，
- * 以及 {@code /nekojs probe enable|disable} 持久化 API（{@link ProbeCoordinator#setEnabled}）。
+ * Covers how {@code scan.mode} (SMART/FULL/NONE) and {@code scan.forceScanMods} take effect in
+ * {@link ProbeCoordinator#collectClasses} and {@link ProbeCoordinator#run}, and the persistence
+ * behind {@code /nekojs probe enable|disable} ({@link ProbeCoordinator#setEnabled}).
  */
 class ProbeScanModeTest {
 
@@ -120,7 +120,8 @@ class ProbeScanModeTest {
     @Test
     void forceScanModsForcesPrefixIntoClosure() {
         NekoScriptCatalogSnapshot snapshot = snapshotWithEvent(ProbeCoordinator.class);
-        // include 白名单覆盖为无关前缀；forceScanMods 字面前缀把 probe 包强制纳入
+        // The include whitelist holds an unrelated prefix; the literal forceScanMods prefix pulls the probe
+        // package in anyway.
         ProbeConfig cfg = new ProbeConfig(true, ".neko_probe", new ProbeConfig.ScanConfig(
                 List.of("com.example.nothing"), List.of(), List.of(), List.of("com.tkisor.nekojs.probe"), 5, "SMART"));
         Set<Class<?>> collected = ProbeCoordinator.collectClasses(snapshot, cfg);
@@ -140,7 +141,7 @@ class ProbeScanModeTest {
                 "无强制前缀且白名单不命中时应为空");
     }
 
-    /* ================= enable/disable 持久化 ================= */
+    /* ================= enable/disable persistence ================= */
 
     @Test
     void coordinatorSetEnabledPersistsAndReloads() throws Exception {
@@ -160,7 +161,7 @@ class ProbeScanModeTest {
         }
     }
 
-    /* ================= 工具 ================= */
+    /* ================= helpers ================= */
 
     private static NekoScriptCatalogSnapshot snapshotWithEvent(Class<?> eventType) {
         EventCatalogEntry event = EventCatalogEntry.of(

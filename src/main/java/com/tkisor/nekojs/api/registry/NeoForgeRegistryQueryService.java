@@ -1,13 +1,15 @@
-// TODO(loader-port): deferred to the LoaderBridge fabric port
+// Not ported to fabric yet: deferred to the LoaderBridge fabric port
 //? if neoforge {
 //~ mc_legacy_api
-// 版本差异收敛（DEVEX-ROADMAP 档 1）：本文件启用文件级 mc_legacy_api——两侧门槛已核验
-// （1.21.1 求值形态无 .identifier()，26.x 形态无 .identifier()/.listRegistryKeys()），
-// 覆盖 .identifier()↔.identifier() 与 .listRegistryKeys()↔.listRegistryKeys() 两组纯改名。
-// tryParse 提升为两端中立方法：26.x 的 Identifier.parse 与 1.21.1 一样对非法输入抛异常
-// （26.x 另有不抛的 tryParse，本类 26.x 原始写法用的就是它——catch 版语义等价）。
-// 残留 2 条守卫是真 API 改名，无法用改名表安全表达：Registry get/getTag、
-// RegistryAccess lookup/registry。
+// This file turns on file-level mc_legacy_api to absorb the version differences below. The
+// thresholds on both sides are verified: the 1.21.1 evaluated form has no .identifier(), and the
+// 26.x form has neither .identifier() nor .listRegistryKeys(). Two pure renames are covered:
+// .identifier() to .identifier() and .listRegistryKeys() to .listRegistryKeys().
+// tryParse is promoted to a method neutral for both sides: Identifier.parse in 26.x throws on
+// invalid input just like 1.21.1 (26.x also has a non-throwing tryParse, which this class used in
+// its original 26.x form; the catch version here is equivalent).
+// The 2 remaining guards are real API renames that a rename table cannot express safely: Registry
+// get/getTag and RegistryAccess lookup/registry.
 package com.tkisor.nekojs.api.registry;
 
 import com.mojang.serialization.JsonOps;
@@ -29,10 +31,11 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * NeoForge 26.x 的只读注册表查询实现。
+ * Read-only registry query implementation for NeoForge 26.x.
  *
- * <p>与 1.21.1 不同，26.x 的 {@code DefaultedRegistry} 没有 {@code asLookup()}，因此从
- * vanilla {@code RegistryAccess} 取 {@link Registry}（与 {@code IngredientResolver} 一致）。
+ * <p>Unlike 1.21.1, {@code DefaultedRegistry} in 26.x has no {@code asLookup()}, so this class
+ * takes the {@link Registry} from the vanilla {@code RegistryAccess}, the same way
+ * {@code IngredientResolver} does.
  */
 public final class NeoForgeRegistryQueryService implements RegistryQueryService {
     public static final NeoForgeRegistryQueryService INSTANCE = new NeoForgeRegistryQueryService();
@@ -41,11 +44,13 @@ public final class NeoForgeRegistryQueryService implements RegistryQueryService 
             RegistryAccess.fromRegistryOfRegistries(BuiltInRegistries.REGISTRY);
 
     /**
-     * registryId → ResourceKey 的进程级快照缓存：{@link #REGISTRY_ACCESS} 是 static final、
-     * 只包内置注册表（{@code BuiltInRegistries.REGISTRY}），其 key 集合在 mod 加载后即冻结
-     * （datapack 重载只替换动态注册表内容，不会增删内置 key），而本服务的调用方是脚本侧
-     * {@code Registry.get(...)}（仅脚本执行期可达）。首次 resolveKey 时一次性建表，
-     * 之后未知 id 直接查表为 null，免去每次 ~500 key 的线性扫描与 toString 分配。
+     * Process-wide snapshot cache from registry id to ResourceKey. {@link #REGISTRY_ACCESS} is
+     * static final and wraps only the built-in registries ({@code BuiltInRegistries.REGISTRY}),
+     * whose key set is frozen once mods load; a datapack reload only replaces dynamic registry
+     * contents and never adds or removes built-in keys. Callers are scripts going through
+     * {@code Registry.get(...)}, which only runs during script execution. The table is built once
+     * on the first resolveKey; after that an unknown id resolves to null with one table lookup,
+     * instead of a linear scan over ~500 keys plus a toString allocation on every call.
      */
     private static volatile Map<String, ResourceKey<? extends Registry<?>>> registryKeysById;
 
@@ -93,8 +98,8 @@ public final class NeoForgeRegistryQueryService implements RegistryQueryService 
                 .orElseGet(List::of);
     }
 
-    // 泛型捕获：Registry<T> 的 key() 返回 ResourceKey<? extends Registry<T>>，
-    // 恰好满足 TagKey.create 的签名，通配符在具体化后自然闭合。
+    // Generic capture: key() on Registry<T> returns ResourceKey<? extends Registry<T>>, which fits
+    // TagKey.create's signature exactly, and the wildcard closes on its own once concretized.
     private static <T> Optional<List<String>> tagInRegistry(Registry<T> registry, Identifier location) {
         TagKey<T> tagKey = TagKey.create(registry.key(), location);
 //? if >=26 {
@@ -173,9 +178,10 @@ public final class NeoForgeRegistryQueryService implements RegistryQueryService 
 
     @SuppressWarnings({"unchecked", "rawtypes"})
     private Optional<Registry<?>> registry(ResourceKey<? extends Registry<?>> key) {
-        // RegistryAccess.lookup 返回 Optional<Registry<E>>，E 是捕获类型；
-        // 这里只需要 Registry<?> 的能力，实参收窄到 raw 后 E 推断为 Object，无需再转 Optional。
-//? if >=26 {
+        // RegistryAccess.lookup returns Optional<Registry<E>> with E a captured type. Only the
+        // Registry<?> capability is needed here: narrowing the argument to raw lets E infer as
+        // Object, so no Optional cast is needed.
+        //? if >=26 {
         return REGISTRY_ACCESS.lookup((ResourceKey) key);
 //?} else {
         /*return REGISTRY_ACCESS.registry((ResourceKey) key);
@@ -196,7 +202,10 @@ public final class NeoForgeRegistryQueryService implements RegistryQueryService 
         return map;
     }
 
-    /** 两端中立的容错解析：26.x 与 1.21.1 的 {@code Identifier.parse} 都对非法输入抛异常。 */
+    /**
+     * Fault-tolerant parsing that is neutral for both sides: {@code Identifier.parse} throws on
+     * invalid input in 26.x and 1.21.1 alike.
+     */
     private static Identifier tryParse(String value) {
         try {
             return Identifier.parse(value);

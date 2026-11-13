@@ -4,9 +4,10 @@ import lombok.Getter;
 import net.minecraft.server.MinecraftServer;
 
 /**
- * 服务端生命周期事件的中立 payload（fabric 桥首用；成员名对齐契约约定的
- * {@code event.server} getter——NeoForge 侧原生事件同形，脚本写法跨加载器一致）。
- * 覆盖 aboutToStart / starting / started / stopping / stopped 五个时机。
+ * Loader-neutral payload for the server lifecycle events (first used by the fabric bridge; member names match the
+ * {@code event.server} getter the contract fixes, and the native NeoForge event has the same shape, so scripts look
+ * the same on either loader).
+ * Covers five moments: aboutToStart / starting / started / stopping / stopped.
  */
 public class ServerLifecycleEventJS {
 

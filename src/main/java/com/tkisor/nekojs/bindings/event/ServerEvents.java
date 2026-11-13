@@ -40,7 +40,8 @@ public interface ServerEvents {
         }
     };
 
-    /** 数据生成阶段 key：脚本以 {@code ServerEvents.generateData('after_mods', ...)} 定向。 */
+    /** Data generation stage key: scripts dispatch on it with
+     * {@code ServerEvents.generateData('after_mods', ...)}. */
     DispatchKey<DataGeneratorJS, String> STAGE_KEY = new DispatchKey<>() {
         @Override
         public Class<String> keyType() {
@@ -53,7 +54,8 @@ public interface ServerEvents {
         }
     };
 
-    // 两时代的声明逐字相同（ServerTickEvent / RecipeEventJS 两端同包同名），无需守卫。
+    // Both versions declare this identically (ServerTickEvent / RecipeEventJS have the same package
+    // and name on each side), so no guard is needed.
     EventBusJS<ServerTickEvent.Pre, Void> TICK_PRE =
             GROUP.server("tickPre", ServerTickEvent.Pre.class, api ->
                     api.stable(StableServerTickEvent.class,
@@ -68,7 +70,7 @@ public interface ServerEvents {
     EventBusJS<RecipeEventJS, Void> RECIPES = GROUP.server("recipes", RecipeEventJS.class);
     EventBusJS<RecipeEventJS, Void> AFTER_RECIPES = GROUP.server("afterRecipes", RecipeEventJS.class);
 
-    /** 数据生成事件：脚本写入 datapack JSON（loot tables / advancements / worldgen 等）。 */
+    /** Data generation event: scripts write datapack JSON (loot tables, advancements, worldgen and so on). */
     EventBusJS<DataGeneratorJS, String> GENERATE_DATA =
             GROUP.server("generateData", DataGeneratorJS.class, STAGE_KEY);
 
@@ -89,7 +91,8 @@ public interface ServerEvents {
     EventBusJS<LootTableLoadEvent, Void> LOOT_TABLE_LOAD =
         GROUP.server("lootTableLoad", LootTableLoadEvent.class);
 
-    /** loot table JSON 管理（reload 时 post，先于 loot 解析；修改当次 reload 生效）。 */
+    /** Loot table JSON management: posted during reload, before loot parsing, and the changes
+     * apply to that reload. */
     EventBusJS<LootTableEventJS, Void> LOOT_TABLES =
         GROUP.server("lootTables", LootTableEventJS.class);
 
@@ -97,20 +100,20 @@ public interface ServerEvents {
         GROUP.server("tags", TagEventJS.class, TAG_REGISTRY_KEY);
 
     /**
-     * Villager / wandering trader trade declarations (ticket 22, server scripts, posted-object
-     * mode): the platform domain adapter ({@code VillagerTradeDomainOwner}) posts this at the
-     * server-start collection point and in the candidate {@code DOMAIN_PLAN} phase of a SERVER
-     * reload. Callbacks describe trades; the registry mutation happens only at the legal commit
-     * point of the platform/version adapter. The first version exposes {@code add} only.
+     * Villager and wandering trader trade declarations (server scripts, posted-object mode): the
+     * platform domain adapter ({@code VillagerTradeDomainOwner}) posts this at the server-start
+     * collection point and in the candidate {@code DOMAIN_PLAN} phase of a SERVER reload.
+     * Callbacks describe trades; the registry mutation happens only at the legal commit point of
+     * the platform/version adapter. The first version exposes {@code add} only.
      */
     EventBusJS<VillagerTradeDeclarationEventJS, Void> TRADE_DECLARATION =
         GROUP.server("tradeDeclaration", VillagerTradeDeclarationEventJS.class);
 
     /**
-     * Villager trade reload sub-event (ticket 22): a script that owns a trade set declares that
-     * it no longer manages it ({@code declareObsolete}); the release takes effect in the same
-     * commit. Ordinary reload never physically deletes trades that are simply no longer
-     * declared — those enter the stale/unrestored record instead.
+     * Villager trade reload sub-event: a script that owns a trade set declares that it no longer
+     * manages it ({@code declareObsolete}); the release takes effect in the same commit. An
+     * ordinary reload never physically deletes trades that are simply no longer declared — those
+     * go into the stale/unrestored record instead.
      */
     EventBusJS<VillagerTradeReloadEventJS, Void> TRADE_RELOAD =
         GROUP.server("tradeReload", VillagerTradeReloadEventJS.class);

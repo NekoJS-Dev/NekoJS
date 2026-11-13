@@ -22,36 +22,39 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.material.Fluid;
 
 /**
- * 启动期注册 Runtime（ticket 15 垂直收口的 owner）：
- * STARTUP 脚本经唯一 {@link RegistryEvents#REGISTER} 调用者 Interface 声明，
- * 本类负责<b>收集（恰好一次）、Supplier 校验（返回值/实际类型）、definition
- * fingerprint、逐注册表 pass 抽干与连带派生投递</b>；节点 Adapter（NeoForge
- * {@code RegistryEventAdapter} / Fabric {@code FabricRegistryAdapter}）只在正确的
- * 注册 pass 调 {@link #drainFor}，把对象创建留给平台注册动作。
+ * Registry runtime for startup. STARTUP scripts declare their registrations through the sole
+ * {@link RegistryEvents#REGISTER} caller interface. This class handles <b>collection (exactly
+ * once), supplier validation (return value and actual type), definition fingerprinting,
+ * per-registry pass draining, and relayed derivation delivery</b>. The node adapters (NeoForge
+ * {@code RegistryEventAdapter} / Fabric {@code FabricRegistryAdapter}) only call
+ * {@link #drainFor} during the correct registry pass; object creation stays with the platform
+ * registration action.
  *
- * <p><b>epoch 语义</b>（AC2/AC5）：每轮游戏启动一个 epoch（{@code beginBoot}），
- * 失败或上一轮的残留不会污染下一轮——新一轮 boot 先丢弃并诊断旧 epoch 的暂存，
- * 收集期抛错的 builder 因「先配置后入库」的顺序永不成为可 drain 的半成品（PR37 负例）。
- * 服务器运行期 Dynamic Registry（{@code com.tkisor.nekojs.dynamic} 面）走完全独立的
- * 生命周期，不经本路径（AC12）。
+ * <p><b>Epoch semantics</b>: each game startup is one epoch ({@code beginBoot}). Failures or
+ * leftovers from an earlier round cannot pollute the next one; a new boot round first discards
+ * and diagnoses stale entries from the previous epoch. A builder that throws during collection is
+ * never drained as a semi-finished product, because objects are configured before they are
+ * stored. Dynamic Registries at server runtime ({@code com.tkisor.nekojs.dynamic} side) have
+ * completely independent lifecycles and bypass this path.
  *
- * <p><b>drain 结果可观察</b>（AC10）：{@link DrainResult} 携带每条注册的定义、注册表、
- * 节点、指纹与错误来源；测试/诊断读它，不读私有仓库字段。
+ * <p><b>Drain results are observable</b>: {@link DrainResult} carries the definition, registry,
+ * node, origin and fingerprint of each registration, plus the error sources; tests and
+ * diagnostics read it instead of private repository fields.
  */
 public final class StartupRegistryRuntime {
 
-    /** 节点 Adapter 的注册落点：把 (registry, id, supplier) 交给平台注册动作。 */
+    /** Registration sink for node adapters: hands off (registry, id, supplier) to the platform registration action. */
     @FunctionalInterface
     public interface RegistrySink {
 
         /**
-         * 注册一条对象。supplier 由 Runtime 包装过校验（返回值/实际类型）；NeoForge 侧
-         * 可延迟执行（RegisterEvent 的 supplier 语义），Fabric 侧立即执行。
+         * Registers an object. The supplier is wrapped by the Runtime for validation (return value/actual type).
+         * On NeoForge, this can be deferred (RegisterEvent's supplier semantics); on Fabric, it executes immediately.
          */
         void register(ResourceKey<? extends Registry<?>> registry, Identifier id, Supplier<?> supplier);
     }
 
-    /** 一条成功的注册观察记录。 */
+    /** A record of a successful registration observation. */
     public record RegistrationRecord(
             Identifier definition,
             ResourceKey<? extends Registry<?>> registry,
@@ -59,7 +62,7 @@ public final class StartupRegistryRuntime {
             String origin,
             String fingerprint) {}
 
-    /** 一条失败/跳过的观察记录：错误来源标注阶段（collection/drain/additional-target）。 */
+    /** A record of a failed/skipped registration observation: indicates error source phase (collection/drain/additional-target). */
     public record ErrorRecord(
             Identifier definition,
             ResourceKey<? extends Registry<?>> registry,
@@ -67,7 +70,7 @@ public final class StartupRegistryRuntime {
             String source,
             String message) {}
 
-    /** 单个 pass 的 drain 结果（不可变快照）。 */
+    /** Drain result for a single pass (immutable snapshot). */
     public record DrainResult(List<RegistrationRecord> registered, List<ErrorRecord> errors) {
         public DrainResult(List<RegistrationRecord> registered, List<ErrorRecord> errors) {
             this.registered = List.copyOf(registered == null ? List.of() : registered);
@@ -75,7 +78,7 @@ public final class StartupRegistryRuntime {
         }
     }
 
-    /** 已知注册表的元素类型令牌（裸 Supplier 实际类型校验用；未列出的注册表不校验类型）。 */
+    /** Element type tokens for known registries (used for raw Supplier actual type validation; unlisted registries are not validated). */
     private static final Map<ResourceKey<? extends Registry<?>>, Class<?>> ELEMENT_TOKENS = elementTokens();
 
     private final RegistryRepository repository;
@@ -91,39 +94,41 @@ public final class StartupRegistryRuntime {
 
     public boolean itemRegistrationComplete() { return passed.contains(Registries.ITEM); }
 
-    /** @param node 节点标签（如 {@code neoforge:26.1.2} / {@code fabric:26.1.2}），进入观察记录与错误信息。 */
+    /** @param node Node label (e.g., {@code neoforge:26.1.2} / {@code fabric:26.1.2}), included in observation records and error messages. */
     public StartupRegistryRuntime(String node) {
         this(node, new RegistryRepository());
     }
 
-    /** 仓库注入形态（adapter 持有跨 pass 仓库 / 测试构造非 bootstrap 输入时用）。 */
+    /** Repository injection form (used by adapters holding cross-pass repositories or when constructing non-bootstrap inputs for tests). */
     public StartupRegistryRuntime(String node, RegistryRepository repository) {
         this.node = node;
         this.repository = repository;
     }
 
-    /** 收集仓库（RegistryEventJS 的写入目标）。 */
+    /** Collection repository; this is where RegistryEventJS writes. */
     public RegistryRepository repository() {
         return repository;
     }
 
-    /** 节点标签。 */
+    /** Node label. */
     public String node() {
         return node;
     }
 
     /**
-     * 首个注册表 pass 前调用：恰好一次投递收集事件（AC1）。重复调用 no-op；
-     * 监听器异常由 {@code EventBusJS.post} 捕获记录，不中断其余监听器。
+     * Delivers the collection event exactly once, before the first registry pass. A second call does
+     * nothing. {@code EventBusJS.post} catches and records listener exceptions, so one failing
+     * listener does not stop the others.
      */
     public void collectOnce() {
         collectOnce(RegistryEventJS.create(repository, node));
     }
 
     /**
-     * 可注入事件载荷的收集入口（adapter / 端到端测试 seam）：payload 仍是唯一
-     * {@link RegistryEvents#REGISTER} 调用者 Interface 的对象——测试用它注入非
-     * bootstrap 的 infos/types 输入，不绕过总线。
+     * Collection entry point that takes an injected event payload, used by adapters and by end-to-end
+     * tests. The payload is still an object of the only {@link RegistryEvents#REGISTER} caller
+     * interface; tests use it to inject infos/types input that does not come from bootstrap, without
+     * bypassing the bus.
      */
     public void collectOnce(RegistryEventJS event) {
         if (collected) {
@@ -133,19 +138,23 @@ public final class StartupRegistryRuntime {
         RegistryEvents.REGISTER.post(event);
     }
 
-    /** 收集事件是否已投递（本轮 epoch 内）。 */
+    /** Whether the collection event has been delivered in this epoch. */
     public boolean isCollected() {
         return collected;
     }
 
     /**
-     * 抽干某注册表的主对象与连带派生条目（每 pass 一次；AC2）。主对象先入 sink，
-     * 其 {@code handleAdditionalObjects} 投递的派生条目进入仓库、等目标注册表自己的 pass；
-     * 目标 pass 已过的派生条目记错误并跳过（loader 注册序不可回溯，KubeJS 同款语义）。
+     * Drains the main objects and the additional derived entries of one registry. Called once per
+     * pass. The main object goes into the sink first; entries that its
+     * {@code handleAdditionalObjects} delivers go into the repository and wait for the pass of their
+     * target registry. An additional entry whose target pass has already run is recorded as an error
+     * and skipped, because the loader registration order cannot be rewound (the same semantics as
+     * KubeJS).
      *
-     * <p>平台注册动作（sink）的失败按条隔离：记入 {@link DrainResult#errors()}
-     * （source={@code platform-register}，含定义/注册表/节点/错误来源）后继续，不留下
-     * 静默丢失；条目本身已从仓库 drain（无未交付残留可污染后续 pass）。
+     * <p>A failing platform registration action (sink) is isolated per entry: it is recorded in
+     * {@link DrainResult#errors()} (source {@code platform-register}, with definition, registry, node
+     * and error source) and draining continues, so nothing is lost silently. The entry itself has
+     * already been drained from the repository, so no undelivered leftover can pollute a later pass.
      */
     public DrainResult drainFor(ResourceKey<? extends Registry<?>> registry, RegistrySink sink) {
         List<RegistrationRecord> registered = new ArrayList<>();
@@ -174,7 +183,8 @@ public final class StartupRegistryRuntime {
                 errors.add(new ErrorRecord(additional.id(), registry, node, "platform-register", e.getMessage()));
             }
         }
-        // 本 pass 结束后才计入 passed：builder 派生条目指向本注册表时仍是合法的当轮注册
+        // A registry joins passed only after its pass ends, so an additional entry that targets this
+        // registry is still a valid registration in the same round.
         passed.add(registry);
         return new DrainResult(registered, errors);
     }
@@ -183,7 +193,7 @@ public final class StartupRegistryRuntime {
                                     Identifier id, Supplier<?> supplier,
                                     com.tkisor.nekojs.core.registry.ItemAssetDefinition assets) {
         Supplier<?> validated = validatedSupplier(id, registry, supplier);
-        // A delayed supplier may run after the sink returns. Both boundaries must succeed.
+        // A delayed supplier may run after the sink returns, so both stages must succeed.
         class Receipt implements Supplier<Object> {
             boolean accepted;
             boolean produced;
@@ -209,7 +219,10 @@ public final class StartupRegistryRuntime {
         }
     }
 
-    /** 抽干期回调：builder 的连带派生条目入仓库，等目标注册表自己的 pass 投递。 */
+    /**
+     * Drain-time callback: the additional entries of a builder go into the repository and wait for
+     * the pass of their target registry.
+     */
     private void collectAdditionalOf(RegistryObjectBuilder<?> builder, List<ErrorRecord> errors) {
         try {
             builder.handleAdditionalObjects((registry, id, supplier) -> {
@@ -228,9 +241,10 @@ public final class StartupRegistryRuntime {
     }
 
     /**
-     * 裸 supplier 的校验包装（AC5）：返回值非空、实际类型匹配已知令牌时放行；
-     * 不承诺任意 Supplier 副作用的指纹或回滚（不据此开放 Dynamic Registry）。
-     * 对未登记令牌的注册表只做非空校验。
+     * Wraps a raw supplier with validation. It lets the value through when the returned value is not
+     * null and its actual type matches a known token. It does not fingerprint or roll back the side
+     * effects of an arbitrary supplier, and Dynamic Registries are not opened on that basis. For a
+     * registry without a registered token it only checks that the value is not null.
      */
     public <T> Supplier<T> validatedSupplier(Identifier id, ResourceKey<? extends Registry<?>> registry, Supplier<T> supplier) {
         return () -> {
@@ -250,10 +264,11 @@ public final class StartupRegistryRuntime {
     }
 
     /**
-     * definition fingerprint（AC3）：注册表 + id + 类型名 + 全部可写属性的<b>规范化</b>
-     * 读数（{@link RegistryBuilderContract#normalizedPropertyReadings}，字典序）。
-     * 显式 setter 与 property 赋值经同一 setter 后指纹必然一致；连带派生对象
-     * 懒构建、指纹只覆盖可表达的启动声明（裸 Supplier 不参与指纹）。
+     * Definition fingerprint: the registry, the id, the type name and the <b>normalized</b> readings of
+     * all writable properties ({@link RegistryBuilderContract#normalizedPropertyReadings}, in
+     * lexicographic order). An explicit setter and a property assignment both end in the same setter,
+     * so their fingerprints match. Additional objects are built lazily, and the fingerprint only
+     * covers startup declarations it can express; raw suppliers do not take part.
      */
     public String definitionFingerprint(RegistryObjectBuilder<?> builder) {
         StringBuilder canonical = new StringBuilder("v1|");
@@ -264,9 +279,10 @@ public final class StartupRegistryRuntime {
     }
 
     /**
-     * 只读 live 视图：当前尚未抽干的主对象/派生条目（诊断用）。
-     * <b>不是冻结结果</b>（PR37：只读 live view 不冒充冻结结果）——返回防御性副本，
-     * 后续 drain 会改变真实状态；已 drain 的结果以 {@link DrainResult} 快照为准。
+     * Read-only live view of the main objects and additional entries that are not drained yet, for
+     * diagnostics. It is not a frozen result: it returns a defensive copy and later drains change the
+     * real state. For content that is already drained, the {@link DrainResult} snapshot is the
+     * authority.
      */
     public Map<ResourceKey<? extends Registry<?>>, List<Identifier>> undrainedLiveView() {
         Map<ResourceKey<? extends Registry<?>>, List<Identifier>> view = new LinkedHashMap<>();
@@ -278,7 +294,10 @@ public final class StartupRegistryRuntime {
         return view;
     }
 
-    /** load-complete 诊断：收集了却未被任何 pass 消化的内容（注册表名写错 / 目标 pass 先于来源）。 */
+    /**
+     * Load-complete diagnostic: reports content that was collected but no pass consumed, because the
+     * registry name is wrong or the target pass ran before the source pass.
+     */
     public void reportUndelivered(Consumer<String> logger) {
         repository.undrained().forEach((registry, entries) -> entries.forEach(entry -> logger.accept(
                 "Registry '" + registry.identifier() + "' (node " + node + ") collected '" + entry.builder().id
@@ -288,14 +307,15 @@ public final class StartupRegistryRuntime {
                         + additional.id() + "' of '" + additional.source() + "'; content NOT registered")));
     }
 
-    /** 本轮 epoch 是否已全部清空（无未交付残留）。 */
+    /** Whether this epoch is fully drained, that is, no undelivered content remains. */
     public boolean isFullyDrained() {
         return repository.isEmpty();
     }
 
     /**
-     * 尚有未抽干内容（主对象或连带派生）的注册表键快照（fabric 单批直注用：
-     * 先拍键集再逐个 drain，避免 drain 改结构）。
+     * Snapshot of the registry keys that still hold undrained content, main objects or additional
+     * entries. Fabric direct batch registration takes the key set first and then drains one registry
+     * at a time, so draining does not change the structure being walked.
      */
     public Set<ResourceKey<? extends Registry<?>>> snapshotUndrainedRegistries() {
         Set<ResourceKey<? extends Registry<?>>> keys = new java.util.LinkedHashSet<>();

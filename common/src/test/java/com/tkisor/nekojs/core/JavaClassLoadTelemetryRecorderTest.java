@@ -11,7 +11,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Ticket 30 telemetry bounds: the bounded recorder dedupes, caps its retention, produces
+ * Telemetry limits: the bounded recorder deduplicates, caps its retention, produces
  * repeatable snapshots, and the telemetry channel stays disable-able (no sink → no records).
  */
 class JavaClassLoadTelemetryRecorderTest {

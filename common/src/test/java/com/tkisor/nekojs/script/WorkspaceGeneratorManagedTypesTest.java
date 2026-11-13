@@ -106,14 +106,14 @@ class WorkspaceGeneratorManagedTypesTest {
         Path scriptDir = Path.of("/game/server_scripts");
         Path probeDir = Path.of("/game/.neko_probe");
 
-        // 默认（jsxAutomaticRuntime=false）：经典全局工厂写法
+        // Default (jsxAutomaticRuntime=false): the classic global factory form
         JSConfigModel classic = WorkspaceGenerator.buildConfigForEnv(ScriptType.SERVER, scriptDir, probeDir);
         assertEquals("react", classic.compilerOptions.jsx);
         assertEquals("__nekoJsxFactory", classic.compilerOptions.jsxFactory);
         assertEquals("__nekoJsxFragment", classic.compilerOptions.jsxFragmentFactory);
         assertNull(classic.compilerOptions.jsxImportSource);
 
-        // 引擎开启自动运行时：jsconfig 同步切到 react-jsx + nekojs/jsx-runtime
+        // With the automatic runtime enabled, the jsconfig switches to react-jsx + nekojs/jsx-runtime as well
         SandboxConfig prev = ClassFilter.INSTANCE.config();
         try {
             ClassFilter.INSTANCE.updateConfig(new SandboxConfig(

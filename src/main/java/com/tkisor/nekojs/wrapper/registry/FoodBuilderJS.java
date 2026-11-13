@@ -1,5 +1,5 @@
-// 26.x 实现，本文件不应再出现版本守卫。1.21.1 的实现是 versions/1.21.1/src 下的同名文件，
-// 改本文件行为时须同步它。
+// 26.x implementation; no version guard should appear in this file again. The 1.21.1 implementation is the
+// file of the same name under versions/1.21.1/src, so changing this file's behavior means updating it too.
 package com.tkisor.nekojs.wrapper.registry;
 
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -45,11 +45,11 @@ public class FoodBuilderJS {
     }
 
     /**
-     * 添加药水效果
-     * @param effectId 效果ID，如 "strength" 或 "minecraft:strength"
-     * @param durationTicks 持续时间 (20 tick = 1秒)
-     * @param amplifier 等级 (0 = I级, 1 = II级)
-     * @param probability 获得该效果的概率 (0.0 ~ 1.0)
+     * Adds a mob effect.
+     * @param effectId effect id, such as "strength" or "minecraft:strength"
+     * @param durationTicks duration in ticks (20 ticks = 1 second)
+     * @param amplifier level (0 = level I, 1 = level II)
+     * @param probability chance of getting this effect (0.0 ~ 1.0)
      */
     public FoodBuilderJS effect(Identifier effectId, int durationTicks, int amplifier, float probability) {
         if (effectId != null) {

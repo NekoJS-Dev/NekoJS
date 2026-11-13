@@ -1,4 +1,4 @@
-// TODO(fabric): fabric 侧还没有对应实现，整文件守卫等移植完成后去掉
+// Fabric has no equivalent implementation yet; this whole-file guard goes away once the port is done
 //? if neoforge {
 //? if >=26 {
 package com.tkisor.nekojs.client;
@@ -9,24 +9,25 @@ import com.tkisor.nekojs.wrapper.registry.gen.EntityTypeBuilder;
 import net.minecraft.resources.Identifier;
 
 /**
- * 26.x 方块默认模型生成（客户端资产生成阶段）。
+ * Generates default block models for 26.x during the client asset generation phase.
  *
- * <p>26.x（1.21.5+）渲染为模型驱动：方块的 translucent 渲染依赖模型 JSON 贴图引用
- * 的 {@code "force_translucent": true}（或贴图本身带 alpha）。脚本通过
- * {@code BlockBuilder.renderType('translucent')} 声明后，本类在
- * {@code ClientEvents.generateAssets} 之后为**没有自写模型**的方块生成默认模型：
+ * <p>26.x (1.21.5+) renders through models: translucent rendering of a block depends on
+ * {@code "force_translucent": true} in the texture reference of the model JSON (or on the texture
+ * itself carrying alpha). After a script declares {@code BlockBuilder.renderType('translucent')},
+ * this class generates a default model, after {@code ClientEvents.generateAssets}, for every block
+ * that has no model of its own:
  * <ul>
- *   <li>{@code models/block/<path>.json}：cube_all + 贴图（translucent 用对象形式）</li>
- *   <li>{@code blockstates/<path>.json}：variants 指向模型</li>
- *   <li>{@code items/<path>.json}：物品栏模型定义（1.21.2+ 模型驱动）</li>
+ *   <li>{@code models/block/<path>.json}: cube_all plus a texture (object form for translucent)</li>
+ *   <li>{@code blockstates/<path>.json}: variants pointing at the model</li>
+ *   <li>{@code items/<path>.json}: inventory model definition (model-driven since 1.21.2)</li>
  * </ul>
- * 已存在的文件（脚本在 generateAssets 中写的）不会被覆盖——用
- * {@link DataGeneratorJS#getJson(String)} 判存在。
+ * Files that already exist (written by the script in generateAssets) are not overwritten; existence
+ * is checked with {@link DataGeneratorJS#getJson(String)}.
  */
 public final class BlockModelGenerator {
     private BlockModelGenerator() {}
 
-    /** 为所有声明过 renderType 的方块生成默认模型（仅当脚本未自写）。 */
+    /** Generates a default model for every block that declared a renderType, only when the script wrote none. */
     public static void generateDefaultModels(DataGeneratorJS generator) {
         for (var entry : com.tkisor.nekojs.wrapper.registry.gen.BlockBuilder.RENDER_TYPES.entrySet()) {
             String namespace = entry.getKey().getNamespace();
@@ -61,9 +62,9 @@ public final class BlockModelGenerator {
     }
 
     /**
-     * cube_all 模型 JSON。{@code translucent} 时贴图引用用
-     * {@code {"sprite": ..., "force_translucent": true}} 对象形式（26.x 模型驱动渲染），
-     * 否则用普通字符串（cutout 由贴图 alpha 自动推导，solid 默认）。
+     * Builds the cube_all model JSON. When {@code translucent} is set, the texture reference uses the
+     * object form {@code {"sprite": ..., "force_translucent": true}} (26.x model-driven rendering);
+     * otherwise it is a plain string, cutout is derived from the texture alpha, and solid is the default.
      */
     private static JsonObject cubeAllModel(String namespace, String path, boolean translucent) {
         JsonObject model = new JsonObject();
@@ -83,11 +84,13 @@ public final class BlockModelGenerator {
     }
 
     /**
-     * 为请求过 {@code spawnEgg()} 的实体生成默认蛋模型（仅当脚本未自写）。
+     * Generates a default spawn egg model for entities that requested {@code spawnEgg()}, only when
+     * the script wrote none.
      *
-     * <p>26.x 的 spawn egg 渲染数据驱动（无运行时染色）：生成新式 item model
-     * definition 指向旧式模型，旧式模型默认引用鸡蛋纹理占位——自定义外观需用资源包
-     * 覆盖模型 JSON 或提供 {@code <ns>:textures/item/<path>_spawn_egg.png}。
+     * <p>Spawn egg rendering in 26.x is data-driven with no runtime tinting: this generates a new-style
+     * item model definition pointing at an old-style model, and the old-style model references the egg
+     * texture as a placeholder. A custom look needs a resource pack that overrides the model JSON or
+     * provides {@code <ns>:textures/item/<path>_spawn_egg.png}.
      */
     public static void generateSpawnEggModels(DataGeneratorJS generator) {
         for (Identifier id : EntityTypeBuilder.registeredSpawnEggs()) {

@@ -4,10 +4,11 @@ import com.tkisor.nekojs.api.event.EventBusJS;
 import com.tkisor.nekojs.api.event.EventGroup;
 
 /**
- * 通用注册入口绑定（ADR-0006 单一入口）：{@code register} 总线挂在与旧类型化入口
- * 同名的 {@code RegistryEvents} 组下（{@code EventGroupRegistry} 对同名组做合并，
- * 新旧入口在 Builder 重写完成前共存）。由 {@link NekoRegistryPointsPlugin} 注册，
- * 平台 adapter 在首个注册表 pass 前 post 一次。
+ * Binds the generic registry entry point: the {@code register} bus hangs under the
+ * {@code RegistryEvents} group, which carries the same name as the old typed entry point.
+ * {@code EventGroupRegistry} merges groups with the same name, so both entry points stay live.
+ * {@link NekoRegistryPointsPlugin} registers it, and the platform adapter posts it once before the
+ * first registry pass.
  *
  * <pre>
  * RegistryEvents.register(event =&gt; {
@@ -17,10 +18,10 @@ import com.tkisor.nekojs.api.event.EventGroup;
  */
 public final class RegistryEvents {
 
-    /** 组名与旧入口共用（同名组注册即合并）。 */
+    /** Group name shared with the old entry point; registering into a group with the same name merges it. */
     public static final EventGroup GROUP = EventGroup.of("RegistryEvents");
 
-    /** 单一收集入口（STARTUP 脚本监听；每轮游戏启动 post 一次）。 */
+    /** The single collection entry point; STARTUP scripts listen to it, and it is posted once per game start. */
     public static final EventBusJS<RegistryEventJS, Void> REGISTER = GROUP.startup("register", RegistryEventJS.class);
 
     private RegistryEvents() {}

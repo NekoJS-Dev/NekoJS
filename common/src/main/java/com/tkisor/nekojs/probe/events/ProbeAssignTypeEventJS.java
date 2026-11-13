@@ -10,20 +10,23 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
- * {@code probe.assign_type} 事件：全局类型重定向。脚本调用 {@link #assign(String, Object)} 登记
- * 「Java 全限定名 → 自定义类型」映射；coordinator 在 IR 构建后用 {@link #applyTo} 把映射应用到每个
- * TypeDecl 的类型槽（凡 SYMBOL 引用了被 assign 的 FQN，替换其 {@code ref}、置 {@code overridden}，
- * 并标记所属 TypeDecl 为 {@code mutated}）。
+ * The {@code probe.assign_type} event: redirects types globally. Scripts call {@link #assign(String, Object)} to
+ * register "Java fully qualified name -> custom type" mappings, and after building the IR the coordinator uses
+ * {@link #applyTo} to apply them to the type slots of every TypeDecl: wherever a SYMBOL references an assigned
+ * FQN, its {@code ref} is replaced, {@code overridden} is set and the owning TypeDecl is marked {@code mutated}.
  *
- * <p>效果：TS 会重渲染被触及的类（assigned 槽走 renderRef → 新类型）；Python 渲染所有类时直接见新类型。
- * 语义上 {@code assign_type} 改的是「反射产出的类型」；若 {@code modify_type} 之后再设类型，后者显式覆盖优先。
+ * <p>Effect: TS re-renders the classes that were touched (an assigned slot takes the renderRef path and shows the
+ * new type); Python sees the new type directly, because it renders every class.
+ * {@code assign_type} changes the type produced by reflection; if {@code modify_type} sets a type afterwards, that
+ * later value wins because it overrides explicitly.
  *
- * <p>需要 IR：assign_type 监听器会使 coordinator 构建 IR（纳入 {@code needIr}）。
+ * <p>Requires the IR: an assign_type listener makes the coordinator build the IR (counted in {@code needIr}).
  */
 public final class ProbeAssignTypeEventJS {
     private final Map<String, ApiTypeRef> assignments = new LinkedHashMap<>();
 
-    /** 登记：把 Java 全限定名 {@code javaFqn} 处处重定向为 {@code typeDesc}（字符串/ApiTypeRef）。 */
+    /** Registers a redirect: rewrites every occurrence of the Java fully qualified name {@code javaFqn} to
+     *  {@code typeDesc} (a string or an ApiTypeRef). */
     public void assign(String javaFqn, Object typeDesc) {
         if (javaFqn == null || javaFqn.isBlank()) return;
         assignments.put(javaFqn, ProbeModifyTypeEventJS.resolveType(typeDesc));
@@ -38,8 +41,8 @@ public final class ProbeAssignTypeEventJS {
     }
 
     /**
-     * 把映射应用到一个 TypeDecl 的所有类型槽。返回替换次数（0 表示本类无受影响槽）。
-     * 凡被替换的槽，其所属 TypeDecl 标记 {@code mutated}（让 TS 重渲染它）。
+     * Applies the mappings to every type slot of a TypeDecl. Returns the number of replacements (0 means this
+     * class has no affected slot). Each replaced slot marks its owning TypeDecl {@code mutated} so TS re-renders it.
      */
     public static int applyTo(TypeDecl d, Map<String, ApiTypeRef> map) {
         if (map == null || map.isEmpty() || d == null) return 0;

@@ -59,8 +59,8 @@ class UiColorTest {
 
     @Test
     void argbBitsReadsUint32ScriptLiteralsAsBits() {
-        // Defect D6: 0xFF...... literals are unsigned JS numbers ≥ 2³¹; the painter seams
-        // receive them as Number and read the low 32 bits.
+        // 0xFF...... literals are unsigned JS numbers ≥ 2³¹; painters receive them
+        // as Number and read the low 32 bits.
         assertEquals(-256, UiColor.argbBits(4294967040d), "0xFFFFFF00 (yellow)");
         assertEquals(-1, UiColor.argbBits(4294967295d), "0xFFFFFFFF (opaque white)");
         assertEquals(0x80FF0000, UiColor.argbBits(2164195328d), "0x80FF0000 (translucent red)");

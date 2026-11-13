@@ -13,8 +13,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * 药水 builder：效果实例经 {@code effect(...)} 追加（additive 配置保留方法面）；
- * 默认空效果（用于酿造基料等）。
+ * Potion builder: effect instances are appended through {@code effect(...)}, which stays a method
+ * because configuration is additive. The default is an empty effect list, as used for brewing bases.
  * <pre>
  * event.potion('mymod:strong_health', b =&gt; { b.effect('minecraft:regeneration', 400, 1) })
  * </pre>
@@ -28,13 +28,13 @@ public class PotionBuilder extends RegistryObjectBuilder<Potion> {
     }
 
     /**
-     * 追加一个效果实例。
+     * Appends one effect instance.
      *
-     * @param effect        效果（id 字符串如 {@code 'minecraft:speed'} 或 Holder）
-     * @param durationTicks 持续时间（tick）
-     * @param amplifier     增幅等级（0 起）
-     * @param ambient       是否环境效果（HUD 半透明图标）
-     * @param visible       是否显示粒子 / 图标
+     * @param effect        the effect: an id string such as {@code 'minecraft:speed'} or a Holder
+     * @param durationTicks duration in ticks
+     * @param amplifier     amplifier level, starting at 0
+     * @param ambient       whether this is an ambient effect (translucent HUD icon)
+     * @param visible       whether to show particles and the icon
      */
     public void effect(Object effect, int durationTicks, int amplifier, boolean ambient, boolean visible) {
         Holder<MobEffect> holder = resolveEffect(effect);
@@ -43,14 +43,14 @@ public class PotionBuilder extends RegistryObjectBuilder<Potion> {
         }
     }
 
-    /** 简便重载：默认非环境、可见。 */
+    /** Convenience overload: not ambient, visible. */
     public void effect(Object effect, int durationTicks, int amplifier) {
         effect(effect, durationTicks, amplifier, false, true);
     }
 
     @Override
     public Potion build() {
-        // 用 namespace:path 作为 Potion 的内部名（用于酿造 / 语言 key 引用）
+        // Use namespace:path as the internal Potion name; brewing and language keys refer to it
         return new Potion(id.getNamespace() + "." + id.getPath(), effects.toArray(new MobEffectInstance[0]));
     }
 
@@ -60,8 +60,8 @@ public class PotionBuilder extends RegistryObjectBuilder<Potion> {
         }
         if (value instanceof String effectId) {
             ResourceKey<MobEffect> key = ResourceKey.create(Registries.MOB_EFFECT, Identifier.parse(effectId));
-            // 26.x 的 Registry#get(ResourceKey) 返回 Optional<Reference>，直接取 Holder。
-//? if >=26 {
+            // In 26.x Registry#get(ResourceKey) returns Optional<Reference>, which is used directly as a Holder.
+            //? if >=26 {
             return BuiltInRegistries.MOB_EFFECT.get(key).map(ref -> (Holder<MobEffect>) ref).orElse(null);
 //?} else {
             /*MobEffect mobEffect = BuiltInRegistries.MOB_EFFECT.get(key);

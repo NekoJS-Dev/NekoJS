@@ -12,13 +12,14 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * {@link ReloadProgressTracker} 语义校验：进度按 currentStep/estimatedSteps 计算且 0.99 封顶、
- * finish 后 100% 停留 1.5s、活动快照更新后停留 5s、未 begin 的 step/update/finish 为 no-op、
- * 已有活动会话时嵌套 begin 返回 false 并保留外层会话。
+ * Checks {@link ReloadProgressTracker} behavior: progress is currentStep / estimatedSteps and is
+ * capped at 0.99, a finished reload shows 100% for 1.5s, an updated active snapshot shows for 5s,
+ * step/update/finish without a begin are no-ops, and a nested begin while a session is active
+ * returns false and keeps the outer session.
  */
 class ReloadProgressTrackerTest {
 
-    /** 可推进的假时钟（毫秒）。 */
+    /** Test clock that can be advanced, in milliseconds. */
     private static final class FakeClock implements LongSupplier {
         final AtomicLong millis = new AtomicLong(1_000L);
 
@@ -183,7 +184,7 @@ class ReloadProgressTrackerTest {
         ReloadProgressTracker.Snapshot snapshot = ReloadProgressTracker.snapshot();
         assertFalse(snapshot.active());
         assertFalse(snapshot.visibleAt(clock.getAsLong()));
-        // hideAll 之后 step 也不应复活会话
+        // After hideAll, step must not bring the session back either.
         ReloadProgressTracker.step("client", "dead");
         assertFalse(ReloadProgressTracker.snapshot().active());
     }

@@ -13,22 +13,20 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Float-coercion defect regression for the dynamic definition builder domain
- * (2026-09-29 hotfix, same class as the ticket 36 trial defect in the modification
- * domain): {@link DynamicBuilderSurface} feeds builders such as
- * {@link DynamicSoundEventBuilder} whose {@code fixedRange} is a {@code Float}
- * property. A script writing {@code s.fixedRange = 0.7} hit the same raw engine
- * lossy-coercion failure ({@code Value.asFloat()} refuses doubles that cannot
- * round-trip through {@code float}) because the surface's numeric coercion used the
- * narrow {@code asInt/asLong/asFloat} readers directly.
+ * Regression test for the float-coercion defect in the dynamic definition builder domain (hotfix,
+ * the same class of defect as the modification domain trial): {@link DynamicBuilderSurface} feeds
+ * builders such as {@link DynamicSoundEventBuilder} whose {@code fixedRange} is a {@code Float}
+ * property. A script writing {@code s.fixedRange = 0.7} hit the same raw engine lossy-coercion
+ * failure ({@code Value.asFloat()} refuses doubles that cannot round-trip through {@code float}),
+ * because the surface's numeric coercion used the narrow {@code asInt/asLong/asFloat} readers
+ * directly.
  *
- * <p>The fix normalizes explicitly (D6 precedent): finite numbers narrow with Java
- * casting semantics, {@code int} members require integral in-range values, and
- * rejections are English {@link IllegalArgumentException}s with member context.
- * The {@code fixedRange} setter's own finite-or-null validation is unchanged and now
- * cannot even be reached with a non-finite value.
+ * <p>The fix normalizes explicitly: finite numbers narrow with Java casting semantics, {@code int}
+ * members require integral in-range values, and rejections are English
+ * {@link IllegalArgumentException}s with member context. The {@code fixedRange} setter's own
+ * finite-or-null validation is unchanged and now cannot even be reached with a non-finite value.
  *
- * <p>Real GraalJS geometry (mirrors {@code DynamicBuilderSurfaceParityTest}).
+ * <p>Runs on real GraalJS, mirroring {@code DynamicBuilderSurfaceParityTest}.
  */
 class DynamicBuilderNumberCoercionTest {
 

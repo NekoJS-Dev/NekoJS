@@ -7,13 +7,13 @@ import java.util.List;
 import java.util.Set;
 
 /**
- * Payload of the {@code ServerEvents.tradeReload} reload sub-event (ticket 22 AC7).
+ * Payload of the {@code ServerEvents.tradeReload} reload sub-event.
  *
- * <p>Ordinary reload never physically deletes trades other scripts still rely on: a trade set
- * keeps serving its previous content, and the entries of the reloading script enter the
- * stale/retired record (visible through the query surface). A script that owns a trade set and
- * is done with it declares that explicitly here; the declaration takes effect in the same
- * commit, so removal is a transaction, not a side effect in the middle of collection.
+ * <p>A normal reload never deletes trades other scripts still rely on: a trade set keeps serving
+ * its previous content, and the entries of the reloading script go into the stale/retired record,
+ * which the query API exposes. A script that owns a trade set and is done with it declares that
+ * here. The declaration applies in the same commit, so removal is a transaction rather than a
+ * side effect in the middle of collection.
  */
 @ScriptTypeView(VillagerTradeReloadEvent.class)
 public final class VillagerTradeReloadEventJS implements VillagerTradeReloadEvent {

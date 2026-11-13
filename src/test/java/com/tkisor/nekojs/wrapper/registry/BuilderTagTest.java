@@ -1,4 +1,5 @@
-// TODO(fabric): fabric 侧还没有对应实现，整文件守卫等移植完成后去掉
+// The Fabric side has no matching implementation yet; this whole-file guard goes away once the
+// port is done.
 //? if neoforge {
 //? if >=26 {
 package com.tkisor.nekojs.wrapper.registry;
@@ -164,7 +165,8 @@ class BuilderTagTest {
 
     @Test
     void blockBuilderTagRecordsBlockRegistryEntry() {
-        // BlockBuilder 构造触碰 SoundType→SoundEvents→注册表；裸 JUnit 跳过本例
+        // Constructing a BlockBuilder touches SoundType -> SoundEvents -> the registry, so a bare JUnit
+        // run skips this case.
         org.junit.jupiter.api.Assumptions.assumeTrue(
                 com.tkisor.nekojs.testfixture.VanillaRegistryProbe.available(),
                 "block properties need vanilla registries (no FML loader in bare JUnit)");

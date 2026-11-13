@@ -59,7 +59,8 @@ class DefaultRegistryFacadeTest {
 
     @Test
     void getReusesCachedViewPerRegistryId() {
-        // DefaultRegistryView 无状态，同一 registryId 应复用同一视图实例，避免按 tick 重复分配
+        // DefaultRegistryView is stateless, so one registryId reuses the same view instance and the
+        // view is not allocated again on every tick
         assertSame(registry.get("minecraft:item"), registry.get("minecraft:item"));
         assertNotSame(registry.get("minecraft:item"), registry.get("minecraft:other"));
     }
@@ -68,7 +69,8 @@ class DefaultRegistryFacadeTest {
     void exposesDataMapQueriesThroughTheView() {
         RegistryView items = registry.get("minecraft:item");
 
-        // fixture service 未覆写 dataMap 方法 → 走 SPI default（空列表 / null）。
+        // The fixture service does not override the dataMap methods, so the SPI defaults apply:
+        // an empty list and null.
         assertEquals(List.of(), items.dataMapIds());
         assertEquals(null, items.dataMapValue("neoforge:furnace_fuels", "minecraft:coal"));
         assertEquals(ApiErrorCodes.TYPE_MISMATCH,

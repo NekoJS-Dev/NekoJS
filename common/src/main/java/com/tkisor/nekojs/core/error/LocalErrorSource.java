@@ -13,14 +13,14 @@ import com.tkisor.nekojs.core.fs.NekoJSPaths;
 import com.tkisor.nekojs.network.ErrorSummaryDTO;
 
 /**
- * Resolves an error location into a "verified local script file". Both entry points share one
- * validation path: the error DTO (wire projection) and ticket 30's frozen diagnostic record
- * via its {@link DiagnosticOpenAction} seam (consumed by ticket 27).
+ * Resolves an error location into a verified local script file. Both entry points share one
+ * validation path: the error DTO (wire projection) and the frozen diagnostic record, handed in
+ * as a {@link DiagnosticOpenAction}.
  *
- * <p>远端专用服务器永远不猜测本机路径；本机模式也必须位于 NekoJS script root 内，并通过
- * {@link NekoJSPaths#verifyInsideNekoRoot(Path)} 的 real-path 校验。The column always comes
- * from the existing {@code line} field; this class never parses {@code fullDetails} to invent
- * a structured column.</p>
+ * <p>A remote dedicated server never guesses a local path. Local mode must still point inside the
+ * NekoJS script root and pass the real-path check in
+ * {@link NekoJSPaths#verifyInsideNekoRoot(Path)}. The column always comes from the existing
+ * {@code line} field; this class never parses {@code fullDetails} to invent a structured column.
  */
 public final class LocalErrorSource {
     private final NekoJSPaths paths;
@@ -34,9 +34,11 @@ public final class LocalErrorSource {
     }
 
     /**
-     * 解析错误位置。
+     * Resolves the location of an error.
      *
-     * @param integratedSingleplayerServer 必须由调用方显式传入：仅集成单人服务器的脚本根可视为本机路径
+     * @param integratedSingleplayerServer must be passed explicitly by the caller: only the script
+     *                                     root of an integrated singleplayer server counts as a
+     *                                     local path
      */
     public Result resolve(ErrorSummaryDTO error, boolean integratedSingleplayerServer) {
         if (error == null) {
@@ -46,11 +48,13 @@ public final class LocalErrorSource {
     }
 
     /**
-     * Resolves ticket 30's frozen diagnostic record open-action seam (ticket 27 consumption):
-     * the same location validation as the DTO path; the action's source/line semantics come
-     * from the record — no second facts source.
+     * Resolves the location from the frozen diagnostic record's open action. It runs the same
+     * validation as the DTO path; the action's source and line come from the record itself, so there
+     * is no second source of truth.
      *
-     * @param integratedSingleplayerServer 必须由调用方显式传入：仅集成单人服务器的脚本根可视为本机路径
+     * @param integratedSingleplayerServer must be passed explicitly by the caller: only the script
+     *                                     root of an integrated singleplayer server counts as a
+     *                                     local path
      */
     public Result resolve(DiagnosticOpenAction action, boolean integratedSingleplayerServer) {
         if (action == null) {
@@ -59,10 +63,11 @@ public final class LocalErrorSource {
         return resolveLocation(action.sourcePath(), action.line(), integratedSingleplayerServer);
     }
 
-    /** Location validation shared by the DTO projection and the open-action seam: path+line → verified local script file. */
+    /** Location validation shared by the DTO path and the open action: maps path and line to a verified local script file. */
     private Result resolveLocation(String rawPath, int requestedLine, boolean integratedSingleplayerServer) {
         if (!integratedSingleplayerServer) {
-            // 远端判断先于任何路径解析；专用服务器路径可能是远端绝对路径，绝不能碰本机同名文件。
+            // The remote check runs before any path parsing. A dedicated server path may be a remote absolute
+            // path, and it must never touch a local file with the same name.
             return Result.unavailable(Status.REMOTE_SERVER);
         }
         if (isInvalidText(rawPath)) {
@@ -75,8 +80,9 @@ public final class LocalErrorSource {
         try {
             Path requested = Path.of(rawPath);
             Path candidate = requested.isAbsolute() ? requested : paths.root().resolve(requested);
-            // 先钉住 gameDir 物理边界，再检查 nekojs 根；否则 nekojs 根本身被替换为
-            // symlink/reparse point 时，verifyInsideNekoRoot 会把链接目标当作新的根。
+            // Pin the physical gameDir path first, then check the nekojs root. Otherwise, when the nekojs
+            // root itself is replaced by a symlink or reparse point, verifyInsideNekoRoot treats the link
+            // target as the new root.
             Path verified = paths.verifyInsideGameDir(candidate);
             verified = paths.verifyInsideNekoRoot(verified);
             if (!paths.isInsideScriptRoot(verified)) {
@@ -97,7 +103,8 @@ public final class LocalErrorSource {
         } catch (InvalidPathException e) {
             return Result.unavailable(Status.INVALID_PATH);
         } catch (IOException e) {
-            // 两个 root verifier 的拒绝包含穿越、非法链接和 reparse escape；不能落入 fallback。
+            // Both root verifiers reject traversal, illegal links and reparse escapes. Those are real failures,
+            // so they must not fall into the fallback.
             return Result.unavailable(Status.OUTSIDE_SCRIPT_ROOT);
         } catch (RuntimeException e) {
             return Result.unavailable(Status.IO_ERROR);
@@ -142,12 +149,13 @@ public final class LocalErrorSource {
         if (colon < 0) {
             return false;
         }
-        // 后续 path segment 内的冒号交给具体 Path 解析、script-root 和 real-path 校验。
-        // 只有首个分隔符之前出现冒号才可能是 scheme / virtual module。
+        // Colons inside later path segments are left to Path parsing, the script-root check and the
+        // real-path check. Only a colon before the first separator can be a scheme or a virtual module.
         if (separator != Integer.MAX_VALUE && colon > separator) {
             return false;
         }
-        // 唯一允许的首段冒号是完整 Windows 盘符路径；C:relative 这种 drive-relative 形式仍拒绝。
+        // The only colon allowed in the first segment belongs to a full Windows drive path; drive-relative
+        // forms such as C:relative are still rejected.
         return !(colon == 1
                 && path.length() > 2
                 && (path.charAt(2) == '\\' || path.charAt(2) == '/')
@@ -163,7 +171,7 @@ public final class LocalErrorSource {
         OUTSIDE_SCRIPT_ROOT, MISSING_FILE, NOT_REGULAR_FILE, UNREADABLE_FILE, IO_ERROR
     }
 
-    /** 解析结果；只有 {@link Status#LOCAL_FILE} 会携带非 null 文件和打开目标。 */
+    /** Resolution result. Only {@link Status#LOCAL_FILE} carries a non-null file and open target. */
     public record Result(Status status, Path file, int line, boolean lineKnown, Target target) {
         public boolean available() {
             return status == Status.LOCAL_FILE;
@@ -189,10 +197,12 @@ public final class LocalErrorSource {
     }
 
     /**
-     * 已验证的 VS Code 打开目标。
+     * A verified VS Code open target.
      *
-     * <p>{@code vscodeFileUri} 始终只表示文件级打开。行号通过官方 CLI 的 {@code --goto} 原生参数传递；
-     * POSIX 文件名本身含冒号会与行列分隔产生歧义，此时 gotoLine 为 false，只打开已验证文件。</p>
+     * <p>{@code vscodeFileUri} always means a file-level open. The line number travels through the
+     * official CLI's native {@code --goto} argument. A POSIX file name that itself contains a colon
+     * would collide with the line and column separator; gotoLine is then false and only the
+     * verified file opens.</p>
      */
     public record Target(Path file, URI vscodeFileUri, boolean gotoLine, int line) {
         public Target {
@@ -209,7 +219,10 @@ public final class LocalErrorSource {
             return new Target(file, vscodeUri, safeLine, line > 0 ? line : -1);
         }
 
-        /** 传给进程的参数（不含 code 命令本身）。这里只生成 argv，绝不做 shell 字符串拼接。 */
+        /**
+         * Arguments passed to the process, without the code command itself. This only builds argv and
+         * never concatenates a shell string.
+         */
         public List<String> arguments() {
             return gotoLine
                     ? List.of("--goto", file + ":" + line)
@@ -217,8 +230,9 @@ public final class LocalErrorSource {
         }
 
         /**
-         * 手动按 UTF-8 编码每个 path segment。Path 的 name 元素不包含根：Windows 盘符和 UNC
-         * server/share 都在 root 中，必须显式编码，否则协议 URI 会丢失打开目标所在的卷。
+         * Encodes each path segment as UTF-8 by hand. The name elements of a Path do not include the
+         * root: the Windows drive letter and the UNC server/share both live in the root, so they must
+         * be encoded explicitly, or the protocol URI loses the volume the open target is on.
          */
         private static String encodedPath(Path file) {
             StringBuilder result = new StringBuilder();
@@ -297,8 +311,9 @@ public final class LocalErrorSource {
             if (firstColon < 0) {
                 return true;
             }
-            // Windows 绝对路径允许且仅允许一个盘符冒号；盘符之后的任何冒号都会让
-            // `file:line` 后缀歧义（包括 NTFS stream 语法），必须降级为文件级打开。
+            // A Windows absolute path allows one drive colon and nothing else. Any colon after the drive makes
+            // the `file:line` suffix ambiguous (NTFS stream syntax included), so it must fall back to a
+            // file-level open.
             boolean windowsDrive = firstColon == 1 && value.length() > 2 && value.charAt(1) == ':';
             return windowsDrive && value.indexOf(':', 2) < 0;
         }

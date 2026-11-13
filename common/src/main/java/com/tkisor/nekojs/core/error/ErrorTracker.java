@@ -9,12 +9,15 @@ import graal.graalvm.polyglot.Context;
 import java.util.Collection;
 
 /**
- * 脚本错误状态记录能力。
+ * Records script error state.
  *
- * <p>边界：只记录脚本入口执行、事件/timer callback、node:test、module evaluation 等脚本相关错误。
- * Java bootstrap、平台 setup、插件发现等普通工程错误继续走 logger，不进入 {@code ErrorTracker}。
+ * <p>Scope: only script-related errors are recorded — script entry execution, event and timer
+ * callbacks, node:test, and module evaluation. Ordinary engineering failures such as
+ * Java bootstrap, platform setup and plugin discovery stay on the logger and never reach
+ * {@code ErrorTracker}.
  *
- * <p>普通业务类需要错误记录能力时注入此接口；不要注入完整 {@code NekoCoreContext}。
+ * <p>Ordinary business classes that need error recording inject this interface, not the whole
+ * {@code NekoCoreContext}.
  */
 public interface ErrorTracker {
     ScriptError record(ScriptContainer script, Throwable error);

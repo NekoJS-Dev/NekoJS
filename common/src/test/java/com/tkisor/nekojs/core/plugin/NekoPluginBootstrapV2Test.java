@@ -14,16 +14,18 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * V2 扩展点模型语义（ADR-0001/0002）在真实 bootstrap 引擎上的验证：
+ * Checks the extension point model on the real bootstrap engine:
  *
  * <ul>
- *   <li>拓扑排序：先注册但 {@code dependsOn} 后注册点的扩展点，执行被重排到依赖之后
- *       （同层无依赖时保持注册序）；</li>
- *   <li>环依赖 fail-fast：报错包含完整环路径；</li>
- *   <li>未注册依赖 id 在 freeze 早爆；</li>
- *   <li>数据依赖违序（已注册但未 finish、未声明 dependsOn）在读取点立即抛错，
- *       报错附"declare dependsOn"修复指引；</li>
- *   <li>两档访问：{@code result} 对未注册点返回 null，{@code resultOrThrow} 抛错。</li>
+ *   <li>Topological sort: a point registered before the point it names in {@code dependsOn} runs
+ *       after that dependency (points of the same level without a dependency keep registration
+ *       order);</li>
+ *   <li>Cyclic dependencies fail fast: the error contains the complete cycle path;</li>
+ *   <li>An unregistered dependency id fails early at freeze;</li>
+ *   <li>A data dependency read out of order (target registered but not finished, no
+ *       {@code dependsOn}) throws at the read site, and the error suggests "declare dependsOn";</li>
+ *   <li>Two access tiers: {@code result} returns null for an unregistered point,
+ *       {@code resultOrThrow} throws.</li>
  * </ul>
  */
 class NekoPluginBootstrapV2Test {
@@ -33,7 +35,7 @@ class NekoPluginBootstrapV2Test {
         TestPlatformInit.ensureInitialized();
     }
 
-    /** 依赖方先注册、被依赖方后注册：dependsOn 必须把执行序纠正过来。 */
+    /** The dependent registers first and the dependency registers later: dependsOn must fix the order. */
     @Test
     void topoSortReordersRegisteredDependency() {
         NekoPluginExtensionProvider provider = registry -> {
@@ -113,14 +115,14 @@ class NekoPluginBootstrapV2Test {
         assertTrue(error.getMessage().contains("unregistered"), "报错应指向未注册 id: " + error.getMessage());
     }
 
-    /** 读已注册但未 finish 的点（漏声明 dependsOn）：读取点立即抛错并附修复指引。 */
+    /** Reads a registered but unfinished point with no dependsOn: the read throws at once and points at the fix. */
     @Test
     void undeclaredDataDependencyThrowsAtReadSite() {
         NekoPluginExtensionProvider provider = registry -> {
             registry.register(NekoPluginExtensionPoint
                     .<NekoJSPlugin, List<String>, List<String>>builder("test:reader", NekoJSPlugin.class)
                     .merge(MergePolicy.append())
-                    // 故意不声明 dependsOn：reader 先注册先执行，读到已注册但未 finish 的 late
+                    // Intentionally no dependsOn: reader registers and runs first, then reads the registered but unfinished late
                     .initializer(ctx -> {
                         ctx.resultOrThrow("test:late", List.class);
                         return new ArrayList<String>();
@@ -143,7 +145,7 @@ class NekoPluginBootstrapV2Test {
                 "报错应附 dependsOn 修复指引: " + error.getMessage());
     }
 
-    /** result() 对未注册点返回 null（可选依赖档），resultOrThrow() 抛错（必需依赖档）。 */
+    /** result() returns null for an unregistered point (optional tier); resultOrThrow() throws (required tier). */
     @Test
     void accessTiersDifferOnUnregisteredPoint() {
         List<String> observed = new ArrayList<>();
@@ -168,9 +170,12 @@ class NekoPluginBootstrapV2Test {
         assertEquals(List.of("optional=null", "required=threw"), observed);
     }
 
-    // ---- 可选时序依赖（dependsOnOptionalId）：跨层"读对方产物、但对方可能缺席" ----
+    // ---- Optional ordering dependencies (dependsOnOptionalId): read another point's product that may be absent ----
 
-    /** 可选依赖对方缺席：不建边、不早爆，点照常执行（common-only bootstrap 的形态）。 */
+    /**
+     * The optional dependency is absent: no edge and no early failure, and the point still runs
+     * (the common-only bootstrap shape).
+     */
     @Test
     void optionalDependencyAbsentDoesNotFailFreeze() {
         NekoPluginExtensionProvider provider = registry -> registry.register(
@@ -188,7 +193,10 @@ class NekoPluginBootstrapV2Test {
         assertEquals(List.of("ran"), runtime.extensionProduct("test:reader", List.class));
     }
 
-    /** 可选依赖对方在场：建边且顺序生效（依赖方先注册也会被重排到对方之后）。 */
+    /**
+     * The optional dependency is present: the edge is added and orders execution, so a dependent
+     * registered first is reordered after it.
+     */
     @Test
     void optionalDependencyPresentOrdersExecution() {
         NekoPluginExtensionProvider provider = registry -> {
@@ -219,11 +227,13 @@ class NekoPluginBootstrapV2Test {
     }
 
     /**
-     * 启动期回归钉（ticket 15）：版本树插件在 doc 钩子里经句柄急切读
-     * {@code nekojs:registry_types} 产物（{@code requireResult} 的等价形态）。
+     * Startup regression check: a version-tree plugin eagerly reads the
+     * {@code nekojs:registry_types} product through a handle inside the doc hook, the
+     * {@code requireResult} shape.
      *
-     * <p>负例对照：目标 doc 点未声明依赖、先于 types 点注册执行 → 读取点抛
-     * "has not finished yet"（证明该形状真的会炸，正例才有意义）。
+     * <p>Negative control: the target doc point declares no dependency and runs before the types
+     * point registers, so the read throws "has not finished yet". That failure shows the shape
+     * really breaks, which is what makes the positive case meaningful.
      */
     @Test
     void lateProductReadWithoutDeclaredDependencyThrows() {
@@ -236,9 +246,11 @@ class NekoPluginBootstrapV2Test {
     }
 
     /**
-     * 启动期回归钉（ticket 15）正例：真实 {@link TypeDocsPoint}（内置、先注册）声明可选依赖后，
-     * 后注册的 {@code nekojs:registry_types} 被重排到它之前完成，doc 钩子里的产物读取不再违序。
-     * 修复前该形状在游戏 bootstrap 里崩溃（FML mod 构造期 "has not finished yet"）。
+     * Positive case for the startup regression: the real {@link TypeDocsPoint} (built in,
+     * registered first) declares the optional dependency, so the later registered
+     * {@code nekojs:registry_types} is reordered to finish before it and the doc hook reads the
+     * product in order. Without that declaration the same shape fails during the FML mod
+     * constructor with "has not finished yet".
      */
     @Test
     void typeDocsPointIsOrderedAfterRegistryTypesWhenPresent() {
@@ -249,10 +261,11 @@ class NekoPluginBootstrapV2Test {
     }
 
     /**
-     * 模拟版本树注册插件的形状：注册 {@code nekojs:registry_types}（含句柄），
-     * 在 doc 收集钩子里急切读该句柄产物——与 {@code NekoRegistryPointsPlugin} 同款。
-     * {@code docPointId} 为真实 {@link TypeDocsPoint#ID} 时读取发生在真实点的收集里；
-     * 否则本插件自建同形状的无依赖 doc 点充当负例对照。
+     * Mimics the version-tree registration plugin: it registers {@code nekojs:registry_types}
+     * (with a handle) and eagerly reads that handle's product inside the doc collection hook, the
+     * same shape as {@code NekoRegistryPointsPlugin}. When {@code docPointId} is the real
+     * {@link TypeDocsPoint#ID}, the read happens inside the real point's collection; otherwise the
+     * plugin builds its own dependency-free doc point of the same shape as the negative control.
      */
     static final class LateReadPlugin
             implements NekoJSPlugin, NekoPluginExtensionProvider, TypeDocsPoint.Contributor {

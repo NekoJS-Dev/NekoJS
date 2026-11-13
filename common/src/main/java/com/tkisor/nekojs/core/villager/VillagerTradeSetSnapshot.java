@@ -6,12 +6,12 @@ import java.util.Map;
 import java.util.TreeMap;
 
 /**
- * Immutable read-only snapshot of the trade-set state a commit published (ticket 22 AC3):
- * container data only — {@code tradeSetId -> declaration count} plus the opaque registry epoch
- * the adapter observed while committing.
+ * Immutable snapshot of the trade-set state a commit published: container data only,
+ * {@code tradeSetId -> declaration count} plus the opaque registry epoch the adapter observed
+ * while committing.
  *
- * <p>The snapshot is what generation-bound queries read. It never exposes a live registry
- * view, a mutable adapter collection or a NekoJS-owned manager object.
+ * <p>Queries bound to a generation read this snapshot. It never exposes a live registry view,
+ * a mutable adapter collection or a NekoJS-owned manager object.
  */
 public record VillagerTradeSetSnapshot(long registryEpoch, Map<String, Integer> countsByTradeSet) {
 

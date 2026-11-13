@@ -18,7 +18,8 @@ final class CompilerExecutionAssertions {
         }
     }
 
-    /** ES module 模式 parse-only（.mjs 触发）：含 import/export 语句的擦除产物必须这样验证。*/
+    /** Parses in ES module mode, which the .mjs file name triggers; erased output that contains
+     * import/export statements has to be verified this way. */
     static void parseModule(String code) {
         try (Context context = restrictedContext()) {
             context.parse(Source.newBuilder("js", code, "corpus.mjs").build());

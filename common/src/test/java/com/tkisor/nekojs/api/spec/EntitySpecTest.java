@@ -17,7 +17,8 @@ class EntitySpecTest {
 
     @Test
     void ambiguousMethodsExcludedFromSpec() {
-        // getId / getX / getY / getZ 因 NF 原生零参同名碰撞（Graal 无法分派）而不在 spec 中
+        // getId, getX, getY and getZ are not in the spec: they collide with native zero-argument methods on NF,
+        // and Graal cannot dispatch them
         assertThrows(NoSuchMethodException.class,
             () -> EntitySpec.class.getMethod("neko$getId"));
         assertThrows(NoSuchMethodException.class,

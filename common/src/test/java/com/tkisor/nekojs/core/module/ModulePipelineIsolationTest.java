@@ -25,17 +25,21 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * 票据 11 AC10：Preparation 与 Resolution/Cache 不创建 Graal Context、不决定 HostAccess、
- * 不读取 Minecraft/loader；Context、HostAccess、bindings 与执行关闭继续由
- * Script Execution Environment 负责（本约束不改变 common 允许 GraalJS 的既有规则）。
+ * Preparation and resolution/cache create no Graal Context, decide no HostAccess and read no
+ * Minecraft or loader class. The Script Execution Environment keeps creating the Context and
+ * deciding HostAccess, bindings and execution shutdown. This does not change the existing rule
+ * that common may use GraalJS.
  *
- * <p>负断言（准备/解析层源码级扫描）+ 正断言（执行层仍承担 Context/HostAccess）双面验证。
- * 扫描口径取精确 token（{@code Context.newBuilder} 等构造点、{@code HostAccess.} 决策点、
- * 平台包 import），避免注释提及造成误报；import 行全行匹配。
+ * <p>The test checks both sides: negative assertions scan the preparation and resolution sources
+ * for forbidden tokens, and positive assertions check that the execution layer still owns the
+ * Context and HostAccess. The scan matches exact tokens ({@code Context.newBuilder} and other
+ * construction sites, {@code HostAccess.} decision points, platform package imports) so that a
+ * mention in a comment does not trigger a false positive; import lines are matched whole.
  */
 class ModulePipelineIsolationTest {
 
-    /** Preparation 纯层：不得出现 Context/HostAccess/平台 import（含注入持有）。 */
+    /** Preparation classes: no Context, no HostAccess, no platform import, including fields that hold
+    an injected instance. */
     private static final List<String> PREPARATION_FILES = List.of(
             "core/compiler/NekoCompilationPipeline.java",
             "core/compiler/NekoSourceMapBuilder.java",
@@ -48,7 +52,8 @@ class ModulePipelineIsolationTest {
             "core/compiler/NekoLegacyLanguagePlugin.java",
             "api/event/ScriptBindingSchema.java");
 
-    /** Resolution/Cache 纯层：同上（host 与 ESM lifecycle 属执行委托面，另行断言）。 */
+    /** Resolution/cache classes: same rule as preparation. The host and ESM lifecycle belong to the
+    execution delegation side and are asserted separately. */
     private static final List<String> RESOLUTION_FILES = List.of(
             "core/module/NekoModuleResolver.java",
             "core/module/NekoModuleDependencyGraph.java",
@@ -56,12 +61,13 @@ class ModulePipelineIsolationTest {
             "core/module/esm/NekoEsmLinker.java",
             "core/module/NekoNativeEsmSourceRewriter.java");
 
-    /** 执行委托面：持有注入的 Context，但不得创建 Context、不得决定 HostAccess。 */
+    /** Execution delegation: holds an injected Context but must not create a Context or decide
+    HostAccess. */
     private static final List<String> DELEGATION_FILES = List.of(
             "core/module/NekoScriptModuleLoaderHost.java",
             "core/module/EsmModuleLifecycle.java");
 
-    /** Runtime-owned cache/registry boundaries must not rediscover platform script roots. */
+    /** Runtime-owned cache and registry classes must not rediscover platform script roots. */
     private static final List<String> RUNTIME_OWNED_BOUNDARY_FILES = List.of(
             "core/module/NekoModulePipelineCache.java",
             "core/error/SourceMapRegistry.java",
@@ -115,7 +121,8 @@ class ModulePipelineIsolationTest {
                 + String.join("\n", violations));
     }
 
-    /** 纯层签名级断言：字段/方法/构造器签名一律不出现 Context/HostAccess 类型。 */
+    /** Signature-level check for the pure classes: no field, method or constructor signature mentions
+    Context or HostAccess. */
     @Test
     void pureSignaturesHoldNoContextOrHostAccess() throws Exception {
         Class<?> contextType = Class.forName("graal.graalvm.polyglot.Context");
@@ -174,7 +181,8 @@ class ModulePipelineIsolationTest {
 
     @Test
     void executionEnvironmentStillOwnsContextAndHostAccess() throws IOException {
-        // 正断言：Context 创建与 HostAccess 决策仍在 Script Execution Environment。
+        // Positive assertion: the Script Execution Environment still creates the Context and decides
+        // HostAccess.
         String sandboxFactory = read("core/NekoSandboxFactory.java");
         assertTrue(sandboxFactory.contains("Context.newBuilder(\"js\")"),
                 "执行环境必须继续创建 Graal Context");
@@ -406,7 +414,8 @@ class ModulePipelineIsolationTest {
     }
 
     /**
-     * @param forbidContextHolding 纯层额外禁止持有 Context 类型（import/字段/签名一律不得出现）。
+     * @param forbidContextHolding the pure classes may not mention the Context type at all
+     *                             (imports, fields and signatures)
      */
     private static List<String> scan(List<String> files, boolean forbidContextHolding) throws IOException {
         List<String> violations = new ArrayList<>();
@@ -421,7 +430,7 @@ class ModulePipelineIsolationTest {
                 if (trimmed.isEmpty()) {
                     continue;
                 }
-                // import 行：全行精确匹配平台/Graal-Context 禁止项。
+                // Import lines: the whole line must match a forbidden platform or Graal Context token.
                 if (trimmed.startsWith("import ")) {
                     if (trimmed.contains("net.minecraft.")
                             || trimmed.contains("net.minecraftforge.")
@@ -434,8 +443,9 @@ class ModulePipelineIsolationTest {
                     }
                     continue;
                 }
-                // 代码行：构造/决策精确 token；Context 持有按词边界判定
-                //（RewriteContext 之类的内类名不算；注释与字符串已剥离）。
+                // Code lines: exact tokens for construction and decisions; Context holding is matched on word
+                // boundaries, so an inner class name like RewriteContext does not count. Comments and string
+                // literals are already stripped.
                 if (line.contains("Context.newBuilder") || line.contains("Context.create")
                         || line.contains("HostAccess.")
                         || line.contains("net.minecraft.") || line.contains("net.minecraftforge.")
@@ -462,7 +472,8 @@ class ModulePipelineIsolationTest {
         return false;
     }
 
-    /** 剥离行/块注释与字符串字面量：注释里的“不创建 Context”式表述不得计入。 */
+    /** Strips line and block comments and string literals, so a phrase like "does not create a
+    Context" inside a comment is not counted. */
     private static String stripCommentsAndStrings(String source) {
         StringBuilder out = new StringBuilder(source.length());
         int i = 0;

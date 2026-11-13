@@ -1,5 +1,5 @@
-// 1.21.1 实现，与版本树 src/ 下的同名 26.x 文件成对。内容等于那份文件在本节点求值后的形态。
-// 26.x 侧行为变更时须同步本文件。
+// 1.21.1 implementation. It pairs with the same-named 26.x file under src/ in the version
+// tree: this file is that file evaluated for this node. Keep them in sync when 26.x changes.
 package com.tkisor.nekojs.client.posteffect;
 
 import com.google.gson.JsonParseException;
@@ -20,20 +20,20 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Runtime client post-effect registry (feature 8b, client-side only; ported from Katton's
+ * Runtime registry of client post effects (client side only, ported from Katton's
  * {@code ClientPostEffectManager}).
  *
- * <p><b>Runtime binding face (ticket 28).</b> {@link #set}/{@link #clear}/{@link #toggle}/
- * {@link #current} back the {@code PostEffects} runtime binding and keep their previous
- * caller-visible behaviour (client-thread renderer mutation, resource-backed ids only).
+ * <p><b>Runtime binding.</b> {@link #set}/{@link #clear}/{@link #toggle}/{@link #current}
+ * back the {@code PostEffects} runtime binding and behave the same for callers as before:
+ * they mutate the renderer on the client thread and accept only resource-backed ids.
  *
- * <p><b>Declaration face (ticket 28).</b> Definitions are no longer registered straight from
- * a script binding: {@code ClientEvents.postEffects} declarations are collected into an inert
- * {@code PostEffectCandidatePlan} and only the commit point installs the active generation
+ * <p><b>Declaration.</b> Definitions no longer come straight from a script binding.
+ * {@code ClientEvents.postEffects} declarations are collected into an inert
+ * {@code PostEffectCandidatePlan}, and only the commit point installs the active generation
  * through {@link #installGeneration}. A generation owns exactly the definitions it declared;
  * the previous generation's definitions and resources are released when the new batch
  * applies. 1.21.1 has no shader-source override and no shader-manager mixin, so a declaration
- * is validated chain JSON resolved through {@code assets/<ns>/shaders/post/<path>.json} and a
+ * is validated chain JSON resolved through {@code assets/<ns>/shaders/post/<path>.json}, and a
  * declared id without that resource cannot be activated (see {@link #getOrCreatePostChain}).
  *
  * <p>All renderer mutations run on the client thread via {@code Minecraft#execute}.
@@ -47,7 +47,7 @@ public final class PostEffectManager {
     /** Declaration generation whose definitions are installed ({@code -1} = none yet). */
     private static volatile long ACTIVE_GENERATION = -1L;
 
-    /** 1.21.1 无公开的 current effect getter，运行时用最后一次 set 的 id 记账。 */
+    /** 1.21.1 has no public getter for the current effect, so the runtime tracks the last set id. */
     private static volatile ResourceLocation lastSetId;
 
     private static long selectionRevision;
@@ -62,7 +62,7 @@ public final class PostEffectManager {
     public record Definition(String chainJson) {
     }
 
-    // ---- declaration lifecycle (ClientEvents.postEffects；commit 点由 Adapter 调用) ----
+    // ---- Declaration lifecycle (ClientEvents.postEffects; the adapter calls the commit point) ----
 
     /**
      * Parses and validates a declaration payload without storing it (candidate preflight):

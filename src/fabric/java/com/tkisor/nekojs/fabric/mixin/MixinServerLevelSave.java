@@ -9,18 +9,19 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 /**
- * {@code LevelEvents.saved} 的 fabric 挂点：{@code ServerLevel#save} 的 TAIL。
+ * Fabric hook for {@code LevelEvents.saved}: the TAIL of {@code ServerLevel#save}.
  *
- * <p>为什么用 mixin：fabric-api 的 {@code ServerLevelEvents} 只有 LOAD/UNLOAD
- * （v1 生命周期，26.x 无 SAVE 回调），NeoForge 的 {@code LevelEvent.Save} 无
- * fabric 等价物。
+ * <p>Why a mixin: fabric-api's {@code ServerLevelEvents} only has LOAD and UNLOAD in the v1
+ * lifecycle and 26.x has no SAVE callback, so NeoForge {@code LevelEvent.Save} has no fabric
+ * equivalent.
  *
- * <p>javap 实证（minecraft-merged-deobf-26.1.2.jar）：
- * {@code public void save(net.minecraft.util.ProgressListener, boolean, boolean)}
- * —— ServerLevel 上的**具体**方法（含方法体；入口先按第二个 boolean 短路跳过），
- * TAIL 落在实际保存完成后；仅服务端调用（MinecraftServer#saveAllChunks 等），
- * 无需客户端过滤。两个 boolean 的语义未实证读通，载荷 {@code LevelSavedEventJS}
- * 只带 level（对齐 NeoForge {@code LevelEvent.Save} 的 getLevel()）。
+ * <p>Checked with javap (minecraft-merged-deobf-26.1.2.jar):
+ * {@code public void save(net.minecraft.util.ProgressListener, boolean, boolean)} is a
+ * <b>concrete</b> method on ServerLevel (its entry short-circuits on the second boolean), so TAIL
+ * runs after the actual save. Only the server calls it (MinecraftServer#saveAllChunks and
+ * similar), so no client filter is needed. The meaning of the two booleans is not established, so
+ * the {@code LevelSavedEventJS} payload only carries the level (thereby matching the getLevel()
+ * value of NeoForge {@code LevelEvent.Save}).
  */
 @Mixin(ServerLevel.class)
 public abstract class MixinServerLevelSave {

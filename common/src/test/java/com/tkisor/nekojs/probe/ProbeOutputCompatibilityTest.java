@@ -43,8 +43,9 @@ class ProbeOutputCompatibilityTest {
 
         Map<String, String> actualFiles = readTree(tempDir.resolve("probe-types"));
 
-        // 重生成模式（-Dnekojs.golden.regenerate=true，由 gradle 任务 regenerateGoldens 设置）：
-        // 实际产物镜像覆盖 golden 资源目录后跳过断言（跑完人工 review + 提交）
+        // Regeneration mode (-Dnekojs.golden.regenerate=true, set by the gradle task regenerateGoldens):
+        // the actual output mirrors over the golden resource directory and the assertions are skipped.
+        // Review the diff by hand and commit it afterwards.
         if (ProbeGoldenSupport.regenerateEnabled()) {
             Path goldenDir = ProbeGoldenSupport.resourceDir(getClass(), GOLDEN_BASE_PATH);
             assertNotNull(goldenDir, "golden tree resources must resolve to a file: URL under " + GOLDEN_BASE_PATH);
@@ -61,8 +62,9 @@ class ProbeOutputCompatibilityTest {
                     "Legacy file missing from generated output: " + relPath);
         }
 
-        // Phase 2.7（IR 唯一渲染路径）回归护栏：legacy 文件内容必须与录制树逐字一致，
-        // 单次反射多产物（TypeReflector → 声明 + import 集合）不得改变任何已有产物字节
+        // Guard for the single IR render path: legacy files must match the recorded tree byte for byte, and
+        // reflecting a class once into several outputs (TypeReflector produces a declaration plus its import
+        // set) must not change a single byte of an existing output.
         for (Map.Entry<String, String> entry : legacyGolden.entrySet()) {
             String actual = actualFiles.get(entry.getKey());
             if (!entry.getValue().equals(actual)) {
@@ -72,7 +74,10 @@ class ProbeOutputCompatibilityTest {
         }
     }
 
-    /** 诊断：golden 与实际内容的逐行差异摘要（临时排查用，定位跨平台漂移）。 */
+    /**
+     * Prints a line-by-line diff summary between the golden content and the actual content, to locate
+     * cross-platform drift.
+     */
     private static String goldenDiff(String file, String golden, String actual) {
         List<String> g = golden == null ? List.of() : java.util.Arrays.asList(golden.split("\n", -1));
         List<String> a = actual == null ? List.of() : java.util.Arrays.asList(actual.split("\n", -1));
@@ -119,8 +124,9 @@ class ProbeOutputCompatibilityTest {
     }
 
     /**
-     * 用 TypeScriptProbeBackend（Phase 1 起替代旧 ProbeOrchestrator）生成到指定目录。
-     * 显式传入旧 5-前缀白名单，确保与 golden tree 字节可比（无视测试平台的 defaultScanPackages）。
+     * Generates into the given directory with {@code TypeScriptProbeBackend}. The same five-prefix
+     * whitelist is passed explicitly so the output stays byte-comparable with the golden tree, whatever
+     * {@code defaultScanPackages} the test platform reports.
      */
     private ProbeBackend.GenerateResult generateAt(NekoScriptCatalogSnapshot snapshot, Path outputDir) {
         ProbeConfig cfg = new ProbeConfig(true, ".neko_probe", new ProbeConfig.ScanConfig(

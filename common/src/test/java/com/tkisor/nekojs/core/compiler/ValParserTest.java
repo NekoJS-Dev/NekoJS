@@ -11,8 +11,9 @@ import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * {@link ValParser} AST 形状测试：字符串字面量、const/let/var 声明、命名/计算成员访问、
- * optional computed、转义解码、畸形输入不挂死。
+ * AST shape tests for {@link ValParser}: string literals, const/let/var declarations, named
+ * and computed member access, optional computed access, escape decoding, and malformed input
+ * that must not hang.
  */
 class ValParserTest {
 
@@ -343,7 +344,7 @@ class ValParserTest {
 
     @Test
     void emptyIdentForUnparseablePartsDoesNotThrow() {
-        // 模板字符串与畸形括号不应抛异常
+        // Template strings and malformed brackets must not throw.
         List<ValNode> stmts = parse("const s = `x${e.getServeer()}`;").stmts();
         assertTrue(stmts.size() >= 1);
     }

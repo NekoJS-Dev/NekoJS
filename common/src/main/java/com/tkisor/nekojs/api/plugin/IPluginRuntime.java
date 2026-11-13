@@ -60,14 +60,16 @@ public interface IPluginRuntime {
     }
 
     /**
-     * typed Builder 面的结构化契约条目（ticket 15）：版本树契约反射派生，TS/Python declaration 同源渲染。
-     * default 空实现保持既有实现方（含测试 stub）兼容——真实产物由 {@code NekoPluginRuntime} 合并提供。
+     * Structured entries for the typed builder API. They are derived by reflection from the
+     * version-tree contracts and rendered into the TypeScript and Python declarations from the same
+     * source. The empty default keeps existing implementors, test stubs included, compiling;
+     * {@code NekoPluginRuntime} merges and supplies the real entries.
      */
     default List<RegistryBuilderSurfaceEntry> registryBuilderSurfaces() {
         return List.of();
     }
 
-    /** 插件注册的 JS 模块：moduleId → CommonJS source。 */
+    /** JS modules registered by the plugin: moduleId to CommonJS source. */
     Map<String, String> nodeModules();
 
     Map<String, RecipeNamespaceEntry> recipeNamespaces();

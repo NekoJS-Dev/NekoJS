@@ -7,13 +7,15 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * mod 加载器版本（如 {@code "4.0.0"}），支持最多四段数字与可选字母限定符。
+ * A mod loader version such as {@code "4.0.0"}: up to four numeric segments plus an
+ * optional alphabetic qualifier.
  *
- * <p>实现 {@link Comparable}：逐段比较数字（缺段按 0），再比较限定符（无限定符 > 有限定符）。
- * 不可变。
+ * <p>Implements {@link Comparable}: numeric segments compare one by one with missing
+ * segments read as 0, then the qualifier compares, and a version without a qualifier
+ * sorts above one with a qualifier. Immutable.
  *
- * @param segments  数字段（不可变列表，可为空）
- * @param qualifier 限定符（如 {@code "beta"}），可为 {@code null}
+ * @param segments  numeric segments (immutable list, may be empty)
+ * @param qualifier qualifier such as {@code "beta"}, may be {@code null}
  */
 public record LoaderVersion(List<Integer> segments, String qualifier) implements Comparable<LoaderVersion> {
 
@@ -24,7 +26,8 @@ public record LoaderVersion(List<Integer> segments, String qualifier) implements
         segments = List.copyOf(segments == null ? List.of() : segments);
     }
 
-    /** 解析加载器版本字符串；非法格式抛 {@link IllegalArgumentException}。 */
+    /** Parses a loader version string. Throws {@link IllegalArgumentException} when the format
+     * is invalid. */
     public static LoaderVersion parse(String raw) {
         Objects.requireNonNull(raw, "raw");
         Matcher m = LOADER_VER.matcher(raw);
@@ -38,7 +41,8 @@ public record LoaderVersion(List<Integer> segments, String qualifier) implements
         return new LoaderVersion(segs, q);
     }
 
-    /** 逐段比较数字（缺段按 0），再比较限定符（无限定符 > 有限定符）。 */
+    /** Compares numeric segments one by one with missing segments read as 0, then compares the
+     * qualifier; a version without a qualifier sorts above one with a qualifier. */
     @Override
     public int compareTo(LoaderVersion other) {
         int maxLen = Math.max(this.segments.size(), other.segments.size());
@@ -56,7 +60,7 @@ public record LoaderVersion(List<Integer> segments, String qualifier) implements
         return this.qualifier.compareTo(other.qualifier);
     }
 
-    /** 返回版本字符串。 */
+    /** Returns the version string. */
     @Override
     public String toString() {
         StringBuilder sb = new StringBuilder();

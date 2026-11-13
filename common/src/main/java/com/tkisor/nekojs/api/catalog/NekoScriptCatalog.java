@@ -191,7 +191,7 @@ public final class NekoScriptCatalog {
         return List.copyOf(map.values());
     }
 
-    /** 已加载 mod id（去重 + 排序，保证 probe 输出确定性）。 */
+    /** Returns the loaded mod ids, deduplicated and sorted so probe output is deterministic. */
     public static List<String> modIds() {
         return platformProvider.modIds().stream().distinct().sorted().toList();
     }
@@ -219,8 +219,8 @@ public final class NekoScriptCatalog {
                 .toList();
         for (var binding : runtime.bindings(scriptType).values()) {
             BindingCatalogEntry entry = BindingCatalogEntry.of(binding.name(), scriptType, binding.valueType(), binding.value() instanceof Class<?>);
-            // DelegatingBinding 代理：valueType 是 helper，但运行时还委托 targetClass 的静态成员，
-            // 让 probe 把 targetClass 的静态成员也合并进 .d.ts。
+            // DelegatingBinding proxy: valueType is the helper, but at runtime the proxy also delegates to
+            // the static members of targetClass, so the probe merges those into the .d.ts as well.
             if (binding.value() instanceof com.tkisor.nekojs.js.DelegatingBinding del) {
                 entry = entry.withExtraDocTypes(List.of(del.targetClass()));
             }
@@ -251,12 +251,13 @@ public final class NekoScriptCatalog {
         for (EventGroup group : runtime.eventGroups().values()) {
             for (var entry : group.viewBuses().entrySet()) {
                 EventGroup.BusHolder holder = entry.getValue();
-                // 每个 bus 只产出一条目录条目，并用它的规范 ScriptType 打标签。不能按
-                // ScriptType 逐类型各收集一遍：同一条 SERVER bus 会被打上 STARTUP/SERVER/TEST
-                // 多个标签重复入目录，而 side 过滤（scriptType().test(side)）会把这些同总线
-                // 条目全部放进同一个 side 文件（如 startup 同时命中 STARTUP 与 SERVER 两个标签），
-                // 导致 Python .pyi / TS .d.ts 里同一事件重复声明（Pylance 报「方法声明被同名
-                // 声明遮盖」）。
+                // Each bus produces exactly one catalog entry, tagged with its canonical ScriptType. Collecting
+                // once per ScriptType does not work: the same SERVER bus would be tagged STARTUP, SERVER
+                // and TEST and enter the catalog several times, and the side filter
+                // (scriptType().test(side)) would put all those entries for the same bus into the same
+                // side file (startup matches both the STARTUP and the SERVER tag), so the same event
+                // would be declared twice in the Python .pyi and the TS .d.ts (Pylance reports the
+                // method declaration as obscured by a same-name declaration).
                 var bus = firstApplicableBus(holder);
                 if (bus == null) continue;
                 Class<?> dispatchKeyType = bus.bus() instanceof DispatchEventBus<?, ?> dispatchBus
@@ -268,9 +269,11 @@ public final class NekoScriptCatalog {
                         .withCallSignatures(bus.callSignatures()));
             }
         }
-        // ScriptEvents 动态注册的事件组并列进目录：probe 才能为它们生成声明，payload
-        // 事件类也随 catalog 种子进入反射 BFS。validateAvailable 已保证不与内置组/绑定
-        // 重名；注册顺序 = 脚本加载顺序（满足确定性）；脚本事件为 PLAIN 总线，无 dispatch 键。
+        // ScriptEvents groups registered at runtime join the catalog so the probe can generate
+        // declarations for them, and the payload event classes enter the reflection BFS through the
+        // catalog seed. validateAvailable guarantees they do not clash with built-in groups or
+        // bindings; registration order follows script load order, which keeps output deterministic;
+        // script events use a PLAIN bus with no dispatch key.
         for (ScriptEventDefinition definition : ScriptEventRegistry.definitions()) {
             entries.add(EventCatalogEntry.ofScriptEvent(
                     definition.groupName(), definition.eventName(), definition.targetType()));
@@ -278,7 +281,7 @@ public final class NekoScriptCatalog {
         return List.copyOf(entries);
     }
 
-    /** 取 holder 在任一适用环境下暴露的 bus（同一 EventBusJS 实例，与目标环境无关）。 */
+    /** Returns a bus the holder exposes in any applicable environment; it is the same EventBusJS instance everywhere. */
     private static EventBusJS<?, ?> firstApplicableBus(EventGroup.BusHolder holder) {
         for (ScriptType type : ScriptType.all()) {
             EventBusJS<?, ?> bus = holder.getBus(type);
@@ -304,7 +307,8 @@ public final class NekoScriptCatalog {
                         .withCallSignatures(bus.callSignatures()));
             }
         }
-        // 动态脚本事件：与静态组一致的 side 过滤语义（canApplyOn），标签用查询侧 ScriptType。
+        // Dynamic script events: the same side-filter semantics as static groups (canApplyOn), tagged
+        // with the ScriptType being queried.
         for (ScriptEventDefinition definition : ScriptEventRegistry.definitions()) {
             if (!definition.canApplyOn(scriptType)) continue;
             entries.add(EventCatalogEntry.ofScriptEvent(

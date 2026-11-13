@@ -36,9 +36,10 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 票 16 facade 测试共用 harness：真实 {@link ScriptManager}（事务式 reload）+ 真实 GraalJS
- * + 生产同款 {@link EventGroupJS} 绑定（DynamicRegistryEvents 组）+ 候选域收集器挂入
- * {@code ScriptManager}。与 {@code ScriptReloadGenerationTest} 的 harness 同一装配形状。
+ * Shared facade test harness: a real {@link ScriptManager} with transactional reload, real GraalJS,
+ * the production {@link EventGroupJS} bindings (the DynamicRegistryEvents group), and the candidate
+ * domain collector wired into {@code ScriptManager}. It assembles the harness the same way
+ * {@code ScriptReloadGenerationTest} does.
  */
 final class FacadeTestHarness implements AutoCloseable {
 
@@ -53,12 +54,13 @@ final class FacadeTestHarness implements AutoCloseable {
     }
 
     /**
-     * @param extraCollectors 与 facade 并列挂进 manager 的额外候选域收集器
-     *                        （收集器崩坏归因类用例注入替身；生产由 root 装配注入）
+     * @param extraCollectors additional candidate domain collectors attached to the manager beside the
+     *                        facade; tests that attribute collector failures inject a stub here, and
+     *                        production injects them from the root
      */
     FacadeTestHarness(ScriptType scriptType,
             java.util.List<com.tkisor.nekojs.core.lifecycle.CandidateDomainCollector> extraCollectors) {
-        // 与 ScriptReloadGenerationTest 相同的测试沙盒形状
+        // The same test sandbox shape as ScriptReloadGenerationTest.
         SandboxConfig config = new SandboxConfig(false, false, false, false, true, true, false, true);
         NekoJSPaths paths = NekoJSPaths.get();
         this.scriptType = scriptType;
@@ -75,7 +77,8 @@ final class FacadeTestHarness implements AutoCloseable {
                 new java.util.ArrayList<>();
         collectors.add(facade);
         collectors.addAll(extraCollectors);
-        // 收集器经构造器（root 装配路径）注入：票 39/16 统一接缝后不再有进程级静态注册表
+        // Collectors are injected through the constructor, the root assembly path: there is no process-level
+        // static registry any more.
         this.manager = new ScriptManager(scriptType, bridge, pluginRuntime,
                 newPropertyRegistry(), tracker, paths, config, environmentFactory, collectors, cache);
     }
@@ -95,7 +98,7 @@ final class FacadeTestHarness implements AutoCloseable {
         engine.close();
     }
 
-    /** 绑定 DynamicRegistryEvents 组的 bridge（生产同款 EventGroupJS 绑定）。 */
+    /** Bridge that binds the DynamicRegistryEvents group, with the production EventGroupJS binding. */
     static final class FacadeBridge implements ScriptEventBridge {
         @Override
         public void bindEvents(Value bindings, ScriptType type) {

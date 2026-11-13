@@ -1,55 +1,63 @@
 package com.tkisor.nekojs.core.state;
 
 /**
- * 候选域计划的联合预检/联合成败边界（票 10 AC5）。
+ * Joint preflight and joint success/failure for candidate domain plans.
  *
- * <p>本接口刻意<b>不包含领域语义</b>：global/shared 写集是第一个内建计划，测试计划与后续
- * 领域计划（如 Item/Block modification 的 candidate plan）可以挂入同一联合边界——同一
- * candidate 的所有计划在 commit 前统一 {@link #preflight()}，全部通过后在 commit 点统一
- * {@link #publish()}，任一预检失败则 candidate 失败、一切计划都不发布（联合成败）。
- * 本票不实现任何领域计划，也不把领域 Adapter 拉进 global owner。
+ * <p>This interface deliberately carries no domain semantics. The global/shared write set is the
+ * first built-in plan; test plans and later domain plans (such as a candidate plan for Item/Block
+ * modification) can join the same joint step: every plan of one candidate runs
+ * {@link #preflight()} before commit, all of them run {@link #publish()} at the commit point once
+ * every preflight passed, and if any preflight fails the candidate fails and no plan publishes.
+ * This interface implements no domain plan and does not pull a domain Adapter into the global
+ * owner.
  *
- * <p>契约（实现者必须遵守）：
+ * <p>Rules implementors must follow:
  * <ul>
- *   <li>{@link #preflight()} 在候选期（STATE_PLAN 阶段）调用，可以自由抛出——抛出即让
- *       整个 candidate 失败（结构化 reload 失败，domain = {@link #domain()}）；</li>
- *   <li>{@link #publish()} 在 commit 点、global/shared 写集发布<b>之前</b>调用；
- *       preflight 通过后 publish <b>不得抛出</b>——若违反契约抛出，reload 在 commit 点
- *       中止（global/shared 写集不发布、active 保留），但该计划自身的部分副作用不被回滚
- *       （spec 10：不承诺对计划内部副作用做深回滚）；</li>
- *   <li>publish 不得再进入 global/shared 视图写入（写集已冻结，联合预检已覆盖）；</li>
- *   <li>{@link #discard()} 在候选失败/取消的丢弃路径调用：持有候选资源的计划在此释放，
- *       active 不受影响（票 27 AC4）。</li>
+ *   <li>{@link #preflight()} runs in the candidate phase (STATE_PLAN) and may throw freely. A
+ *       throw fails the whole candidate as a structured reload failure with
+ *       domain = {@link #domain()};</li>
+ *   <li>{@link #publish()} runs at the commit point, before the global/shared write set
+ *       publishes. After a passing preflight, publish must not throw. A throw stops the reload
+ *       at the commit point (the global/shared write set does not publish and the active
+ *       generation stays), but the plan's own partial side effects are not rolled back: there is
+ *       no deep rollback inside a plan;</li>
+ *   <li>publish must not write to the global/shared views again: the write set is frozen and the
+ *       joint preflight already covered it;</li>
+ *   <li>{@link #discard()} runs on the discard path when a candidate fails or is cancelled. A
+ *       plan holding candidate resources releases them here, and the active generation is not
+ *       affected.</li>
  * </ul>
  */
 public interface CandidateStatePlan {
 
-    /** 计划标识（进入失败结果的 domain，如 {@code "test-plan"}、{@code "item-modification"}）。 */
+    /** Plan identifier. It becomes the domain of a failure result, for example {@code "test-plan"} or
+     * {@code "item-modification"}. */
     String domain();
 
     /**
-     * 联合预检：验证计划自身与已提交状态的相容性。可以抛出（任意异常都会以
-     * {@code state-plan-preflight:<domain>} 归因为 candidate 失败），不得产生对外可见副作用。
+     * Joint preflight: checks that the plan is compatible with the already committed state. It
+     * may throw; any exception fails the candidate as {@code state-plan-preflight:<domain>}. It
+     * must not produce side effects visible outside the candidate.
      */
     void preflight();
 
     /**
-     * 联合发布：preflight 全部通过后在 commit 点执行。通过预检后不得抛出（见接口契约）。
+     * Joint publish: runs at the commit point once every preflight passed. It must not throw after
+     * a passing preflight (see the interface rules).
      */
     void publish();
 
     /**
-     * Candidate failure/cancellation release, invoked on the owner thread from the candidate
-     * discard path: the plan releases whatever candidate-scoped resources it collected while
-     * the active generation keeps serving untouched. Also invoked from the generation
-     * {@code close()} path, where a plan may already have published — implementations must
-     * therefore treat a post-publish call as an idempotent no-op. Default no-op — only plans
-     * that hold candidate resources need to override.
+     * Releases the plan when the candidate fails or is cancelled. Called on the owner thread from
+     * the candidate discard path: the plan releases whatever candidate-scoped resources it
+     * collected while the active generation keeps serving untouched. It is also called from the
+     * generation {@code close()} path, where a plan may already have published, so an
+     * implementation must treat a call after publish as an idempotent no-op. The default is a
+     * no-op; only plans holding candidate resources need to override it.
      *
-     * <p>Contract: idempotent and must not throw. A throwing discard is not rolled back (same
-     * boundary as {@link #publish()}); the joint boundary logs the failure and continues
-     * tearing the candidate down, so one misbehaving plan cannot block candidate cleanup
-     * (ticket 27 AC4).
+     * <p>It must be idempotent and must not throw. A throwing discard is not rolled back, same as
+     * {@link #publish()}. The joint step logs the failure and keeps tearing the candidate down, so
+     * one misbehaving plan cannot block candidate cleanup.
      */
     default void discard() {
     }

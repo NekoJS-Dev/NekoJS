@@ -6,9 +6,9 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Registers TypeScript input aliases for Java conversion boundaries.
- * Host containers retain their generic arguments; converted inputs use independently rendered element types.
- * Return values retain their host types rather than accepting input conversions.
+ * Registers TypeScript input aliases for values converted to Java.
+ * A host container keeps its generic arguments; a converted input uses separately rendered element
+ * types. Return values keep their host types and do not accept input conversions.
  */
 public final class TypeAliasRegistry {
     private final Map<String, String> classAliases = new LinkedHashMap<>();
@@ -19,13 +19,17 @@ public final class TypeAliasRegistry {
     private boolean projectScalarValues = true;
     private Map<String, String> typeVariables = Map.of();
     /**
-     * 枚举输入别名的惰性解析缓存：FQN → {@code $<SimpleName>_}；空串 = 已确认非枚举/不可加载。
+     * Lazy cache for enum input aliases: FQN to {@code $<SimpleName>_}. An empty string means the
+     * class was already checked and is not an enum, or cannot be loaded.
      *
-     * <p>枚举别名必须与适配器别名（{@code registerClassAlias}，在全部参数渲染前一次性注册）一样
-     * 「先于参数渲染可用」——但共享 IR 是逐类并行预声明的，逐类注册会因任务调度顺序不同导致
-     * 参数是否被放宽随运行抖动（违反产物确定性）。故这里在查询点（{@link TypeConverter} 的
-     * input 查询）按需反射判定枚举并缓存，效果等价于启动时对每个枚举 FQN 调一次
-     * {@code registerClassAlias(fqn, "$" + SimpleName + "_")}，且与处理顺序无关。
+     * <p>An enum alias must be available before any parameter is rendered, like an adapter alias
+     * registered once through {@code registerClassAlias}. The shared IR is, however, declared per
+     * class in parallel, so registering aliases class by class would make whether a parameter gets
+     * widened depend on task scheduling and change the output between runs. Instead the enum is
+     * detected and cached by reflection at the query point (the input lookup in
+     * {@link TypeConverter}). This is equivalent to calling
+     * {@code registerClassAlias(fqn, "$" + SimpleName + "_")} for every enum FQN at startup, and it
+     * does not depend on processing order.
      */
     private final Map<String, String> enumAliasCache = new ConcurrentHashMap<>();
 
@@ -86,9 +90,9 @@ public final class TypeAliasRegistry {
     }
 
     private void registerDefaults() {
-        // String → string（已在 TypeConverter 中处理，这里不重复）
+        // String to string is handled in TypeConverter, so it is not repeated here
 
-        // 集合类型别名
+        // Collection type aliases
         collectionAliases.put("java.util.List", hostCollection("$List", true));
         collectionAliases.put("java.util.Collection", hostCollection("$Collection", true));
         collectionAliases.put("java.util.Set", hostCollection("$Set", false));
@@ -112,7 +116,7 @@ public final class TypeAliasRegistry {
             }
         });
 
-        // 常用类型别名
+        // Common type aliases
         classAliases.put("java.lang.String", "string");
         classAliases.put("java.lang.Boolean", "boolean");
         classAliases.put("java.lang.Byte", "number");
@@ -143,8 +147,9 @@ public final class TypeAliasRegistry {
     }
 
     /**
-     * 清空全部注册并恢复默认别名表——供 backend 每次 probe 运行前调用，避免上一轮的适配器别名
-     * （{@code registerClassAlias} 产物）泄漏到本轮：若某目标类本轮不再生成，其残留别名仍会放宽参数类型。
+     * Clears every registration and restores the default alias table. The backend calls it before
+     * each probe run so adapter aliases registered in the previous run do not leak into this one:
+     * a leftover alias for a class that is no longer generated would still widen parameter types.
      */
     public void clear() {
         typeVariables = Map.of();
@@ -157,10 +162,11 @@ public final class TypeAliasRegistry {
     }
 
     /**
-     * 检查是否有类级别的输入别名。
+     * Checks whether a class has a class-level input alias.
      *
-     * <p>除显式注册（{@link #registerClassAlias}）外，枚举类型恒有输入别名
-     * {@code $<SimpleName>_}（枚举 | 字符串字面量联合，声明由 IndexFileGenerator 就近发射）。
+     * <p>Besides explicit registration ({@link #registerClassAlias}), every enum type has the input
+     * alias {@code $<SimpleName>_} (a union of the enum and string literals, declared next to the
+     * enum by IndexFileGenerator).
      */
     public boolean hasAlias(String className) {
         if (classAliases.containsKey(className)) return true;
@@ -168,10 +174,11 @@ public final class TypeAliasRegistry {
     }
 
     /**
-     * 获取类级别的输入别名。
+     * Returns the class-level input alias.
      *
-     * <p>显式注册的别名优先；枚举类型回退到 {@code $<SimpleName>_}（内部类为
-     * {@code $Parent$Child_}，与各生成器的 TS 命名一致）。
+     * <p>An explicitly registered alias wins. For an enum type it falls back to
+     * {@code $<SimpleName>_}; a nested class uses {@code $Parent$Child_}, matching the TS name the
+     * generators produce.
      */
     public String getAlias(String className) {
         String explicit = classAliases.get(className);
@@ -180,8 +187,9 @@ public final class TypeAliasRegistry {
     }
 
     /**
-     * 惰性解析枚举的输入别名名：枚举 FQN → {@code $<TS名>_}，非枚举/不可加载 → null。
-     * 结果缓存（含否定结果），跨线程安全。
+     * Resolves an enum input alias lazily: an enum FQN gives {@code $<TSName>_}, a non-enum or a
+     * class that cannot be loaded gives null. Results, including misses, are cached and safe to
+     * read from multiple threads.
      */
     private String enumInputAlias(String className) {
         if (className == null) return null;
@@ -194,13 +202,14 @@ public final class TypeAliasRegistry {
                 alias = "$" + tsClassName(cls) + "_";
             }
         } catch (ClassNotFoundException | LinkageError ignored) {
-            // 不可加载（含 NoClassDefFoundError）：与显式别名缺失时的行为一致（不放宽，正常渲染 $Foo）
+            // Not loadable, including a NoClassDefFoundError: behave as if no alias were registered, so the
+            // type is not widened and renders as $Foo
         }
         enumAliasCache.put(className, alias == null ? "" : alias);
         return alias;
     }
 
-    /** 类的 TypeScript 标识符名（内部类用 Parent$Child 格式，与各生成器一致）。 */
+    /** TypeScript identifier of a class; a nested class uses the Parent$Child form that the generators produce. */
     private static String tsClassName(Class<?> cls) {
         if (cls.getEnclosingClass() != null && !cls.isAnonymousClass()) {
             return tsClassName(cls.getEnclosingClass()) + "$" + cls.getSimpleName();
@@ -209,22 +218,24 @@ public final class TypeAliasRegistry {
     }
 
     /**
-     * 获取集合类型的输入别名。
+     * Returns the input alias for a collection type.
      *
-     * @param rawClass 参数化类型的 raw class
-     * @param tsArgs   各类型实参**独立渲染后**的 TS 字符串（结构化数组，来自
-     *                 {@code ParameterizedType.getActualTypeArguments()} 逐个转换）。
-     *                 不能传入 join 后的整体字符串再按 ", " 拆分——实参自身可能含 ", "
-     *                 （嵌套多实参泛型），拆分会截断嵌套类型。
-     * @return 输入类型字符串，如果不是集合类型则返回 null
+     * @param rawClass the raw class of the parameterized type
+     * @param tsArgs   the TS string of each type argument, rendered <b>independently</b>: a structured
+     *                 array built by converting each entry of
+     *                 {@code ParameterizedType.getActualTypeArguments()}. Do not pass a joined
+     *                 string and split it on ", ": an argument can itself contain ", " (a nested
+     *                 generic with several arguments), and splitting would cut the nested type.
+     * @return the input type string, or null when the class is not a collection type
      */
     public String getCollectionAlias(Class<?> rawClass, String[] tsArgs) {
         return getCollectionAlias(rawClass.getName(), tsArgs);
     }
 
     /**
-     * fqn 版集合输入别名查询（ref 渲染路径用——ref 只有符号 FQN，没有 Class 实例）。
-     * 语义与 {@link #getCollectionAlias(Class, String[])} 完全一致。
+     * Collection input alias lookup by FQN, used on the ref rendering path because a ref carries
+     * only the symbolic FQN and no Class instance. Behaves exactly like
+     * {@link #getCollectionAlias(Class, String[])}.
      */
     public String getCollectionAlias(String rawFqn, String[] tsArgs) {
         return getCollectionAlias(rawFqn, tsArgs, tsArgs);
@@ -255,7 +266,7 @@ public final class TypeAliasRegistry {
     }
 
     /**
-     * 注册自定义类别名。
+     * Registers a custom class alias.
      */
     public void registerClassAlias(String className, String tsType) {
         classAliases.put(className, tsType);
@@ -298,7 +309,7 @@ public final class TypeAliasRegistry {
     }
 
     /**
-     * 注册自定义集合别名。
+     * Registers a custom collection alias.
      */
     public void registerCollectionAlias(String className, String baseType, String suffix) {
         collectionAliases.put(className, new CollectionAlias(baseType, suffix));

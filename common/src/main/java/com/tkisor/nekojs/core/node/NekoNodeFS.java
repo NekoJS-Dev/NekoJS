@@ -17,7 +17,8 @@ public final class NekoNodeFS {
 
     public NekoNodeFS(SandboxConfig sandboxConfig) {
         this.paths = NekoJSPaths.get();
-        // 写策略唯一真相（nekojs/config 拒写 + allowFsWriteOutsideNekojs 收敛），与 Graal FS 同源
+        // The single source of truth for write policy (nekojs/config rejects writes and
+        // allowFsWriteOutsideNekojs narrows the rest), shared with the Graal FS
         this.policy = new com.tkisor.nekojs.core.fs.SandboxPolicy(sandboxConfig, paths);
         this.currentWorkingDirectory = paths.gameDir();
     }
@@ -88,7 +89,10 @@ public final class NekoNodeFS {
         Files.writeString(target, data == null ? "" : data, NekoNodeBuffer.charset(encoding), StandardOpenOption.CREATE, StandardOpenOption.APPEND);
     }
 
-    /** flag 语义（fs.ts 解析后的归一化形态）：append→追加，exclusive→已存在即失败（wx/x/ax）。 */
+    /**
+     * Flag semantics after fs.ts normalizes them: append means append, exclusive means fail when
+     * the file already exists (wx/x/ax).
+     */
     private static OpenOption[] openOptions(boolean append, boolean exclusive) {
         if (exclusive) {
             return append
@@ -214,8 +218,9 @@ public final class NekoNodeFS {
     }
 
     private Path verifyWriteParentForCreate(Path path) throws IOException {
-        // 与写入同源裁决（含受保护配置拒绝——正常路径下 parent 不可能落进 nekojs/config，
-        // 这里只是防直接以 parent 形式绕过）
+        // Decided by the same policy as writing, including the protected-config rejection. A normal
+        // path cannot put the parent inside nekojs/config; this only blocks bypassing the check by
+        // passing the parent directly
         return policy.resolveWrite(path);
     }
 }

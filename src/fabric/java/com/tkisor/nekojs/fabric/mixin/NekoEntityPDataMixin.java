@@ -42,10 +42,12 @@ public abstract class NekoEntityPDataMixin implements NekoEntityPData {
         return neko$ensureTag();
     }
 
-    // 注入点：saveWithoutId/load 里对 addAdditionalSaveData/readAdditionalSaveData 的调用点，
-    // 不是那两个抽象方法本身——它们在 Entity 上无方法体，TAIL 注入永远找不到 RETURN（26.1.2
-    // 实测崩溃）。挂调用点也与 NeoForge 补丁的位置一致：storeNullable("NeoForgeData") 就写在
-    // addAdditionalSaveData 调用的紧前方。defaultRequire=1：MC 重构掉调用点时硬失败，不静默丢钩子。
+    // Injection point: the call to addAdditionalSaveData/readAdditionalSaveData inside
+    // saveWithoutId/load, not those two abstract methods themselves. They have no body on Entity,
+    // so a TAIL injection never finds a RETURN (this crashes on 26.1.2). Hooking the call site also
+    // matches where the NeoForge patch sits: storeNullable("NeoForgeData") is written right before
+    // the addAdditionalSaveData call. defaultRequire=1 makes a refactor that removes the call site
+    // fail hard instead of dropping the hook silently.
     @Inject(method = "saveWithoutId", at = @At(
             value = "INVOKE",
             target = "Lnet/minecraft/world/entity/Entity;addAdditionalSaveData(Lnet/minecraft/world/level/storage/ValueOutput;)V"))

@@ -172,9 +172,10 @@ public class DefaultScriptEventBridge implements ScriptEventBridge {
             bus.clearTokensByPrefix(type, scriptIdPrefix);
         }
         ScriptEventRegistry.clearListenersByPrefix(type, scriptIdPrefix);
-        // 与 clearListeners(type, scriptId) 的 STARTUP 全扫同理：动态事件定义按 targetType
-        // 记账而监听 token 按注册脚本的实际 ScriptType 桶记账，按前缀扫全部 target 才不会
-        // 漏掉定义侧的残留。
+        // Same reasoning as the STARTUP-wide scan in clearListeners(type, scriptId): dynamic
+        // event definitions are recorded per targetType while listener tokens are recorded
+        // under the actual ScriptType of the registering script, so scanning every target by
+        // prefix is the only way to also catch leftovers on the definition side.
         for (ScriptType target : ScriptType.all()) {
             ScriptEventRegistry.clearDefinitionsByPrefix(target, scriptIdPrefix);
         }

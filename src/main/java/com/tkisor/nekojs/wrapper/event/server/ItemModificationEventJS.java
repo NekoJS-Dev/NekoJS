@@ -1,5 +1,5 @@
-// 26.x 实现（Holder.Reference#bindComponents 为 26.x API）。1.21.1 的实现是
-// versions/1.21.1/src 下的同名文件，改本文件行为时须同步它。
+// 26.x implementation (Holder.Reference#bindComponents is a 26.x API). Keep behavior in sync
+// with the matching file under versions/1.21.1/src.
 //? if >=26 {
 package com.tkisor.nekojs.wrapper.event.server;
 
@@ -14,26 +14,28 @@ import net.minecraft.world.item.Item;
 import java.util.function.Consumer;
 
 /**
- * Server-side item property modification event payload（{@code ItemEvents.modification}）。
+ * Event object for {@code ItemEvents.modification} on the server.
  *
- * <h2>ticket 39 起的收集语义</h2>
- * 事件由 {@code ModificationDomainOwner} 在两个合法收集点派发：
+ * <h2>Collection behavior</h2>
+ * {@code ModificationDomainOwner} dispatches this event at two collection points:
  * <ul>
- *   <li><b>事务 reload 的 DOMAIN_PLAN 阶段</b>——派发给<b>候选</b>的挂起监听器
- *       （{@code CandidateDomainCollector.Handle.dispatch}），声明进入 inert 候选计划，
- *       与 global/shared 顶层写集联合预检（STATE_PLAN）、commit 点联合应用；</li>
- *   <li><b>初始 generation（服务器 about-to-start）</b>——派发给 active 总线监听器，
- *       收集后在同一 owner 内 preflight + 应用（无旧 active 时旧值 = vanilla 基线）。</li>
+ *   <li><b>Transactional reload ({@code DOMAIN_PLAN}):</b> dispatched to pending candidate
+ *       listeners ({@code CandidateDomainCollector.Handle.dispatch}) into an inert candidate plan,
+ *       preflighted during {@code STATE_PLAN}, and applied together with {@code global}/shared
+ *       top-level state at commit time.</li>
+ *   <li><b>Initial generation (server about-to-start):</b> dispatched to active listeners, then
+ *       preflighted and applied by {@code ModificationDomainOwner} (falling back to vanilla
+ *       baselines if it fails).</li>
  * </ul>
- * {@link #modify} 只<b>收集与规范化</b>声明（同目标后声明整体替换前声明，与旧行为
- * characterization 一致），不触碰 live Item/默认组件——MC 应用只在
- * {@code ModificationDomainOwner}（平台 Adapter）。
+ * {@link #modify} only collects and normalizes declarations (a later declaration for the same
+ * item replaces earlier properties from baseline) without mutating live {@link Item} instances or
+ * default components; {@code ModificationDomainOwner} applies the changes.
  *
- * <h2>JS API（payload/side/priority/cancel/dispatch 时机不变，无第二 bus）</h2>
+ * <h2>JS API</h2>
  * <pre>
  * ItemEvents.modification(event {@code ->} {
  *   event.modify('minecraft:diamond', item {@code ->} {
- *     item.maxStackSize = 16;   // property 写与 setMaxStackSize 经同一 setter（ModificationViewSurface）
+ *     item.maxStackSize = 16;   // uses the same setter as setMaxStackSize (ModificationViewSurface)
  *   });
  * });
  * </pre>
@@ -43,7 +45,7 @@ public class ItemModificationEventJS {
     private final ModificationCandidatePlan plan;
     private int declaredCount;
 
-    /** @param plan 收集目标计划（由 {@code ModificationDomainOwner} 创建）。 */
+    /** @param plan target candidate plan created by {@code ModificationDomainOwner} */
     @ScriptInternalConstructor
     public ItemModificationEventJS(ModificationCandidatePlan plan) {
         this.plan = plan;
@@ -51,18 +53,18 @@ public class ItemModificationEventJS {
 
     /**
      * Records a modification declaration for the item with the given id. The callback
-     * receives an {@link ItemModificationJS} view（回调抛出的异常向上传播：收集期失败 →
-     * 整批失败，不再有旧路径的部分应用）。
+     * receives an {@link ItemModificationJS} view; any exception thrown by the callback
+     * propagates out so a collection failure aborts the whole batch.
      *
-     * <p>回调参数类型保持改造前的函数式接口签名（{@code Consumer<ItemModificationJS>}）：
-     * Java 侧直接传 lambda；脚本侧的 Graal 函数由沙盒 HostAccess
-     * （{@code allowAllImplementations}）实现该接口。视图本身是
-     * {@link graal.graalvm.polyglot.proxy.ProxyObject}，所以脚本拿到的参数上
-     * {@code item.maxStackSize = 16} 与 {@code item.setMaxStackSize(16)} 命中同一
-     * setter / 校验 / 规范化 / 计划路径（AC8，见 {@link ModificationViewSurface}）。
+     * <p>The parameter uses {@code Consumer<ItemModificationJS>} so Java callers can pass a
+     * lambda directly while script functions implement the interface through sandbox HostAccess
+     * ({@code allowAllImplementations}). Because the view implements
+     * {@link graal.graalvm.polyglot.proxy.ProxyObject}, {@code item.maxStackSize = 16} and
+     * {@code item.setMaxStackSize(16)} invoke the same setter, validation, normalization, and plan
+     * recording path (see {@link ModificationViewSurface}).
      *
      * @param itemId item id, e.g. {@code 'minecraft:diamond'} (namespace optional)
-     * @param modifier property callback（脚本函数或 Java {@code Consumer}）
+     * @param modifier property callback (script function or Java {@code Consumer})
      */
     public void modify(String itemId, Consumer<ItemModificationJS> modifier) {
         Identifier id = parseItemId(itemId);
@@ -99,7 +101,7 @@ public class ItemModificationEventJS {
         return location;
     }
 
-    // builtInRegistryHolder() 无非废弃等价 API（components() 委托它），保守保留
+    // builtInRegistryHolder() has no non-deprecated equivalent for rebinding default components.
     @SuppressWarnings("deprecation")
     static void applyComponents(Item item, DataComponentMap components) {
         item.builtInRegistryHolder().bindComponents(components);

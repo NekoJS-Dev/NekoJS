@@ -9,70 +9,69 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.Explosion;
 
 /**
- * 维度事件面的 fabric 桥 v2：saved / explosionStart / explosionDetonate
- * （+ {@code beforeExplosion} / {@code afterExplosion} 历史别名）。
+ * Fabric bridge v2 for level event surface: saved / explosionStart / explosionDetonate
+ * (+ {@code beforeExplosion} / {@code afterExplosion} historical aliases).
  *
- * <p>总线声明在**本类**、注册进节点孪生 {@link LevelEvents} 的 {@code GROUP}
- * （同名组、加载时合并）——与 v1 的 loaded/unloaded/tickPre/tickPost 同命名空间，
- * 脚本看到的是一个完整的 {@code LevelEvents}。
- * Names and aliases match the NeoForge LevelEvents implementation:
+ * <p>The bus is declared in <b>this class</b> and registered into the node-twin
+ * {@link LevelEvents}' {@code GROUP} (same-name group, merged at load time)—it shares a
+ * namespace with v1's loaded/unloaded/tickPre/tickPost; scripts see a single complete
+ * {@code LevelEvents}. Names and aliases match the NeoForge LevelEvents implementation:
  * <ul>
- *   <li>{@code saved} —— NeoForge {@code LevelEvent.Save}（不可取消）；</li>
- *   <li>{@code explosionStart} / {@code beforeExplosion}(Deprecated) ——
- *       NeoForge {@code ExplosionEvent.Start}（可取消）；</li>
- *   <li>{@code explosionDetonate} / {@code afterExplosion}(Deprecated) ——
- *       NeoForge {@code ExplosionEvent.Detonate}（通知型）。</li>
+ *   <li>{@code saved} — NeoForge {@code LevelEvent.Save} (uncancellable).</li>
+ *   <li>{@code explosionStart} / {@code beforeExplosion} (Deprecated) —
+ *       NeoForge {@code ExplosionEvent.Start} (cancellable).</li>
+ *   <li>{@code explosionDetonate} / {@code afterExplosion} (Deprecated) —
+ *       NeoForge {@code ExplosionEvent.Detonate} (informational).</li>
  * </ul>
  *
- * <p>**关键初始化纪律**：{@code EventGroup} 会在插件引导完成后冻结
- * （见 {@code EventsPoint#freezeEventGroups}）——本类总线字段的 {@code GROUP.add}
- * 必须发生在冻结之前。时序：{@code NekoJSFabricMod.onInitialize} 先跑各
- * {@code register()}（早于 {@code initializeScripts()} 的插件引导/冻结），
- * 因此 {@link #bootstrap()} 在 {@code FabricLevelEventBindings.register()} 内
- * 追加一行即可（接线清单给出），切勿等到首个 mixin post（届时已冻结、
- * {@code GROUP.add} 抛 IllegalStateException）。
+ * <p><b>Critical initialization discipline:</b> {@code EventGroup} freezes after plugin
+ * bootstrapping (see {@code EventsPoint#freezeEventGroups})—{@code GROUP.add} for bus fields in
+ * this class must occur before freezing. Sequencing: {@code NekoJSFabricMod.onInitialize} first
+ * runs each {@code register()} (before plugin boot/freezing in {@code initializeScripts()}),
+ * so calling {@link #bootstrap()} in {@code FabricLevelEventBindings.register()} is sufficient.
+ * Do not delay until the first mixin post (by then, it is frozen and {@code GROUP.add} throws
+ * an IllegalStateException).
  */
 public final class FabricLevelEventBindingsV2 {
 
     private FabricLevelEventBindingsV2() {}
 
-    /** 维度保存完成（server 脚本，不可取消）。载荷 {@link LevelSavedEventJS}。 */
+    /** Level save complete (server script, uncancellable). Payload {@link LevelSavedEventJS}. */
     public static final EventBusJS<LevelSavedEventJS, Void> SAVED =
             LevelEvents.GROUP.server("saved", LevelSavedEventJS.class);
 
-    /** 爆炸开始前（server 脚本；可取消——取消则整场爆炸不结算）。 */
+    /** Before explosion (server script; cancellable—if cancelled, the entire explosion is not processed). */
     public static final EventBusJS<LevelExplosionEventJS, Void> EXPLOSION_START =
             LevelEvents.GROUP.add("explosionStart", ScriptType.SERVER,
                     EventBusJS.of(LevelExplosionEventJS.class, true));
 
-    /** beforeExplosion：explosionStart 的历史别名（NeoForge 侧同款 Deprecated）。 */
+    /** beforeExplosion: historical alias for explosionStart (same deprecated status as NeoForge side). */
     @Deprecated
     public static final EventBusJS<LevelExplosionEventJS, Void> BEFORE_EXPLOSION =
             LevelEvents.GROUP.add("beforeExplosion", ScriptType.SERVER,
                     EventBusJS.of(LevelExplosionEventJS.class, true));
 
-    /** 爆炸结算完成（server 脚本，通知型）。 */
+    /** Explosion detonation complete (server script, informational). */
     public static final EventBusJS<LevelExplosionEventJS, Void> EXPLOSION_DETONATE =
             LevelEvents.GROUP.server("explosionDetonate", LevelExplosionEventJS.class);
 
-    /** afterExplosion：explosionDetonate 的历史别名（NeoForge 侧同款 Deprecated）。 */
+    /** afterExplosion: historical alias for explosionDetonate (same deprecated status as NeoForge side). */
     @Deprecated
     public static final EventBusJS<LevelExplosionEventJS, Void> AFTER_EXPLOSION =
             LevelEvents.GROUP.server("afterExplosion", LevelExplosionEventJS.class);
 
     /**
-     * 触发本类初始化，把上面的总线注册进 {@code LevelEvents.GROUP}。
-     * 必须在事件组冻结（插件引导）前调用：唯一安全时机是
-     * {@code NekoJSFabricMod.onInitialize} 早期（{@code FabricLevelEventBindings.register()}
-     * 内追加一行本调用）。
+     * Triggers initialization of this class, registering the buses above into {@code LevelEvents.GROUP}.
+     * Must be called before the event group freezes (plugin bootstrap): the only safe timing is early
+     * in {@code NekoJSFabricMod.onInitialize} (add a line to {@code FabricLevelEventBindings.register()}).
      */
     public static void bootstrap() {
-        // 空方法体：访问任一总线常量即完成类初始化
+        // Empty body: touching any bus constant is enough to finish the class initialisation
     }
 
     /**
-     * 维度保存完成：{@code MixinServerLevelSave} 在
-     * {@code ServerLevel#save(ProgressListener, boolean, boolean)} 的 TAIL 调用。
+     * Level save complete: {@code MixinServerLevelSave} called at the TAIL of
+     * {@code ServerLevel#save(ProgressListener, boolean, boolean)}.
      */
     public static void postSaved(ServerLevel level) {
         if (!SAVED.hasListeners()) {
@@ -82,10 +81,10 @@ public final class FabricLevelEventBindingsV2 {
     }
 
     /**
-     * 爆炸开始前：{@code MixinServerExplosion} 在 {@code ServerExplosion#explode()}
-     * 的 HEAD 调用。
+     * Before explosion: {@code MixinServerExplosion} called at the HEAD of
+     * {@code ServerExplosion#explode()}.
      *
-     * @return true 表示监听器取消了爆炸（mixin 应跳过 {@code explode()} 执行）
+     * @return {@code true} if a listener cancelled the explosion (mixin should skip {@code explode()} execution)
      */
     public static boolean postExplosionStart(Explosion explosion) {
         if (!EXPLOSION_START.hasListeners() && !BEFORE_EXPLOSION.hasListeners()) {
@@ -98,9 +97,9 @@ public final class FabricLevelEventBindingsV2 {
     }
 
     /**
-     * 爆炸结算完成：{@code MixinServerExplosion} 在 {@code ServerExplosion#explode()}
-     * 的 TAIL 调用（爆炸伤害/方块破坏/火焰已结算完，客户端爆炸包已由
-     * {@code ServerLevel.explode} 后续发出——见接线清单的取消语义说明）。
+     * Explosion resolved: {@code MixinServerExplosion} calls this at the TAIL of
+     * {@code ServerExplosion#explode()}, after explosion damage, block breaking and fire are done;
+     * the client explosion packet is sent afterwards by {@code ServerLevel.explode}.
      */
     public static void postExplosionDetonate(Explosion explosion) {
         if (!EXPLOSION_DETONATE.hasListeners() && !AFTER_EXPLOSION.hasListeners()) {

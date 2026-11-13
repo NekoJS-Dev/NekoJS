@@ -5,19 +5,22 @@ import com.tkisor.nekojs.core.dynamic.DynamicRegisterMode;
 import java.util.List;
 
 /**
- * 一条 <b>inert</b> Adapter 请求（ticket 16，AC7）：generation-scoped 候选计划对
- * 平台/版本 Adapter 的「将会请求什么」描述。本类<b>没有任何执行通道</b>——不持有
- * registry/supplier/factory 引用，构造与持有都不可能修改 live registry；实际注册
- * 动作由事务/同步 gate（票 21）通过后的 Adapter 激活路径另行裁决。
+ * One <b>inert</b> adapter request: a generation-scoped candidate plan's description of what it
+ * would ask the platform/version adapter to do. This class has no execution channel. It holds no
+ * registry, supplier or factory reference, so constructing or holding a request can never modify
+ * the live registry; whether registration actually happens is decided separately by the adapter
+ * activation path once the transaction/sync gate passes.
  *
- * <p>动作集合封闭为 {@code register}：remove/replace/modify 不存在于第一版语义
- * （同 key 定义变化在 preflight 冲突失败，见 {@link DynamicCandidateRegistryPlan}）。
+ * <p>The action set is closed to {@code register}: remove/replace/modify do not exist in the
+ * first version (a changed definition for the same key fails preflight as a conflict, see
+ * {@link DynamicCandidateRegistryPlan}).
  *
- * <p>{@code readings}（票 21 平台接线）携带定义的全部规范化属性读数
- * （{@code name=value} 字串，与 {@link DynamicDefinition#readings()} 同源同序）：平台
- * Adapter 在合法应用点据此重建注册值（stack size / rarity / fixedRange / category /
- * color），无需回查 builder。它仍是纯数据——本类零 MC 类型，值的解析只发生在平台
- * Adapter 边界。
+ * <p>{@code readings} carries every normalized property reading of the definition as
+ * {@code name=value} strings, from the same source and in the same order as
+ * {@link DynamicDefinition#readings()}. The platform adapter rebuilds the registry value from
+ * them at the point of application (stack size / rarity / fixedRange / category / color) without
+ * looking the builder up again. They are still pure data: this class has zero MC types, and
+ * values are parsed only in the platform adapter.
  */
 public record DynamicAdapterRequest(
         long generation,
@@ -29,15 +32,15 @@ public record DynamicAdapterRequest(
         String action,
         List<String> readings) {
 
-    /** 唯一动作值：注册/重声明（无 remove/replace/modify）。 */
+    /** The only action value: register or redeclare. There is no remove/replace/modify. */
     public static final String ACTION_REGISTER = "register";
 
     /**
-     * Derives a request from a normalized definition (ticket 21): the server-side
-     * batch path and the client-side sync path both construct requests this way —
-     * there is no other production construction site. The definition's normalized
-     * property readings travel with the request so the platform adapter can rebuild
-     * the registry value without a second lookup.
+     * Derives a request from a normalized definition. Both the server-side batch path
+     * and the client-side sync path construct requests this way; there is no other
+     * production construction site. The definition's normalized property readings
+     * travel with the request, so the platform adapter can rebuild the registry value
+     * without a second lookup.
      */
     public DynamicAdapterRequest(DynamicDefinition definition, long generation, String ownerScriptId) {
         this(generation, definition.type().registryKey(), definition.id(), definition.mode(),

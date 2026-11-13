@@ -1,6 +1,7 @@
-// 1.21.1 实现，与版本树 src/ 下的同名 26.x 文件成对。内容等于那份文件在本节点求值后的形态。
-// 26.x 侧行为变更时须同步本文件。
-// 脚本面的 @Doc/@Param 文案两侧本就不同，探针类型 golden 会校验，别照抄主干的措辞。
+// 1.21.1 implementation. It pairs with the same-named 26.x file under src/ in the version
+// tree: this file is that file evaluated for this node. Keep them in sync when 26.x changes.
+// The @Doc/@Param text on the script side differs between the two trees and is checked by the
+// probe-type golden, so do not copy the mainline wording.
 package com.tkisor.nekojs.client.posteffect;
 
 import com.tkisor.nekojs.api.annotation.Doc;
@@ -21,14 +22,14 @@ import net.minecraft.resources.ResourceLocation;
 import java.util.Map;
 
 /**
- * Payload of the {@code ClientEvents.postEffects} declaration event (ticket 28): the
- * declaration half of the {@code PostEffects} feature, separated from the runtime binding
+ * Payload of the {@code ClientEvents.postEffects} declaration event: the declaration half of
+ * the {@code PostEffects} feature, separate from the runtime binding
  * ({@code PostEffects.set/clear/toggle/current}).
  *
- * <p>The event only <b>collects</b> declarations into an inert candidate plan — it never
- * mounts a production listener or touches the current client frame. The platform Adapter
- * ({@link PostEffectDomainOwner}) commits the collected generation at the reload commit
- * point; a failed or interrupted candidate keeps the previous active generation.
+ * <p>The event only <b>collects</b> declarations into an inert candidate plan. It never mounts
+ * a production listener or touches the current client frame. The client adapter
+ * ({@link PostEffectDomainOwner}) commits the collected generation at the reload commit point;
+ * a failed or interrupted candidate keeps the previous active generation.
  *
  * <pre>
  * // client_scripts

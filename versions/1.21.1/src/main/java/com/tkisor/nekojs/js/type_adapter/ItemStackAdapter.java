@@ -1,5 +1,6 @@
-// 1.21.1 实现，与版本树 src/ 下的同名 26.x 文件成对。内容等于那份文件在本节点求值后的形态。
-// 26.x 侧行为变更时须同步本文件。
+// 1.21.1 implementation, paired with the same-named 26.x file under the version tree's src/. The content
+// is what that file becomes once evaluated for this node. Keep this file in sync when the 26.x behavior
+// changes.
 package com.tkisor.nekojs.js.type_adapter;
 
 import com.tkisor.nekojs.api.AdapterInputShape;
@@ -24,7 +25,8 @@ import static com.tkisor.nekojs.api.AdapterInputShape.*;
 
 public final class ItemStackAdapter implements JSTypeAdapter<ItemStack> {
 
-    // 容忍无空格（"1xminecraft:stone"），用 Pattern 替代 matches()+indexOf()（后者在 namespace 前出现 x 也有 bug）
+    // Tolerates a missing space ("1xminecraft:stone"), so a Pattern replaces matches() plus indexOf(); the
+    // indexOf approach also got it wrong when an x appeared before the namespace.
     private static final Pattern COUNT_PATTERN = Pattern.compile("^(\\d+)x\\s*(\\S+)$");
 
     @Override
@@ -104,7 +106,8 @@ public final class ItemStackAdapter implements JSTypeAdapter<ItemStack> {
             idText = m.group(2);
         }
 
-        // id 部分复用 ParseIds（统一 trim / minecraft: 前缀 / 拒绝 tag 前缀 / tryParse）
+        // The id part goes through ParseIds, which trims, adds the minecraft: prefix, rejects a tag prefix and
+        // parses with tryParse.
         ResourceLocation id = ParseIds.parseItemOrBlockId(idText);
         return idToItemStack(id, count);
     }
@@ -129,7 +132,7 @@ public final class ItemStackAdapter implements JSTypeAdapter<ItemStack> {
                 "ItemStack object must contain 'item' or 'id'");
         }
 
-        // B10: 复用当前实例，不再每次 new
+        // Reuses this adapter instance instead of allocating a new one each time.
         ItemStack stack = this.apply(itemValue);
         if (value.hasMember("components")) {
             DataComponentPatch patch = DataComponentsAdapter.toPatch(value.getMember("components"));

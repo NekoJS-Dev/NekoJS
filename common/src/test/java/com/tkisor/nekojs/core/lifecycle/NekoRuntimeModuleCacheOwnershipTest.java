@@ -37,10 +37,11 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertSame;
 
 /**
- * 票据 11：模块 cache/session 生命周期由 runtime owner 持有。
+ * Module cache and session lifetimes are owned by the runtime owner.
  *
- * <p>root 构造时接收唯一的 prepared 缓存实例并经 {@link NekoRuntimeRoot#preparationCache()}
- * 暴露；独立 root 互不可见；root close 全清释放。消费 05 的单 owner 成果，不重做 05。
+ * <p>The root receives the single prepared cache instance at construction and exposes it through
+ * {@link NekoRuntimeRoot#preparationCache()}. Independent roots do not see each other's cache,
+ * and closing a root clears and releases it.
  */
 class NekoRuntimeModuleCacheOwnershipTest {
 
@@ -177,7 +178,8 @@ class NekoRuntimeModuleCacheOwnershipTest {
                 NekoTrustContext.local());
     }
 
-    /** 零行为插件桩：本测试不经过装配/执行，任何调用返回空值/零值/空集合。 */
+    /** A plugin stub with no behavior: this test never assembles or executes anything, so every call
+     * returns null, zero or an empty collection. */
     private static final class NullPluginRuntime implements InvocationHandler {
         @Override
         public Object invoke(Object proxy, Method method, Object[] args) {

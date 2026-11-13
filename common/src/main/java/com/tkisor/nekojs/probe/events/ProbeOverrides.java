@@ -3,8 +3,8 @@ package com.tkisor.nekojs.probe.events;
 import java.util.List;
 
 /**
- * {@code probe.add_global} 与 {@code probe.snippets} 事件收集结果的不可变捆绑，经
- * {@link com.tkisor.nekojs.probe.ProbeContext#overrides()} 传给各 backend。
+ * Immutable bundle of the results collected by the {@code probe.add_global} and {@code probe.snippets} events,
+ * passed to each backend through {@link com.tkisor.nekojs.probe.ProbeContext#overrides()}.
  */
 public record ProbeOverrides(List<GlobalDecl> globals, List<Snippet> snippets) {
     public ProbeOverrides {

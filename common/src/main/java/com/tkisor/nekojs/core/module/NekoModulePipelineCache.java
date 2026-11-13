@@ -32,22 +32,18 @@ import java.util.function.BiConsumer;
 import java.util.function.Supplier;
 
 /**
- * 模块准备缓存（Script Preparation + Module Resolution/Cache 的 prepared 层）：
- * 持有 prepared module cache 并发布 source map；prepare 逻辑委托给构造器注入的
- * {@link NekoModulePipeline} 实例。
+ * Prepared module cache (prepared layer for Script Preparation and Module Resolution/Cache).
+ * Manages the cache of prepared modules and publishes source maps; preparation is delegated to
+ * the {@link NekoModulePipeline} instance injected via the constructor.
  *
- * <p>票据 11（W3）显式注入形态：实例由 runtime owner（{@code NekoRuntimeRoot}）持有，
- * 经构造器装配进 ScriptManager / module host / ESM linker / source rewriter /
- * reload coordinator / sandbox filesystem——生产代码不再调用任何 process-wide static
- * cache。历史 static {@code PREPARED_CACHE / prepare / clear / invalidate} 已随本票删除
- * （05 总账 A7/A8 的删除条件即“W3 显式注入后删除”；替代 behavior 见
- * {@code NekoModulePipelineCacheStampTest}，trace 见 {@code ModulePipelineIsolationTest}）。
- * root close 时清空本实例（生命周期归属见 {@code NekoRuntimeRoot#closeSilently}）；
- * 直接构造的测试/manager 各自持有隔离实例，互不污染。
+ * <p>Instances are held by the runtime owner ({@code NekoRuntimeRoot}) and injected into the
+ * ScriptManager, module host, ESM linker, and reload coordinator. Production code no longer uses
+ * static caches.
  *
- * <p>失效口径：同一路径键下，mtime/size/内容哈希/language id/requested mode/compiler registry
- * revision 任一变化即失效（{@link FileStamp} 六元组）——同 stamp 同长度但内容不同的覆盖写入不会返回旧模块；
- * 路径/mode 变化天然落到不同键或不同 stamp。
+ * <p>Invalidation: A cache entry is invalidated if any attribute in the {@link FileStamp}
+ * sextuplet changes (mtime, size, content hash, language ID, requested mode, or compiler registry revision).
+ * Overwrites with the same stamp and length but different content are detected; path or mode
+ * changes produce different keys.
  */
 public final class NekoModulePipelineCache implements AutoCloseable {
     private final NekoModulePipeline pipeline;
@@ -237,7 +233,7 @@ public final class NekoModulePipelineCache implements AutoCloseable {
         } catch (PipelineException wrapper) {
             Throwable cause = wrapper.getCause();
             if (cause instanceof NekoModuleError staged) {
-                // 管线阶段错误原样透传：PREPARE 不重标为 CACHE，语言位置不丢失。
+                // Propagate pipeline phase errors without modification: PREPARE errors are not re-marked as CACHE errors, preserving language location context.
                 if (cause instanceof IOException io) {
                     throw io;
                 }
@@ -265,9 +261,9 @@ public final class NekoModulePipelineCache implements AutoCloseable {
     }
 
     /**
-     * Prepare a JSON source through the same trust boundary as executable modules.
-     * JSON has no language compiler, but it is still a resolved module source and must
-     * not be read by an execution-side bypass.
+     * Prepares a JSON source through the same trust boundary as executable modules.
+     * JSON lacks a language compiler, but it is a resolved module source and must be
+     * protected against execution-side bypasses.
      */
     public String prepareJson(Path path) throws IOException {
         ensureOpen();
@@ -292,7 +288,7 @@ public final class NekoModulePipelineCache implements AutoCloseable {
         PipelineException(Throwable cause) { super(cause); }
     }
 
-    /** 清空本实例的全部 prepared 条目与对应 source map（runtime owner 释放语义）。 */
+    /** Clear all prepared entries and corresponding source maps in this instance (runtime owner release semantics). */
     public void clear() {
         builtinTransforms.clear();
         if (owner == null) {
@@ -314,10 +310,10 @@ public final class NekoModulePipelineCache implements AutoCloseable {
     }
 
     /**
-     * 仅清空本实例中指定 {@link ScriptType} 的 prepared 模块缓存与对应 source map。
-     * 各类型脚本根目录为 {@code nekojs/<name>_scripts} 下的互不相交子树，故按 key 推导所属类型；
-     * 不在任何类型脚本目录下的 key（如 node_modules，跨类型共享）不受影响。无参 {@link #clear()}
-     * 保持全清语义，供 ModuleReloadCoordinator 等显式全清路径使用。
+     * Clear only the prepared module cache and corresponding source maps for the specified {@link ScriptType} in this instance.
+     * Each script root directory is a disjoint subtree under {@code nekojs/<name>_scripts}, so the type is deduced from the key;
+     * keys not under any type script directory (e.g., node_modules, shared across types) are unaffected. The parameterless {@link #clear()}
+     * maintains full-clear semantics, used by ModuleReloadCoordinator, etc., for explicit full-clear paths.
      */
     public void clear(ScriptType type) {
         if (type == null) {
@@ -367,8 +363,8 @@ public final class NekoModulePipelineCache implements AutoCloseable {
     }
 
     /**
-     * Install the active schema on this runtime owner. Owner-only internal seam: the mutable
-     * store is package-private and no API consumer may drive schema transactions directly.
+     * Installs the active schema on this runtime owner. Mutable store is package-private;
+     * only {@link NekoModulePipelineCache} can install active views or drive candidate transactions.
      */
     void installActiveBindingSchema(ScriptType type,
             Map<String, ScriptBindingSchema.BindingMembers> schemas, Set<String> globals) {
@@ -376,36 +372,36 @@ public final class NekoModulePipelineCache implements AutoCloseable {
     }
 
     /**
-     * Active schema view for a new generation. Owner-only internal seam consumed by
-     * {@code ScriptManager}/{@code ScriptEnvironmentFactory}.
+     * Active schema view for a new generation. Internal seam consumed by
+     * {@code ScriptManager} and {@code ScriptEnvironmentFactory}.
      */
     public ScriptBindingSchema.View activeBindingSchemaView(ScriptType type) {
         return rootOwner().bindingSchema.activeView(type);
     }
 
-    /** Owner-only internal seam: capture the active schema/global snapshot for a reload transaction. */
+    /** Captures the active schema/global snapshot for a reload transaction. */
     public ScriptBindingSchema.Snapshot snapshotBindingSchema(ScriptType type) {
         return rootOwner().bindingSchema.snapshot(type);
     }
 
-    /** Owner-only internal seam: open a generation candidate schema transaction. */
+    /** Opens a candidate schema transaction for the next generation. For the owner only. */
     public ScriptBindingSchema.View beginBindingSchemaCandidate(Object token, ScriptType type,
             Map<String, ScriptBindingSchema.BindingMembers> schemas, Set<String> globals, Object diagnosticContext) {
         return rootOwner().bindingSchema.beginCandidate(token, type, schemas, globals,
                 ScriptBindingSchema.diagnosticReporter(diagnosticContext));
     }
 
-    /** Owner-only internal seam: publish exactly one candidate view at the generation commit point. */
+    /** Publishes exactly one candidate view at the generation commit point. For the owner only. */
     public ScriptBindingSchema.View commitBindingSchemaCandidate(Object token) {
         return rootOwner().bindingSchema.commitCandidate(token);
     }
 
-    /** Owner-only internal seam: discard a candidate schema after a failed generation. */
+    /** Discards a candidate schema after a generation fails. For the owner only. */
     public void discardBindingSchemaCandidate(Object token) {
         rootOwner().bindingSchema.discardCandidate(token);
     }
 
-    /** Owner-only internal seam: restore an active schema/global snapshot for a failed reload. */
+    /** Restores an active schema/global snapshot after a failed reload. For the owner only. */
     public void restoreBindingSchema(ScriptType type, ScriptBindingSchema.Snapshot snapshot) {
         rootOwner().bindingSchema.restore(type, snapshot);
     }
@@ -418,7 +414,7 @@ public final class NekoModulePipelineCache implements AutoCloseable {
         return virtualModules;
     }
 
-    /** Host-owned observation seam for direct linker/rewriter preparation calls. */
+    /** Registers the host's observer for direct linker/rewriter preparation calls and returns it. */
     BiConsumer<Path, String> registerPreparationObserver(BiConsumer<Path, String> observer) {
         if (observer != null) {
             preparationObservers.add(observer);
@@ -426,7 +422,7 @@ public final class NekoModulePipelineCache implements AutoCloseable {
         return observer;
     }
 
-    /** Narrow unregister seam used by a host/context close path. */
+    /** Removes an observer registered earlier; the host/context close path calls this. */
     void unregisterPreparationObserver(BiConsumer<Path, String> observer) {
         if (observer != null) {
             preparationObservers.remove(observer);
@@ -700,8 +696,8 @@ public final class NekoModulePipelineCache implements AutoCloseable {
             try {
                 identity = pipeline.identify(path);
             } catch (RuntimeException unsupportedExtension) {
-                // JSON is prepared as data rather than as a language module. Trust must still
-                // reject it at the authorization boundary before compiler discovery runs.
+                // JSON is prepared as data rather than as a language module. Trust still
+                // rejects it during authorization, before compiler discovery runs.
                 if (!isJson(path)) {
                     throw NekoModuleError.denied(NekoModuleError.displayPath(path), "unknown",
                             NekoModuleMode.AUTO, approval, "module dependency has no valid trust context");
@@ -752,8 +748,8 @@ public final class NekoModulePipelineCache implements AutoCloseable {
         if (prepared.sourceMap() == null || prepared.sourceMap().isBlank()) {
             return;
         }
-        // Ticket 30: the prepared module's cache key travels with its source map so mapped
-        // diagnostics can retain which prepared revision produced the executing code.
+        // The prepared module's cache key travels with its source map, so mapped
+        // diagnostics can tell which prepared revision produced the executing code.
         relativePath(path).ifPresent(relativePath -> sourceMaps.register(relativePath,
                 prepared.sourceMap(), prepared.prependedLineCount(), prepared.cacheKey()));
     }
@@ -790,15 +786,16 @@ public final class NekoModulePipelineCache implements AutoCloseable {
     }
 
     /**
-     * 从缓存 key（模块文件绝对路径）推导所属 {@link ScriptType}：脚本根目录遵循
-     * {@code <name>_scripts} 命名约定（与 {@link SourceMapRegistry#clearByScriptType} 的
-     * root-relative 前缀约定一致），key 相对 nekojs root 的第一个路径段即类型目录名。
-     * 不在任何类型目录下（如 node_modules）的 key 是跨类型共享缓存，返回 null。
+     * Deduce the {@link ScriptType} from the cache key (absolute path of the module file).
+     * Script root directories follow the {@code <name>_scripts} naming convention (consistent with the
+     * root-relative prefix convention in {@link SourceMapRegistry#clearByScriptType}). The first
+     * path segment of the key, relative to the NekoJS root, is the type directory name.
+     * Keys not under any type directory (e.g., node_modules) are treated as cross-type shared cache, returning null.
      */
     private ScriptType scriptTypeOf(Path key) {
         try {
             return ScriptPathProvider.typeOf(key);
-        } catch (Exception ignored) { // 路径解析失败 → 视为共享缓存
+        } catch (Exception ignored) { // Path resolution failed: treat as shared cache
             return null;
         }
     }
@@ -809,13 +806,16 @@ public final class NekoModulePipelineCache implements AutoCloseable {
     private record PreparedEntry(FileStamp stamp, NekoPreparedModule prepared, ScriptType type) {}
 
     /**
-     * 模块文件的内容指纹（mtime/size/contentHash + ModuleIdentity(languageId/requestedMode)
-     * + compiler registry revision）。
+     * Content fingerprint of the module file (mtime/size/contentHash + ModuleIdentity(languageId/requestedMode)
+     * + compiler registry revision).
      *
-     * <p>历史缺陷：仅 (modifiedMillis, size) 无法区分“同一时间戳刻度内对等长文件的覆盖写入”，
-     * 粗粒度时间戳文件系统（如部分 Windows / FAT / 容器挂载）会因此误判未变化，继续返回旧编译模块。
-     * contentHash（SHA-256）修复该缺陷；languageId/requestedMode 由 {@link NekoModuleIdentity}
-     * 组成，registryRevision 捕获语言插件注册表的版本：同一路径在同 id 编译器替换时也必须失效。
+     * <p>Historical limitation: Using only (modifiedMillis, size) could not distinguish "overwrite
+     * operations of equal-length files within the same timestamp granularity." Coarse-grained timestamp
+     * filesystems (e.g., some Windows/FAT/container mounts) could mistakenly determine that no change
+     * occurred, continuing to return old compiled modules. The contentHash (SHA-256) fixes this defect;
+     * languageId/requestedMode are comprised of {@link NekoModuleIdentity}, and registryRevision captures
+     * the language plugin registry version: the cache must also be invalidated if the same compiler ID is
+     * replaced at the same path.
      */
     private record FileStamp(long modifiedMillis, long size, String contentHash,
                              NekoModuleIdentity identity, long registryRevision) {

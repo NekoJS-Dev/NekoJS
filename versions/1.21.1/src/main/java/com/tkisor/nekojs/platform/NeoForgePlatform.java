@@ -1,5 +1,5 @@
-// 1.21.1 实现，与版本树 src/ 下的同名 26.x 文件成对。内容等于那份文件在本节点求值后的形态。
-// 26.x 侧行为变更时须同步本文件。
+// 1.21.1 implementation, paired with the same-named 26.x file under the version tree src/. Its
+// content is that file as evaluated at this node. Keep this file in sync when the 26.x side changes.
 package com.tkisor.nekojs.platform;
 
 import com.tkisor.nekojs.api.nbt.NbtBinaryCodec;
@@ -71,7 +71,7 @@ public class NeoForgePlatform implements IPlatform {
             modCache = new LinkedHashMap<>();
             for (var mod : ModList.get().getMods()) {
                 String id = mod.getModId();
-                // 初始化我们自己的 ModInfo 实现
+                // Builds our own ModInfo implementation.
                 IModInfo info = new ModInfo(
                         id,
                         mod.getDisplayName(),
@@ -128,8 +128,9 @@ public class NeoForgePlatform implements IPlatform {
 
     @Override
     public List<String> defaultScanPackages() {
-        // com.mojang: MC API 签名大量引用 datafixers(Either)/brigadier/blaze3d/authlib——
-        // 不放行则 probe 只生成引用它们的 import 而无声明，IDE 里这些类型全部悬空
+        // com.mojang: Minecraft API signatures reference datafixers (Either), brigadier, blaze3d and authlib
+        // heavily. Without it the probe emits imports for those types but no declarations, leaving them
+        // unresolved in the IDE.
         return List.of("net.minecraft", "net.neoforged", "com.mojang");
     }
 }

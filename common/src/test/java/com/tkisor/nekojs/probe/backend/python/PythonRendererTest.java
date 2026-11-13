@@ -22,7 +22,7 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * {@link ApiTypeRefPyRenderer} + {@link PythonClassRenderer} 单测：类型映射 + IR→.pyi 渲染。
+ * Tests for {@link ApiTypeRefPyRenderer} and {@link PythonClassRenderer}: type mapping and IR to .pyi rendering.
  */
 class PythonRendererTest {
 
@@ -96,14 +96,14 @@ class PythonRendererTest {
         assertTrue(output.contains("typeName: str, build: Callable[[FixtureBuilder], None]"), output);
     }
 
-    /** 反射样本：实例字段、getter、实例方法、静态方法、构造器（含 Java 重载）。 */
+    /** Reflected sample: instance field, getter, instance methods, static method, constructors and Java overloads. */
     public static class Sample {
         public String nameField;
         public Sample() {}
-        public Sample(String name) { this.nameField = name; }   // 构造器重载
+        public Sample(String name) { this.nameField = name; }   // constructor overload
         public String getName() { return nameField; }   // getter → @property name
         public void greet(String who) {}
-        public void greet(String who, int times) {}     // 与 greet(String) 构成重载
+        public void greet(String who, int times) {}     // overloads greet(String)
         public static int helper(int n) { return n; }
     }
 
@@ -156,7 +156,7 @@ class PythonRendererTest {
     void render_arrayUnionTypeVar() {
         ApiTypeRefPyRenderer r = new ApiTypeRefPyRenderer(Set.of());
         assertEquals("list[str]", r.render(ApiTypeRef.array(ApiTypeRef.primitive("string"))));
-        // union 成员在 ApiTypeRef 构造时按 compatibilityKey 排序：int < string → "int | str"
+        // ApiTypeRef sorts union members by compatibilityKey when it builds the union: int < string, so "int | str"
         assertEquals("int | str",
                 r.render(ApiTypeRef.union(java.util.List.of(ApiTypeRef.primitive("string"), ApiTypeRef.primitive("int")))));
         assertEquals("Any", r.render(ApiTypeRef.typeVariable("T")));
@@ -166,7 +166,7 @@ class PythonRendererTest {
     void render_symbolAvailability() {
         ApiTypeRefPyRenderer r = new ApiTypeRefPyRenderer(Set.of("net.x.Foo"));
         assertEquals("Foo", r.render(ApiTypeRef.symbol(new ApiSymbolId("java", "net.x.Foo"))));
-        // 未收集的 SYMBOL → Any（避免悬空引用）
+        // A SYMBOL that was not collected renders as Any, so the stub has no dangling reference
         assertEquals("Any", r.render(ApiTypeRef.symbol(new ApiSymbolId("java", "net.x.Bar"))));
     }
 
@@ -186,22 +186,22 @@ class PythonRendererTest {
         PythonClassRenderer classR = new PythonClassRenderer(typeR);
 
         String out = classR.render(d);
-        // 类声明（嵌套类名末尾为 _Sample）
+        // class declaration (a nested class name ends in _Sample)
         assertTrue(out.contains("class "), "class header: " + out);
         assertTrue(out.trim().startsWith("class "), out);
-        // 实例字段
+        // instance field
         assertTrue(out.contains("nameField: str"), out);
         // getter → @property + def name(self) -> str
         assertTrue(out.contains("@property"), out);
         assertTrue(out.contains("def name(self) -> str"), out);
-        // 实例方法
+        // instance method
         assertTrue(out.contains("def greet(self,"), out);
-        assertTrue(out.contains(": str"), out);   // greet 的 String 参数
-        // 静态方法
+        assertTrue(out.contains(": str"), out);   // greet's String parameter
+// static method
         assertTrue(out.contains("@staticmethod"), out);
         assertTrue(out.contains("def helper("), out);
-        assertTrue(out.contains("-> int"), out);  // helper 返回 int
-        // 构造器 → __init__
+        assertTrue(out.contains("-> int"), out);  // helper returns int
+// constructor becomes __init__
         assertTrue(out.contains("def __init__(self) -> None"), out);
     }
 
@@ -212,42 +212,43 @@ class PythonRendererTest {
         ApiTypeRefPyRenderer typeR = new ApiTypeRefPyRenderer(Set.of(d.fqn));
         PythonClassRenderer classR = new PythonClassRenderer(typeR);
 
-        // 类级 docs
+        // class-level docs
         d.docs.add("Class doc line1");
         d.docs.add("Class doc line2");
-        // 构造器 docs
+        // constructor docs
         d.constructors.get(0).docs.add("Creates a sample.");
-        // getter docs（@property 同样处理）
+        // getter docs (handled the same way for @property)
         MethodDecl getter = d.methods.stream().filter(m -> m.isGetter).findFirst().orElseThrow();
         getter.docs.add("The name.");
-        // 实例方法 docs（多行）——docs 加到单参 greet（重载组内任一实例；断言按单参签名匹配）
+        // instance method docs (multiple lines): they go on the one-arg greet; any instance in the overload group works,
+        // since the assertion matches the one-arg signature
         MethodDecl greet = d.methods.stream()
                 .filter(m -> m.name.equals("greet") && m.params.size() == 1)
                 .findFirst()
                 .orElseThrow();
         greet.docs.add("Greets someone.");
         greet.docs.add("Second line.");
-        // 字段 docs（多行 → 首行行尾注释 + 后续 `# ` 行）
+        // field docs (multiple lines: first line as a trailing comment, later lines prefixed with `# `)
         d.fields.get(0).docs.add("Field doc.");
         d.fields.get(0).docs.add("Second field line.");
 
         String out = classR.render(d);
-        // 类级 docstring（多行）
+        // class-level docstring (multiple lines)
         assertTrue(out.contains("    \"\"\"Class doc line1\nClass doc line2\"\"\""), out);
-        // 构造器 docstring：def 行后换行缩进 8 空格
+        // constructor docstring: it starts on a new line after the def line, indented 8 spaces
         assertTrue(out.contains("def __init__(self) -> None:\n        \"\"\"Creates a sample.\"\"\"\n        ..."), out);
         // getter（@property）docstring
         assertTrue(out.contains("def name(self) -> str:\n        \"\"\"The name.\"\"\"\n        ..."), out);
-        // 实例方法 docstring（多行）——根 build.gradle 已全局开启 -parameters，参数名为真实名 who
+        // instance method docstring (multiple lines); the root build.gradle enables -parameters, so the name is the real who
         assertTrue(out.contains("def greet(self, who: str) -> None:\n        \"\"\"Greets someone.\nSecond line.\"\"\"\n        ..."), out);
-        // 字段：行尾 `  # ...` + 后续行 `# ` 前缀
+        // field docs: a trailing `  # ...` comment on the declaration line, then later lines prefixed with `# `
         assertTrue(out.contains("nameField: str  # Field doc.\n    # Second field line."), out);
     }
 
     @Test
     void renderClass_javaOverloadsUseOverloadDecorator() {
-        // Sample 的 greet(String) / greet(String,int) 重载 + 双构造器 → 同名 def 全部标注 @overload，
-        // 否则 Pylance 报「方法声明被同名声明遮盖」
+        // Sample has greet(String)/greet(String, int) overloads plus two constructors, so every def of the same name is marked
+        // @overload; otherwise Pylance reports that a declaration is obscured by a declaration with the same name
         TypeDecl d = new TypeReflector().reflect(Sample.class);
         ApiTypeRefPyRenderer typeR = new ApiTypeRefPyRenderer(Set.of(d.fqn));
         PythonClassRenderer classR = new PythonClassRenderer(typeR);
@@ -304,7 +305,7 @@ class PythonRendererTest {
     @Test
     void addMethod_emitsPythonDef() {
         TypeDecl d = new TypeDecl(TypeDecl.Kind.CLASS, null, "pkg.Foo");
-        // "a:string" 具名参数 + "int" 纯类型（参数名自动 arg1）；静态方法无 self
+        // "a:string" is a named parameter, "int" is a bare type (its name becomes arg1); static methods have no self
         editorFor(d).addMethod("foo", "boolean", "a:string", "int");
         editorFor(d).addStaticMethod("create", "string");
 
@@ -314,7 +315,7 @@ class PythonRendererTest {
         assertTrue(out.contains("def create() -> str: ..."), out);
     }
 
-    /** 经事件取得 ClassEditor（ClassEditor 构造器包私有，外部包只能走 forClass）。 */
+    /** Obtains a ClassEditor through the event: its constructor is package-private, so other packages must use forClass. */
     private static com.tkisor.nekojs.probe.events.ClassEditor editorFor(TypeDecl d) {
         return new ProbeModifyTypeEventJS(Map.of(d.fqn, d)).forClass(d.fqn);
     }

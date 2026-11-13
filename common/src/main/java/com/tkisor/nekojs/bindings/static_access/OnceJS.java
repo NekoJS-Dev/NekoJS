@@ -7,32 +7,36 @@ import graal.graalvm.polyglot.proxy.ProxyExecutable;
 
 
 /**
- * {@code once} / {@code clearOnce} 全局函数绑定（{@link ProxyExecutable}，直接以函数形式调用）。
+ * Binding for the global {@code once} / {@code clearOnce} functions ({@link ProxyExecutable},
+ * called directly as functions).
  *
- * <p>{@code once(key, callback)}：首次使用该 key 时执行 callback 并记录标记，此后
- * （包括脚本 reload 后）同 key 调用直接跳过——标记存于 {@link OnceRegistry#SHARED}，
- * 进程内存活、不持久化。{@code clearOnce(key)} 移除单个标记，{@code clearOnce()} 清空全部，
- * 之后的 {@code once} 会重新执行。
+ * <p>{@code once(key, callback)} runs the callback the first time the key is used and records
+ * a marker; later calls with the same key are skipped, including after a script reload.
+ * Markers live in {@link OnceRegistry#SHARED} for the lifetime of the process and are not
+ * persisted. {@code clearOnce(key)} removes one marker and {@code clearOnce()} clears all of
+ * them, after which the next {@code once} for that key runs again.
  *
- * <p>v1 的 key 全局（无按脚本命名空间隔离），{@link OnceRegistry#resolveKey(String)}
- * 是后续接入脚本所有者前缀的唯一改动点。
+ * <p>Keys are global in v1, with no per-script namespace isolation;
+ * {@link OnceRegistry#resolveKey(String)} is the single place to add a script-owner prefix
+ * later.
  *
  * <pre>
  * once('myPack:migration', () => {
- *   // 只在进程首次加载（或 clearOnce('myPack:migration') 之后）执行一次
+ *   // runs once on the first load of the process (or after clearOnce('myPack:migration'))
  * })
- * clearOnce('myPack:migration')  // 移除单个标记
- * clearOnce()                    // 清空全部标记
+ * clearOnce('myPack:migration')  // remove one marker
+ * clearOnce()                    // clear all markers
  * </pre>
  */
 @Doc("Run-once guard: once(key, callback) executes the callback only the first time the key is used.")
 @Doc("Markers deliberately survive script reloads (process-lifetime, in-memory); use clearOnce(key) to re-arm.")
 public final class OnceJS implements ProxyExecutable {
 
-    /** {@code once} 函数的进程级单例（标记表共享，实例无状态）。 */
+    /** Process-level singleton for the {@code once} function (the marker table is shared; the
+     * instance holds no state). */
     public static final OnceJS ONCE = new OnceJS();
 
-    /** {@code clearOnce} 函数的进程级单例。 */
+    /** Process-level singleton for the {@code clearOnce} function. */
     public static final ClearOnceJS CLEAR_ONCE = new ClearOnceJS();
 
     private OnceJS() {}
@@ -51,14 +55,15 @@ public final class OnceJS implements ProxyExecutable {
         if (!callback.canExecute()) {
             throw new IllegalArgumentException("once(key, callback): callback must be a function");
         }
-        // 原子 check-and-set：只有抢到“首次”的调用才执行回调
+        // Atomic check-and-set: only the call that wins the "first time" runs the callback
         if (!OnceRegistry.SHARED.runOnce(key)) {
             return null;
         }
         return callback.execute();
     }
 
-    /** {@code clearOnce} 函数：无参清空全部标记，带 key 参数移除单个标记并返回它是否存在。 */
+    /** The {@code clearOnce} function: called with no argument it clears all markers; called with
+     * a key it removes that one marker and returns whether it existed. */
     @Doc("clearOnce(key) removes one run-once marker (returns whether it existed); clearOnce() clears all markers.")
     public static final class ClearOnceJS implements ProxyExecutable {
 
@@ -66,7 +71,8 @@ public final class OnceJS implements ProxyExecutable {
 
         @Override
         public Object execute(Value... arguments) {
-            // clearOnce() -> 清空全部；clearOnce(key) -> 移除单个，返回标记是否原本存在
+            // clearOnce() -> clears everything; clearOnce(key) -> removes one entry and returns whether the
+            // marker existed before
             if (arguments == null || arguments.length == 0) {
                 OnceRegistry.SHARED.clearAll();
                 return null;

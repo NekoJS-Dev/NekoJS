@@ -1,5 +1,5 @@
-// 26.x 实现，本文件不应再出现版本守卫。1.21.1 的实现是 versions/1.21.1/src 下的同名文件，
-// 改本文件行为时须同步它。
+// 26.x implementation, this file should no longer contain version guards. The 1.21.1 implementation
+// is the same-named file under versions/1.21.1/src; synchronize it when changing behavior here.
 package com.tkisor.nekojs.wrapper.registry.gen;
 
 import com.tkisor.nekojs.wrapper.registry.TaggableBuilder;
@@ -14,33 +14,35 @@ import java.util.Map;
 import java.util.function.Consumer;
 
 /**
- * 方块 builder（连带注册三件套的样板，ticket 15 单一写入语义）：
+ * Block builder (boilerplate for the three-part registration):
  * <pre>
  * event.block('mymod:ruby_block', b =&gt; { b.hardness = 3; b.noItem() })
- * event.block('mymod:ruby_block', b =&gt; { b.item.maxStackSize = 16 })   // 定制自动 BlockItem
+ * event.block('mymod:ruby_block', b =&gt; { b.item.maxStackSize = 16 })   // Customizes automatic BlockItem
  * </pre>
- * 三件套：构造期预创建 {@link #item} 子 builder（默认连带注册 BlockItem）、
- * {@link #noItem()} 抑制（与 {@code b.item = null} 走同一 {@link #setItem} 写入点）、
- * 本类 {@code implements Supplier}（BlockItem 经 {@link #get()} 懒引用方块，
- * 注册事件抽干期才构建）。数据属性私有 + setter，两种写法同一写入语义。
+ * Three parts: the {@link #item} sub-builder is pre-created during construction (by default the
+ * BlockItem registration is bundled), it is suppressed via {@link #noItem()} (the same
+ * {@link #setItem} write point as {@code b.item = null}), and this class {@code implements Supplier}
+ * (BlockItem references the block lazily via {@link #get()} and is constructed only during the
+ * registry event drain phase). Data attributes are private with setters; both writing styles share
+ * the same write semantics.
  */
 public class BlockBuilder extends RegistryObjectBuilder<Block> implements TaggableBuilder<BlockBuilder> {
 
-    /** 声明了 renderType 的方块（26.x 资产生成消费：translucent 用 force_translucent 贴图引用）。 */
+    /** Blocks with a declared renderType (26.x asset generation consumption: translucent uses force_translucent texture reference). */
     public static final Map<Identifier, String> RENDER_TYPES = new HashMap<>();
 
     private float hardness = 1.5f;
     private float resistance = 1.5f;
     private int lightLevel = 0;
     private boolean requiresTool = false;
-    /** 声音类型名：wood/gravel/grass/metal/glass/wool/sand/snow/amethyst（默认 stone）。 */
+    /** Sound type name: wood/gravel/grass/metal/glass/wool/sand/snow/amethyst (defaults to stone). */
     private String sound = "stone";
-    /** 地图颜色名（如 'dirt'/'water'/'gold'/'color_red'）。默认 stone。 */
+    /** Map color name (e.g., 'dirt'/'water'/'gold'/'color_red'). Defaults to stone. */
     private String mapColor = "stone";
-    /** 客户端渲染层：solid / cutout / cutout_mipped / translucent。26.x 模型驱动，仅文档意义。 */
+    /** Client render layer: solid / cutout / cutout_mipped / translucent. 26.x model-driven, documentary only. */
     private String renderType = null;
 
-    /** 预创建的 BlockItem 子 builder：{@code b.item.maxStackSize = 16} 直接定制；{@link #noItem()} 抑制。 */
+    /** Pre-created BlockItem sub-builder: {@code b.item.maxStackSize = 16} customizes directly; {@link #noItem()} suppresses. */
     private ItemBuilder item;
     private boolean itemDefinitionFrozen;
 
@@ -49,7 +51,7 @@ public class BlockBuilder extends RegistryObjectBuilder<Block> implements Taggab
         this.item = new ItemBuilder(id);
     }
 
-    /** {@link TaggableBuilder}：方块 tag 归属 BLOCK 注册表（给 BlockItem 打 tag 走 {@code item}）。 */
+    /** {@link TaggableBuilder}: Block tags belong to the BLOCK registry (tag BlockItem via {@code item}). */
     @Override
     public net.minecraft.resources.ResourceKey<? extends net.minecraft.core.Registry<?>> getTagRegistry() {
         return Registries.BLOCK;
@@ -60,7 +62,7 @@ public class BlockBuilder extends RegistryObjectBuilder<Block> implements Taggab
         return id;
     }
 
-    // ---- 数据属性：显式 setter 与 JavaBean property 同一写入点 ----
+    // ---- Data attributes: explicit setters and JavaBean properties share one write point ----
 
     public float getHardness() {
         return hardness;
@@ -97,7 +99,7 @@ public class BlockBuilder extends RegistryObjectBuilder<Block> implements Taggab
         this.requiresTool = requiresTool;
     }
 
-    /** 声音类型名（已归一化小写）。 */
+    /** Sound type name (normalized to lowercase). */
     public String getSound() {
         return sound;
     }
@@ -106,7 +108,7 @@ public class BlockBuilder extends RegistryObjectBuilder<Block> implements Taggab
         this.sound = sound == null ? "stone" : sound.toLowerCase();
     }
 
-    /** 地图颜色名（已归一化小写）。 */
+    /** Map color name (normalized to lower case). */
     public String getMapColor() {
         return mapColor;
     }
@@ -115,7 +117,7 @@ public class BlockBuilder extends RegistryObjectBuilder<Block> implements Taggab
         this.mapColor = mapColor == null ? "stone" : mapColor.toLowerCase();
     }
 
-    /** 渲染层（已归一化：空白视为未声明——build 期本来就走同一分支）。 */
+    /** Render layer (normalized: blank counts as undeclared, because build takes the same branch anyway). */
     @com.tkisor.nekojs.api.annotation.ScriptNullable
     public String getRenderType() {
         return renderType;
@@ -125,16 +127,17 @@ public class BlockBuilder extends RegistryObjectBuilder<Block> implements Taggab
         this.renderType = renderType == null || renderType.isBlank() ? null : renderType;
     }
 
-    /** 预创建的 BlockItem 子 builder（脚本面经 {@link BuilderSurface} 包装）。 */
+    /** Pre-created BlockItem sub-builder (the script surface wraps it in {@link BuilderSurface}). */
     @com.tkisor.nekojs.api.annotation.ScriptNullable
     public ItemBuilder getItem() {
         return item;
     }
 
     /**
-     * 连带 BlockItem 抑制/恢复的唯一写入点：{@code b.item = null} 与 {@link #noItem()}
-     * 走本 setter。脚本侧只接受 null（抑制）；恢复默认子 builder 用 Java 面
-     * （脚本的定制走 {@code b.item.xxx} 或 {@link #item(Consumer)}）。
+     * The only write point for suppressing or restoring the bundled BlockItem: both
+     * {@code b.item = null} and {@link #noItem()} go through this setter. The script side only
+     * accepts null (suppress); restoring the default sub-builder is done from Java, and script
+     * customization goes through {@code b.item.xxx} or {@link #item(Consumer)}.
      */
     public void setItem(@com.tkisor.nekojs.api.annotation.ScriptNullable ItemBuilder item) {
         if (itemDefinitionFrozen) throw new IllegalStateException("[NEKO-4035] Block item definition is frozen after collection");
@@ -150,20 +153,20 @@ public class BlockBuilder extends RegistryObjectBuilder<Block> implements Taggab
                         + "b.item.xxx = ... or b.item(cb) instead");
     }
 
-    // ---- 复合配置 ----
+    // ---- Composite configuration ----
 
-    /** 不可破坏（硬度 -1 / 抗爆 3600000）。 */
+    /** Makes the block unbreakable (hardness -1, blast resistance 3600000). */
     public void unbreakable() {
         setHardness(-1.0f);
         setResistance(3600000.0f);
     }
 
-    /** 抑制自动 BlockItem 连带注册（与 {@code b.item = null} 同一写入点）。 */
+    /** Suppresses the automatic bundled BlockItem registration (same write point as {@code b.item = null}). */
     public void noItem() {
         setItem(null);
     }
 
-    /** 定制自动 BlockItem 属性（便捷面；等价于直接改 {@link #getItem()} 子 builder）。 */
+    /** Configures the automatic BlockItem; same as editing the {@link #getItem()} sub-builder. */
     public void item(Consumer<ItemBuilder> consumer) {
         if (this.item == null) {
             throw new IllegalStateException("noItem() 已抑制 BlockItem 生成，不能再配置 item(cb)");
@@ -201,7 +204,10 @@ public class BlockBuilder extends RegistryObjectBuilder<Block> implements Taggab
         return block;
     }
 
-    /** 连带注册：预创建子 builder 非 null 时注册 BlockItem（ITEM pass 在 BLOCK 之后）。 */
+    /**
+     * Bundled registration: registers the BlockItem when the pre-created sub-builder is not null
+     * (the ITEM pass runs after BLOCK).
+     */
     @Override
     public void handleAdditionalObjects(RegistryObjectBuilder.AdditionalObjectRegistry registry) {
         ItemBuilder itemBuilder = this.item;
@@ -227,7 +233,7 @@ public class BlockBuilder extends RegistryObjectBuilder<Block> implements Taggab
         };
     }
 
-    /** 常用 MapColor 名称 → 常量。未命中回退 STONE（保留默认）。 */
+    /** Maps common MapColor names to constants. Falls back to STONE on a miss (keeps the default). */
     private static net.minecraft.world.level.material.MapColor resolveMapColor(String name) {
         if (name == null) return net.minecraft.world.level.material.MapColor.STONE;
         return switch (name.toLowerCase()) {

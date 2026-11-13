@@ -1,4 +1,4 @@
-// TODO(fabric): fabric 侧还没有对应实现，整文件守卫等移植完成后去掉
+// TODO(fabric): there is no Fabric implementation yet; drop the whole-file guard once the port is done.
 //? if neoforge {
 //? if >=26 {
 package com.tkisor.nekojs.mixin;

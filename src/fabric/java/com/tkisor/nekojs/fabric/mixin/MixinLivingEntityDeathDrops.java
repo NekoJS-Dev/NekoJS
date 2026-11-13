@@ -10,29 +10,31 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 /**
- * {@code EntityEvents.drops} 的 fabric 挂点：{@code LivingEntity#dropAllDeathLoot}。
+ * Fabric hook for {@code EntityEvents.drops}: {@code LivingEntity#dropAllDeathLoot}.
  *
- * <p>为何不用 fabric-api：{@code ServerLivingEntityEvents} 5.0.2 javap 实证只有
- * ALLOW_DAMAGE / AFTER_DAMAGE / ALLOW_DEATH / AFTER_DEATH / MOB_CONVERSION——
- * <b>没有掉落回调</b>。
+ * <p>Why not fabric-api: the javap dump of {@code ServerLivingEntityEvents} 5.0.2 has only
+ * ALLOW_DAMAGE, AFTER_DAMAGE, ALLOW_DEATH, AFTER_DEATH and MOB_CONVERSION, with <b>no drop
+ * callback</b>.
  *
- * <p>javap 实证（minecraft-merged-deobf-26.1.2.jar）：
+ * <p>Checked with javap (minecraft-merged-deobf-26.1.2.jar):
  * <ul>
  *   <li>{@code protected void dropAllDeathLoot(net.minecraft.server.level.ServerLevel,
- *       net.minecraft.world.damagesource.DamageSource)}——26.x 签名（1.21.x 无 ServerLevel 参数），
- *       protected 具体方法，HEAD 可注入。</li>
- *   <li>{@code LivingEntity#die(DamageSource)} 字节码 91-93 先 {@code dead=true}，
- *       109-150 服务端检查后、{@code createWitherRose} 前调用 {@code dropAllDeathLoot}——
- *       本挂点是所有生物（含玩家）死亡掉落的单一入口。</li>
+ *       net.minecraft.world.damagesource.DamageSource)} has the 26.x signature (1.21.x had no
+ *       ServerLevel parameter) and is a protected concrete method, so HEAD can be injected.</li>
+ *   <li>In the bytecode of {@code LivingEntity#die(DamageSource)}, 91-93 set {@code dead=true},
+ *       then 109-150 do the server check and call {@code dropAllDeathLoot} before
+ *       {@code createWitherRose}. This hook is the single entry for the death drops of every
+ *       living entity, players included.</li>
  * </ul>
  *
- * <p>取消语义：{@code EntityEvents.drops} 为可取消总线，监听器 {@code return true} →
- * {@code ci.cancel()} 跳过整段原版掉落（equipment + 战利品表 + 经验球），等价 NeoForge
- * {@code LivingDropsEvent} 的 setCanceled；脚本 push 进 {@code event.drops} 的物品由
- * {@code FabricEntityEventBindingsV2.postDrops} 经 {@code Entity#spawnAtLocation}
- * （public，字节码实证最终 {@code ServerLevel.addFreshEntity}）放出。
- * 限制：原版生成的掉落集合在 vanilla 里不存在（逐件生成），payload 的 {@code drops}
- * 触发时为空（详见 {@code LivingDropsEventJS} javadoc）。
+ * <p>Cancelling: {@code EntityEvents.drops} is cancellable, so a listener returning {@code true}
+ * leads to {@code ci.cancel()}, which skips the whole vanilla drop (equipment, loot tables and
+ * experience orbs); this matches setCanceled on NeoForge {@code LivingDropsEvent}. Items that
+ * scripts push into {@code event.drops} are spawned by
+ * {@code FabricEntityEventBindingsV2.postDrops} through {@code Entity#spawnAtLocation} (public,
+ * and the bytecode shows it ends in {@code ServerLevel.addFreshEntity}). Limitation: vanilla
+ * never builds the drop set up front, because it generates each item as it drops, so the payload's
+ * {@code drops} is empty when the event fires (see the {@code LivingDropsEventJS} javadoc).
  */
 @Mixin(LivingEntity.class)
 public abstract class MixinLivingEntityDeathDrops {

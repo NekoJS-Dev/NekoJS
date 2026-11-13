@@ -19,12 +19,13 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * 票 28 AC1/AC7/AC8 fixture：post-effect 声明面只经<b>既有</b>
- * {@code ClientEvents} 的资源/reload 子事件贡献，事件成员在 catalog/golden 意义上唯一，
- * 且不新增第二个 PostEffects 事件。
+ * Fixture for the post-effect declaration surface: it is contributed only by the existing
+ * {@code ClientEvents} resource/reload sub-events, its event member is unique in the catalog and
+ * golden output, and it adds no second PostEffects event.
  *
- * <p>断言只走生产注册路径（{@link NekoJSCorePlugin#registerClientEvents}）与真实总线
- * metadata，不复制一份平行的成员表。
+ * <p>Assertions only use the production registration path
+ * ({@link NekoJSCorePlugin#registerClientEvents}) and real bus metadata; there is no parallel member
+ * table.
  */
 class PostEffectDeclarationSurfaceTest {
 
@@ -38,7 +39,8 @@ class PostEffectDeclarationSurfaceTest {
         assertTrue(clientEvents.viewBuses().containsKey("postEffects"),
                 "the declaration face is ClientEvents.postEffects (existing resource/reload sub-events)");
 
-        // 全事件面无第二个 PostEffects 域：postEffects 只出现一次，且没有任何组叫 PostEffects*。
+        // No second PostEffects domain exists anywhere in the event set: postEffects appears once, and no
+        // group is named PostEffects*.
         Set<String> postEffectBuses = new HashSet<>();
         for (var group : registry.view().values()) {
             for (var entry : group.viewBuses().entrySet()) {
@@ -89,7 +91,7 @@ class PostEffectDeclarationSurfaceTest {
 
     @Test
     void runtimeBindingKeepsItsCallerVisibleMembers() {
-        // AC5：运行时 binding 的调用者可见成员在改造后仍然存在（脚本侧写法不变）。
+        // The caller-visible members of the runtime binding stay available, so script code is unchanged.
         Set<String> names = new HashSet<>();
         for (var method : PostEffectsJS.class.getMethods()) {
             names.add(method.getName());

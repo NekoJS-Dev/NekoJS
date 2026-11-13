@@ -12,10 +12,12 @@ import net.neoforged.fml.loading.FMLEnvironment;
 import net.neoforged.neoforge.network.registration.PayloadRegistrar;
 
 /**
- * 26.2 侧 {@link McPlatformCompat.Impl}：与 26.1 同体（类名刻意不同——26.1↔26.2 的
- * drift 比较对不允许同名不同体）。票 21 平台接线：动态注册批事务 payload 在同一
- * RegisterPayloadHandlersEvent 注册（register-once 通道族，无第二通道）。
- * 注册：{@code META-INF/services/McPlatformCompat$Impl}。
+ * 26.2 implementation of {@link McPlatformCompat.Impl}, with the same body as the 26.1 side; the
+ * class name deliberately differs because the 26.1 to 26.2 drift comparison pair does not allow
+ * the same name with a different body. Every payload, including the dynamic registration batch
+ * transaction, registers in the same RegisterPayloadHandlersEvent; no other registration
+ * channel exists.
+ * Registered through {@code META-INF/services/McPlatformCompat$Impl}.
  */
 public final class Nf262PlatformCompat implements McPlatformCompat.Impl {
 

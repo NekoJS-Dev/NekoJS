@@ -1,5 +1,5 @@
-// 1.21.1 实现，与版本树 src/ 下的同名 26.x 文件成对。内容等于那份文件在本节点求值后的形态。
-// 26.x 侧行为变更时须同步本文件。
+// 1.21.1 implementation. It pairs with the same-named 26.x file under src/ in the version
+// tree: this file is that file evaluated for this node. Keep them in sync when 26.x changes.
 package com.tkisor.nekojs.client.gui.components;
 
 import net.minecraft.client.gui.Font;
@@ -28,10 +28,10 @@ public class NekoContextMenu {
 
     public void render(GuiGraphics g, int mx, int my) {
         g.fill(x, y, x + width, y + height, 0xFF18181B);
-        g.fill(x, y, x + width, y + 1, 0xFF3F3F46); // 上
-        g.fill(x, y + height - 1, x + width, y + height, 0xFF3F3F46); // 下
-        g.fill(x, y + 1, x + 1, y + height - 1, 0xFF3F3F46); // 左
-        g.fill(x + width - 1, y + 1, x + width, y + height - 1, 0xFF3F3F46); // 右
+        g.fill(x, y, x + width, y + 1, 0xFF3F3F46); // top
+        g.fill(x, y + height - 1, x + width, y + height, 0xFF3F3F46); // bottom
+        g.fill(x, y + 1, x + 1, y + height - 1, 0xFF3F3F46); // left
+        g.fill(x + width - 1, y + 1, x + width, y + height - 1, 0xFF3F3F46); // right
         for (int i = 0; i < items.size(); i++) {
             int iy = y + 3 + i * 18;
             boolean h = mx >= x && mx <= x + width && my >= iy && my < iy + 18;

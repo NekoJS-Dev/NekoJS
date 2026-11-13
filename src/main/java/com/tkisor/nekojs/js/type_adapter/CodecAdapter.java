@@ -13,9 +13,10 @@ import java.util.List;
 import static com.tkisor.nekojs.api.AdapterInputShape.*;
 
 /**
- * 通用 Codec 适配器：任意 JS 值 → {@link JsonElement} → {@code codec.parse(JsonOps)}。
+ * Generic codec adapter: any JS value → {@link JsonElement} → {@code codec.parse(JsonOps)}.
  *
- * <p>precedence={@link ConversionPrecedence#LOWEST}，作为兜底映射，避免抢占更具体的 adapter。
+ * <p>precedence={@link ConversionPrecedence#LOWEST}: it is the fallback mapping, so it does
+ * not take precedence over a more specific adapter.
  */
 public final class CodecAdapter<T> extends AbstractJSTypeAdapter<T> {
     private final Class<T> target;
@@ -38,7 +39,7 @@ public final class CodecAdapter<T> extends AbstractJSTypeAdapter<T> {
 
     @Override
     protected T fromHostObject(Object host) {
-        // null 表示不识别（test 据此返回 false）
+        // A null return means not recognized (tests use it to return false)
         return target.isInstance(host) ? target.cast(host) : null;
     }
 

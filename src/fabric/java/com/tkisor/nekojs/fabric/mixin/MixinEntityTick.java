@@ -8,25 +8,30 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 /**
- * {@code EntityEvents.tickPre / tickPost} 的 fabric 挂点：{@code Entity#tick} 的
- * HEAD/TAIL。另经 {@code FabricEntityEventBindingsV2.ensureRegistered()} 惰性注册
- * leaveLevel 的 fabric-api {@code ServerEntityEvents.ENTITY_UNLOAD} 回调。
+ * Fabric hook for {@code EntityEvents.tickPre} and {@code EntityEvents.tickPost}: the HEAD and TAIL
+ * of {@code Entity#tick}. This mixin also triggers the lazy registration of the fabric-api
+ * {@code ServerEntityEvents.ENTITY_UNLOAD} callback for leaveLevel through
+ * {@code FabricEntityEventBindingsV2.ensureRegistered()}.
  *
- * <p>为何不用 fabric-api：entity-events-v1 5.0.2 javap 实证无 per-entity tick 回调
- * （仅 Elytra/Sleep/Combat/Living 伤害死亡转换）。
+ * <p>Why not fabric-api: the javap dump of entity-events-v1 5.0.2 has no per-entity tick
+ * callback; it only converts Elytra/Sleep/Combat/Living damage and death.
  *
- * <p>javap 实证（minecraft-merged-deobf-26.1.2.jar）：
+ * <p>Checked with javap (minecraft-merged-deobf-26.1.2.jar):
  * <ul>
- *   <li>{@code public void tick()}——{@code Entity} 抽象类上的<b>具体</b>方法
- *       （子类可覆写；覆写且不调 {@code super.tick()} 的实体不会触达本挂点）。</li>
- *   <li>{@code level()} public 具体方法（javap 实证），客户端也参与 tick——两个注入点
- *       都以 {@code level().isClientSide()} 过滤，SERVER 总线只收服务端实例。</li>
+ *   <li>{@code public void tick()} is a <b>concrete</b> method on the {@code Entity} abstract
+ *       class. Subclasses may override it, and an entity that overrides it without calling
+ *       {@code super.tick()} never reaches this hook.</li>
+ *   <li>{@code level()} is a public concrete method, and clients tick too, so both injection
+ *       points filter on {@code level().isClientSide()}; the SERVER bus only receives
+ *       server-side instances.</li>
  * </ul>
  *
- * <p><b>开销说明</b>：每 tick 每实体都会走到注入点（含无监听器时），注入实现只做
- * {@code isClientSide + hasListeners} 两次短路检查（{@code hasListeners()} 在
- * {@code FabricEntityEventBindingsV2} 内部先于 payload 构建），无监听器时零事件对象。
- * 仍属高频通道：脚本监听器请保持轻量、建议只在需要时注册。
+ * <p><b>Cost</b>: every entity reaches the injection points every tick, even with no listeners.
+ * The injected code only performs two short-circuit checks, {@code isClientSide} and
+ * {@code hasListeners} ({@code hasListeners()} runs inside
+ * {@code FabricEntityEventBindingsV2} before the payload is built), so no event object is
+ * created without listeners. This is still a high-frequency path: keep script listeners light
+ * and register them only while needed.
  */
 @Mixin(Entity.class)
 public abstract class MixinEntityTick {
@@ -36,7 +41,8 @@ public abstract class MixinEntityTick {
         if (((Entity) (Object) this).level().isClientSide()) {
             return;
         }
-        // 惰性注册（幂等）：第一个服务端实体 tick 必然早于任何 leaveLevel 场景
+        // Lazy registration (idempotent): the first server-side entity tick always comes before any
+        // leaveLevel case
         FabricEntityEventBindingsV2.ensureRegistered();
         FabricEntityEventBindingsV2.postTickPre((Entity) (Object) this);
     }

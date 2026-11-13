@@ -1,5 +1,6 @@
-// 1.21.1 实现，与版本树 src/ 下的同名 26.x 文件成对。内容等于那份文件在本节点求值后的形态。
-// 26.x 侧行为变更时须同步本文件。
+// 1.21.1 implementation, paired with the same-named 26.x file under the version tree's src/. The content
+// is what that file becomes once evaluated for this node. Keep this file in sync when the 26.x behavior
+// changes.
 package com.tkisor.nekojs.js.type_adapter;
 
 import com.tkisor.nekojs.api.AdapterInputShape;

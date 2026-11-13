@@ -1,5 +1,5 @@
-// 1.21.1 实现，与版本树 src/ 下的同名 26.x 文件成对。内容等于那份文件在本节点求值后的形态。
-// 26.x 侧行为变更时须同步本文件。
+// 1.21.1 implementation, paired with the same-named 26.x file under src/ in the version tree.
+// The content is that file evaluated at this node; keep this file in sync when 26.x behavior changes.
 package com.tkisor.nekojs.wrapper.registry.gen;
 
 import com.tkisor.nekojs.wrapper.entity.GoalRegistry;
@@ -28,9 +28,10 @@ import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 /**
- * 实体类型 builder：spawn egg 经 {@link #handleAdditionalObjects} 连带到 ITEM pass
- * （{@code <id>_spawn_egg}，ENTITY_TYPE 先于 ITEM 触发）；属性在 build 期记账，
- * 由平台 {@code EntityAttributeCreationEvent} 监听器经 {@link #drainPendingAttributes()} 消费。
+ * Entity type builder. The spawn egg is linked into the ITEM pass by
+ * {@link #handleAdditionalObjects} ({@code <id>_spawn_egg}; ENTITY_TYPE fires before ITEM).
+ * Attributes are recorded during build and consumed by the platform's
+ * {@code EntityAttributeCreationEvent} listener through {@link #drainPendingAttributes()}.
  *
  * <pre>
  * event.entityType('mymod:robo_cat', b =&gt; {
@@ -40,12 +41,15 @@ import java.util.function.Supplier;
  */
 public class EntityTypeBuilder extends RegistryObjectBuilder<EntityType<?>> {
 
-    /** build 期记账的实体（持久：客户端渲染器 / goal 校验 / 属性事件查询用）。 */
+    /** Entities recorded during build (persistent: used by client renderers, goal checks and attribute event lookups). */
     private static final Map<ResourceLocation, EntityTypeBuilder> REGISTERED = new HashMap<>();
-    /** 已注册的 spawn egg item id（跨 reload 保留，客户端生成模型用）。 */
+    /** Registered spawn egg item ids, kept across reloads for client model generation. */
     private static final java.util.Set<ResourceLocation> SPAWN_EGGS = java.util.concurrent.ConcurrentHashMap.newKeySet();
 
-    /** 生物类别名：monster/ambient/water_creature/water_ambient/underground_water_creature/axolotls/misc（默认 creature）。 */
+    /**
+     * Mob category name: monster/ambient/water_creature/water_ambient/
+     * underground_water_creature/axolotls/misc (default creature).
+     */
     private String category = "creature";
     private float width = 0.6F;
     private float height = 1.8F;
@@ -78,9 +82,9 @@ public class EntityTypeBuilder extends RegistryObjectBuilder<EntityType<?>> {
         super(id);
     }
 
-    // ---- 数据属性：显式 setter 与 JavaBean property 同一写入点（ticket 15） ----
+    // ---- Data properties: the explicit setter and the JavaBean property share one write point ----
 
-    /** 生物类别名（已归一化小写）。 */
+    /** Mob category name, normalized to lower case. */
     public String getCategory() {
         return category;
     }
@@ -167,14 +171,15 @@ public class EntityTypeBuilder extends RegistryObjectBuilder<EntityType<?>> {
         }
     }
 
-    /** 设置碰撞箱宽高。 */
+    /** Sets the hitbox width and height. */
     public void size(double width, double height) {
         setWidth((float) width);
         setHeight((float) height);
     }
 
     /**
-     * 请求自动注册 {@code <id>_spawn_egg} 物品。26.x 无运行时染色，颜色仅作声明（纹理数据驱动）。
+     * Requests automatic registration of a {@code <id>_spawn_egg} item. 26.x has no runtime
+     * tinting, so the colors are declarations only (texture data drives them).
      */
     public void spawnEgg(int backgroundColor, int highlightColor) {
         this.spawnEggBackgroundColor = backgroundColor;
@@ -267,7 +272,7 @@ public class EntityTypeBuilder extends RegistryObjectBuilder<EntityType<?>> {
         return this;
     }
 
-    /** 配置 AI 目标。 */
+    /** Configures the AI goals. */
     public void goals(Consumer<GoalRegistry.GoalBuilderJS> consumer) {
         consumer.accept(goals);
     }
@@ -384,12 +389,15 @@ public class EntityTypeBuilder extends RegistryObjectBuilder<EntityType<?>> {
         return type;
     }
 
-    /** spawn egg 物品 id：{@code <path>_spawn_egg}（同 namespace）。 */
+    /** Spawn egg item id: {@code <path>_spawn_egg} in the same namespace. */
     public ResourceLocation getSpawnEggId() {
         return ResourceLocation.fromNamespaceAndPath(id.getNamespace(), id.getPath() + "_spawn_egg");
     }
 
-    /** 连带注册：请求过 spawn egg 时注册 {@code <id>_spawn_egg}（ITEM pass 在 ENTITY_TYPE 之后）。 */
+    /**
+     * Linked registration: registers {@code <id>_spawn_egg} when a spawn egg was
+     * requested (the ITEM pass runs after ENTITY_TYPE).
+     */
     @Override
     public void handleAdditionalObjects(RegistryObjectBuilder.AdditionalObjectRegistry registry) {
         if (spawnEggBackgroundColor == null) {
@@ -402,9 +410,10 @@ public class EntityTypeBuilder extends RegistryObjectBuilder<EntityType<?>> {
     }
 
     /**
-     * 抽干 build 期记账的实体 → 属性表成品对。
-     * 平台 {@code EntityAttributeCreationEvent} 监听器调用（此时实体均已 build）。
-     * 不清账（REGISTERED 持久供渲染器 / goal 查询），重复调用幂等。
+     * Drains the entities recorded during build into entity to attribute supplier pairs.
+     * The platform's {@code EntityAttributeCreationEvent} listener calls it, when every entity
+     * is already built. Nothing is cleared (REGISTERED stays for renderer and goal lookups), so
+     * repeated calls are idempotent.
      */
     public static Map<EntityType<? extends LivingEntity>, AttributeSupplier> drainPendingAttributes() {
         Map<EntityType<? extends LivingEntity>, AttributeSupplier> drained = new HashMap<>();
@@ -426,23 +435,23 @@ public class EntityTypeBuilder extends RegistryObjectBuilder<EntityType<?>> {
         return builder == null ? null : builder.builtRenderConfiguration.entityClass();
     }
 
-    /** build 好的脚本实体类型（未注册 id 返回 null）。 */
+    /** Returns the built script entity type, or {@code null} when the id is not registered. */
     public static EntityType<? extends LivingEntity> getEntityType(ResourceLocation entityId) {
         EntityTypeBuilder builder = REGISTERED.get(entityId);
         return builder == null ? null : builder.entityType();
     }
 
-    /** 全部已 build 的脚本实体类型（客户端渲染器注册用）。 */
+    /** Returns all built script entity types; used to register client renderers. */
     public static Iterable<EntityType<? extends LivingEntity>> registeredEntityTypes() {
         return REGISTERED.values().stream().map(EntityTypeBuilder::entityType).toList();
     }
 
-    /** 已注册的 spawn egg item id（客户端模型生成用，跨 reload 保留）。 */
+    /** Returns the registered spawn egg item ids; used to generate client models and kept across reloads. */
     public static java.util.Set<ResourceLocation> registeredSpawnEggs() {
         return java.util.Collections.unmodifiableSet(SPAWN_EGGS);
     }
 
-    /** build 好的实体类型（属性事件监听器解析实体实例用）。 */
+    /** Returns the built entity type; attribute event listeners use it to resolve entity instances. */
     @SuppressWarnings("unchecked")
     public EntityType<? extends LivingEntity> entityType() {
         return (EntityType<? extends LivingEntity>) get();

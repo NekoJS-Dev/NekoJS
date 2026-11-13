@@ -1,12 +1,13 @@
 package com.tkisor.nekojs.core.plugin;
 
 /**
- * 扩展点注册句柄：{@link NekoPluginExtensionRegistry#register} 返回的轻量凭据，
- * bootstrap 完成本扩展点后可凭它取回 finisher 产物。
+ * Handle returned by {@link NekoPluginExtensionRegistry#register}: a lightweight token that
+ * fetches the finisher product once bootstrap has finished this extension point.
  *
- * <p>句柄与单次 bootstrap 绑定（每次 bootstrap 重新注册扩展点、返回新句柄）。
- * 产物发布前调用 {@link #result()} 抛 {@link IllegalStateException}；
- * 扩展点被环境谓词跳过时本句柄永远保持未发布状态。
+ * <p>A handle belongs to one bootstrap run; every run registers the points again and returns
+ * new handles. Calling {@link #result()} before the product is published throws
+ * {@link IllegalStateException}. When an environment predicate skips the point, its handle
+ * stays unpublished forever.
  */
 public final class NekoPluginExtensionHandle<R> {
 
@@ -18,21 +19,23 @@ public final class NekoPluginExtensionHandle<R> {
         this.pointId = pointId;
     }
 
-    /** 句柄对应的扩展点 id。 */
+    /** Extension point id this handle refers to. */
     public String pointId() {
         return pointId;
     }
 
-    /** 扩展点是否已在本轮 bootstrap 中完成（finisher 已运行并发布产物）。 */
+    /** Whether this bootstrap run finished the point: its finisher has run and published the
+     * product. */
     public boolean isFinished() {
         return finished;
     }
 
     /**
-     * 取回 finisher 产物。
+     * Returns the finisher product.
      *
-     * @return 产物；finisher 返回 null 时为 {@code null}
-     * @throws IllegalStateException 扩展点尚未完成（bootstrap 未跑完或该点被环境跳过）
+     * @return the product; {@code null} when the finisher returned null
+     * @throws IllegalStateException the point has not finished (bootstrap is incomplete or the
+     *                               environment skipped the point)
      */
     public R result() {
         if (!finished) {

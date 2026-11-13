@@ -13,22 +13,27 @@ import net.fabricmc.loader.api.FabricLoader;
 import java.util.List;
 
 /**
- * Fabric 侧插件发现（与 NeoForge 侧 {@code NeoForgePluginLoader} 的注解扫描等价）：
+ * Finds Fabric plugins. This is the equivalent of the annotation scan in
+ * {@code NeoForgePluginLoader} on the NeoForge side:
  *
  * <ol>
- *   <li><b>内置清单</b>：common 与共享树中<b>无平台守卫</b>的 {@code @RegisterNekoJSPlugin}
- *       插件显式列出（NeoForge 靠 FML 注解扫描覆盖全类路径，fabric loader 无此机制）；
- *       新增无守卫插件时须同步本清单——这也是 fabric 端唯一的注册点摩擦；</li>
- *   <li><b>{@code nekojs} entrypoint</b>：第三方 fabric 集成在 fabric.mod.json 声明
- *       entrypoint 即被发现（与 NeoForge 端注解扫描对第三方等价自由）。</li>
+ *   <li><b>Built-in list</b>: {@code @RegisterNekoJSPlugin} plugins in common and the shared
+ *       tree that have <b>no platform guard</b> are listed explicitly. NeoForge relies on the
+ *       FML annotation scan over the whole classpath, and the fabric loader has no such
+ *       mechanism, so a new unguarded plugin must be added to this list. This list is the only
+ *       registration friction on fabric;</li>
+ *   <li><b>{@code nekojs} entrypoint</b>: a third-party fabric integration is discovered once
+ *       it declares the entrypoint in fabric.mod.json, which is as free as the annotation
+ *       scan is for third parties on NeoForge.</li>
  * </ol>
  */
 public final class FabricPluginLoader {
     private FabricPluginLoader() {}
 
     /**
-     * 内置插件：common 全局绑定/编译器/探测 + 通用注册表 + 实体选择器。
-     * （NekoBuiltinPointsPlugin 不在列——它由 bootstrap 内部带参构造，不经扫描注册。）
+     * The built-in plugins: common global bindings/compiler/probe, the general registry and the
+     * entity selectors. ({@code NekoBuiltinPointsPlugin} is absent because bootstrap constructs
+     * it internally with arguments; it is not registered by scanning.)
      */
     private static final List<Class<?>> BUILTIN_PLUGINS = List.of(
             NekoCommonBuiltinPlugin.class,

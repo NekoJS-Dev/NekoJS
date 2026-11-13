@@ -9,37 +9,39 @@ import net.minecraft.world.level.material.Fluid;
 import net.neoforged.neoforge.client.ChunkRenderTypeSet;
 
 /^*
- * 1.21.1 客户端渲染层应用（专用服务器上不加载本类）。
+ * Applies client render layers for 1.21.1; this class is not loaded on a dedicated server.
  *
- * <p>1.21.1 的 chunk 渲染层来自 {@link ItemBlockRenderTypes} 的静态查找表，NeoForge
- * patch 了 {@code setRenderLayer}（须在 {@code ClientModLoader.isLoading()} 期间调用）。
- * 注册事件（RegisterEvent）在客户端 mod loading 阶段触发，此时 blocks 已创建且
- * {@code ClientModLoader.isLoading()} 为 true，故在 BLOCK 分支内直接应用。
- ^/
+ * <p>In 1.21.1 the chunk render layer comes from the static lookup table in
+ * {@link ItemBlockRenderTypes}, and NeoForge patches {@code setRenderLayer}, which must be called
+ * while {@code ClientModLoader.isLoading()} is true. RegisterEvent fires during the client mod
+ * loading phase, when the blocks already exist and {@code ClientModLoader.isLoading()} is true, so
+ * the layer is applied directly in the BLOCK branch.
+^/
 public final class ClientBlockRenderTypes {
-    private ClientBlockRenderTypes() {}
+private ClientBlockRenderTypes() {}
 
-    /^* 按名称应用方块渲染层；未知名称回退 solid。 ^/
-    @SuppressWarnings("deprecation") // 1.21.1 的 setRenderLayer(Block, ChunkRenderTypeSet) 标 @Deprecated(since=1.19) 但无替代，仍是官方推荐用法
-    public static void apply(Block block, String renderType) {
-        RenderType layer = parse(renderType);
-        ItemBlockRenderTypes.setRenderLayer(block, ChunkRenderTypeSet.of(layer));
-    }
-
-    /^* 应用流体渲染层（液体方块/流体本体默认 translucent）。 ^/
-    public static void applyFluid(Fluid fluid, String renderType) {
-        RenderType layer = parse(renderType);
-        ItemBlockRenderTypes.setRenderLayer(fluid, layer);
-    }
-
-    private static RenderType parse(String renderType) {
-        return switch (renderType == null ? "solid" : renderType) {
-            case "cutout" -> RenderType.cutout();
-            case "cutout_mipped", "cutoutmipped" -> RenderType.cutoutMipped();
-            case "translucent" -> RenderType.translucent();
-            default -> RenderType.solid();
-        };
-    }
+/^* Applies a block render layer by name; an unknown name falls back to solid. ^/
+@SuppressWarnings("deprecation") // setRenderLayer(Block, ChunkRenderTypeSet) is marked @Deprecated(since=1.19)
+// in 1.21.1 with no replacement, and is still the official usage
+public static void apply(Block block, String renderType) {
+RenderType layer = parse(renderType);
+ItemBlockRenderTypes.setRenderLayer(block, ChunkRenderTypeSet.of(layer));
 }
-*///?}
+
+/^* Applies a fluid render layer (liquid blocks and the fluid itself default to translucent). ^/
+public static void applyFluid(Fluid fluid, String renderType) {
+RenderType layer = parse(renderType);
+ItemBlockRenderTypes.setRenderLayer(fluid, layer);
+}
+
+private static RenderType parse(String renderType) {
+return switch (renderType == null ? "solid" : renderType) {
+case "cutout" -> RenderType.cutout();
+case "cutout_mipped", "cutoutmipped" -> RenderType.cutoutMipped();
+case "translucent" -> RenderType.translucent();
+default -> RenderType.solid();
+};
+}
+}
+ *///?}
 //?}

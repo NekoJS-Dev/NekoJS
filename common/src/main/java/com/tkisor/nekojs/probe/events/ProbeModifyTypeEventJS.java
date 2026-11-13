@@ -15,12 +15,13 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * {@code probe.modify_type} 事件对象。持有本次 probe 收集到的全部 {@link TypeDecl} IR（fqn → decl），
- * 供脚本经 {@link #forClass(String)} 取得 {@link ClassEditor} 后就地编辑。
+ * The {@code probe.modify_type} event object. It holds every {@link TypeDecl} IR collected by this probe run
+ * (fqn -> decl), so scripts can get a {@link ClassEditor} through {@link #forClass(String)} and edit it in place.
  *
- * <p>本类同时提供类型构造辅助（{@link #type}/{@link #array}/{@link #union}）——编辑方法接受字符串
- * 或 {@link ApiTypeRef}：含 {@code .} 的字符串当作 Java 全限定名（SYMBOL），否则当作原始类型名
- * （{@code "string"}、{@code "number"}、{@code "boolean"}、{@code "int"} …）。
+ * <p>The class also provides type builders ({@link #type}/{@link #array}/{@link #union}). Edit methods accept a
+ * string or an {@link ApiTypeRef}: a string containing {@code .} is treated as a Java fully qualified name
+ * (SYMBOL), anything else as a primitive type name ({@code "string"}, {@code "number"}, {@code "boolean"},
+ * {@code "int"} ...).
  */
 public final class ProbeModifyTypeEventJS {
     private final Map<String, TypeDecl> decls;
@@ -29,13 +30,14 @@ public final class ProbeModifyTypeEventJS {
         this.decls = decls;
     }
 
-    /** 本次 probe 是否收集到了指定类（即可编辑）。 */
+    /** Whether this probe run collected the given class (which makes it editable). */
     public boolean hasClass(String fqn) {
         return decls.containsKey(fqn);
     }
 
     /**
-     * 获取指定类的编辑器；类不在本次 probe 收集范围时返回 {@code null}（脚本应判空）。
+     * Returns an editor for the given class, or {@code null} when the class is outside this probe run's collection
+     * (scripts should null-check).
      */
     public ClassEditor forClass(String fqn) {
         TypeDecl d = decls.get(fqn);
@@ -43,20 +45,20 @@ public final class ProbeModifyTypeEventJS {
     }
 
     // ------------------------------------------------------------------
-    //  类型构造辅助
+    //  Type building helpers
     // ------------------------------------------------------------------
 
-    /** 把类型描述符（字符串/ApiTypeRef）解析为 {@link ApiTypeRef}。 */
+    /** Resolves a type descriptor (string or ApiTypeRef) to an {@link ApiTypeRef}. */
     public ApiTypeRef type(Object desc) {
         return resolveType(desc);
     }
 
-    /** 数组类型。 */
+    /** Array type. */
     public ApiTypeRef array(Object element) {
         return ApiTypeRef.array(resolveType(element));
     }
 
-    /** 联合类型（≥2 个成员）。 */
+    /** Union type (two or more members). */
     public ApiTypeRef union(Object a, Object b, Object... rest) {
         List<ApiTypeRef> members = new ArrayList<>();
         members.add(resolveType(a));
@@ -65,7 +67,7 @@ public final class ProbeModifyTypeEventJS {
         return ApiTypeRef.union(members);
     }
 
-    /** 字符串/ApiTypeRef → ApiTypeRef（编辑方法共用）。 */
+    /** Turns a string or an ApiTypeRef into an ApiTypeRef (shared by the edit methods). */
     static ApiTypeRef resolveType(Object desc) {
         if (desc instanceof ApiTypeRef ref) return ref;
         if (desc instanceof String s) {
@@ -77,7 +79,8 @@ public final class ProbeModifyTypeEventJS {
                 + (desc == null ? "null" : desc.getClass().getName()));
     }
 
-    /** 用新类型覆盖一个类型槽（保留原 sourceType 作存档，置 overridden=true 强制走 ref 渲染）。 */
+    /** Overrides a type slot with a new type: keeps the original sourceType as a record and sets
+     *  overridden=true to force ref rendering. */
     static TypeSlot override(TypeSlot original, Object newType) {
         ApiTypeRef ref = resolveType(newType);
         TypeSlot s = new TypeSlot(original == null ? null : original.sourceType, ref);
@@ -86,12 +89,14 @@ public final class ProbeModifyTypeEventJS {
     }
 
     // ------------------------------------------------------------------
-    //  import 收集（供 backend 在覆盖声明缓存时合并 import）
+    //  Import collection (backends merge these when replacing the declaration cache)
     // ------------------------------------------------------------------
 
     /**
-     * 收集被编辑（overridden/合成）槽位引用的 SYMBOL 全限定名，供 {@code IndexFileGenerator} 合并
-     * import。同包类型（会是自导入）已剔除；未被触及的成员由反射侧 import 收集覆盖，无需在此处理。
+     * Collects the SYMBOL fully qualified names referenced by edited (overridden or synthesized) slots, so
+     * {@code IndexFileGenerator} can merge the imports. Types in the same package are dropped because they would
+     * import themselves; untouched members are covered by the reflection-side import collection and need no
+     * handling here.
      */
     public static Set<String> collectEditedSymbolFqns(TypeDecl d, String classPackage) {
         Set<String> out = new LinkedHashSet<>();
@@ -121,18 +126,18 @@ public final class ProbeModifyTypeEventJS {
         if (ref == null) return;
         switch (ref.kind()) {
             case SYMBOL -> {
-                String name = ref.name();                 // 形如 "java:net.minecraft.Foo"
+                String name = ref.name();                 // Looks like "java:net.minecraft.Foo"
                 int colon = name.indexOf(':');
                 String fqn = colon >= 0 ? name.substring(colon + 1) : name;
                 int dot = fqn.lastIndexOf('.');
                 String pkg = dot >= 0 ? fqn.substring(0, dot) : "";
-                if (!pkg.equals(classPackage)) out.add(fqn);   // 剔除同包自导入
+                if (!pkg.equals(classPackage)) out.add(fqn);   // Drop same-package self-imports
             }
             case ARRAY -> collectSyms(ref.arguments().get(0), out, classPackage);
             case UNION -> {
                 for (ApiTypeRef a : ref.arguments()) collectSyms(a, out, classPackage);
             }
-            default -> { /* PRIMITIVE/VOID/TYPE_VARIABLE/CALLBACK 不产生 SYMBOL import */ }
+            default -> { /* PRIMITIVE, VOID, TYPE_VARIABLE and CALLBACK produce no SYMBOL import */ }
         }
     }
 }

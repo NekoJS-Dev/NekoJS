@@ -13,7 +13,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-/** Focused ticket 41 checks for retained transactions and the guest-free paint path. */
+/** Checks retained transactions and the paint path that runs without a guest context. */
 class Ticket41JsxHostAdapterTest {
     @Test
     void inputEditingDeletesByCodePointAndReplacesSelection() {

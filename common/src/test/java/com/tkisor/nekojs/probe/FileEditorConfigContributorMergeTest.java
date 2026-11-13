@@ -11,8 +11,9 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * jsconfig 数组型键（include/typeRoots）的「刷新 probe 管理条目 + 保留用户条目」合并语义回归：
- * 旧实现整体替换 include/typeRoots，用户自加的条目每次 probe 都被抹掉。
+ * Regression test for merging array-valued jsconfig keys (include/typeRoots): the probe-managed
+ * entries are refreshed and the user entries are kept. Replacing include/typeRoots wholesale
+ * dropped every user-added entry on each probe run.
  */
 class FileEditorConfigContributorMergeTest {
 

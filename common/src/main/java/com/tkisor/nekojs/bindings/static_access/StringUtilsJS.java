@@ -8,15 +8,17 @@ import java.util.Locale;
 import java.util.regex.Pattern;
 
 /**
- * 字符串工具：判空与命名风格转换（camelCase / snake_case 等）。
+ * String helpers: blank checks and conversion between naming conventions such as camelCase and
+ * snake_case.
  */
 @Doc("String helpers for blank checks and case-convention conversion.")
 public final class StringUtilsJS {
 
-    /** 驼峰边界（小写/数字 → 大写）：snakeCase 每次调用都用到，预编译避免重复编译正则。 */
+    /** A camel-case boundary (lowercase or digit followed by uppercase). snakeCase uses it on every
+     * call, so the pattern is compiled once instead of on each call. */
     private static final Pattern CAMEL_BOUNDARY = Pattern.compile("([a-z0-9])([A-Z])");
 
-    /** 是否为 null、空串或纯空白。 */
+    /** Whether the value is null, empty, or whitespace only. */
     @Doc("Checks whether the value is null, empty, or whitespace-only.")
     @Param(name = "value", value = "string to check; null is allowed")
     @Return("true when null, empty, or whitespace-only")
@@ -24,7 +26,7 @@ public final class StringUtilsJS {
         return value == null || value.isBlank();
     }
 
-    /** 是否为 null 或空串（不忽略空白）。 */
+    /** Whether the value is null or the empty string (whitespace alone counts as non-empty). */
     @Doc("Checks whether the value is null or the empty string (whitespace counts as non-empty).")
     @Param(name = "value", value = "string to check; null is allowed")
     @Return("true only when null or empty")
@@ -32,7 +34,7 @@ public final class StringUtilsJS {
         return value == null || value.isEmpty();
     }
 
-    /** 首字母大写。 */
+    /** Converts the first character to upper case. */
     @Doc("Upper-cases the first character, keeping the rest unchanged.")
     @Param(name = "value", value = "input string; null is allowed")
     @Return("capitalized string, or the input unchanged when null/empty")
@@ -41,7 +43,7 @@ public final class StringUtilsJS {
         return value.substring(0, 1).toUpperCase(Locale.ROOT) + value.substring(1);
     }
 
-    /** 首字母小写。 */
+    /** Converts the first character to lower case. */
     @Doc("Lower-cases the first character, keeping the rest unchanged.")
     @Param(name = "value", value = "input string; null is allowed")
     @Return("decapitalized string, or the input unchanged when null/empty")
@@ -50,7 +52,8 @@ public final class StringUtilsJS {
         return value.substring(0, 1).toLowerCase(Locale.ROOT) + value.substring(1);
     }
 
-    /** 转为小写下划线形式（camelCase / kebab-case / 空格均按分隔处理）。 */
+    /** Converts to lower snake_case; camelCase, kebab-case and space-separated input are all split
+     * at their separators. */
     @Doc("Converts camelCase, kebab-case, or space-separated input to lower_snake_case.")
     @Param(name = "value", value = "input string; null is allowed")
     @Return("snake_case string, or the input unchanged when null/empty")
@@ -62,7 +65,8 @@ public final class StringUtilsJS {
                 .toLowerCase(Locale.ROOT);
     }
 
-    /** 转为小驼峰形式（首字母小写，后续分隔符后的字母大写）。 */
+    /** Converts to lower camelCase: the first character is lower case and the character after each
+     * separator becomes upper case. */
     @Doc("Converts snake_case, kebab-case, or space-separated input to camelCase.")
     @Param(name = "value", value = "input string; null is allowed")
     @Return("camelCase string, or the input unchanged when null/empty")

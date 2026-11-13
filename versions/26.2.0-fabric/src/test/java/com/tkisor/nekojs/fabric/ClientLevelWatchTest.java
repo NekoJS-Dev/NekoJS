@@ -6,14 +6,17 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * 票 18 AC5 的「首次进服数据不被进入世界钩子误删」fixture（fabric 节点本地，两 fabric
- * 节点同体分发）：{@link ClientLevelWatch} 是 fabric 侧「离开旧世界才清」守卫——NeoForge
- * 挂 client level unload（断线/切维度都触发；首次进服没有 unload 事件，天然不误删），
- * fabric 无对应事件，以客户端世界实例变化等价。状态机语义：
+ * Fixture for "the data pushed on the first join is not deleted by mistake by the enter-world hook",
+ * node-local on fabric and shipped in the same body to both fabric nodes. {@link ClientLevelWatch}
+ * is the fabric-side guard that clears only after leaving the old level. On NeoForge the clear
+ * hangs off client level unload, which fires on disconnect and on dimension change but not on the
+ * first join, so the first join is safe there by construction; fabric has no matching event, so it
+ * uses a change of the client level instance instead. The state machine:
  * <ul>
- *   <li>null→世界（首次进服）：不清——否则刚随进服推下来的 pdata mirror/clientData 被抹掉；</li>
- *   <li>世界→世界（切维度）/ 世界→null（断线）：清；</li>
- *   <li>同实例重复 tick：不动。</li>
+ *   <li>null to a level (first join): no clear, otherwise the pdata mirror/clientData just pushed
+ *       down for the join would be wiped;</li>
+ *   <li>level to level (dimension change) or level to null (disconnect): clear;</li>
+ *   <li>repeated tick on the same instance: nothing.</li>
  * </ul>
  */
 class ClientLevelWatchTest {
@@ -44,8 +47,9 @@ class ClientLevelWatchTest {
 
     @Test
     void instancesAreIndependent() {
-        // FabricPDataSync（pdata mirror）与 FabricPlayNetwork（clientData store）各持一个守卫：
-        // 互不串扰——一个域消费自己的变化序列，不吞掉另一个域的 tick 观测
+        // FabricPDataSync (pdata mirror) and FabricPlayNetwork (clientData store) each hold their own
+        // guard, so they do not interfere: each domain consumes its own change sequence and does not
+        // swallow the other's tick observation.
         ClientLevelWatch pdataWatch = new ClientLevelWatch();
         ClientLevelWatch clientDataWatch = new ClientLevelWatch();
         pdataWatch.leftPreviousLevel(OVERWORLD);

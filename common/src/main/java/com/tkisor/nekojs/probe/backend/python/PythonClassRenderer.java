@@ -98,7 +98,7 @@ public final class PythonClassRenderer {
         boolean hasMember = false;
         BeanPropertyConflicts propertyConflicts = beanPropertyConflicts(d, declarations);
 
-        // 字段：静态（ClassVar）+ 实例
+        // Fields: static ones (ClassVar) and instance ones.
         for (FieldDecl f : d.fields) {
             if (f.hidden || !isPythonIdentifier(f.effectiveName())) continue;
             MethodDecl getter = d.beanGetterForField(f);
@@ -135,7 +135,8 @@ public final class PythonClassRenderer {
                 hasMember = true;
             }
         }
-        // 构造器 → __init__（多个构造器 = 重载，每个 __init__ 都需 @overload）
+        // Constructors become __init__. More than one constructor means overloads, so every
+        // __init__ then needs @overload.
         boolean ctorOverloaded = d.constructors.stream().filter(c -> !c.hidden).count() > 1;
         for (MethodDecl c : d.constructors) {
             if (c.hidden) continue;
@@ -145,9 +146,11 @@ public final class PythonClassRenderer {
             hasMember = true;
         }
         hasMember |= appendBeanProperties(sb, d, propertyConflicts);
-        // 方法：静态 + 实例（排除 getter/setter/构造器）。Java 重载（同名不同参数）渲染为
-        // 同名 def 时必须全部标注 @overload，否则 Pylance 报「方法声明被同名声明遮盖」
-        // （与 PythonEventRenderer 对 dispatch 事件的处理一致）。
+        // Methods: static and instance, excluding getters, setters and constructors. Java
+        // overloads (same name, different parameters) render as defs of the same name, and all of
+        // them must carry @overload. Otherwise Pylance reports that the method declaration is
+        // obscured by a declaration of the same name; PythonEventRenderer handles dispatch events
+        // the same way.
         Map<String, Integer> methodNameCount = new HashMap<>();
         for (MethodDecl m : d.methods) {
             if (!isOrdinaryPythonMethod(m, propertyConflicts)) continue;
@@ -405,7 +408,7 @@ public final class PythonClassRenderer {
         sb.append("class ").append(name).append(bases(d, false)).append(":\n");
         appendDoc(sb, d.docs);
         boolean hasMember = appendBeanProperties(sb, d, beanPropertyConflicts(d, declarations));
-        // 接口方法同样可能有 Java 重载 → 同名 def 需 @overload
+        // Interface methods can have Java overloads too, so defs of the same name need @overload.
         Map<String, Integer> nameCount = new HashMap<>();
         for (MethodDecl m : d.methods) {
             if (!isRenderedInterfaceMethod(m)) continue;
@@ -454,7 +457,10 @@ public final class PythonClassRenderer {
 
     // ---------------- helpers ----------------
 
-    /** 渲染出的该类型是否需要 {@code typing.overload} 导入（存在同名 def：重载方法/重载构造器）。 */
+    /**
+     * Whether the rendered type needs the {@code typing.overload} import because it has defs of the
+     * same name: overloaded methods or overloaded constructors.
+     */
     public static boolean hasOverloads(TypeDecl d) {
         return hasOverloads(d, Map.of());
     }
@@ -477,12 +483,18 @@ public final class PythonClassRenderer {
         return nameCount.values().stream().anyMatch(count -> count > 1);
     }
 
-    /** 渲染用的类名：renameTo（modify_type 改名）优先，否则回退 fqn 的 Python 简单名。 */
+    /**
+     * Class name used for rendering: the rename from modify_type wins, otherwise the Python simple
+     * name of the fqn.
+     */
     private static String effectiveClassName(TypeDecl d) {
         return d.effectiveTypeName() != null ? d.effectiveTypeName() : ApiTypeRefPyRenderer.simplePyName(d.fqn);
     }
 
-    /** 基类列表：class 含 superType+interfaces；interface 仅 interfaces。 */
+    /**
+     * Base class list: a class contributes superType and interfaces; an interface contributes only
+     * interfaces.
+     */
     private String bases(TypeDecl d, boolean includeSuper) {
         Map<String, TypeSlot> bases = new LinkedHashMap<>();
         if (includeSuper && d.superType != null) {
@@ -556,7 +568,7 @@ public final class PythonClassRenderer {
         return !rendered.contains("|");
     }
 
-    /** 完整参数列表（含可选的 self 前缀）。 */
+    /** Full parameter list, including the optional self prefix. */
     private String params(MethodDecl m, boolean prependSelf) {
         StringBuilder sb = new StringBuilder();
         if (prependSelf) sb.append("self");
@@ -568,7 +580,7 @@ public final class PythonClassRenderer {
         return sb.toString();
     }
 
-    /** 除 self 外的参数（接口方法直接用这个）。 */
+    /** Parameters other than self. Interface methods use this directly. */
     private String paramsRest(MethodDecl m) {
         StringBuilder sb = new StringBuilder();
         List<MethodDecl.MethodParam> ps = m.params;
@@ -583,11 +595,11 @@ public final class PythonClassRenderer {
                 sb.append(pyIdent(p.name)).append(": ").append(renderSlot(p.type));
             }
         }
-        // 返回类型仅给非构造器方法；构造器在外层硬编码 None
+        // Only non-constructor methods get a return type; the caller hardcodes None for constructors.
         return sb.toString();
     }
 
-    /** 字段类型：静态→ClassVar[...]，否则裸类型。 */
+    /** Field type: ClassVar[...] for static fields, the bare type otherwise. */
     private String fieldType(FieldDecl f) {
         String t = renderSlot(f.type);
         return f.isStatic ? "ClassVar[" + t + "]" : t;
@@ -602,7 +614,10 @@ public final class PythonClassRenderer {
         sb.append("    \"\"\"").append(docText(docs)).append("\"\"\"\n");
     }
 
-    /** 方法体：无 docs → 单行 {@code : ...}；有 docs → 换行 docstring + {@code ...}（stub 允许 docstring）。 */
+    /**
+     * Method body: without docs a single {@code : ...} line; with docs a newline, the docstring, then
+     * {@code ...}. A stub may contain a docstring.
+     */
     private static void appendMethodBody(StringBuilder sb, List<String> docs) {
         if (docs == null || docs.isEmpty()) {
             sb.append(": ...\n");
@@ -613,7 +628,10 @@ public final class PythonClassRenderer {
         sb.append("        ...\n");
     }
 
-    /** 字段级 docs：首行作为行尾 {@code   # ...} 注释；其余行以 {@code # } 前缀单独成行（跟在字段行之后）。 */
+    /**
+     * Field docs: the first line becomes a trailing {@code   # ...} comment; each remaining line gets its own line
+     * after the field line, prefixed with {@code # }.
+     */
     private static void appendFieldDoc(StringBuilder sb, List<String> docs, String indent) {
         if (docs == null || docs.isEmpty()) return;
         List<String> lines = docs.stream().map(String::strip).filter(s -> !s.isEmpty()).toList();
@@ -622,7 +640,10 @@ public final class PythonClassRenderer {
         for (int i = 1; i < lines.size(); i++) sb.append("\n").append(indent).append("# ").append(lines.get(i));
     }
 
-    /** docs 拼接（按行 strip 后换行连接）；docstring 定界符 {@code """} 转成 {@code '''} 避免截断。 */
+    /**
+     * Joins docs into one string, stripping each line and joining them with newlines. The docstring delimiter
+     * {@code """} becomes {@code '''} so it cannot close the docstring early.
+     */
     private static String docText(List<String> docs) {
         return docs.stream().map(String::strip)
                 .collect(Collectors.joining("\n"))
@@ -706,7 +727,7 @@ public final class PythonClassRenderer {
         return true;
     }
 
-    /** 规避 Python 关键字/软关键字：命中则末尾加 {@code _}。 */
+    /** Avoids Python keywords/soft keywords: appends {@code _} when the name hits one. */
     static String pyIdent(String name) {
         if (name == null || name.isEmpty()) return "_";
         if (PY_KEYWORDS.contains(name)) return name + "_";

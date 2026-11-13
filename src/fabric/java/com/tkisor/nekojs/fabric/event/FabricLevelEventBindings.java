@@ -6,9 +6,10 @@ import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLevelEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 
 /**
- * 维度事件面的 fabric 桥：loaded / unloaded / tickPre / tickPost（中立 payload，
- * 成员名对齐 NeoForge 原生 LevelEvent 的 getter）。爆炸系（explosionStart/Detonate）
- * 与 saved 需 mixin Level#explode / ServerLevel#save，随后续批次。
+ * Fabric bridge for level events: loaded, unloaded, tickPre and tickPost. The payloads are
+ * neutral and their member names match the getters of the NeoForge level event. The explosion
+ * events (explosionStart/explosionDetonate) and saved need mixins on Level#explode and
+ * ServerLevel#save and come in a later batch.
  */
 public final class FabricLevelEventBindings {
 

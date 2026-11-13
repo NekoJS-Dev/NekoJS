@@ -1,4 +1,5 @@
-// TODO(fabric): fabric 侧还没有对应实现，整文件守卫等移植完成后去掉
+// Fabric has no equivalent implementation yet; this whole-file guard goes away once the port is
+// done.
 //? if neoforge {
 package com.tkisor.nekojs.api.event;
 
@@ -60,7 +61,7 @@ class EventBusForgeBridgeSideFilterTest {
         try {
             Platform.init(new StubPlatform());
         } catch (IllegalStateException alreadyInitialized) {
-            // 同 JVM 内其它测试已初始化平台时复用现有实例
+            // Reuse the instance another test in this JVM already initialized.
         }
     }
 
@@ -89,8 +90,9 @@ class EventBusForgeBridgeSideFilterTest {
         EventBusJS<CancellableTestEvent, Object> busJS =
                 EventBusJS.of(CancellableTestEvent.class, true);
 
-        // script listener "returns true" -> cancel；bus() 静态类型是基接口（Consumer-only），
-        // Predicate 重载在 CancellableEventBus 上，按实际运行时形态下转
+        // A script listener that returns true cancels the event. The static type of bus() is the base
+        // interface, which only accepts consumers; the Predicate overload lives on CancellableEventBus, so
+        // the code casts to the actual runtime type.
         ((com.tkisor.nekojs.api.event.CancellableEventBus<CancellableTestEvent>) busJS.bus())
                 .listen((Predicate<CancellableTestEvent>) event -> true);
 

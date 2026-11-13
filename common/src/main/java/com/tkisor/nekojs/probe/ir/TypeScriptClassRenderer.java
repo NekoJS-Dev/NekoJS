@@ -23,10 +23,11 @@ import java.util.stream.Collectors;
 
 /**
  * Renders shared declarations as TypeScript class, interface and enum blocks.
- * Slots use their neutral {@link ApiTypeRef}; contextual callback input aliases retain signature metadata.
- * Input aliases apply at conversion boundaries while ordinary host containers keep their type arguments.
- * Bean aliases supplement real accessors, yielding to existing instance fields or methods.
- * Getter overrides remain available when Probe edits trigger rendering again.
+ * A slot renders through its neutral {@link ApiTypeRef}; a contextual callback input alias keeps
+ * the signature metadata. Input aliases apply where a value is converted to Java, while ordinary
+ * host containers keep their type arguments. Bean aliases supplement the real accessors and give
+ * way to an existing instance field or method. Getter overrides still apply when a Probe edit
+ * renders the declaration again.
  */
 public final class TypeScriptClassRenderer {
     private final TypeAliasRegistry aliases;
@@ -140,8 +141,8 @@ public final class TypeScriptClassRenderer {
                 && method.returnType.ref.equals(TypeReflector.toRef(method.sourceMethod.getGenericReturnType()));
     }
 
-    // 覆盖 getter 的返回类型 (fqn -> getter 属性名 -> { returnType, importStatement })
-    // 键是 getter 的**属性名**（如 "recipes"），与 ClassDeclGenerator 的 lookup 口径一致
+    // Overrides getter return types (FQN -> property name -> { returnType, importStatement })
+    // Keys are property names (e.g., "recipes"), matching ClassDeclGenerator lookup conventions.
     private final Map<String, Map<String, GetterOverride>> getterOverrides = new LinkedHashMap<>();
 
     public TypeScriptClassRenderer(TypeAliasRegistry aliases) {
@@ -161,7 +162,7 @@ public final class TypeScriptClassRenderer {
                 || declaration.fields.stream().anyMatch(field -> !field.hidden && field.isStatic && field.isFinal));
     }
 
-    /** getter 覆盖条目：返回类型字符串 + 附带 import 语句（import 由 IndexFileGenerator 合并，本类不消费）。 */
+    /** Getter override entry: return type string and accompanying import statement (merged by IndexFileGenerator; not consumed by this class). */
     public record GetterOverride(String returnType, String importStatement) {}
 
     /**
@@ -176,8 +177,8 @@ public final class TypeScriptClassRenderer {
     }
 
     /**
-     * 某类所有 getter 覆盖附带的 import 语句（供 IndexFileGenerator 在写包级 index.d.ts 时合并）。
-     * 镜像旧 {@code ClassDeclGenerator#getExtraImports}。
+     * Returns all getter overrides and their imports for a class (merged by IndexFileGenerator when writing package index.d.ts).
+     * Mirrors legacy ClassDeclGenerator#getExtraImports.
      */
     public Set<String> getExtraImports(String className) {
         Map<String, GetterOverride> overrides = getterOverrides.get(className);
@@ -255,15 +256,15 @@ public final class TypeScriptClassRenderer {
 
         if (d.superType != null) {
             String superTs = renderHeritageSlot(d.superType, aliases);
-            // 父类槽经 TypeConverter 可能映射为 TS 原始类型（Number 子类 → number，即 $Double extends number），
-            // 经 probe 编辑（changeSuper/assign_type）还可能是联合/回调（extends string | number）——
-            // 这些都不能作 heritage，省略整个 extends 子句（implements 等照常保留）
+            // Parent slots may map to primitive TS types via TypeConverter (e.g., Number subclasses → number, $Double extends number),
+            // or via Probe edits (changeSuper/assign_type) to unions/callbacks (extends string | number).
+            // These cannot serve as heritage; omit the entire extends clause (implements clauses remain as is).
             if (isHeritageSafe(superTs)) {
                 sb.append(" extends ").append(superTs);
             }
         }
-        // implements 条目经 probe.assign_type 可被重写为任意 ref（primitive/union/回调）——不安全条目逐条
-        // 省略（见 isHeritageSafe），其余条目与整个子句的存续照常保留
+        // Implements entries may be rewritten by probe.assign_type to arbitrary refs (primitives/unions/callbacks).
+        // Omit unsafe entries (see isHeritageSafe); retain other entries and the clause itself.
         List<String> implemented = renderHeritageEntries(d.interfaces);
         if (!implemented.isEmpty()) {
             sb.append(" implements ").append(String.join(", ", implemented));
@@ -506,8 +507,8 @@ public final class TypeScriptClassRenderer {
         sb.append("    export interface $").append(effectiveClassName(d));
         appendTypeParameters(sb, d);
         if (!d.interfaces.isEmpty()) {
-            // 接口 extends 列表与 class implements 同样经 assign_type 可被注入不安全 ref（extends string），
-            // 逐条过滤（见 isHeritageSafe）
+            // Interface extends lists, like class implements, may be injected with unsafe refs (extends string) via assign_type.
+            // Filter entries individually (see isHeritageSafe).
             List<String> extended = renderHeritageEntries(d.interfaces);
             if (!extended.isEmpty()) {
                 sb.append(" extends ").append(String.join(", ", extended));
@@ -651,9 +652,10 @@ public final class TypeScriptClassRenderer {
     }
 
     /**
-     * 发射手写重载（{@code @Overload}）：同名（构造器则 constructor）附加声明，参数条目为
-     * TypeScript 片段原样拼接；returns 为空沿用反射返回类型。参数与返回类型不经 renderSlot，
-     * 也不参与 import 收集——引用的类型须已在本模块可见（{@code $Foo} 形式），由注解作者保证。
+     * Emits handwritten overloads (@Overload): appends declarations with the same name (or "constructor").
+     * Param types are spliced verbatim; returns reuse reflected types if empty. Params/returns are not
+     * passed through renderSlot and do not participate in import collection—referenced types must be
+     * visible in the current module (e.g., $Foo format), a constraint guaranteed by the annotation author.
      */
     private void appendOverloads(StringBuilder sb, MethodDecl m, boolean constructor, boolean isStatic) {
         appendOverloads(sb, m, constructor, isStatic, m.effectiveName());
@@ -709,13 +711,13 @@ public final class TypeScriptClassRenderer {
         return isValidTsIdentifier(name) ? name : new JsonPrimitive(name).toString();
     }
 
-    /** TS 参数名转义：JS/TS 保留字不能作参数名（如 Java 参数 {@code function}），追加 {@code _}。 */
+    /** Escapes TS parameter names: JS/TS reserved words cannot be used (e.g., Java parameter "function"); append "_" if necessary. */
     private static String tsParamName(String name) {
         if (name == null || name.isEmpty()) return "arg";
         return TS_RESERVED_WORDS.contains(name) ? name + "_" : name;
     }
 
-    /** getter/setter 属性名是否为合法 TS 标识符（首字符须字母/下划线/$；数字开头如 {@code 2DigitYearStart} 非法）。 */
+    /** Checks if getter/setter property names are valid TS identifiers (must start with letter, underscore, or $; numeric starts like "2DigitYearStart" are invalid). */
     private static boolean isValidTsIdentifier(String name) {
         if (name == null || name.isEmpty()) return false;
         char first = name.charAt(0);
@@ -727,7 +729,7 @@ public final class TypeScriptClassRenderer {
         return true;
     }
 
-    /** JS/TS 中不能作为参数名的保留字（含严格模式/上下文关键字，保守集合）。 */
+    /** Conservative set of JS/TS reserved words that cannot be used as parameter names (includes strict mode/contextual keywords). */
     private static final Set<String> TS_RESERVED_WORDS = Set.of(
             "break", "case", "catch", "class", "const", "continue", "debugger", "default",
             "delete", "do", "else", "enum", "export", "extends", "false", "finally", "for",
@@ -737,8 +739,8 @@ public final class TypeScriptClassRenderer {
             "protected", "public", "arguments", "eval");
 
     /**
-     * 渲染出的类型字符串是否是 TS 原始类型关键字（number/string/boolean 等）——这些不能出现在
-     * {@code extends} 子句里（TypeConverter 会把 Number 子类映射为 number、String/Boolean 同理）。
+     * Checks if a rendered type string is a TS primitive keyword (number/string/boolean, etc.)—these
+     * cannot appear in "extends" clauses (TypeConverter maps Number subclasses to number; String/Boolean analogously).
      */
     private static boolean isTsPrimitiveKeyword(String tsType) {
         return switch (tsType) {
@@ -748,7 +750,7 @@ public final class TypeScriptClassRenderer {
     }
 
     /**
-     * 渲染 interfaces 槽列表并逐条剔除 heritage 不安全条目；全被剔除时返回空列表（调用方省略整个子句）。
+     * Renders the interfaces slot list, removing heritage-unsafe entries; returns an empty list if all are removed (callers omit the entire clause).
      */
     private List<String> renderHeritageEntries(List<TypeSlot> slots) {
         return slots.stream()
@@ -758,20 +760,20 @@ public final class TypeScriptClassRenderer {
     }
 
     /**
-     * 渲染出的类型字符串能否安全地出现在 heritage 位置（class 的 extends/implements、interface 的 extends）。
-     * heritage 只接受普通类型引用，以下形态不安全：
+     * Checks if a rendered type string is safe for heritage positions (class extends/implements, interface extends).
+     * Heritage only accepts standard type references; unsafe forms:
      * <ul>
-     *   <li>TS 原始类型关键字（含 any/void/object）——{@link #isTsPrimitiveKeyword}</li>
-     *   <li>联合类型（含 {@code |}，渲染为 {@code A | B}）</li>
-     *   <li>回调类型（含 {@code =>}，渲染为 {@code (...args: any[]) => any}）</li>
+     *   <li>TS primitive keywords (including any/void/object) — {@link #isTsPrimitiveKeyword}</li>
+     *   <li>Union types (containing "|"; rendered as "A | B")</li>
+     *   <li>Callback types (containing "=>"; rendered as "(...args: any[]) => any")</li>
      * </ul>
      *
-     * <p>可达路径：{@code probe.assign_type} 可把任一 SYMBOL 槽（含 implements / 接口 extends 条目）
-     * 重写为任意 ref（如 {@code probe.assign("java.lang.CharSequence", "string")}）；
-     * {@code probe.modify_type.changeSuper} 可把父类槽换成 union/回调/原始类型。
+     * <p>Paths: probe.assign_type can rewrite any SYMBOL slot (including implements/interface extends entries)
+     * to arbitrary refs (e.g., probe.assign("java.lang.CharSequence", "string"));
+     * probe.modify_type.changeSuper can replace parent slots with unions/callbacks/primitive types.
      *
-     * <p><b>策略：省略（OMIT）而非失败</b>——不安全条目被丢弃、其余条目及声明主体照常渲染，
-     * 保证产出声明语法有效。本 renderer 是纯函数、无日志通道，故以此注释记录该静默策略。
+     * <p><b>Strategy: Omit, do not fail</b>—unsafe entries are dropped, while others and the declaration body
+     * render as usual, ensuring valid generated declarations. This renderer is a pure function without logging channels, thus this comment records this silent strategy.
      */
     private static boolean isHeritageSafe(String renderedTs) {
         if (renderedTs == null || renderedTs.isBlank()) return false;
@@ -875,7 +877,7 @@ public final class TypeScriptClassRenderer {
         return renderTypeRef(reference, names, false);
     }
 
-    /** 简单 ApiTypeRef → TS（无别名表；probe.add_global 的全局声明类型等声明位使用）。 */
+    /** Simple ApiTypeRef → TS (no alias registry; used for declarations like probe.add_global). */
     public static String renderTypeRef(ApiTypeRef ref) {
         return renderTypeRef(ref, null, false);
     }
@@ -913,9 +915,9 @@ public final class TypeScriptClassRenderer {
     }
 
     /**
-     * ApiTypeRef → TS。{@code input=true} 且提供别名表时应用输入别名放宽——语义与旧
-     * TypeConverter 逐项对齐：参数化符号先查集合别名（结构化实参数组，防嵌套泛型被
-     * {@code ", "} 拆坏），非参数化符号查类别名（适配器/枚举惰性别名）。
+     * ApiTypeRef → TS. With input=true and alias registry, applies input alias relaxation—semantic alignment with
+     * TypeConverter: parameterized symbols consult collection aliases (structured argument arrays to prevent nested
+     * generic corruption by ", "), while non-parameterized symbols consult type aliases (adapters/enum lazy aliases).
      */
     public static String renderTypeRef(ApiTypeRef ref, TypeAliasRegistry aliases, boolean input) {
         return renderTypeRef(ref, aliases, input, new LinkedHashSet<>());
@@ -1035,16 +1037,16 @@ public final class TypeScriptClassRenderer {
         return sb.toString();
     }
 
-    /** symbol name 形如 {@code "java:java.util.List"} → 取 FQN 部分。 */
+    /** Symbol name like "java:java.util.List" → extract FQN part. */
     private static String fqnOfSymbol(String symbolName) {
         int colon = symbolName.indexOf(':');
         return colon >= 0 ? symbolName.substring(colon + 1) : symbolName;
     }
 
     /**
-     * 渲染 {@code docs} 列表为 JSDoc 块（行前用 {@code indent} 缩进）。单行 doc 折叠为一行形式的
-     * 块注释，多行（含条目内嵌换行）逐行以星号前缀展开。docs 为空时不产出任何内容，
-     * 因此 TypeReflector 的默认产出（docs 为空）渲染结果与旧实现逐字一致。
+     * Renders docs list as a JSDoc block (indented by "indent"). Single-line docs collapse to a single-line
+     * block comment, while multi-line (including embedded newlines) expand with asterisk prefixes. If docs are empty,
+     * produces no content, preserving output consistency with TypeReflector's default behavior.
      */
     private static void appendDoc(StringBuilder sb, String indent, List<String> docs) {
         if (docs == null || docs.isEmpty()) return;
@@ -1074,7 +1076,7 @@ public final class TypeScriptClassRenderer {
         };
     }
 
-    /** symbol name 形如 {@code "java:java.util.List"} → 取最后一段点分作为简单名。 */
+    /** Symbol name like "java:java.util.List" → extract the last dot-separated part as simple name. */
     private static String simpleSymbolName(String symbolName) {
         int colon = symbolName.indexOf(':');
         String qn = colon >= 0 ? symbolName.substring(colon + 1) : symbolName;
@@ -1082,7 +1084,7 @@ public final class TypeScriptClassRenderer {
         return dot >= 0 ? qn.substring(dot + 1) : qn;
     }
 
-    /** 渲染用的类名：renameTo（modify_type 改名）优先，否则回退 sourceClass 原名。 */
+    /** Class name for rendering: prioritize renameTo (modify_type), otherwise fallback to sourceClass simple name. */
     private static String effectiveClassName(TypeDecl d) {
         return d.effectiveTypeName() != null ? d.effectiveTypeName() : tsClassName(d.sourceClass);
     }

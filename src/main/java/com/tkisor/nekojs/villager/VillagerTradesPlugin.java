@@ -1,4 +1,5 @@
-// TODO(fabric): fabric 侧还没有对应实现，整文件守卫等移植完成后去掉
+// TODO(fabric): fabric has no implementation yet; remove this whole-file guard once the port is
+// done
 //? if neoforge {
 package com.tkisor.nekojs.villager;
 

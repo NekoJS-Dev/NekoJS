@@ -26,15 +26,17 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 
 /**
- * {@link NekoJSLoggers} 的并发注册安全。
+ * Concurrent registration safety of {@link NekoJSLoggers}.
  *
- * <p>修复前 {@code createLogger} 是 check-then-act，并且直接修改全局 Log4j
- * Configuration；同一 logger name 的并发首次调用可能注册重复的
- * FileAppender / AsyncAppender / CollapsingAppender 以及重复的 {@code APPENDERS} 条目。
+ * <p>{@code createLogger} must be atomic: it edits the global Log4j Configuration, and a
+ * check-then-act version let concurrent first calls for one logger name register duplicate
+ * FileAppender, AsyncAppender and CollapsingAppender instances plus duplicate {@code APPENDERS}
+ * entries.
  *
- * <p>Log4j / SLF4J 在 common 模块中只有 {@code compileOnly} / {@code testRuntimeOnly} 依赖，
- * 测试编译类路径看不到它们，因此这里通过反射调用 {@code NekoJSLoggers}、Log4j
- * {@code LoggerContext} 与 {@code Configuration}，避免测试代码直接 import。
+ * <p>Log4j and SLF4J are only {@code compileOnly} / {@code testRuntimeOnly} dependencies in common,
+ * so the test compile classpath cannot see them. The test therefore reaches {@code NekoJSLoggers},
+ * the Log4j {@code LoggerContext} and {@code Configuration} through reflection instead of
+ * importing them.
  */
 class NekoJSLoggersConcurrencyTest {
 
@@ -56,8 +58,8 @@ class NekoJSLoggersConcurrencyTest {
 
     @BeforeAll
     static void initPlatform() {
-        // 固定的非临时目录：FileAppender 会持有日志文件句柄，若放在 JUnit @TempDir 中，
-        // 目录清理会在 Windows 上因文件被占用而失败。
+        // A fixed, non-temporary directory: FileAppender keeps handles on the log files, and on Windows
+        //        a JUnit @TempDir cleanup would fail because the files are still in use.
         TestPlatformInit.ensureInitialized(GAME_DIR);
     }
 
@@ -200,7 +202,8 @@ class NekoJSLoggersConcurrencyTest {
             String fileAppenderName = "NekoJS-File-" + name;
             String loggerName = "nekojs." + name;
 
-            // 先清掉 APPENDERS 中的 CollapsingAppender（修复前的并发重复项也在这里）。
+            // First drop the CollapsingAppender from APPENDERS; duplicate entries from concurrent
+            // registration also end up there.
             Object value = APPENDERS_FIELD.get(null);
             if (value instanceof List<?> list) {
                 for (Object item : new ArrayList<>(list)) {
@@ -211,7 +214,7 @@ class NekoJSLoggersConcurrencyTest {
                 }
             }
 
-            // 再从 Log4j Configuration 中停止并移除 appender / logger config。
+            // Then stop and remove the appenders and the logger config from the Log4j Configuration.
             for (String appenderName : List.of(collapseName, asyncName, fileAppenderName)) {
                 if (cfgAppender(cfg, appenderName) != null) {
                     cfg.getClass().getMethod("removeAppender", String.class).invoke(cfg, appenderName);
@@ -220,7 +223,8 @@ class NekoJSLoggersConcurrencyTest {
             cfg.getClass().getMethod("removeLogger", String.class).invoke(cfg, loggerName);
             ctx.getClass().getMethod("updateLoggers").invoke(ctx);
 
-            // 反射清理 NekoJSLoggers.CACHE，避免影响同一 JVM 内后续用例。
+            // Clear the entry from NekoJSLoggers.CACHE through reflection so later tests in the same JVM are
+            // not affected.
             Object cache = CACHE_FIELD.get(null);
             if (cache instanceof ConcurrentHashMap) {
                 ((ConcurrentHashMap) cache).remove(name);
@@ -230,7 +234,7 @@ class NekoJSLoggersConcurrencyTest {
                     .resolve("logs").resolve("nekojs").resolve(name + ".log");
             Files.deleteIfExists(logFile);
         } catch (Exception e) {
-            // 清理失败不应掩盖测试失败；修复后正常情况下不会走到这里。
+            // A cleanup failure must not hide the test failure; this path is not normally reached.
             System.err.println("[NekoJSLoggersConcurrencyTest] cleanup failed for " + name + ": " + e);
         }
     }

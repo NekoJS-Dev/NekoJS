@@ -1,5 +1,6 @@
-// fabric 孪生：NeoForge 侧同位次实现见 src/main/java/com/tkisor/nekojs/mixin/BlockBehaviourMixin.java
-// （经 NF 总线投递原生 RandomTickEvent；fabric 侧 mixin 直投中立总线，孪生决策见移植台账第 14 批）。
+// Fabric twin of the implementation at the same point on the NeoForge side, in
+// src/main/java/com/tkisor/nekojs/mixin/BlockBehaviourMixin.java (that one delivers the vanilla
+// RandomTickEvent through the NF bus; the fabric mixin posts to the neutral bus directly).
 package com.tkisor.nekojs.fabric.mixin;
 
 import com.tkisor.nekojs.fabric.event.FabricBlockEventBindingsV2;
@@ -14,19 +15,21 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 /**
- * 方块随机 tick 事件（{@code BlockEvents.randomTick}）的 fabric 挂点：
- * {@code BlockBehaviour.BlockStateBase#randomTick} HEAD——与 NeoForge 侧
- * {@code BlockBehaviourMixin} 同点孪生（javap 实证 minecraft-merged-deobf-26.1.2：
- * public 方法，描述符一致）。
+ * Fabric hook for the block random tick event ({@code BlockEvents.randomTick}): the HEAD of
+ * {@code BlockBehaviour.BlockStateBase#randomTick}, the same point as {@code BlockBehaviourMixin}
+ * on NeoForge (checked with javap on minecraft-merged-deobf-26.1.2: a public method with the
+ * same descriptor).
  *
- * <p>注入点必须在 BlockStateBase 漏斗而非 {@code BlockBehaviour} 接口 default
- * randomTick：ServerLevel 逐位置虚分派到 BlockStateBase.randomTick 再进具体方块覆写，
- * 原版随机 tick 方块全部覆写 4 参方法，接口 default 对它们永不执行（ticket 24 D5，
- * 两 loader 同病）。ServerLevel 不逐方块检查 {@code isRandomlyTicking()}，因此这里
- * 守卫该标志以维持「仅自然随机 tick 方块触发」的文档语义。
+ * <p>The injection has to be on the BlockStateBase funnel rather than the {@code BlockBehaviour}
+ * interface default randomTick. ServerLevel dispatches virtually per position to
+ * BlockStateBase.randomTick, which then enters the concrete block override, and every vanilla
+ * randomly ticking block overrides the four-argument method, so the interface default never runs
+ * for them; both loaders have the same problem. ServerLevel does not check
+ * {@code isRandomlyTicking()} per block, so this method checks that flag to keep the documented
+ * meaning: only blocks that randomly tick naturally fire the event.
  *
- * <p>高频守卫：无监听器时零事件对象（post 入口 hasListeners 短路）。不可取消
- * （NF 侧同）。
+ * <p>High-frequency guard: with no listeners no event object is created, because the post entry
+ * point short-circuits on hasListeners. Not cancellable, the same as on NeoForge.
  */
 @Mixin(BlockBehaviour.BlockStateBase.class)
 public abstract class MixinBlockBehaviourRandomTick {

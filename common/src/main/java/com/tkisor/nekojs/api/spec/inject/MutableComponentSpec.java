@@ -6,21 +6,26 @@ import com.tkisor.nekojs.api.spec.PlatformAvailability;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * MutableComponent 跨平台统一扩展规范（NF_ONLY——CR 1.12.2 的 ITextComponent 暂未实现对应扩展）。
+ * Cross-platform extension specification for MutableComponent. NF_ONLY: CR 1.12.2 has no matching
+ * extension for its ITextComponent yet.
  *
- * <p>各 NF 平台的 {@code MutableComponentExtension} 必须 {@code extends MutableComponentSpec}。
+ * <p>Every NF platform's {@code MutableComponentExtension} must {@code extends MutableComponentSpec}.
  *
- * <p><b>覆盖范围</b>：颜色、样式（bold/italic/underlined/strikethrough/obfuscated）、insertion、
- * hasStyle、font。这些方法在 NF26/NF1.21.1 上签名一致（font 统一为 String——JS 层已是 String，
- * 平台 impl 内部解析为 {@code FontDescription.Resource} 或 {@code ResourceLocation}）。
+ * <p><b>Covered methods:</b> color, style (bold/italic/underlined/strikethrough/obfuscated),
+ * insertion, hasStyle and font. They have the same signatures on NF26 and NF1.21.1. Font takes a
+ * String on both because the JS side already passes a String, and the platform impl resolves it to
+ * {@code FontDescription.Resource} or {@code ResourceLocation} internally.
  *
- * <p><b>不</b>在本 spec 中的方法（参数含 MC 版本特定类型，host-side 便利，JS 层不可用）：
+ * <p><b>Not</b> in this spec (their parameters use MC types that differ by version; they stay
+ * host-side conveniences and are unavailable from JS):
  * <ul>
- *   <li>{@code color(@Nullable TextColor)} —— TextColor 是 MC 类型
- *   <li>{@code click(@Nullable ClickEvent)} / {@code hover(@Nullable HoverEvent)} —— ClickEvent/HoverEvent 是 MC 类型
- *   <li>{@code clickSuggestCommand/clickCopy/clickOpenUrl/clickOpenFile/clickChangePage} ——
- *       参数签名一致但内部 body 因 MC 版本 ClickEvent 构造差异而分歧；留作 host-side 便利
- *   <li>{@code hoverText/hoverItem/hoverEntity} —— 同上，HoverEvent 构造差异
+ *   <li>{@code color(@Nullable TextColor)}: TextColor is an MC type
+ *   <li>{@code click(@Nullable ClickEvent)} / {@code hover(@Nullable HoverEvent)}: these events
+ *       are MC types
+ *   <li>{@code clickSuggestCommand/clickCopy/clickOpenUrl/clickOpenFile/clickChangePage}:
+ *       same parameter signatures, but the bodies diverge because ClickEvent is constructed
+ *       differently on each MC version; kept as host-side conveniences
+ *   <li>{@code hoverText/hoverItem/hoverEntity}: same reason, HoverEvent construction differs
  * </ul>
  */
 @RemapByPrefix("neko$")
@@ -144,8 +149,9 @@ public interface MutableComponentSpec {
     }
 
     /**
-     * 设置字体。{@code font} 是资源 id 字符串（如 {@code minecraft:default}），
-     * 各平台 impl 内部解析为原生类型（NF26: {@code FontDescription.Resource}，NF1.21.1: {@code ResourceLocation}）。
+     * Sets the font. {@code font} is a resource id string (such as {@code minecraft:default});
+     * each platform impl resolves it to its native type (NF26: {@code FontDescription.Resource},
+     * NF1.21.1: {@code ResourceLocation}).
      */
     default Object neko$font(@Nullable String font) {
         throw new UnsupportedOperationException("MutableComponentSpec.neko$font not implemented");

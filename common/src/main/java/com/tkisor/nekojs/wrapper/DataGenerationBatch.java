@@ -26,33 +26,32 @@ import java.util.TreeSet;
 import java.util.stream.Stream;
 
 /**
- * One non-Assets data generation batch (ticket 23): candidate collection → validation →
- * atomic publish, shared by the plugin {@code generateData} hook and the script
+ * One non-assets data generation batch: collect candidates, validate them, publish atomically.
+ * Shared by the plugin {@code generateData} hook and the script
  * {@code ServerEvents.generateData} event.
  *
  * <p>Lifecycle (driven by {@code PluginGenerationHooks.runGenerateData}):
  * <ol>
  *   <li>{@link #open}: create a fresh candidate directory outside the pack-visible root
- *       ({@code <sibling>/.nekojs-datagen/<stage>/candidate}); all generator writes land there,
+ *       ({@code <sibling>/.nekojs-datagen/<stage>/candidate}). All generator writes land there,
  *       so the active pack root is never touched during collection.</li>
- *   <li>{@link #validate}: every candidate file is re-checked for candidate-root inclusion,
- *       JSON files must parse (structure), and every file must be readable back.</li>
- *   <li>{@link #publish}: publish surviving files into the active root with per-file
- *       atomic moves plus a backup/rollback journal, so a mid-publish failure restores the
- *       previous active content (failure retention). Files that exist in the active root but
- *       are not listed in the previous manifest are treated as user-owned and are never
- *       overwritten — the write is skipped and reported instead.</li>
+ *   <li>{@link #validate}: re-check every candidate file for candidate-root inclusion, require
+ *       JSON files to parse (structure), and require every file to be readable back.</li>
+ *   <li>{@link #publish}: publish the surviving files into the active root with per-file atomic
+ *       moves plus a backup/rollback journal, so a mid-publish failure restores the previous
+ *       active content (failure retention). Files that exist in the active root but are not
+ *       listed in the previous manifest are treated as user-owned and are never overwritten:
+ *       the write is skipped and reported instead.</li>
  * </ol>
  *
- * <p>Overwrite policy within one batch: last contributor wins (a script may intentionally
- * override what a plugin produced); every cross-contributor overwrite is recorded in
+ * <p>Overwrite policy within one batch: the last contributor wins (a script may intentionally
+ * override what a plugin produced). Every cross-contributor overwrite is recorded in
  * {@link PublishResult#overwriteTrace()} with both owners. Toward the active root the batch
- * only replaces files it published before AND whose content still matches the recorded
- * sha256 — anything else (never-generated files, or generated files edited by hand) is
- * user-owned: the write is skipped and reported, never overwritten. Files produced by
- * earlier batches but absent from the current batch are never deleted: script-generated data
- * is not unconditionally regenerable (data-protection inventory row 16), so the manifest only
- * accumulates.
+ * only replaces files it published before and whose content still matches the recorded
+ * sha256. Anything else (never-generated files, or generated files edited by hand) is
+ * user-owned: the write is skipped and reported, never overwritten. Files produced by earlier
+ * batches but absent from the current batch are never deleted: script-generated data is not
+ * unconditionally regenerable, so the manifest only accumulates.
  *
  * <p>On validation or publish failure the candidate directory is kept for diagnostics; the
  * next {@link #open} for the same stage wipes it. {@link #discard()} deletes it explicitly.
@@ -449,8 +448,8 @@ public class DataGenerationBatch {
     }
 
     /**
-     * Single move seam used for backup, publish and rollback moves. Package-private so tests
-     * can inject deterministic IO failures; production always performs an atomic move.
+     * The one move used for backup, publish and rollback. Package-private so tests can inject
+     * deterministic IO failures; production always performs an atomic move.
      */
     void moveForPublish(Path source, Path target) throws IOException {
         if (moveFailure != null && moveFailure.test(target)) {

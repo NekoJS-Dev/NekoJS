@@ -15,19 +15,18 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Defect D6 regression (ticket 26): script-side ARGB color literals are unsigned JS
- * numbers ≥ 2³¹ ({@code 0xFFFFFF00} = 4294967040). Declaring painter color parameters
- * as Java {@code int} saturates them to {@code 0x7FFFFFFF} (translucent white) at the
- * engine conversion boundary, so the painter seam accepts {@link Number} and reads the
- * bits through {@code UiColor.argbBits} instead.
+ * Regression for script-side ARGB color literals: they are unsigned JS numbers >= 2^31
+ * ({@code 0xFFFFFF00} = 4294967040). Declaring painter color parameters as Java {@code int}
+ * saturates them to {@code 0x7FFFFFFF} (translucent white) during the engine conversion, so the
+ * painter takes a {@link Number} and reads the bits through {@code UiColor.argbBits} instead.
  *
- * <p>Test geometry: a real GraalJS {@link Context} (production-shaped
- * {@link NekoSharedHostAccess} + interop options) drives the <b>production
- * {@link PainterJS}</b> through its measurement-only test seam; the colors are asserted
- * at the graphics sink via a recording subclass of the platform graphics type. The
- * platform constructor dereferences a live {@code Minecraft} client, so the recorder is
- * allocated without running any constructor ({@code Unsafe.allocateInstance}) — its
- * only state is the recorded colors, which never touch platform fields.
+ * <p>The test uses a real GraalJS {@link Context} (production-shaped
+ * {@link NekoSharedHostAccess} plus interop options) to drive the <b>production {@link PainterJS}</b>
+ * through its measurement-only test constructor. Colors are asserted at the graphics sink through a
+ * recording subclass of the platform graphics type. The platform constructor dereferences a live
+ * {@code Minecraft} client, so the recorder is allocated without running any constructor
+ * ({@code Unsafe.allocateInstance}); its only state is the recorded colors, which never touch
+ * platform fields.
  */
 class PainterJSScriptColorBoundaryTest {
 

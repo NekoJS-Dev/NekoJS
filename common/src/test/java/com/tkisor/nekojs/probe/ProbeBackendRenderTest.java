@@ -19,13 +19,16 @@ import java.util.Map;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * {@link ProbeBackend#render} / 默认 {@code generate} 的契约回归（预发布接口重构）：
+ * Contract regression for {@link ProbeBackend#render} and the default {@code generate}:
  * <ul>
- *   <li>render 纯内存——不创建/触碰输出目录</li>
- *   <li>默认 generate：逐文件就地写入输出目录 + 结果携带 outputDir</li>
- *   <li>路径越界防护：绝对路径 / {@code ..} 段被拒绝，目录外零写盘</li>
- *   <li>异常消息兜底：null message 的异常不再产出 "backend failed: null"</li>
- *   <li>probe.toml {@code runAtStartup} 解析（默认 false）</li>
+ *   <li>Render is memory-only: it does not create or touch the output directory.</li>
+ *   <li>The default generate writes each file into the output directory and returns the result
+ *       with outputDir.</li>
+ *   <li>Path escape guard: absolute paths and {@code ..} segments are rejected, so nothing is
+ *       written outside the directory.</li>
+ *   <li>Exception message fallback: an exception with a null message no longer reports
+ *       "backend failed: null".</li>
+ *   <li>probe.toml {@code runAtStartup} parsing (defaults to false).</li>
  * </ul>
  */
 class ProbeBackendRenderTest {
@@ -35,7 +38,7 @@ class ProbeBackendRenderTest {
         TestPlatformInit.ensureInitialized();
     }
 
-    /* ================= render 纯内存 ================= */
+    /* ================= Render stays in memory ================= */
 
     @Test
     void pythonRenderProducesMapWithoutTouchingDisk(@TempDir Path tmp) {
@@ -76,7 +79,7 @@ class ProbeBackendRenderTest {
         assertFalse(Files.exists(out.resolveSibling("custom.old")));
     }
 
-    /* ================= 路径越界防护 ================= */
+    /* ================= Path traversal guard ================= */
 
     @Test
     void traversalPathIsRejectedWithoutWritingOutside(@TempDir Path tmp) {
@@ -112,7 +115,7 @@ class ProbeBackendRenderTest {
         assertFalse(Files.exists(tmp.resolve("elsewhere.txt")));
     }
 
-    /* ================= 异常消息兜底 ================= */
+    /* ================= Exception message fallback ================= */
 
     @Test
     void nullMessageExceptionFallsBackToString(@TempDir Path tmp) {
@@ -144,7 +147,7 @@ class ProbeBackendRenderTest {
                 "null message 应回退 toString()：" + res.message());
     }
 
-    /* ================= runAtStartup 配置 ================= */
+    /* ================= runAtStartup config ================= */
 
     @Test
     void runAtStartupDefaultsFalseAndParsesTrue(@TempDir Path tmp) throws Exception {
@@ -166,7 +169,7 @@ class ProbeBackendRenderTest {
         assertTrue(enabled.enabled(), "其它键不受影响");
     }
 
-    /* ================= 工具 ================= */
+    /* ================= Helpers ================= */
 
     private static final class FakeRenderBackend implements ProbeBackend {
         private final Map<String, String> files;

@@ -1,9 +1,9 @@
 package com.tkisor.nekojs.api.ui;
 
 /**
- * One locatable UI diagnostic: a {@link UiErrorCodes NEKO-} code, an English
- * summary, and the position (UI root, node, resource, generation) the failure
- * came from. Diagnostics are data; the reporting seam decides where they surface.
+ * One locatable UI diagnostic: a {@link UiErrorCodes NEKO-} code, an English summary, and
+ * the position (UI root, node, resource, generation) the failure came from. Diagnostics
+ * are data; the reporting code decides where they surface.
  */
 public record UiDiagnostic(String code, String message, String rootId, String nodeType, String nodeKey,
                            String resourceId, long generation) {

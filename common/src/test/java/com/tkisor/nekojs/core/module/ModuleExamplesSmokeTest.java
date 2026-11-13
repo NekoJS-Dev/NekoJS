@@ -29,12 +29,14 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * 票据 11 AC11：随票交付的 JS/CJS/ESM 最小可运行示例冒烟。
+ * Smoke test for the minimal runnable JS/CJS/ESM examples that ship with the module pipeline.
  *
- * <p>示例源文件在 {@code common/src/test/resources/nekojs/module-examples/}（交付物，
- * 内容同时内联于基线迁移材料）；本测试把它们拷入隔离 gameDir 后经最高调用者 seam
- * 真实装载，断言文档中承诺的输出与缓存/reload 行为一致。示例只使用已过 gate 的模块能力
- * （require/module.exports、import/export、按路径失效 + 重跑入口）。
+ * <p>The example sources live in {@code common/src/test/resources/nekojs/module-examples/} (the
+ * same content is inlined in the baseline migration material). The test copies them into an
+ * isolated gameDir, loads them through the public entry points and asserts that the output and
+ * the cache and reload behavior match what the docs promise. The examples only use module
+ * capabilities that already pass the gate: require and module.exports, import and export,
+ * invalidation by path plus re-running the entry.
  */
 class ModuleExamplesSmokeTest {
     @TempDir
@@ -106,7 +108,7 @@ class ModuleExamplesSmokeTest {
         Path hello = paths.serverScripts().resolve("examples/js/hello.js");
         Path greet = paths.serverScripts().resolve("examples/js/greet.js");
 
-        // 文档承诺 1：同内容重复准备命中缓存（稳定 key）。
+        // Documented promise 1: preparing the same content again hits the cache with a stable key.
         NekoPreparedModule first = cache.prepare(hello);
         NekoPreparedModule second = cache.prepare(hello);
         assertEquals(first.cacheKey(), second.cacheKey());
@@ -114,7 +116,8 @@ class ModuleExamplesSmokeTest {
         Value before = asValue(host.loadEntry("./server_scripts/examples/js/hello.js"));
         assertEquals("hello, neko!", before.getMember("message").asString());
 
-        // 文档承诺 2：内容变化后经失效 + 重跑入口看到新输出（旧模块不复返）。
+        // Documented promise 2: after the content changes, invalidating and re-running the entry shows the
+        // new output, and the old module does not come back.
         Files.writeString(greet, Files.readString(greet).replace("hello, ", "hey, "));
         host.invalidateModuleTree("./server_scripts/examples/js/hello.js");
 

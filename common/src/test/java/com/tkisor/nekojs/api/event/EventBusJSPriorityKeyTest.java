@@ -18,11 +18,11 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * DEFECT-D6 回归：dispatch 总线上，第一个字符串参数应只在「后面还有 key + listener」
- * 时才被解析为 priority；否则它就是 dispatch key。
+ * Regression test: on a dispatch bus the first string argument is only parsed as a priority when
+ * another key and a listener follow it. Otherwise it is the dispatch key.
  *
- * <p>{@code listen("HIGH", listener)} 在 dispatch 总线上必须注册 key {@code "HIGH"}，
- * 而不是把 {@code "HIGH"} 当成 priority 并注册到 main bus。
+ * <p>{@code listen("HIGH", listener)} on a dispatch bus must register the key {@code "HIGH"}
+ * rather than treat {@code "HIGH"} as a priority and register on the main bus.
  */
 class EventBusJSPriorityKeyTest {
 
@@ -125,8 +125,9 @@ class EventBusJSPriorityKeyTest {
     }
 
     /**
-     * 静态工厂语义回归：EventBusFactory 退役后，接口静态工厂造出的总线必须保持
-     * 原有语义——普通总线不可取消、可取消总线按谓词结果取消并短路、按 key 分发。
+     * Regression test for the interface static factories: a bus they create must keep its
+     * behavior. A plain bus cannot cancel; a cancellable bus cancels on the predicate result and
+     * stops the remaining listeners; and a keyed bus dispatches by key.
      */
     @Test
     void staticFactoryBusSemanticsUnchanged() {

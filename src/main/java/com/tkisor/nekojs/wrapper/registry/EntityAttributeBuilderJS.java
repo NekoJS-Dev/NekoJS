@@ -8,7 +8,7 @@ import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 
 /**
- * 实体属性（attribute supplier）builder：流式设置常用属性后 {@code build()}。
+ * Entity attribute supplier builder: sets the common attributes in a fluent style, then {@code build()}.
  */
 @Doc("Builder for a mob's attribute supplier, covering the common vanilla attributes.")
 @Doc("Every setter defaults to the vanilla mob baseline (health 20, speed 0.25, and so on).")
@@ -16,7 +16,7 @@ public class EntityAttributeBuilderJS {
     private final java.util.Map<net.minecraft.core.Holder<net.minecraft.world.entity.ai.attributes.Attribute>, Double>
             configured = new java.util.LinkedHashMap<>();
 
-    /** 最大生命值（默认 20）。 */
+    /** Max health (default 20). */
     @Doc("Sets the max health.")
     @Param(name = "value", value = "max health in half-hearts; vanilla baseline is 20")
     @Return("this, for chaining")
@@ -25,7 +25,7 @@ public class EntityAttributeBuilderJS {
         return this;
     }
 
-    /** 移动速度（默认 0.25）。 */
+    /** Movement speed (default 0.25). */
     @Doc("Sets the movement speed.")
     @Param(name = "value", value = "movement speed; vanilla mob baseline is 0.25")
     @Return("this, for chaining")
@@ -34,7 +34,7 @@ public class EntityAttributeBuilderJS {
         return this;
     }
 
-    /** 追踪/感知范围（默认 16）。 */
+    /** Follow/perception range (default 16). */
     @Doc("Sets the follow range.")
     @Param(name = "value", value = "follow range in blocks; vanilla baseline is 16")
     @Return("this, for chaining")
@@ -43,7 +43,7 @@ public class EntityAttributeBuilderJS {
         return this;
     }
 
-    /** 近战攻击伤害（默认 2）。 */
+    /** Melee attack damage (default 2). */
     @Doc("Sets the attack damage.")
     @Param(name = "value", value = "melee attack damage; vanilla baseline is 2")
     @Return("this, for chaining")
@@ -52,7 +52,7 @@ public class EntityAttributeBuilderJS {
         return this;
     }
 
-    /** 护甲值（默认 0）。 */
+    /** Armor value (default 0). */
     @Doc("Sets the armor value.")
     @Param(name = "value", value = "armor points; vanilla baseline is 0")
     @Return("this, for chaining")
@@ -61,7 +61,7 @@ public class EntityAttributeBuilderJS {
         return this;
     }
 
-    /** 护甲韧性（默认 0）。 */
+    /** Armor toughness (default 0). */
     @Doc("Sets the armor toughness.")
     @Param(name = "value", value = "armor toughness; vanilla baseline is 0")
     @Return("this, for chaining")
@@ -70,7 +70,7 @@ public class EntityAttributeBuilderJS {
         return this;
     }
 
-    /** 击退抗性（0-1，默认 0）。 */
+    /** Knockback resistance (0-1, default 0). */
     @Doc("Sets the knockback resistance.")
     @Param(name = "value", value = "knockback resistance between 0 and 1; vanilla baseline is 0")
     @Return("this, for chaining")
@@ -79,7 +79,7 @@ public class EntityAttributeBuilderJS {
         return this;
     }
 
-    /** 构建属性 supplier（{@link Mob#createMobAttributes()} 基线 + 全部已设属性）。 */
+    /** Builds the attribute supplier ({@link Mob#createMobAttributes()} baseline plus every configured attribute). */
     @Doc("Builds the attribute supplier from all configured values.")
     @Return("an AttributeSupplier based on the vanilla mob baseline with this builder's values applied")
     public AttributeSupplier build() {

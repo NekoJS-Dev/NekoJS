@@ -9,8 +9,9 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * 票据 12 review-round-1 F3：enum 数字字面量诊断必须指向**该成员**的 authored 位置，
- * 不得因文件里更早出现同名 token/注释而指向别处，也不得在位置未知时伪造 1:1。
+ * Enum numeric literal diagnostics must point at the authored position of **that member**. An
+ * earlier token or comment with the same text elsewhere in the file must not take the position, and
+ * an unknown position must not be reported as 1:1.
  */
 class NekoTypeScriptEnumDiagnosticLocationTest {
 

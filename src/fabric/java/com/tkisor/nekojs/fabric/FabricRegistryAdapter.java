@@ -20,12 +20,13 @@ public final class FabricRegistryAdapter {
 
     private static volatile StartupRegistryRuntime runtime = new StartupRegistryRuntime(nodeLabel());
 
-    /** 当前 epoch 的 Runtime。 */
+    /** The runtime for the current epoch. */
     public static StartupRegistryRuntime runtime() {
         return runtime;
     }
 
-    /** 新一轮游戏启动：换新 epoch；上一轮若有未清空暂存，先丢弃并记录诊断（AC2）。 */
+    /** Starts a new game boot: switches to a new epoch and, if the previous boot left staging
+     * undrained, discards it and logs a diagnostic. */
     public static void beginBoot() {
         StartupRegistryRuntime previous = runtime;
         if (previous != null && !previous.isFullyDrained()) {
@@ -35,18 +36,19 @@ public final class FabricRegistryAdapter {
         runtime = new StartupRegistryRuntime(nodeLabel());
     }
 
-    /** mod 入口在 STARTUP 脚本加载完成后调用（收集依赖脚本侧已挂好监听）。 */
+    /** Called by the mod entry after the STARTUP scripts have loaded; the script-side listeners
+     * are already attached by then. */
     public static void onInitialize() {
         StartupRegistryRuntime current = runtime;
         current.collectOnce();
         drainPendingRegistries(current, key -> drainRegistry(current, key));
-        // 实体属性挂载：EntityTypeBuilder build 期记账的属性表统一注册（NeoForge 侧由
-        // EntityAttributeCreationEvent 消费同一 drainPendingAttributes）
+        // Entity attributes: register the attribute table recorded while EntityTypeBuilder builds.
+        // NeoForge consumes the same drainPendingAttributes through EntityAttributeCreationEvent.
         com.tkisor.nekojs.wrapper.registry.gen.EntityTypeBuilder.drainPendingAttributes()
                 .forEach(net.fabricmc.fabric.api.object.builder.v1.entity.FabricDefaultAttributeRegistry::register);
-        // groupTab 分配消费：GROUP_ASSIGNMENTS 按标签页分组注册 modifyOutput 追加
-        //（NeoForge 侧由 BuildCreativeModeTabContentsEvent 消费）；modifyOutput 是懒回调，
-        // 注册表此时已冻结完毕，物品解析在回调期安全
+        // groupTab assignments: group GROUP_ASSIGNMENTS by tab and register a modifyOutput append
+        // (NeoForge consumes them through BuildCreativeModeTabContentsEvent). modifyOutput is a
+        // lazy callback and the registries are frozen by now, so resolving items inside it is safe.
         java.util.Map<Identifier, java.util.List<Identifier>> byTab = new java.util.HashMap<>();
         com.tkisor.nekojs.wrapper.registry.gen.ItemBuilder.GROUP_ASSIGNMENTS.forEach(
                 (itemId, tabId) -> byTab.computeIfAbsent(tabId, k -> new java.util.ArrayList<>()).add(itemId));
@@ -56,8 +58,9 @@ public final class FabricRegistryAdapter {
                         .register(output -> itemIds.forEach(id ->
                                 BuiltInRegistries.ITEM.getOptional(id).ifPresent(item ->
                                         output.accept(new net.minecraft.world.item.ItemStack(item))))));
-        // 物品燃料（NeoForge 侧走 getBurnTime override；fabric 经 FuelValueEvents.BUILD 灌表，
-        // 每次燃料表构建（服务器启动/数据包重载）都会重放——幂等）
+        // Item fuel (NeoForge uses a getBurnTime override; fabric fills the table through
+        // FuelValueEvents.BUILD). This replays on every fuel table build (server start, datapack
+        // reload), so it is idempotent.
         if (!com.tkisor.nekojs.wrapper.registry.gen.ItemBuilder.FUEL_ASSIGNMENTS.isEmpty()) {
             net.fabricmc.fabric.api.registry.FuelValueEvents.BUILD.register((builder, ctx) ->
                     com.tkisor.nekojs.wrapper.registry.gen.ItemBuilder.FUEL_ASSIGNMENTS.forEach((id, time) ->
@@ -87,13 +90,15 @@ public final class FabricRegistryAdapter {
 
     @SuppressWarnings({"unchecked", "rawtypes"})
     private static void drainRegistry(StartupRegistryRuntime current, ResourceKey<? extends Registry<?>> key) {
-        // REGISTRY 是根注册表（Registry of Registry），泛型捕获与任一具体键不兼容——raw 收窄
+        // REGISTRY is the root registry (a registry of registries), so its generic capture does not
+        // match any concrete key; narrow it with a raw type.
         java.util.Optional<?> resolved = BuiltInRegistries.REGISTRY.get((ResourceKey) key);
         Registry<?> registry = resolved.isPresent() ? (Registry<?>) ((Holder<?>) resolved.get()).value() : null;
         if (registry == null) {
             NekoJS.LOGGER.error("Registry '{}' collected objects but no such vanilla registry exists; content NOT registered", key);
-            // sink 抛错：每条进 DrainResult.errors（source=platform-register，含定义/注册表/节点），
-            // 不冒充已注册（审查 F7，与 AC10 可观察语义一致）；条目仍被 drain（无残留）
+            // The sink throws: each entry lands in DrainResult.errors (source=platform-register, with the
+            // definition, registry and node) instead of counting as registered; the entries are still
+            // drained, so nothing is left behind.
             current.drainFor(key, (reg, id, supplier) -> {
                 throw new IllegalStateException("no such vanilla registry '" + key + "' on fabric; content NOT registered");
             }).errors().forEach(error -> NekoJS.LOGGER.error(

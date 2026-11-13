@@ -168,7 +168,7 @@ public final class CoreManagedApiBootstrap {
                 text.selector((String) args.getFirst()));
         register(contributions, symbols, "member:Text.ofValues", (receiver, args) -> text.ofValues(args));
         register(contributions, symbols, "member:Text.join", (receiver, args) -> {
-            // (separator, ...values) — 第一个参数是分隔符 TextValue/String
+            // (separator, ...values): the first argument is the separator, a TextValue or String
             TextValue separator = toTextValue(args.get(0));
             return text.join(separator, args.subList(1, args.size()));
         });
@@ -176,7 +176,7 @@ public final class CoreManagedApiBootstrap {
                 text.append((TextValue) receiver, args));
         register(contributions, symbols, "member:TextValue.isEmpty", (receiver, args) ->
                 ((TextValue) receiver).isEmpty());
-        // 富文本样式：链式合并，每次返回带样式（Styled）的 TextValue
+        // Rich text styles: each call merges one style and returns a new styled TextValue, so calls chain
         register(contributions, symbols, "member:TextValue.bold", (receiver, args) ->
                 text.bold((TextValue) receiver, boolArg(args, 0, true)));
         register(contributions, symbols, "member:TextValue.italic", (receiver, args) ->
@@ -189,7 +189,8 @@ public final class CoreManagedApiBootstrap {
                 text.obfuscated((TextValue) receiver, boolArg(args, 0, true)));
         register(contributions, symbols, "member:TextValue.color", (receiver, args) ->
                 text.color((TextValue) receiver, (String) args.getFirst()));
-        // 16 色 KubeJS 风格快捷方法：零参数，委托 facade 对应命名色方法
+        // 16 KubeJS-style colour shortcuts: no arguments, each delegates to the matching named colour
+        // method on the facade
         var colorMethods = new java.util.LinkedHashMap<String, java.util.function.Function<TextValue, TextValue>>();
         colorMethods.put("black", t -> text.black(t));
         colorMethods.put("darkBlue", t -> text.darkBlue(t));
@@ -320,21 +321,23 @@ public final class CoreManagedApiBootstrap {
     }
 
     /**
-     * 程序化构建 portable-core 契约。Java facade/数据类型接口即唯一真相源——
-     * 不再读取任何 JSON 契约文件。
+     * Builds the portable-core contract programmatically. The Java facades and data type interfaces
+     * are the only source of truth; no JSON contract file is read.
      *
-     * <p>symbols 来源（全部反射，0 手写）：
+     * <p>Every symbol is reflected, none is written by hand:
      * <ul>
-     *   <li>7 个 facade 接口：{@link ContractReflector#extractSymbols}（含 receiver 双产出）
-     *   <li>数据类型自身方法：{@link ContractReflector#reflectDataType}
-     *       （RegistryView/NbtEntry/ModInfo/PerfTimer/TextValue.isEmpty）
-     *   <li>事件注册类：{@link ContractReflector#reflectEventRegistrationSymbols}
-     *       （common 侧 ScriptEventRegistrationEvent）
+     *   <li>The 7 facade interfaces, via {@link ContractReflector#extractSymbols} (which also emits
+     *       the receiver form of each member)
+     *   <li>Methods on the data types themselves, via {@link ContractReflector#reflectDataType}
+     *       (RegistryView/NbtEntry/ModInfo/PerfTimer/TextValue.isEmpty)
+     *   <li>Event registration classes, via {@link ContractReflector#reflectEventRegistrationSymbols}
+     *       (ScriptEventRegistrationEvent on the common side)
      * </ul>
-     * 版本号从 api-runtime.properties 读取（单一真相源）。
-     * integrity/compatibility 哈希基于 {@link NormativeApiContract#toString()} 规范形式。
+     * The version is read from api-runtime.properties, the only source of truth. The integrity and
+     * compatibility hashes are computed over the canonical form of
+     * {@link NormativeApiContract#toString()}.
      *
-     * @param codeSource 调用方 codeSource URI（用于 VerifiedApiContract 归属）
+     * @param codeSource codeSource URI of the caller, used to attribute the VerifiedApiContract
      */
     public static VerifiedApiContract buildContract(URI codeSource) {
         Objects.requireNonNull(codeSource, "codeSource");
@@ -343,7 +346,7 @@ public final class CoreManagedApiBootstrap {
                 "nekojs-core", ApiContractKind.PORTABLE, "portable-core", apiVersion);
 
         List<ApiSymbol> symbols = new java.util.ArrayList<>();
-        // 7 个 facade：global + member + receiver 双产出
+        // The 7 facades: each yields the global, member and receiver symbols
         symbols.addAll(ContractReflector.extractSymbols("ID", IdFacade.class));
         symbols.addAll(ContractReflector.extractSymbols("Platform", PlatformFacade.class));
         symbols.addAll(ContractReflector.extractSymbols("Text", TextFacade.class));
@@ -351,13 +354,14 @@ public final class CoreManagedApiBootstrap {
         symbols.addAll(ContractReflector.extractSymbols("NBT", NbtFacade.class));
         symbols.addAll(ContractReflector.extractSymbols("Registry", RegistryFacade.class));
         symbols.addAll(ContractReflector.extractSymbols("Performance", PerformanceFacade.class));
-        // 数据类型自身方法（receiver 双产出覆盖不到的：无 facade 方法以它为首参）
+        // Methods on the data types that the receiver form misses, because no facade method takes them as
+        // its first parameter
         symbols.addAll(ContractReflector.reflectDataType("TextValue", TextValue.class));
         symbols.addAll(ContractReflector.reflectDataType("RegistryView", RegistryView.class));
         symbols.addAll(ContractReflector.reflectDataType("NbtEntry", NbtEntry.class));
         symbols.addAll(ContractReflector.reflectDataType("ModInfo", ModInfoValue.class));
         symbols.addAll(ContractReflector.reflectDataType("PerfTimer", PerfTimerValue.class));
-        // common 侧事件注册类（Graal Value/ScriptType 全映射为 object）
+        // Event registration classes on the common side (every Graal Value/ScriptType maps to object)
         symbols.addAll(ContractReflector.reflectEventRegistrationSymbols());
 
         String docs = "NekoJS portable core API contract. Symbols reflected from Java facades "
@@ -405,7 +409,7 @@ public final class CoreManagedApiBootstrap {
         return fallback;
     }
 
-    /** join 分隔符：接受 TextValue 或 String（String 包成 Literal）。 */
+    /** Resolves a join separator: accepts a TextValue or a String, which is wrapped as a Literal. */
     private static TextValue toTextValue(Object value) {
         if (value instanceof TextValue text) return text;
         if (value instanceof String string) return TextValue.literal(string);

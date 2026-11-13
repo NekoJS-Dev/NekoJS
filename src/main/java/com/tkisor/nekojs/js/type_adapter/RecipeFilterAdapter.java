@@ -175,7 +175,8 @@ public final class RecipeFilterAdapter implements JSTypeAdapter<RecipeFilter> {
         }
 
         if (andFilters.isEmpty()) {
-            // 空对象 = 无约束 = 匹配全部：And 空列表恒真，避免 apply 返回 null 让调用方 NPE
+            // An empty object means no constraints, so it matches everything: an And with an empty list is always
+            // true, and apply never returns null where callers would NPE
             return new RecipeFilter.And(List.of());
         }
         return andFilters.size() == 1 ? andFilters.get(0) : new RecipeFilter.And(andFilters);

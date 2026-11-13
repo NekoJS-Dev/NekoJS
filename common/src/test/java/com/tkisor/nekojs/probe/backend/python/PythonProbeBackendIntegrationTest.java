@@ -40,8 +40,9 @@ import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * {@link PythonProbeBackend} 端到端：手构一份跨包引用的 IR，跑 generate()，验证模块组织、
- * 跨包 import、祖先 {@code __init__.pyi}、绑定入口、py.typed 均正确产出。
+ * End-to-end test for {@link PythonProbeBackend}: builds an IR with cross-package references by
+ * hand, runs generate() and checks that the module layout, cross-package imports, ancestor
+ * {@code __init__.pyi} files, binding entry points and py.typed are all produced.
  */
 class PythonProbeBackendIntegrationTest {
 
@@ -277,7 +278,8 @@ class PythonProbeBackendIntegrationTest {
         }
     }
 
-    /** ScriptType 静态初始化需要 Platform（NekoJSPaths.get），测试先装 TestIPlatform。 */
+    /** Static initialization of ScriptType needs Platform ({@code NekoJSPaths.get}),
+     * so the test installs TestIPlatform first. */
     @BeforeAll
     static void initPlatform() {
         TestPlatformInit.ensureInitialized();
@@ -437,7 +439,7 @@ class PythonProbeBackendIntegrationTest {
 
     @Test
     void generate_producesStubsAndCrossPackageImports(@TempDir Path temp) throws Exception {
-        // IR：pkg.a.Foo.getBar() 返回 pkg.b.Bar（跨包引用）
+        // IR: pkg.a.Foo.getBar() returns pkg.b.Bar (a cross-package reference)
         TypeDecl foo = new TypeDecl(TypeDecl.Kind.CLASS, null, "pkg.a.Foo");
         MethodDecl getBar = new MethodDecl("getBar");
         getBar.returnType = new TypeSlot(null, ApiTypeRef.symbol(new ApiSymbolId("java", "pkg.b.Bar")));
@@ -449,28 +451,28 @@ class PythonProbeBackendIntegrationTest {
         ProbeConfig cfg = new ProbeConfig(true, ".neko_probe", new ProbeConfig.ScanConfig(
                 List.of("pkg.a", "pkg.b"), List.of(), List.of(), List.of(), 5, "SMART"));
         NekoJSPaths paths = NekoJSPaths.fromGameDir(temp);
-        Files.createDirectories(paths.root());  // 供 pyrightconfig 写入
+        Files.createDirectories(paths.root());  // Output directory for pyrightconfig
         Path outputDir = temp.resolve("probe-python");
         ProbeContext ctx = new ProbeContext.Of(snapshot, List.of(), cfg, paths, "python", outputDir, ir);
 
         ProbeBackend.GenerateResult res = new PythonProbeBackend().generate(ctx);
         assertTrue(res.success(), "generate failed: " + res.message());
 
-        // pkg.a 模块：跨包 import Bar + class Foo + 方法
+        // pkg.a module: cross-package import of Bar, class Foo and its methods
         String a = Files.readString(outputDir.resolve("nekojs/_java/pkg/a/__init__.pyi"));
         assertTrue(a.contains("from nekojs._java.pkg.b import Bar"), "cross-package import missing: " + a);
         assertTrue(a.contains("class Foo:"), a);
         assertTrue(a.contains("def getBar(self) -> Bar"), "return type should resolve to Bar: " + a);
 
-        // pkg.b 模块：class Bar
+        // pkg.b module: class Bar
         String b = Files.readString(outputDir.resolve("nekojs/_java/pkg/b/__init__.pyi"));
         assertTrue(b.contains("class Bar:"), b);
 
-        // 祖先包 marker
+        // Marker files for the ancestor packages
         assertTrue(Files.exists(outputDir.resolve("nekojs/_java/pkg/__init__.pyi")), "ancestor __init__.pyi missing");
         assertTrue(Files.exists(outputDir.resolve("nekojs/_java/__init__.pyi")), "_java root marker missing");
 
-        // 绑定入口（空绑定 → __all__ = []）+ py.typed + README
+        // Binding entry point (empty bindings give __all__ = []) plus py.typed and README
         String init = Files.readString(outputDir.resolve("nekojs/__init__.pyi"));
         assertTrue(init.contains("__all__"), init);
         assertTrue(Files.exists(outputDir.resolve("nekojs/py.typed")));
@@ -491,8 +493,9 @@ class PythonProbeBackendIntegrationTest {
 
     @Test
     void generate_javaTypeBindingNamedLikeClassEmitsImportOnly_notSelfAlias(@TempDir Path temp) throws Exception {
-        // javaType 已收集，且绑定名 == 类型简单名（如 Items: Items）。旧实现会生成自引用别名，
-        // pyright 报 "Type of Items is unknown because it refers to itself"。
+        // The javaType is collected and the binding name equals the type's simple name (Items: Items).
+        // A self-referential alias would make pyright report "Type of Items is unknown because it
+        // refers to itself".
         TypeDecl item = new TypeDecl(TypeDecl.Kind.CLASS, FakeProbeEvent.class, FakeProbeEvent.class.getName());
         List<TypeDecl> ir = List.of(item);
 
@@ -512,12 +515,12 @@ class PythonProbeBackendIntegrationTest {
         assertTrue(init.contains("\"FakeProbeEvent\""), "name must remain in __all__: " + init);
     }
 
-    // -------------------- B2：绑定尊重 typeOverride --------------------
+    // -------------------- Bindings honor typeOverride --------------------
 
     @Test
     void generate_bindingTypeOverrideResolvesCollectedClass(@TempDir Path temp) throws Exception {
-        // IR 收集了简单名为 NekoItemHelper 的类；绑定的 javaType 未被收集（会掉到 Any），
-        // typeOverride 命中该简单名时应优先使用它
+        // The IR collected a class whose simple name is NekoItemHelper. The binding's javaType was not
+        // collected and would fall back to Any, so a typeOverride matching that simple name must win.
         TypeDecl helper = new TypeDecl(TypeDecl.Kind.CLASS, null, "com.example.NekoItemHelper");
         List<TypeDecl> ir = List.of(helper);
 
@@ -535,18 +538,18 @@ class PythonProbeBackendIntegrationTest {
                 "override class should be imported: " + init);
     }
 
-    // -------------------- 事件声明 .pyi + 事件组绑定 --------------------
+    // -------------------- Event declaration .pyi and event group bindings --------------------
 
     @Test
     void generate_events_produceEventStubsAndGroupBindings(@TempDir Path temp) throws Exception {
         TypeDecl event = new TypeDecl(TypeDecl.Kind.CLASS, FakeProbeEvent.class, FakeProbeEvent.class.getName());
         List<TypeDecl> ir = List.of(event);
 
-        // dispatch 型事件（recipes，key = FakeProbeEvent → 有适配器别名时放宽为 FakeProbeEvent_）
+        // Dispatch event (recipes, key = FakeProbeEvent): widened to FakeProbeEvent_ when an adapter alias exists
         EventCatalogEntry recipes = new EventCatalogEntry(
                 "ServerEvents", "recipes", ScriptType.SERVER, FakeProbeEvent.class, FakeProbeEvent.class,
                 false, true, "ServerEvents.recipes(event => {\n  $0\n})");
-        // 无 dispatch key 的普通事件（另一组、另一 side）
+        // A plain event with no dispatch key, in another group and another side
         EventCatalogEntry tick = new EventCatalogEntry(
                 "ClientEvents", "tick", ScriptType.CLIENT, FakeProbeEvent.class, null,
                 false, false, "ClientEvents.tick(event => {\n  $0\n})");
@@ -566,14 +569,15 @@ class PythonProbeBackendIntegrationTest {
         assertTrue(res.success(), "generate failed: " + res.message());
 
         Path out = temp.resolve("probe-python");
-        // server 事件模块：组类 + 普通签名 + dispatch key 重载（key 用适配器别名放宽）
+        // Server event module: the group class, the plain signature and a dispatch key overload whose key
+        // is widened through the adapter alias
         String server = Files.readString(out.resolve("nekojs/_events/server/__init__.pyi"));
         assertTrue(server.contains("class ServerEventsType:"), server);
         assertTrue(server.contains("def recipes(handler: Callable[[FakeProbeEvent], None]) -> None: ..."), server);
         assertTrue(server.contains("def recipes(extra: FakeProbeEvent_, handler: Callable[[FakeProbeEvent], None]) -> None: ..."),
                 "dispatch overload should widen key via adapter alias: " + server);
-        // dispatch 型事件的两个签名都必须带 @overload：裸同名 def 会被 Pylance 报
-        // 「方法声明被同名声明遮盖」(reportRedeclaration)
+        // Both signatures of a dispatch event must carry @overload. Two plain defs with the same name
+        // make Pylance report a redeclaration that hides the earlier declaration (reportRedeclaration).
         assertEquals(2, countOccurrences(server, "@overload"),
                 "dispatch event overloads must be declared with @overload: " + server);
         assertTrue(server.contains("from typing import Any, Callable, overload"),
@@ -581,17 +585,19 @@ class PythonProbeBackendIntegrationTest {
         assertTrue(server.contains("from nekojs._java.com.tkisor.nekojs.probe.backend.python import FakeProbeEvent"), server);
         assertTrue(server.contains("import FakeProbeEvent_"), "alias import for widened key missing: " + server);
 
-        // client 事件模块
+        // Client event module
         String client = Files.readString(out.resolve("nekojs/_events/client/__init__.pyi"));
         assertTrue(client.contains("class ClientEventsType:"), client);
         assertTrue(client.contains("def tick(handler: Callable[[FakeProbeEvent], None]) -> None: ..."), client);
         assertEquals(0, countOccurrences(client, "@overload"),
                 "non-dispatch events must not carry @overload: " + client);
-        // 命名空间 marker
+        // Marker file for the {@code _events} namespace
         assertTrue(Files.exists(out.resolve("nekojs/_events/__init__.pyi")), "_events marker missing");
 
-        // 绑定入口：ServerEvents 绑定指向 Type 类；ClientEvents 无绑定条目也补发入口。
-        // 未覆盖组名取 ScriptType.all() 中第一个匹配 side（client 事件也匹配 startup，startup 版本是超集）
+        // Binding entry points: the ServerEvents binding points at the Type class, and ClientEvents gets
+        // an entry even with no binding. A group name with no coverage takes the first side in
+        // {@code ScriptType.all()} that matches; client events also match startup, and the startup
+        // version is a superset.
         String init = Files.readString(out.resolve("nekojs/__init__.pyi"));
         assertTrue(init.contains("from nekojs._events.server import ServerEventsType"), init);
         assertTrue(init.contains("from nekojs._events.startup import ClientEventsType"), init);
@@ -601,7 +607,7 @@ class PythonProbeBackendIntegrationTest {
         assertTrue(init.contains("\"ClientEvents\""), "event groups should be in __all__: " + init);
     }
 
-    // -------------------- 适配器输入别名 --------------------
+    // -------------------- Adapter input aliases --------------------
 
     @Test
     void generate_adapterAlias_emitsInPackageModule(@TempDir Path temp) throws Exception {
@@ -616,18 +622,18 @@ class PythonProbeBackendIntegrationTest {
         ProbeBackend.GenerateResult res = runGenerate(temp, snapshot, ir, List.of());
         assertTrue(res.success(), "generate failed: " + res.message());
 
-        // 别名声明在目标类的包模块里
+        // The alias is declared in the package module of the target class
         String module = Files.readString(temp.resolve(
                 "probe-python/nekojs/_java/com/tkisor/nekojs/probe/backend/python/__init__.pyi"));
         assertTrue(module.contains("FakeProbeEvent_ = FakeProbeEvent | str"),
                 "adapter input alias missing: " + module);
     }
 
-    // -------------------- 枚举字面量输入别名（镜像 TS $Enum_）--------------------
+    // -------------------- Enum literal input aliases (mirrors TS $Enum_) --------------------
 
     @Test
     void generate_enumAlias_emitsLiteralUnionInPackageModule(@TempDir Path temp) throws Exception {
-        // 合成枚举 IR：pkg.c.Color{RED,GREEN,BLUE} + 无别名的对照包 pkg.d.Plain
+        // Synthetic enum IR: pkg.c.Color{RED,GREEN,BLUE} plus pkg.d.Plain as a control package with no alias
         TypeDecl color = new TypeDecl(TypeDecl.Kind.ENUM, null, "pkg.c.Color");
         for (String c : new String[]{"RED", "GREEN", "BLUE"}) {
             FieldDecl f = new FieldDecl(c, new TypeSlot(null, ApiTypeRef.symbol(new ApiSymbolId("java", "pkg.c.Color"))));
@@ -648,14 +654,15 @@ class PythonProbeBackendIntegrationTest {
         assertTrue(cMod.contains("from typing import Any, Callable, ClassVar, Literal"),
                 "Literal must be imported when the module uses literal unions: " + cMod);
 
-        // 无别名的模块不引入 Literal
+        // A module without aliases does not import Literal
         String dMod = Files.readString(temp.resolve("probe-python/nekojs/_java/pkg/d/__init__.pyi"));
         assertFalse(dMod.contains("Literal"), "plain module should not import Literal: " + dMod);
     }
 
     @Test
     void generate_enumDispatchKeyEventKeyWidenedToEnumAlias(@TempDir Path temp) throws Exception {
-        // 真实反射的枚举作为 dispatch key：事件重载的 extra 参数应放宽为 FakeProbeEnum_
+        // A reflected enum as the dispatch key: the extra parameter of the event overload should be
+        // widened to FakeProbeEnum_
         TypeDecl keyEnum = new TypeReflector().reflect(FakeProbeEnum.class);
         TypeDecl event = new TypeDecl(TypeDecl.Kind.CLASS, FakeProbeEvent.class, FakeProbeEvent.class.getName());
         List<TypeDecl> ir = List.of(keyEnum, event);
@@ -675,14 +682,14 @@ class PythonProbeBackendIntegrationTest {
                 "enum alias import missing in event module: " + server);
     }
 
-    // -------------------- RegistryValue 形状 → Literal[...]（小注册表）/ str（大注册表）--------------------
+    // -------------------- RegistryValue shape: Literal[...] small registries, str for large ones --------------------
 
     @Test
     void generate_registryValueAlias_emitsSortedLiteralUnion(@TempDir Path temp) throws Exception {
         TypeDecl target = new TypeDecl(TypeDecl.Kind.CLASS, FakeProbeEvent.class, FakeProbeEvent.class.getName());
         List<TypeDecl> ir = List.of(target);
 
-        // 快照条目乱序 → Literal 必须排序输出（确定性）
+        // Snapshot entries come out of order, so the Literal must be sorted for deterministic output
         RegistryTypeCatalogEntry registry = new RegistryTypeCatalogEntry(
                 "SampleBlock", List.of("testcraft:zeta", "testcraft:alpha"), List.of());
         AdapterCatalogEntry adapter = new AdapterCatalogEntry(
@@ -706,7 +713,7 @@ class PythonProbeBackendIntegrationTest {
         TypeDecl target = new TypeDecl(TypeDecl.Kind.CLASS, FakeProbeEvent.class, FakeProbeEvent.class.getName());
         List<TypeDecl> ir = List.of(target);
 
-        // >=512 条目 → 缩略为 str，行尾注释标注注册表名
+        // 512 entries or more collapse to str, with the registry name in a line comment
         List<String> entries = new java.util.ArrayList<>();
         for (int i = 0; i < 512; i++) entries.add("minecraft:block_" + i);
         RegistryTypeCatalogEntry big = new RegistryTypeCatalogEntry("BigBlock", entries, List.of());
@@ -728,7 +735,8 @@ class PythonProbeBackendIntegrationTest {
 
     @Test
     void generate_registryValueUnknownRegistry_skipsShape(@TempDir Path temp) throws Exception {
-        // 快照缺失该注册表 → 形状跳过（与旧行为一致），别名退化为其余形状
+        // The snapshot has no entry for that registry, so the shape is skipped and the alias falls back
+        // to the remaining shapes
         TypeDecl target = new TypeDecl(TypeDecl.Kind.CLASS, FakeProbeEvent.class, FakeProbeEvent.class.getName());
         List<TypeDecl> ir = List.of(target);
 
@@ -750,7 +758,8 @@ class PythonProbeBackendIntegrationTest {
         TypeDecl target = new TypeDecl(TypeDecl.Kind.CLASS, FakeProbeEvent.class, FakeProbeEvent.class.getName());
         List<TypeDecl> ir = List.of(target);
 
-        // packns 只在条目 id 里（脚本/数据包造的命名空间），othermod 只在 mod 表里（装了但没注册东西）
+        // packns appears only in entry ids (a namespace made by scripts or datapacks); othermod appears
+        // only in the mod table (installed but registers nothing)
         RegistryTypeCatalogEntry registry = new RegistryTypeCatalogEntry(
                 "SampleBlock", List.of("packns:zeta", "minecraft:alpha"), List.of());
         AdapterCatalogEntry adapter = new AdapterCatalogEntry(
@@ -771,7 +780,8 @@ class PythonProbeBackendIntegrationTest {
 
     @Test
     void generate_namespaceAliasWithoutPlatform_fallsBackToStr(@TempDir Path temp) throws Exception {
-        // 无平台的快照（单测/纯 IR 场景）两个数据源都空 → str，与 TS 侧 type Namespace = string 一致
+        // A snapshot without a platform (unit tests, pure IR) has both sources empty, so this is str,
+        // matching {@code type Namespace = string} on the TS side
         TypeDecl target = new TypeDecl(TypeDecl.Kind.CLASS, FakeProbeEvent.class, FakeProbeEvent.class.getName());
         AdapterCatalogEntry adapter = new AdapterCatalogEntry(
                 FakeProbeEvent.class, List.of(AdapterInputShape.self(), AdapterInputShape.namespace()),
@@ -787,11 +797,11 @@ class PythonProbeBackendIntegrationTest {
                 "namespace fallback missing: " + module);
     }
 
-    // -------------------- C5a：隐藏类残留清理 --------------------
+    // -------------------- Hidden class cleanup --------------------
 
     @Test
     void generate_hiddenClassNotImportedAndNotRendered(@TempDir Path temp) throws Exception {
-        // A 引用 pkg.b.Hidden；Hidden 被 hide()（mutated + hidden）
+        // A references pkg.b.Hidden; Hidden is hide()d (mutated + hidden)
         TypeDecl a = new TypeDecl(TypeDecl.Kind.CLASS, null, "pkg.a.A");
         MethodDecl getH = new MethodDecl("getH");
         getH.returnType = new TypeSlot(null, ApiTypeRef.symbol(new ApiSymbolId("java", "pkg.b.Hidden")));
@@ -804,12 +814,12 @@ class PythonProbeBackendIntegrationTest {
         ProbeBackend.GenerateResult res = runGenerate(temp, emptySnapshot(), ir, List.of("pkg.a", "pkg.b"));
         assertTrue(res.success(), "generate failed: " + res.message());
 
-        // A 的模块：不 import Hidden；对 Hidden 的引用降级为 Any
+        // Module A: no import of Hidden, and references to Hidden fall back to Any
         String aMod = Files.readString(temp.resolve("probe-python/nekojs/_java/pkg/a/__init__.pyi"));
         assertFalse(aMod.contains("import Hidden"), "hidden class must not be imported: " + aMod);
         assertTrue(aMod.contains("def getH(self) -> Any"), "hidden SYMBOL should degrade to Any: " + aMod);
 
-        // Hidden 的模块：该类不出现
+        // Module of Hidden: the class does not appear
         String bMod = Files.readString(temp.resolve("probe-python/nekojs/_java/pkg/b/__init__.pyi"));
         assertFalse(bMod.contains("class Hidden"), "hidden class must not be rendered: " + bMod);
     }
@@ -889,7 +899,8 @@ class PythonProbeBackendIntegrationTest {
         return snapshotWith(bindings, events, adapters, List.of());
     }
 
-    /** 带 registryTypes 的快照构造（RegistryValue 形状 → Literal[...] 的数据源）。 */
+    /** Builds a snapshot with registryTypes: the data source for the {@code Literal[...]} of the
+     * RegistryValue shape. */
     private static NekoScriptCatalogSnapshot snapshotWith(List<BindingCatalogEntry> bindings,
                                                           List<EventCatalogEntry> events,
                                                           List<AdapterCatalogEntry> adapters,
@@ -897,7 +908,7 @@ class PythonProbeBackendIntegrationTest {
         return snapshotWith(bindings, events, adapters, registries, List.of());
     }
 
-    /** 再带 modIds 的快照构造（NamespaceValue 形状的第二个数据源）。 */
+    /** Builds a snapshot that also takes modIds: the second data source for the NamespaceValue shape. */
     private static NekoScriptCatalogSnapshot snapshotWith(List<BindingCatalogEntry> bindings,
                                                           List<EventCatalogEntry> events,
                                                           List<AdapterCatalogEntry> adapters,
@@ -913,7 +924,7 @@ class PythonProbeBackendIntegrationTest {
         ProbeConfig cfg = new ProbeConfig(true, ".neko_probe", new ProbeConfig.ScanConfig(
                 includes, List.of(), List.of(), List.of(), 5, "SMART"));
         NekoJSPaths paths = NekoJSPaths.fromGameDir(temp);
-        Files.createDirectories(paths.root());  // 供 pyrightconfig 写入
+        Files.createDirectories(paths.root());  // Used to write pyrightconfig
         Path outputDir = temp.resolve("probe-python");
         ProbeContext ctx = new ProbeContext.Of(snapshot, List.of(), cfg, paths, "python", outputDir, ir);
         return new PythonProbeBackend().generate(ctx);
@@ -936,10 +947,10 @@ class PythonProbeBackendIntegrationTest {
     }
 }
 
-/** 集成测试用事件类：稳定 FQN，供事件声明与适配器别名断言。 */
+/** Event class for the integration test. Its FQN is stable, so event declarations and alias assertions rely on it. */
 class FakeProbeEvent {}
 
-/** 集成测试用枚举：真实反射路径，供枚举别名与 dispatch key 放宽断言。 */
+/** Enum for the integration test. It reaches the real reflection path, so enum alias and dispatch key tests use it. */
 enum FakeProbeEnum {
     RED, GREEN
 }

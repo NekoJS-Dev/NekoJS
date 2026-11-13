@@ -25,24 +25,29 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * bootstrap 扩展点交付冒烟：{@code registerNodeModules} / {@code registerRecipeSchemas}
- * 与生命周期便捷钩子（{@code init} / {@code initStartup} / {@code afterInit} /
- * {@code beforeScriptsLoaded} / {@code afterScriptsLoaded}）此前没有任何内置插件实现。
+ * Smoke tests for how bootstrap delivers extension points: {@code registerNodeModules},
+ * {@code registerRecipeSchemas} and the lifecycle convenience hooks ({@code init},
+ * {@code initStartup}, {@code afterInit}, {@code beforeScriptsLoaded},
+ * {@code afterScriptsLoaded}).
  *
- * <p>本测试用录制插件走 {@link NekoPluginBootstrap#bootstrap}（与
- * {@code NekoCommonBuiltinPluginTest} 相同的 harness），断言：
+ * <p>The test drives a recording plugin through {@link NekoPluginBootstrap#bootstrap}, using the
+ * same harness as {@code NekoCommonBuiltinPluginTest}, and checks that:
  * <ul>
- *   <li>{@code registerNodeModules} 注册的模块出现在 {@link NekoPluginRuntime#nodeModules()}；</li>
- *   <li>{@code registerRecipeSchemas} 注册的 schema 经 runtime 构造时的
- *       {@code publishRecipeSchemaOverrides} 发布到 {@link RecipeTypeDefinitionStorage}
- *       （同时经 runtime.recipeSchemaOverrides() 访问器直接断言快照）；</li>
- *   <li>{@code registerLifecycleHooks} 默认实现把五个便捷方法以方法引用收集进 runtime，
- *       bootstrap 阶段不提前触发，{@code fireXxx} 时按序触发且异常被隔离。</li>
+ *   <li>modules registered by {@code registerNodeModules} appear in
+ *       {@link NekoPluginRuntime#nodeModules()};</li>
+ *   <li>schemas registered by {@code registerRecipeSchemas} are published to
+ *       {@link RecipeTypeDefinitionStorage} by {@code publishRecipeSchemaOverrides} when the
+ *       runtime is built (the test also checks the snapshot through the
+ *       runtime.recipeSchemaOverrides() accessor);</li>
+ *   <li>the default {@code registerLifecycleHooks} collects the five convenience methods as
+ *       method references into the runtime. Bootstrap does not fire them early; each
+ *       {@code fireXxx} call fires them in order and isolates exceptions.</li>
  * </ul>
  */
 class NekoPluginBootstrapHookDeliveryTest {
 
-    /** 冒烟用 schema：namespace=smoke、type=machine，断言同一实例从存储层取回。 */
+    /** Schema for the smoke tests: namespace=smoke, type=machine. The test checks that the same
+     * instance comes back from the storage layer. */
     private static final RecipeTypeDefinition SMOKE_SCHEMA = new RecipeTypeDefinition(
             "smoke", "machine", "smoke:machine", "smoke_machine",
             List.of(List.of("output")), Map.of(), List.of());
@@ -54,13 +59,15 @@ class NekoPluginBootstrapHookDeliveryTest {
 
     @BeforeEach
     void resetGlobals() throws Exception {
-        // bootstrap 的 collectExtensions 会 ProbeBackendRegistry.setInstance（已设置时抛异常），先清
+        // Bootstrap's collectExtensions calls ProbeBackendRegistry.setInstance, which throws when an
+        // instance is already set, so clear it first.
         Field probeInstance = ProbeBackendRegistry.class.getDeclaredField("INSTANCE");
         probeInstance.setAccessible(true);
         probeInstance.set(null, null);
 
-        // RecipeTypeDefinitionStorage 四层静态注册表清空，隔离同 JVM 其他测试的残留
-        // （断言走 current() 合并视图，残留层会干扰取回结果）
+        // Clear the four static registries of RecipeTypeDefinitionStorage so leftovers from other tests
+        // in the same JVM do not leak in; the assertions read the merged current() view, which a
+        // leftover layer would disturb.
         for (String layer : List.of("autoDiscovered", "pluginOverrides", "dataDriven", "scriptSchemas")) {
             storageField(layer).set(null, RecipeTypeDefinitionRegistry.EMPTY);
         }
@@ -113,7 +120,8 @@ class NekoPluginBootstrapHookDeliveryTest {
         NekoPluginRuntime runtime = NekoPluginBootstrap.bootstrap(
                 List.of(plugin), new ScriptPropertyRegistry.Impl());
 
-        // 收集阶段只调用注册型钩子；五个生命周期便捷方法以方法引用收集，不在 bootstrap 时提前触发
+        // The collection phase only calls the registration hooks. The five lifecycle convenience
+        // methods are collected as method references and do not fire during bootstrap.
         assertEquals(List.of("registerNodeModules", "registerRecipeSchemas"), plugin.calls,
                 "bootstrap 阶段不应触发生命周期便捷方法");
 
@@ -149,7 +157,8 @@ class NekoPluginBootstrapHookDeliveryTest {
                 "前序插件 beforeScriptsLoaded 抛异常不应中断后续插件");
     }
 
-    /** 直接实例化传入 bootstrap 的录制插件：记录扩展点收集与生命周期触发（调用顺序敏感）。 */
+    /** Recording plugin passed straight to bootstrap: it records extension point collection and
+     * lifecycle firing, and the call order matters. */
     private static final class RecordingPlugin implements NekoJSPlugin, NodeModulesPoint.Contributor, RecipeSchemasPoint.Contributor, LifecyclePoint.Contributor, RecipeLifecyclePoint.Contributor {
         final List<String> calls = new ArrayList<>();
 
@@ -191,7 +200,8 @@ class NekoPluginBootstrapHookDeliveryTest {
         }
     }
 
-    /** init / beforeScriptsLoaded 抛异常，验证 fire 入口的异常隔离语义。 */
+    /** Throws from init and beforeScriptsLoaded to test how the fire entry points isolate
+     * exceptions. */
     private static final class ThrowingLifecyclePlugin implements NekoJSPlugin, LifecyclePoint.Contributor {
         @Override
         public void init() {

@@ -15,30 +15,33 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 /**
- * {@code ItemEvents.entityInteracted} 的 fabric 挂点：
- * {@code ServerGamePacketListenerImpl#handleInteract(ServerboundInteractPacket)} 中
- * {@code ServerPlayer.interactOn} 的调用点（INVOKE），按交互时<b>主手物品</b> dispatch。
+ * Fabric hook for {@code ItemEvents.entityInteracted}: the
+ * {@code ServerPlayer.interactOn} call site in
+ * {@code ServerGamePacketListenerImpl#handleInteract(ServerboundInteractPacket)} (INVOKE),
+ * dispatched by the <b>main hand item</b> used for the interaction.
  *
- * <p>javap 实证（minecraft-merged-deobf-26.1.2.jar）：
+ * <p>Checked with javap (minecraft-merged-deobf-26.1.2.jar):
  * <ul>
- *   <li>{@code handleInteract} 是 public 具体方法；{@code ServerboundInteractPacket} 是
- *       record（{@code entityId()/hand()/location()/usingSecondaryAction()}）；
- *       攻击走独立的 {@code handleAttack(ServerboundAttackPacket)}（3894 行），本挂在
- *       交互侧不会拦截攻击。</li>
- *   <li>调用点顺序（字节码）：{@code level.getEntityOrPart(entityId())}（55-73 实体为 null
- *       或出世界边界 return）→ 交互范围校验（80-95）→ {@code packet.hand()} →
- *       {@code player.getItemInHand(hand)}（119-131 未启用特性 return）→
- *       {@code player.interactOn(entity, hand, location)}（139-148）。选 INVOKE 点在
- *       上述校验全部通过之后，实体/手/物品均安全。</li>
- *   <li>{@code Player.interactOn} 的 descriptor：
+ *   <li>{@code handleInteract} is a public concrete method. {@code ServerboundInteractPacket} is a
+ *       record ({@code entityId()/hand()/location()/usingSecondaryAction()}). Attacks go through a
+ *       separate {@code handleAttack(ServerboundAttackPacket)}, so this interaction hook never
+ *       intercepts attacks.</li>
+ *   <li>Call order in the bytecode: {@code level.getEntityOrPart(entityId())} (55-73, returns when
+ *       the entity is null or outside the world), the interaction range check (80-95),
+ *       {@code packet.hand()}, {@code player.getItemInHand(hand)} (119-131, returns when the
+ *       feature is disabled), then {@code player.interactOn(entity, hand, location)} (139-148).
+ *       The INVOKE point comes after all these checks, so the entity, hand and item are all
+ *       valid.</li>
+ *   <li>The descriptor of {@code Player.interactOn} is
  *       {@code (Lnet/minecraft/world/entity/Entity;Lnet/minecraft/world/InteractionHand;
- *       Lnet/minecraft/world/phys/Vec3;)Lnet/minecraft/world/InteractionResult;}。</li>
+ *       Lnet/minecraft/world/phys/Vec3;)Lnet/minecraft/world/InteractionResult;}.</li>
  * </ul>
  *
- * <p>可取消：监听器 {@code return true} → {@code ci.cancel()} 取消整包处理（原版交互不执行），
- * 对应 NeoForge {@code PlayerInteractEvent.EntityInteract} 的 setCanceled。
- * <b>命名注意</b>：目标类已有 {@code ServerGamePacketListenerMixin}（handleUseItem/rightClicked，
- * 不同方法），本类以 ItemInteract 后缀独立命名防冲突。
+ * <p>Cancellable: a listener returning {@code true} leads to {@code ci.cancel()}, which cancels
+ * handling of the whole packet so the vanilla interaction does not run; this matches setCanceled
+ * on NeoForge {@code PlayerInteractEvent.EntityInteract}. <b>Naming</b>: the target class already
+ * has {@code ServerGamePacketListenerMixin} (handleUseItem/rightClicked, different methods), so
+ * this class takes the ItemInteract suffix to avoid a name clash.
  */
 @Mixin(ServerGamePacketListenerImpl.class)
 public abstract class MixinServerGamePacketListenerItemInteract {
@@ -56,10 +59,11 @@ public abstract class MixinServerGamePacketListenerItemInteract {
             return;
         }
         InteractionHand hand = packet.hand();
-        // PlayerEvents.entityInteract 与本事件的注入点完全相同（handleInteract →
-        // player.interactOn 调用点，目标实体已存在/在界内/在交互距离内）——曾以独立
-        // mixin 在相同点注入，但那是一个扫描 0 的 mixin 怪癖（注解与字节码与本文
-        // 完全一致的孪生注入却通过），故双事件合并到本 handler 一次 dispatch。
+        // PlayerEvents.entityInteract uses exactly the same injection point as this event: handleInteract ->
+        // the player.interactOn call site, after the target entity exists, is inside the world and is
+        // within interaction distance. It once had its own mixin at that point, but that hit a mixin quirk
+        // where the scan found nothing even though a twin injection with identical annotations and
+        // bytecode passed, so both events are dispatched once from this handler.
         if (FabricPlayerEventBindings.postEntityInteract(this.player, target, hand)) {
             ci.cancel();
         }

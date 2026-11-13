@@ -1,4 +1,4 @@
-// TODO(fabric): fabric 侧还没有对应实现，整文件守卫等移植完成后去掉
+// TODO(fabric): the fabric side has no counterpart yet; drop this whole-file guard once the port lands
 //? if neoforge {
 package com.tkisor.nekojs.bindings.event;
 
@@ -23,11 +23,10 @@ class EventApiSurfaceGoldenTest {
 
     @Test
     void blockEventsSurfaceMatchesGolden() throws IOException {
-        // Install the platform predicate before the complete event family initializes.
-        // ticket 24: cancellability predicate must also precede the first family class-init
-        // (mirrors NekoJSMod's constructor calling NeoForgeRuntimeBootstrap.setup() first);
-        // without it this test would freeze every cancellable family bus as non-cancellable
-        // for the whole shared test JVM.
+        // Installs the cancellability predicate before any event family class-initializes. This
+        // mirrors the NekoJSMod constructor, which calls NeoForgeRuntimeBootstrap.setup() first.
+        // Without it, the shared test JVM would freeze every cancellable family bus as
+        // non-cancellable.
         com.tkisor.nekojs.api.event.EventBusJS.setExternalCancellabilityPredicate(
                 net.neoforged.bus.api.ICancellableEvent.class::isAssignableFrom);
         EventGroup group = BlockEvents.GROUP;

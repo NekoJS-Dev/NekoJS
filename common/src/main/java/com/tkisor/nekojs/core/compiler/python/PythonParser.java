@@ -125,8 +125,10 @@ public final class PythonParser {
         if (matchOp("(")) {
             if (!atOp(")")) {
                 base = parseTest();
-                // 多重继承 / 类关键字参数：v1 只支持单继承。此前静默跳过额外基类是无声错误
-                // （父类 B 被丢弃），现改为带源码位置的显式报错；尾随逗号仍允许。
+                // Multiple inheritance and class keyword arguments: v1 supports single inheritance only.
+                // Skipping extra base classes would silently drop them (parent B would be lost), so
+                // this reports an explicit error with the source position. Trailing commas are still
+                // allowed.
                 if (matchOp(",") && !atOp(")")) {
                     throw error("multiple base classes (or class keyword args) are not supported"
                             + " (v1: single inheritance only); found extra base '" + peek().text() + "'");
@@ -150,9 +152,10 @@ public final class PythonParser {
             PythonToken elif = peek();
             tokens.set(pos, new PythonToken(PythonToken.Type.NAME, "if", elif.line(), elif.col()));
             PythonNode nested = parseIf();
-            // 糖改写出的嵌套 If 不会回到 parseStatements 登记——这里按 elif 头部所在的行补上，
-            // 否则 emitter 内联的 `} else if` 没有 source map 映射，且其中的发射期报错会沿用
-            // 外层 if 的行号（elif 体里的语句不受影响：parseSuite → parseStatements 各自登记）。
+            // The nested If this sugar builds never passes through parseStatements, so record its source
+            // line here from the elif header. Without it the inlined else-if has no source map entry,
+            // and emit-time errors inside it would report the outer if's line. Statements in the
+            // elif body are unaffected: parseSuite -> parseStatements records them individually.
             srcLines.put(nested, elif.line());
             elseBody.add(nested);
         } else if (matchKw("else")) {
@@ -338,7 +341,8 @@ public final class PythonParser {
         };
     }
 
-    /** 数字字面量解析失败（如超出 long 范围）时给出带位置的报错，而非裸 NumberFormatException。 */
+    /** Reports a located error when a numeric literal cannot be parsed (for example when it
+     *  exceeds the long range), instead of a bare NumberFormatException. */
     private long parseIntLiteral(PythonToken t) {
         try {
             return Long.parseLong(t.text());
@@ -652,8 +656,9 @@ public final class PythonParser {
                 while (peek().is(PythonToken.Type.STRING)) { sb.append(advance().text()); }
                 return new PythonNode.StrLit(sb.toString());
             }
-            // 传入 FSTRING 记号的行/列（记号列指向引号，内容从 col+1 开始），供 FStringParser
-            // 把插值表达式的解析错误换算回源码坐标
+            // Passes the FSTRING token's line and column to FStringParser (the column points at the
+            // opening quote, so content starts at col+1) so it can map interpolation parse errors
+            // back to source coordinates.
             case FSTRING -> { advance(); return FStringParser.parse(t.text(), t.line(), t.col() + 1); }
             case NAME -> {
                 advance();
@@ -992,9 +997,9 @@ public final class PythonParser {
     }
 
     /**
-     * Authored parser diagnostic. Message text is unchanged from the previous plain
-     * {@link IllegalArgumentException}; the line/column of the offending token now also travel as
-     * {@link NekoCompileException} so the preparation seam publishes real authored coordinates.
+     * Builds a parser diagnostic. The message text is unchanged from the plain
+     * {@link IllegalArgumentException}; the offending token's line and column now also travel
+     * inside {@link NekoCompileException}, so the caller reports real authored coordinates.
      */
     private IllegalArgumentException error(String msg) {
         PythonToken t = peek();

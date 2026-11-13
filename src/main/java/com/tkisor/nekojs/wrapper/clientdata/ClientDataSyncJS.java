@@ -9,23 +9,26 @@ import com.tkisor.nekojs.wrapper.clientdata.ClientDataStore;
 import net.minecraft.server.level.ServerPlayer;
 
 /**
- * {@code ClientData} 绑定（服务端脚本专用）：把 key-value 数据推送到客户端，客户端脚本经
- * {@code clientData.get(key)} 只读消费（未来 HUD 脚本的数据通道）。
+ * The {@code ClientData} binding, for server scripts only: pushes key-value data to clients,
+ * where client scripts read it through {@code clientData.get(key)}. HUD scripts use it as their
+ * data channel.
  *
- * <p>值走 JSON 序列化（gson），网络传输为 JSON 字符串——三个平台共用同一种线格式；
- * 仅支持 JSON 类型（string/number/bool/object/array/null），其它值抛
- * {@link IllegalArgumentException}。同 key 重复推送后者覆盖；客户端断线/切世界时清空。
+ * <p>Values are serialized to JSON with gson and travel as a JSON string, so all three platforms
+ * share one wire format. Only JSON types are supported (string/number/bool/object/array/null);
+ * any other value throws {@link IllegalArgumentException}. Pushing the same key again overwrites
+ * the earlier value; a client clears its data on disconnect or world change.
  */
 @Doc("Server-side API to push key-value data to clients; client scripts read it via clientData.get(key).")
 @Doc("Values must be JSON types (string/number/bool/object/array/null); re-pushed keys overwrite on the client.")
 public final class ClientDataSyncJS {
 
-    /** 单个值序列化后的 JSON 文本上限（与 pdata 同限）：防止脚本把超大结构塞进聊天包。 */
+    /** Upper bound on the serialized JSON text of one value, the same limit as pdata, so a script
+     * cannot put a huge structure into a chat packet. */
     private static final int MAX_JSON_CHARS = 32768;
 
     private ClientDataSyncJS() {}
 
-    /** 推送给全部在线玩家。 */
+    /** Pushes the value to every online player. */
     @Doc("Pushes the value under the key to every connected player.")
     @Param(name = "key", value = "data key the client reads with clientData.get(key)")
     @Param(name = "value", value = "JSON-compatible value (string/number/bool/object/array/null)")
@@ -34,7 +37,7 @@ public final class ClientDataSyncJS {
         PlayPacketDispatchers.get().sendToAllPlayers(packet);
     }
 
-    /** 推送给指定玩家。 */
+    /** Pushes the value to one player. */
     @Doc("Pushes the value under the key to one specific player.")
     @Param(name = "player", value = "the receiving server-side player")
     @Param(name = "key", value = "data key the client reads with clientData.get(key)")
@@ -48,7 +51,8 @@ public final class ClientDataSyncJS {
         JsonElement json = ClientDataStore.toJsonElement(value);
         String serialized = json.toString();
         if (serialized.length() > MAX_JSON_CHARS) {
-            // 抛给脚本层（error reporting 可见），而不是静默跳过——推送失败应当显式失败
+            // Throws to the script layer, where error reporting can show it, instead of skipping the push:
+            // a failed push should fail visibly
             throw new IllegalArgumentException(
                     "client data value for key '" + key + "' serializes to " + serialized.length()
                             + " chars, over the " + MAX_JSON_CHARS + " limit");

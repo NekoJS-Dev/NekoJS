@@ -9,11 +9,11 @@ import java.util.Map;
 import java.util.concurrent.ThreadLocalRandom;
 
 /**
- * 杂项工具：随机数与 Java 值类型判断（数组 / List / Map）。
+ * Miscellaneous helpers: random numbers and checks for Java value types (array, List, Map).
  */
 @Doc("Misc helpers: randomness and Java value type checks.")
 public final class UtilsJS {
-    /** [0, maxExclusive) 的随机 int。 */
+    /** Random int in [0, maxExclusive). */
     @Doc("Returns a random int in [0, maxExclusive).")
     @Param(name = "maxExclusive", value = "exclusive upper bound; must be positive")
     @Return("random int, never equal to maxExclusive")
@@ -21,7 +21,7 @@ public final class UtilsJS {
         return ThreadLocalRandom.current().nextInt(maxExclusive);
     }
 
-    /** [minInclusive, maxExclusive) 的随机 int。 */
+    /** Random int in [minInclusive, maxExclusive). */
     @Doc("Returns a random int in [minInclusive, maxExclusive).")
     @Param(name = "minInclusive", value = "inclusive lower bound")
     @Param(name = "maxExclusive", value = "exclusive upper bound")
@@ -30,14 +30,14 @@ public final class UtilsJS {
         return ThreadLocalRandom.current().nextInt(minInclusive, maxExclusive);
     }
 
-    /** [0, 1) 的随机 double。 */
+    /** Random double in [0, 1). */
     @Doc("Returns a random double in [0, 1).")
     @Return("random double, never 1.0")
     public double randomDouble() {
         return ThreadLocalRandom.current().nextDouble();
     }
 
-    /** [0, maxExclusive) 的随机 double。 */
+    /** Random double in [0, maxExclusive). */
     @Doc("Returns a random double in [0, maxExclusive).")
     @Param(name = "maxExclusive", value = "exclusive upper bound; must be positive")
     @Return("random double within the range")
@@ -45,7 +45,7 @@ public final class UtilsJS {
         return ThreadLocalRandom.current().nextDouble(maxExclusive);
     }
 
-    /** [minInclusive, maxExclusive) 的随机 double。 */
+    /** Random double in [minInclusive, maxExclusive). */
     @Doc("Returns a random double in [minInclusive, maxExclusive).")
     @Param(name = "minInclusive", value = "inclusive lower bound")
     @Param(name = "maxExclusive", value = "exclusive upper bound")
@@ -54,7 +54,7 @@ public final class UtilsJS {
         return ThreadLocalRandom.current().nextDouble(minInclusive, maxExclusive);
     }
 
-    /** 以给定概率返回 true（0 恒 false，>= 1 恒 true）。 */
+    /** Returns true with the given probability (0 is always false, 1 or more is always true). */
     @Doc("Returns true with the given probability.")
     @Param(name = "probability", value = "chance of true, from 0 (never) to 1 (always)")
     @Return("true with the given probability, false otherwise")
@@ -62,7 +62,7 @@ public final class UtilsJS {
         return ThreadLocalRandom.current().nextDouble() < probability;
     }
 
-    /** 是否为 Java 数组。 */
+    /** Whether the value is a Java array. */
     @Doc("Checks whether the value is a Java array.")
     @Param(name = "value", value = "value to check; null is allowed")
     @Return("true for arrays; false for null and non-arrays")
@@ -70,7 +70,7 @@ public final class UtilsJS {
         return value != null && value.getClass().isArray();
     }
 
-    /** 是否为 Java List。 */
+    /** Whether the value is a Java List. */
     @Doc("Checks whether the value is a Java List.")
     @Param(name = "value", value = "value to check; null is allowed")
     @Return("true for List instances; false for null and other types")
@@ -78,7 +78,7 @@ public final class UtilsJS {
         return value instanceof List<?>;
     }
 
-    /** 是否为 Java Map。 */
+    /** Whether the value is a Java Map. */
     @Doc("Checks whether the value is a Java Map.")
     @Param(name = "value", value = "value to check; null is allowed")
     @Return("true for Map instances; false for null and other types")

@@ -3,22 +3,24 @@ package com.tkisor.nekojs.api.event;
 import com.tkisor.nekojs.api.ScriptType;
 
 /**
- * 脚本事件注册器：支撑 {@code ScriptEvents.server/client} 注册 API 的平台回调。
- * 启动阶段 {@link ScriptEvents#post} 会携带本接口实例向 SERVER/CLIENT 脚本广播
- * {@link ScriptEventRegistrationEvent}，脚本调用 {@code event.register(...)} 后最终落到
- * {@link #register}，实现登记到 {@link ScriptEventRegistry} 以支持 reload 清理。
+ * Script event registrar. It backs the platform callbacks of the {@code ScriptEvents.server/client}
+ * registration API. During startup {@link ScriptEvents#post} broadcasts a
+ * {@link ScriptEventRegistrationEvent} carrying this instance to SERVER and CLIENT scripts. When a
+ * script calls {@code event.register(...)}, the call ends up in {@link #register}, which records the
+ * definition in {@link ScriptEventRegistry} so reload can clean it up.
  *
- * <p>声明出来的事件由脚本自己触发（{@code 组.名.post(payload)}），不绑定任何平台原生事件——
- * "按类名挂原生事件"是加载器专属能力，由 {@code NativeEvents} 承担。
+ * <p>A declared event is fired by the script itself ({@code group.name.post(payload)}) and is not
+ * bound to any platform event. Binding native events by class name belongs to the loader and lives in
+ * {@code NativeEvents}.
  */
 public interface ScriptEventRegistrar {
     /**
-     * 注册一个自定义脚本事件。
+     * Registers a custom script event.
      *
-     * @param targetType     事件面向的脚本类型（SERVER 或 CLIENT）
-     * @param groupName      事件组名（脚本侧访问前缀，如 {@code "MyEvents"}）
-     * @param eventName      事件名（组内访问名）
-     * @param sourceScriptId 注册来源脚本 id（reload 时按来源清理）
+     * @param targetType     script type the event is for (SERVER or CLIENT)
+     * @param groupName      event group name, the access prefix on the script side, such as {@code "MyEvents"}
+     * @param eventName      event name, the access name inside the group
+     * @param sourceScriptId id of the script that registered the event; reload cleans up by this id
      */
     void register(ScriptType targetType, String groupName, String eventName, String sourceScriptId);
 }

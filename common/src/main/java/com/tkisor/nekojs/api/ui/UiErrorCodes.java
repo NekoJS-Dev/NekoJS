@@ -20,7 +20,7 @@ public final class UiErrorCodes {
     /** Decoding a resource into a usable image failed. */
     public static final String RESOURCE_DECODE_FAILED = "NEKO-6007";
 
-    // Inspector codes use area 8xxx (ticket 45); 6xxx stays with the visual contract, 7xxx with lifecycle.
+    // Inspector codes use area 8xxx; 6xxx stays with the visual contract, 7xxx with lifecycle.
     /** A runtime layout snapshot does not match the inspector read contract (version skew). */
     public static final String INSPECTOR_SNAPSHOT_MALFORMED = "NEKO-8001";
 

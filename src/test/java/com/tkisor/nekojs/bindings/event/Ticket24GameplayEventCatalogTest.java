@@ -68,25 +68,25 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Ticket 24 catalog-snapshot fixture (NeoForge side): the public members of the eight event
- * families Block/Item/Level/Player/Command/Capability/Goal/Entity are frozen into a contract
- * snapshot via <b>the real registration entry + real catalog derivation</b>
- * ({@link NekoScriptCatalog#events}) — member name, payload class, side, dispatch key,
- * cancellable. Adding/removing/reshaping any public member diffs this table (a contract
- * change) instead of drifting silently; a missing family (the registration entry dropping
- * an entire group) likewise fails outright.
+ * Freezes the public members of the eight event families
+ * Block/Item/Level/Player/Command/Capability/Goal/Entity into a contract snapshot, built
+ * through <b>the real registration entry plus the real catalog derivation</b>
+ * ({@link NekoScriptCatalog#events}), recording member name, payload class, side, dispatch key
+ * and cancellability. Adding, removing or reshaping any public member shows up as a diff of
+ * this table (a contract change) instead of drifting silently; a missing family (the
+ * registration entry dropping an entire group) fails outright.
  *
- * <p>Complements ticket 33's {@code EventSurfaceDomainGateTest} (cross-node bus-name
- * baseline): that one freezes "which member names each node registers", while this test
- * adds the payload/side/dispatch/cancel shapes at the catalog dimension and pulls the
- * wrapper public payload classes ({@code BlockBrokenEventJS} and other loader-neutral
- * payloads) into the same managed contract view. The fabric-side twin snapshot lives in
- * the fabric node's local test tree (see the file header comment).
+ * <p>Complements {@code EventSurfaceDomainGateTest} (the cross-node bus-name baseline): that one
+ * freezes which member names each node registers, while this test adds the payload, side,
+ * dispatch and cancel shapes at the catalog level and pulls the wrapper public payload classes
+ * ({@code BlockBrokenEventJS} and other loader-neutral payloads) into the same managed contract
+ * view. The fabric-side twin snapshot lives in the fabric node's local test tree (see the file
+ * header comment).
  *
- * <p>Replicates the production init order: install the external cancellability predicate
- * first (same as {@code NeoForgeRuntimeBootstrap.setup()} in the {@code NekoJSMod}
- * constructor), then the bootstrap adapter layer, then the registration groups — reversing
- * the order would freeze cancellable buses as non-cancellable.
+ * <p>Replicates the production init order: install the external cancellability predicate first
+ * (same as {@code NeoForgeRuntimeBootstrap.setup()} in the {@code NekoJSMod} constructor), then
+ * the bootstrap adapter layer, then the registration groups. Reversing the order would freeze
+ * cancellable buses as non-cancellable.
  */
 class Ticket24GameplayEventCatalogTest {
 
@@ -195,7 +195,8 @@ class Ticket24GameplayEventCatalogTest {
                 "ticket-24 gameplay event catalog snapshot diff:\n  " + String.join("\n  ", failures));
     }
 
-    /** Each bus appears exactly once in the catalog derivation (corroborates ticket 14's cross-group uniqueness). */
+    /** Each bus yields exactly one catalog entry, which confirms the cross-group uniqueness from
+     * a second angle. */
     @Test
     void eachFamilyBusYieldsExactlyOneCatalogEntry() {
         Map<String, EventGroup> groups = registeredGroups();

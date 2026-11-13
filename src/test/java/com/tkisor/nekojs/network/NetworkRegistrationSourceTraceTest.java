@@ -17,33 +17,37 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * 票 17 注册时机与 loader 子集的源码 trace fixture（纯文件读，全部节点同跑）：
+ * Source trace for registration timing and for the loader's explicit payload subset (plain file
+ * reads, so every node runs it):
  *
  * <ul>
- *   <li>AC1：平台 network 注册只发生在 loader 原生初始化入口——NeoForge 的
- *       {@code RegisterPayloadHandlersEvent} 订阅（{@code NekoJSNetwork}）与 fabric 的
- *       entrypoint（{@code NekoJSFabricMod#onInitialize} / {@code NekoJSFabricClient}）；
- *       {@code PlayPacketDispatchers.install} 全仓 main 源恰两处（两 loader 各一）；
- *       reload/命令面文件不含任何 payload 注册调用。多次 SERVER/CLIENT reload 的运行期
- *       不变性由「reload 路径不含注册调用 + 生命周期测试（票 06/07 与本票 routing fixture）
- *       不触碰 dispatcher」联合钉住；平台 event 只发一次是 loader 契约（REPORT
- *       characterization）。</li>
- *   <li>AC7：fabric 网络面是显式子集——payload 注册恰为
- *       {script_payload（双向）、client_data_sync、pdata_sync、pack_hashes、pack_bundle}，
- *       {@code ShowErrorListPacket}（错误面板/显示域）在 {@code src/fabric} 零引用：
- *       不伪造编辑器/dashboard/客户端显示 parity。</li>
+ *   <li>Platform network registration happens only at a loader's own initialization entry:
+ *       NeoForge's {@code RegisterPayloadHandlersEvent} subscriber ({@code NekoJSNetwork}) and
+ *       the fabric entrypoints ({@code NekoJSFabricMod#onInitialize} /
+ *       {@code NekoJSFabricClient}). {@code PlayPacketDispatchers.install} appears exactly twice
+ *       in the main sources, once per loader, and the reload and command files contain no call
+ *       that registers a payload. Together these pin that property across repeated
+ *       SERVER/CLIENT reloads: the reload path registers nothing, and the lifecycle tests plus
+ *       this routing fixture never touch the dispatcher. The platform event firing only once is
+ *       a loader rule pinned by characterization.</li>
+ *   <li>The fabric network side is an explicit subset: it registers exactly script_payload
+ *       (both directions), client_data_sync, pdata_sync, pack_hashes and pack_bundle, and
+ *       {@code ShowErrorListPacket} (error panel / display) has zero references under
+ *       {@code src/fabric}. The fabric side does not imitate editor, dashboard or client
+ *       display parity.</li>
  * </ul>
  *
- * <p><b>受管增项（2026-09-29，票 21 平台接线 review 分支）</b>：NeoForge 面在同一
- * {@code RegisterPayloadHandlersEvent} 注册点新增第 7 个 payload 类型
- * {@code nekojs:dynamic_registry_sync}（双向，Dynamic Registry 批事务同步）——经
- * {@code McPlatformCompat.Impl#registerDynamicSyncPayload} 门面（26.x 实现侧真正注册，
- * 1.21.1 默认空实现＝该节点无动态注册面）。同一 channel、同一注册点、纯增量类型；
- * fabric 显式子集（恰 6 调用/5 类型）不变。
+ * <p><b>Later addition (2026-09-29, platform wiring review)</b>: the NeoForge side registers a
+ * seventh payload type, {@code nekojs:dynamic_registry_sync} (both directions, batch
+ * transactions for the dynamic registry), at the same {@code RegisterPayloadHandlersEvent}
+ * point, through the {@code McPlatformCompat.Impl#registerDynamicSyncPayload} facade (the 26.x
+ * implementation registers it; the 1.21.1 default is empty, since that node has no dynamic
+ * registry). Same channel, same registration point, purely additional type. The fabric explicit
+ * subset stays at 6 calls / 5 types.
  */
 class NetworkRegistrationSourceTraceTest {
 
-    // ---- 仓库根定位（节点测试 CWD = versions/<node>，向上找到控制器脚本） ----
+    // ---- Locating the repo root (a node test runs with CWD versions/<node>; walk up to the controller script) ----
 
     private static Path repoRoot() {
         Path dir = Path.of("").toAbsolutePath();
@@ -65,7 +69,8 @@ class NetworkRegistrationSourceTraceTest {
         }
     }
 
-    /** 只保留代码行（去掉 javadoc/行注释形态的行）：类名出现在注释里不是接线引用。 */
+    /** Keeps code lines only, dropping javadoc and line-comment lines: a class name inside a comment
+     * is not a wiring reference. */
     private static String codeLinesOnly(String source) {
         StringBuilder out = new StringBuilder(source.length());
         for (String line : source.split("\n", -1)) {
@@ -88,7 +93,8 @@ class NetworkRegistrationSourceTraceTest {
         return count;
     }
 
-    /** 枚举 main 源根（共享 src/main + common main + fabric raw root + 全部节点 main）下的 java 文本流。 */
+    /** Lists the java files under every main source root: shared src/main, common main, the fabric root
+     * and every node main tree. */
     private static List<Path> mainJavaFiles() {
         Path root = repoRoot();
         Stream<Path> shared = Stream.of(root.resolve("src/main/java"));
@@ -111,7 +117,7 @@ class NetworkRegistrationSourceTraceTest {
                 .toList();
     }
 
-    // ---- AC1：注册只在 loader 原生初始化时机 ----
+    // ---- Registration happens only at the loader's own initialization ----
 
     @Test
     void neoforgeRegistrationLivesInLoaderEventSubscriber() {
@@ -124,7 +130,7 @@ class NetworkRegistrationSourceTraceTest {
                 "the dispatcher is assembled exactly once in the NeoForge network entry");
     }
 
-    /** AC2 的「方向」钉住：NeoForge 侧每个 payload 的注册方向（S2C / 双向 / 配置期 S2C）。 */
+    /** Pins the registration direction of each payload on the NeoForge side: S2C, bidirectional, or configuration-phase S2C. */
     @Test
     void neoforgePayloadDirectionsStayOnLegacyRegistration() {
         String source = read(repoRoot().resolve("src/main/java/com/tkisor/nekojs/network/NekoJSNetwork.java"));
@@ -137,20 +143,22 @@ class NetworkRegistrationSourceTraceTest {
         for (String line : expectedDirections) {
             assertTrue(source.contains(line), "NeoForge registration line missing: " + line);
         }
-        // 脚本自定义通道的双向注册经版本 compat 门面（26.x 4 参 playBidirectional，
-        // 1.21.1 3 参 + flow 判别）——形状由 ScriptPayloadRegistrationShapeTest 钉住，
-        // 这里钉住「确实经门面注册」这一方向事实。
+        // The script custom channel registers in both directions through the version compat facade
+        // (26.x uses the 4-arg playBidirectional, 1.21.1 the 3-arg form plus a flow check). The
+        // exact shape is pinned by ScriptPayloadRegistrationShapeTest; this pins that it does go
+        // through the facade.
         assertTrue(source.contains("McPlatformCompat.get().registerScriptPayload(registrar)"),
                 "the bidirectional script payload must be registered through the version compat facade");
-        // 受管增项（票 21 平台接线）：动态注册批事务 payload 同样经 compat 门面注册在
-        // 同一 loader 事件/同一 channel——不出现第二注册点（26.x 实现侧注册，
-        // 1.21.1 默认空实现）。wire golden 见 DynamicSyncPayloadWireFormatTest。
+        // The dynamic registry batch-transaction payload registers through the compat facade at the
+        // same loader event and on the same channel, so there is no second registration point
+        // (26.x registers it, 1.21.1 defaults to an empty implementation). The wire golden lives
+        // in DynamicSyncPayloadWireFormatTest.
         assertTrue(source.contains("McPlatformCompat.get().registerDynamicSyncPayload(registrar)"),
                 "the dynamic registry sync payload must register at the same single loader event"
                         + " through the version compat facade (no second registration point)");
     }
 
-    /** AC2 的「方向」钉住：fabric 侧显式子集的注册方向。 */
+    /** Pins the registration direction of the explicit fabric subset. */
     @Test
     void fabricPayloadDirectionsStayOnLegacyRegistration() {
         Path root = repoRoot();
@@ -193,8 +201,9 @@ class NetworkRegistrationSourceTraceTest {
 
     @Test
     void reloadAndCommandPathsContainNoPayloadRegistration() {
-        // reload 的可达入口：命令面（三节点）+ 生命周期 owner（root/manager）。
-        // 这些文件里出现平台注册调用 = reload 会重复注册，直接红。
+        // Entry points a reload can reach: the command surface (three nodes) and the lifecycle owners
+        // (root and manager). A platform registration call in any of these files means a reload
+        // registers a second time, and the test fails.
         Path root = repoRoot();
         List<Path> reloadFacing = List.of(
                 root.resolve("src/main/java/com/tkisor/nekojs/command/NekoJSCommands.java"),
@@ -212,7 +221,7 @@ class NetworkRegistrationSourceTraceTest {
         }
     }
 
-    // ---- AC7：fabric 显式子集 ----
+    // ---- The explicit fabric subset ----
 
     @Test
     void fabricRegistersExactlyTheExplicitPayloadSubset() {
@@ -228,11 +237,11 @@ class NetworkRegistrationSourceTraceTest {
         int registryCalls = 0;
         for (Path file : fabricFiles) {
             String source = read(file);
-            // 只数调用点（"PayloadTypeRegistry."），不含 import 行
+            // Count call sites only ("PayloadTypeRegistry."), not import lines
             registryCalls += countOccurrences(source, "PayloadTypeRegistry.");
         }
-        // FabricPlayNetwork(3: client_data_sync + script_payload 双向) + FabricPDataSync(1)
-        // + FabricPackSync(2: pack_hashes/pack_bundle) = 6 处注册调用、5 个 payload 类型
+        // FabricPlayNetwork(3: client_data_sync and script_payload in both directions) + FabricPDataSync(1)
+        // + FabricPackSync(2: pack_hashes/pack_bundle) = 6 registration calls for 5 payload types
         assertEquals(6, registryCalls,
                 "fabric payload type registrations must stay the explicit six calls / five types");
     }
@@ -258,7 +267,8 @@ class NetworkRegistrationSourceTraceTest {
     @Test
     void fabricScriptChannelReceiversHopMainThreadBeforeNeutralDispatch() {
         String source = read(repoRoot().resolve("src/fabric/java/com/tkisor/nekojs/fabric/FabricPlayNetwork.java"));
-        // 两处 receiver（server/client）都必须先切平台主线程再进中立投递核心
+        // Both receivers, server and client, must hop to the platform main thread before entering the
+        // neutral dispatch core.
         Pattern receiverHop = Pattern.compile(
                 "context\\.(server|client)\\(\\)\\.execute\\(\\(\\) ->\\s*[^;]*NetworkMessageHandler\\.post(Server|Client)Event");
         Matcher matcher = receiverHop.matcher(source);

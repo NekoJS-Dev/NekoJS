@@ -10,13 +10,13 @@ import java.util.Set;
 import java.util.function.Function;
 
 /**
- * Shared collection path for every {@link UiInspector} implementation (ticket 45).
- * {@link #read} converts the common JSX runtime's public layout snapshot — the frozen
- * object handed to {@code NekoUiHostAdapter.layout} — into {@link InspectorSnapshot}
+ * Shared collection path for every {@link UiInspector} implementation.
+ * {@link #read} converts the common JSX runtime's public layout snapshot, the frozen
+ * object handed to {@code NekoUiHostAdapter.layout}, into {@link InspectorSnapshot}
  * records; {@link #decorate} fills the host-only facts (focus, resource statuses,
  * retained phase errors, capture metadata); {@link #canonical} renders the stable text
  * form used by golden files and reports. Fake hosts and the NeoForge host run this same
- * code, so their records are isomorphic by construction rather than by convention.
+ * code, so their records match by construction rather than by convention.
  */
 public final class InspectorSnapshots {
     private InspectorSnapshots() {
@@ -37,9 +37,9 @@ public final class InspectorSnapshots {
     }
 
     /**
-     * Reads a layout snapshot regardless of which side of the interop boundary it came
-     * from: a guest {@link Value} or plain host data ({@code Map}/{@code List}/scalars
-     * in the same shape). Both hosts collect through this one entry point.
+     * Reads a layout snapshot whether it arrives as a guest {@link Value} or as plain host
+     * data ({@code Map}/{@code List}/scalars in the same shape). Both hosts collect through
+     * this one entry point.
      */
     public static InspectorSnapshot read(String rootId, String source, Object snapshot) {
         try {

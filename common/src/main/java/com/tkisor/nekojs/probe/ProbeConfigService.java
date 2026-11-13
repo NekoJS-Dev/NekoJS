@@ -8,19 +8,22 @@ import java.nio.file.Files;
 import java.nio.file.attribute.BasicFileAttributes;
 
 /**
- * probe.toml 的读取与缓存（包内组件，从 {@link ProbeCoordinator} 抽出）：mtime+size 双因子
- * 缓存戳的自动重读、强制丢弃缓存、{@code enabled} 持久化。无状态耦合——持有一份
- * {@link NekoJSPaths} 绑定即一个独立缓存域（多实例互不影响）。
+ * Reads and caches probe.toml, split out of {@link ProbeCoordinator}. It reloads when the cache stamp
+ * changes, supports dropping the cache, and persists {@code enabled}. It keeps no shared state: an
+ * instance holds one {@link NekoJSPaths} binding and therefore owns an independent cache domain, so
+ * instances do not affect each other.
  */
 final class ProbeConfigService {
 
     private final NekoJSPaths paths;
     private final ProbeConfigLoader configLoader = new ProbeConfigLoader();
     private volatile ProbeConfig cachedConfig;
-    /** probe.toml 缓存戳（mtime+size 双因子）；{@link ConfigStamp#MISSING} = 无缓存/文件缺失不可读。 */
+    /** Cache stamp for probe.toml (mtime plus size). {@link ConfigStamp#MISSING} means no cache, or a file
+     *  that is missing or unreadable. */
     private volatile ConfigStamp cachedConfigStamp = ConfigStamp.MISSING;
 
-    /** 配置缓存戳：仅凭 mtime 会漏检同戳不同内容的写入（部分文件系统 mtime 粒度粗），补 size 因子。 */
+    /** Cache stamp for the config. An mtime alone misses writes that keep the same timestamp but change the
+     *  content, because some file systems have coarse mtime granularity, so size is the second factor. */
     private record ConfigStamp(long mtime, long size) {
         static final ConfigStamp MISSING = new ConfigStamp(Long.MIN_VALUE, -1L);
     }
@@ -30,9 +33,10 @@ final class ProbeConfigService {
     }
 
     /**
-     * 读取 probe 配置：带缓存的自动重读——每次调用比对 probe.toml 的 mtime+size 戳，
-     * 文件被修改（或缺失/新建）时自动重新加载，无需手动 reload。
-     * 并发下两个线程可能同时重载同一文件，load 幂等、后写覆盖，结果等价。
+     * Reads the probe config, re-reading it automatically from the cache. Each call compares the mtime
+     * and size stamp of probe.toml and reloads when the file was modified, appeared or went missing, so
+     * no manual reload is needed. Under concurrency two threads may reload the same file at once; load is
+     * idempotent and the later write wins, so the result is the same.
      */
     ProbeConfig readConfig() {
         ProbeConfig c = cachedConfig;
@@ -40,14 +44,18 @@ final class ProbeConfigService {
         if (c == null || !stamp.equals(cachedConfigStamp)) {
             c = configLoader.load(paths.probeConfig());
             cachedConfig = c;
-            // load() 可能在文件缺失时自动创建（autosave 写默认值），落盘后戳已变化；
-            // 重新取一次戳，避免下次读取误判为变更而重复加载。
+            // load() may create the file when it is missing (autosave writes the defaults), which changes the
+            // stamp on disk. Take the stamp again so the next read does not mistake that for a change and
+            // reload a second time.
             cachedConfigStamp = configStamp();
         }
         return c;
     }
 
-    /** probe.toml 的 mtime+size；缺失/不可读返回 {@link ConfigStamp#MISSING}（恒视为已变更，每次重载）。 */
+    /**
+     * Modification time and size of probe.toml. A missing or unreadable file returns
+     * {@link ConfigStamp#MISSING}, which always counts as changed, so every call reloads.
+     */
     private ConfigStamp configStamp() {
         try {
             BasicFileAttributes attrs = Files.readAttributes(paths.probeConfig(), BasicFileAttributes.class);
@@ -58,15 +66,20 @@ final class ProbeConfigService {
     }
 
     /**
-     * 丢弃配置缓存，下次 {@link #readConfig()} 重新从盘读取（供 {@code /nekojs probe reload}
-     * 强制刷新——正常修改配置后 readConfig 已自动感知，无需手动调用）。
+     * Drops the cached config so the next {@link #readConfig()} reads from disk again.
+     * {@code /nekojs probe reload} uses it to force a refresh; a normal config edit is already
+     * noticed by readConfig, so callers do not need this.
      */
     void reloadConfigCache() {
         cachedConfig = null;
         cachedConfigStamp = ConfigStamp.MISSING;
     }
 
-    /** 把 probe.toml 的 {@code enabled} 写盘并重载缓存（供 {@code /nekojs probe enable|disable}）。写盘失败时告警：命令看似成功但配置未持久化。 */
+    /**
+     * Writes {@code enabled} to probe.toml and reloads the cache. Used by
+     * {@code /nekojs probe enable|disable}. A write failure only logs a warning: the command looks
+     * successful but the setting is not persisted.
+     */
     void applyEnabled(boolean enabled) {
         try {
             ProbeConfigLoader.setEnabled(paths.probeConfig(), enabled);
@@ -77,7 +90,7 @@ final class ProbeConfigService {
         reloadConfigCache();
     }
 
-    /** 当前 probe 总开关（{@code == readConfig().enabled()}）。 */
+    /** Current probe master switch ({@code == readConfig().enabled()}). */
     boolean isProbeEnabled() {
         return readConfig().enabled();
     }

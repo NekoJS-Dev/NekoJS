@@ -50,15 +50,17 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * ticket 05 AC2/AC6 可重复测试：独立 root 不互相污染、root-owned 状态随 root close 释放、
- * close 异常不阻断后续清理、重复 close 不产生二次回调。
+ * Repeatable tests for the root lifecycle: independent roots do not pollute each other,
+ * root-owned state is released when the root closes, an exception during close does not block
+ * later cleanup, and closing twice does not run callbacks twice.
  *
- * <p>进程级例外（NekoSharedEngine）在同一进程内共享但不得造成 root 间耦合——本测试在两个
- * root 共用 NekoSharedEngine.get() 的前提下断言错误面与 manager 集合互相隔离。
+ * <p>Process-level exception: NekoSharedEngine is shared within one process but must not
+ * couple roots. This test asserts that the error side and the manager sets stay isolated while
+ * both roots use the same NekoSharedEngine.get() instance.
  */
 class NekoRuntimeRootLifecycleTest {
 
-    /** 记录型 bridge：记录 bindEvents / clearListeners 调用，可配置对某类型抛异常。 */
+    /** A recording bridge: it counts bindEvents and clearListeners calls and can be configured to throw for one type. */
     static final class RecordingBridge implements ScriptEventBridge {
         final Map<ScriptType, Integer> bindEventsCalls = new ConcurrentHashMap<>();
         final Map<ScriptType, Integer> clearListenersCalls = new ConcurrentHashMap<>();
@@ -133,7 +135,8 @@ class NekoRuntimeRootLifecycleTest {
         }
     }
 
-    /** AC2：两个独立 root 共用进程级 NekoSharedEngine，但错误面与 manager 集合互不污染。 */
+    /** Two independent roots share the process-level NekoSharedEngine, but their error side and manager
+     * sets do not pollute each other. */
     @Test
     void independentRootsDoNotPolluteEachOther() {
         RecordingBridge bridge1 = new RecordingBridge();
@@ -141,7 +144,7 @@ class NekoRuntimeRootLifecycleTest {
         NekoRuntimeRoot root1 = new RootBuilder(bridge1).build();
         NekoRuntimeRoot root2 = new RootBuilder(bridge2).build();
 
-        // 进程级例外：共享 Engine 是同一实例（process-owned，AC2 点名）
+        // Process-level exception: the shared Engine is the same instance for every root.
         assertSame(NekoSharedEngine.get(), NekoSharedEngine.get());
 
         root1.createScriptManager(ScriptType.SERVER);
@@ -156,7 +159,8 @@ class NekoRuntimeRootLifecycleTest {
         assertFalse(root2.errorTracker().hasErrors());
     }
 
-    /** AC6：close 冲刷并释放 root-owned 状态——manager 集合清空、bridge 监听器逐类型清空。 */
+    /** close flushes and releases root-owned state: the manager set is emptied and the bridge listeners
+     * are cleared per type. */
     @Test
     void closeReleasesManagersAndClearsBridgeListeners() {
         RecordingBridge bridge = new RecordingBridge();
@@ -169,9 +173,10 @@ class NekoRuntimeRootLifecycleTest {
 
         assertNull(root.scriptManagerOrNull(ScriptType.SERVER), "managers released on close");
         assertNull(root.scriptManagerOrNull(ScriptType.CLIENT), "managers released on close");
-        // AC2 的"root-owned 状态随 close 释放"当前覆盖 manager 集合/bridge 监听器/resources；
-        // ErrorTracker 刻意**不**随 close 清空（错误面要活过 close 供诊断），其 generation 归属
-        // 由 06/07 处理（总账 A9/I3）——这里断言现状，防止语义漂移无人察觉。
+        // Closing the root releases the manager set, the bridge listeners and the resources.
+        // ErrorTracker is deliberately **not** cleared by close (the error surface must outlive
+        // close so diagnostics stay readable), and where its generation belongs is tracked
+        // separately. This asserts the current behavior so a change in it gets noticed.
         assertEquals(0, root.errors().count(), "tracker keeps its lifetime contract across close (see ledger A9)");
         Set<ScriptType> cleared = bridge.clearListenersCalls.keySet();
         assertTrue(cleared.contains(ScriptType.STARTUP) && cleared.contains(ScriptType.SERVER)
@@ -179,8 +184,9 @@ class NekoRuntimeRootLifecycleTest {
                 "bridge listeners must be cleared for every ScriptType, got " + cleared);
     }
 
-    /** AC6：重复 close 不抛异常、不再触碰 manager（二次回调源为 manager flush/close，随
-     *  manager 集合清空而消失；bridge 的 clearListeners 属幂等注册表清理，可重复调用）。 */
+    /** A second close does not throw and does not touch the managers again. The second round of
+     * callbacks comes from manager flush/close, which disappears once the manager set is empty;
+     * the bridge's clearListeners is an idempotent registry cleanup and may run more than once. */
     @Test
     void doubleCloseIsSafe() {
         RecordingBridge bridge = new RecordingBridge();
@@ -196,7 +202,8 @@ class NekoRuntimeRootLifecycleTest {
         assertTrue(bridge.bindEventsCalls.isEmpty(), "no listener re-binding may happen after close");
     }
 
-    /** AC6：清理过程中的异常不阻断后续清理（bridge 对 TEST 抛错，manager 仍全部释放并重抛）。 */
+    /** An exception raised during cleanup does not stop the rest of the cleanup. The bridge throws
+     * for TEST, yet every manager is still released and the exception is rethrown. */
     @Test
     void closeExceptionDoesNotBlockSubsequentCleanup() {
         RecordingBridge bridge = new RecordingBridge();
@@ -249,8 +256,9 @@ class NekoRuntimeRootLifecycleTest {
         }
     }
 
-    /** AC7 最小替代（无头环境）：CLIENT load/reload 与错误边界走同一 root 生命周期入口
-     *  （即 NekoJSClient F3+T / loadScripts lambda 调用的同一组 API）。 */
+    /** Minimal stand-in for a headless environment: CLIENT load/reload and error handling go through
+     * the same root lifecycle entry points that NekoJSClient uses for F3+T and for its loadScripts
+     * lambda. */
     @Test
     void clientLoadAndReloadThroughRootLifecycleEntry() {
         RecordingBridge bridge = new RecordingBridge();

@@ -1,50 +1,55 @@
 package com.tkisor.nekojs.core.lifecycle;
 
 /**
- * 同一 ScriptType 的 owner-thread 生命周期调度门（票 07）。
+ * Owner-thread lifecycle scheduling gate for one ScriptType.
  *
- * <p>跨线程串行由调用方（{@code ScriptManager}）的实例锁承担：非 owner 线程的
- * managed lifecycle 请求在实例锁的 monitor 队列里排队，不直接并发触碰 Context、
- * binding、listener 或 timer。本门只解决实例锁表达不了的三件事：
+ * <p>The caller's instance lock ({@code ScriptManager}) already serializes work across threads:
+ * managed lifecycle requests from a non-owner thread queue on the monitor and never touch the
+ * Context, bindings, listeners or timers concurrently. This gate covers the three cases the
+ * instance lock cannot express:
  * <ul>
- *   <li>reload 不重入：同一线程已在生命周期内又请求 RELOAD/LOAD（回调内 reload、
- *       并发 reload 在同一线程重入）时返回明确拒绝而不是递归开启第二个 candidate；</li>
- *   <li>回调内请求：managed 回调（事件监听器 / timer）执行期间同线程请求
- *       lifecycle 时返回明确拒绝，不同步等待自身队列；</li>
- *   <li>close 优先：{@link #requestClose()} 在拿实例锁<i>之前</i>设置 volatile 标志，
- *       尚未开始的 reload/load 随后拿到锁即被拒绝，在途 candidate 由 close 侧中断
- *       并丢弃（取消点：候选求值中断 + commit 前检查）；{@link #markClosed()} 后
- *       一切新 lifecycle 拒绝。</li>
+ *   <li>No nested reload: when the same thread is already in a lifecycle and asks for RELOAD or
+ *       LOAD again (a reload from a callback, or a concurrent reload re-entering on the same
+ *       thread), the gate rejects it instead of recursively starting a second candidate.</li>
+ *   <li>Requests from callbacks: a lifecycle request on the same thread while a managed callback
+ *       (event listener or timer) runs is rejected instead of waiting on its own queue.</li>
+ *   <li>Close wins: {@link #requestClose()} sets a volatile flag <i>before</i> taking the instance
+ *       lock, so a reload/load that has not started yet is rejected once it gets the lock. The
+ *       close side interrupts and discards an in-flight candidate (cancellation points: candidate
+ *       evaluation interrupt and the check before commit). After {@link #markClosed()} every new
+ *       lifecycle is rejected.</li>
  * </ul>
  *
- * <p>线程约定：除 volatile 标志（closeRequested/closed/activeFailed）与静态回调
- * 深度外，所有实例方法必须在持有调用方实例锁的前提下调用（与 {@code ScriptManager}
- * 的 synchronized 方法一致）。跨线程排队由实例锁保证；门内 {@code depth > 0}
- * 因此只可能表示同线程重入（另一线程会被实例锁挡在门外）。
+ * <p>Threading: apart from the volatile flags (closeRequested/closed/activeFailed) and the static
+ * callback depth, every instance method must be called while holding the caller's instance lock,
+ * which matches {@code ScriptManager}'s synchronized methods. The instance lock handles queuing
+ * across threads, so {@code depth > 0} can only mean re-entry on the same thread; another thread
+ * would be blocked outside.
  *
- * <p>嵌套例外：STARTUP 的 reset+load 路径在 RELOAD 临界区内同步调用 LOAD，
- * 该且仅该嵌套（LOAD in RELOAD，同线程）被放行；其它嵌套一律拒绝。CLOSE 永不
- * 嵌套执行：同线程在 lifecycle 内请求 close 只置 {@link #requestClose()} 标志
- * 并返回拒绝（在途操作会在取消点失败，调用方可在其结束后重新 close）。
+ * <p>Nesting exception: the STARTUP reset+load path calls LOAD synchronously inside a RELOAD
+ * critical section. That one nesting (LOAD in RELOAD on the same thread) is allowed; all others
+ * are rejected. CLOSE never nests: a close requested from the same thread inside a lifecycle only
+ * sets the {@link #requestClose()} flag and returns a rejection. The in-flight operation then
+ * fails at a cancellation point, and the caller can close again once it finishes.
  */
 public final class ScriptLifecycleGate {
 
-    /** 生命周期操作种类。 */
+    /** Kinds of lifecycle operation. */
     public enum Operation {
         RELOAD,
         LOAD,
         CLOSE
     }
 
-    /** 进入判决：调用方可观察的结果，不是内部锁状态。 */
+    /** Result of entering, as the caller observes it, not internal lock state. */
     public enum Decision {
-        /** 已进入，调用方继续执行并在 finally 中 {@link #exit(Operation)}。 */
+        /** Entered; the caller continues and calls {@link #exit(Operation)} in a finally block. */
         EXECUTED,
-        /** 同线程重入或 managed 回调内请求：不得递归，必须向外部返回明确拒绝。 */
+        /** Re-entry on the same thread, or a request from inside a managed callback. Never recurse; report the rejection. */
         REJECTED_REENTRANT,
-        /** close 已请求但尚未完成：尚未开始的新工作拒绝，在途工作由 close 侧抢占。 */
+        /** Close was requested but is not finished: unstarted work is rejected, work in flight is preempted by close. */
         REJECTED_CLOSING,
-        /** 已关闭：一切新 lifecycle 拒绝。 */
+        /** Closed: every new lifecycle is rejected. */
         REJECTED_CLOSED
     }
 
@@ -74,15 +79,15 @@ public final class ScriptLifecycleGate {
     }
 
     /**
-     * managed 回调进入（事件监听器 / timer 回调执行体）：调用方（EventBusJS /
-     * NekoNodeTimers）在执行 guest 回调前后配对调用，只做线程本地计数，
-     * 不加锁、不触碰 Context。
+     * Enters a managed callback (the body of an event listener or timer callback). The caller
+     * (EventBusJS / NekoNodeTimers) pairs it with exitCallback() around the guest callback. It
+     * only updates a thread-local counter: no lock, and no access to the Context.
      */
     public static void enterCallback() {
         CALLBACK_DEPTH.set(CALLBACK_DEPTH.get() + 1);
     }
 
-    /** 与 {@link #enterCallback()} 配对的回调退出。 */
+    /** Leaves a managed callback; pairs with {@link #enterCallback()}. */
     public static void exitCallback() {
         int remaining = CALLBACK_DEPTH.get() - 1;
         if (remaining <= 0) {
@@ -103,15 +108,16 @@ public final class ScriptLifecycleGate {
     }
 
     /**
-     * 请求进入生命周期。调用方必须已持有实例锁。
+     * Requests entry into a lifecycle. The caller must already hold the instance lock.
      *
-     * @return 判决；非 {@link Decision#EXECUTED} 时未产生任何门状态变化，
-     *         调用方不得执行 lifecycle 体，必须把拒绝结果向外部可观察地返回。
+     * @return the decision; when it is not {@link Decision#EXECUTED} no gate state changed, the caller
+     *         must not run the lifecycle body and must report the rejection to the outside
      */
     public Decision tryEnter(Operation op) {
         if (op == Operation.CLOSE) {
-            // CLOSE 永不嵌套：同线程在 RELOAD/LOAD 内请求 close 只留下抢占标志，
-            // 由在途操作在取消点失败后另行 close（避免边执行边拆除自己的状态机）。
+            // CLOSE never nests: a close requested on the same thread inside RELOAD/LOAD only leaves the
+            // preemption flag, and the in-flight operation is closed separately after it fails at a
+            // cancellation point. This avoids tearing down the state machine while it runs.
             if (depth > 0) {
                 return Decision.REJECTED_REENTRANT;
             }
@@ -128,8 +134,8 @@ public final class ScriptLifecycleGate {
         }
         if (depth > 0) {
             if (op == Operation.LOAD && outer == Operation.RELOAD && depth == 1) {
-                // STARTUP reset+load 的既有嵌套路径：RELOAD 内的一层 LOAD 放行
-                //（更深层嵌套仍拒绝——真实调用形状只有这一层）
+                // The one supported nesting: a single LOAD inside the RELOAD of the STARTUP reset+load path.
+                // Anything deeper is still rejected, because real calls never go deeper than one level.
                 depth++;
                 return Decision.EXECUTED;
             }
@@ -145,8 +151,9 @@ public final class ScriptLifecycleGate {
     }
 
     /**
-     * 退出生命周期。调用方必须已持有实例锁，且与一次 {@link Decision#EXECUTED}
-     * 的 {@link #tryEnter(Operation)} 配对（finally 内调用，幂等清理不吞异常）。
+     * Exits a lifecycle. The caller must hold the instance lock and must pair this with one
+     * {@link Decision#EXECUTED} from {@link #tryEnter(Operation)}. Call it in a finally block; the
+     * cleanup is idempotent and swallows nothing.
      */
     public void exit(Operation op) {
         if (depth <= 0) {
@@ -159,14 +166,15 @@ public final class ScriptLifecycleGate {
         }
     }
 
-    /** 是否有 lifecycle 在体（门内状态；调用方持锁时读）。 */
+    /** Whether a lifecycle is in progress. Reads gate state, so call it while holding the lock. */
     public boolean isInLifecycle() {
         return depth > 0;
     }
 
     /**
-     * 请求关闭：close 侧在拿实例锁<i>之前</i>先设置，其他线程随后拿到锁的
-     * 新 lifecycle 即看到拒绝——close 优先于尚未开始的 reload。
+     * Requests close. The close side sets this <i>before</i> it takes the instance lock, so any other
+     * thread that gets the lock afterwards sees the rejection: close wins over a reload that has not
+     * started.
      */
     public void requestClose() {
         closeRequested = true;
@@ -176,7 +184,7 @@ public final class ScriptLifecycleGate {
         return closeRequested;
     }
 
-    /** 终端关闭完成：之后一切新 lifecycle 拒绝（幂等）。 */
+    /** Marks the terminal close as done: every new lifecycle is rejected afterwards; idempotent. */
     public void markClosed() {
         closed = true;
     }

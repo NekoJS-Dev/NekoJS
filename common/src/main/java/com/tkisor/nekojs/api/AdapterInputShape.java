@@ -3,14 +3,14 @@ package com.tkisor.nekojs.api;
 import java.util.List;
 
 /**
- * 声明式描述一个 {@link JSTypeAdapter} 接受的输入形状。
+ * Declaratively describes an input shape accepted by a {@link JSTypeAdapter}.
  *
- * <p>适配器通过 {@link JSTypeAdapter#inputShapes()} 返回一组形状，probe 的
- * {@code AdapterAliasGenerator} 将其渲染成 TypeScript 输入别名（如 {@code $ItemStack_}），
- * 让脚本在期望 {@code ItemStack} 的地方也能直接传入字符串、对象字面量等。
+ * <p>Adapters return a set of shapes via {@link JSTypeAdapter#inputShapes()}. The probe's
+ * {@code AdapterAliasGenerator} renders these into TypeScript input aliases (e.g., {@code $ItemStack_}),
+ * allowing scripts to pass strings, object literals, etc., where an {@code ItemStack} is expected.
  *
- * <p>本类型是纯数据，渲染逻辑由 probe 侧统一处理（需要知道目标类型与 import 收集）。
- * 用法示例：
+ * <p>This type is pure data; rendering logic is handled uniformly by the probe (requiring knowledge
+ * of the target type and import collection). Usage example:
  * <pre>{@code
  * @Override
  * public List<AdapterInputShape> inputShapes() {
@@ -25,7 +25,7 @@ import java.util.List;
  * }
  * }</pre>
  *
- * <p>推荐静态导入工厂方法：{@code import static ...AdapterInputShape.*;}。
+ * <p>Static factory methods are recommended ({@code import static ...AdapterInputShape.*;}).
  */
 public sealed interface AdapterInputShape permits
         AdapterInputShape.StringValue,
@@ -45,7 +45,7 @@ public sealed interface AdapterInputShape permits
         AdapterInputShape.CallableValue,
         AdapterInputShape.NamedValue {
 
-    // ===================== 静态工厂 =====================
+    // ===================== Static factories =====================
 
     static StringValue string() { return new StringValue(); }
     static LiteralValue literal(String text) { return new LiteralValue(text); }
@@ -65,81 +65,91 @@ public sealed interface AdapterInputShape permits
     static NamedValue named(String suffix, AdapterInputShape shape) { return new NamedValue(suffix, shape); }
     /** A callback with required parameters and a typed result; parameter host types are not input-coerced. */
     static CallableValue callable(List<Slot> parameters, AdapterInputShape result) { return new CallableValue(parameters, result); }
-    /** 字面量模板：{@code prefix + hole}，如 {@code template("#", registryTag("Item"))}。 */
+    /** Literal template: {@code prefix + hole}, e.g., {@code template("#", registryTag("Item"))}. */
     static TemplateValue template(String prefix, AdapterInputShape hole) {
         return new TemplateValue(prefix, hole, "");
     }
-    /** 字面量模板：{@code prefix + hole + suffix}，如 {@code template("/", string(), "/")}。 */
+    /** Literal template: {@code prefix + hole + suffix}, e.g., {@code template("/", string(), "/")}. */
     static TemplateValue template(String prefix, AdapterInputShape hole, String suffix) {
         return new TemplateValue(prefix, hole, suffix);
     }
 
-    // ===================== 变体 =====================
+    // ===================== Variants =====================
 
     /**
-     * 字符串。
+     * String.
      *
-     * <p>注意：TypeScript 一旦在同一个联合里看到裸 {@code string}，就会把该联合里的字符串
-     * 字面量成员吸收掉，编辑器不再给任何 id 补全。所以「id 或若干前缀语法」这种位置不要用
-     * {@code string()}，用 {@link #registry(String)} + {@link #template(String, AdapterInputShape)}
-     * 逐个列出（见 {@link TemplateValue}）。自由文本字段（配方 id、mod id）才用 {@code string()}。
+     * <p>Note: In TypeScript, if a plain {@code string} is present in a union, it absorbs all
+     * string literal members, disabling IDE completions for those IDs. Do not use
+     * {@code string()} for locations like "ID or prefixed syntax". Instead, use
+     * {@link #registry(String)} + {@link #template(String, AdapterInputShape)} to list them
+     * explicitly (see {@link TemplateValue}). Use {@code string()} only for free-text fields
+     * (e.g., recipe IDs, mod IDs).
      */
     record StringValue() implements AdapterInputShape {}
-    /** 单个字符串字面量，如 {@code literal("*")} 渲染成 {@code "*"}。 */
+    /** A single string literal, e.g., {@code literal("*")} renders as {@code "*"}. */
     record LiteralValue(String text) implements AdapterInputShape {}
-    /** 数字。 */
+    /** Number. */
     record NumberValue() implements AdapterInputShape {}
-    /** 布尔。 */
+    /** Boolean. */
     record BooleanValue() implements AdapterInputShape {}
-    /** 适配器自身的目标类型（渲染为 {@code $目标类型}）。 */
+    /** Adapter's own target type (renders as {@code $TargetType}). */
     record SelfValue() implements AdapterInputShape {}
-    /** 另一个 Java 类（host object），渲染为 {@code $ClassName}，跨包时自动产生 import。 */
+    /** Another Java class (host object); renders as {@code $ClassName}, generating imports automatically when crossing packages. */
     record HostValue(Class<?> cls) implements AdapterInputShape {}
-    /** 元素形状的数组。 */
+    /** Array of element shapes. */
     record ArrayOfValue(AdapterInputShape element) implements AdapterInputShape {}
-    /** 对象字面量，由若干 {@link Slot} 组成。 */
+    /** Object literal consisting of multiple {@link Slot} entries. */
     record ObjectValue(List<Slot> slots) implements AdapterInputShape {}
     /**
-     * 若干形状的联合，渲染成带括号的 {@code (A | B)}。
+     * Union of several shapes, rendered with parentheses as {@code (A | B)}.
      *
-     * <p>用于单个槽位需要多种写法的场合，例如过滤器的 {@code output} 既接受物品 id
-     * 也接受 {@code #标签}。顶层的 {@code inputShapes()} 列表本身已经是联合，无需再包一层。
+     * <p>Use it when one slot accepts several forms, for example a filter {@code output} that takes
+     * either an item id or {@code #tag}. A top-level {@code inputShapes()} list is already a union,
+     * so it needs no extra wrapper.
      */
     record UnionValue(List<AdapterInputShape> members) implements AdapterInputShape {
         public UnionValue {
             members = List.copyOf(members);
         }
     }
-    /** 注册表字面量联合（复用 {@code @special} 的 {@code RegistryTypes.X}）。 */
+    /** Union of registry literals; reuses the {@code RegistryTypes.X} of {@code @special}. */
     record RegistryValue(String typeName) implements AdapterInputShape {}
     /**
-     * 注册表标签字面量联合（{@code RegistryTypes.XTag}）。
+     * Union of registry tag literals ({@code RegistryTypes.XTag}).
      *
-     * <p>标签在脚本里有两种写法：字符串前缀式（{@code "#minecraft:planks"}）与对象字段式
-     * （{@code { tag: "minecraft:planks" }}）。本形状只渲染裸标签 id，前缀式请用
-     * {@code template("#", registryTag("Item"))} 包一层。
+     * <p>Scripts write tags in two forms: the string form with a prefix
+     * ({@code "#minecraft:planks"}) and the object field form
+     * ({@code { tag: "minecraft:planks" }}). This shape renders only the bare tag id; for the
+     * prefixed form, wrap it with {@code template("#", registryTag("Item"))}.
      */
     record RegistryTagValue(String typeName) implements AdapterInputShape {}
     /**
-     * id 命名空间的字面量联合（{@code RegistryTypes.Namespace}）。
+     * Union of id namespace literals ({@code RegistryTypes.Namespace}).
      *
-     * <p>两个数据源取并集：加载器的 mod 列表（{@code NekoCatalogPlatformProvider.modIds()}）
-     * 覆盖「装了但没往某个注册表注册东西」的 mod；注册表条目 id 的 {@code ':'} 前缀覆盖不属于
-     * 任何 mod 的命名空间（脚本 {@code event.create('mymod:cool_gem')}、数据包等）。
+     * <p>It unions two sources: the loader mod list
+     * ({@code NekoCatalogPlatformProvider.modIds()}) covers mods that are installed but register
+     * nothing in a registry, and the {@code ':'} prefix of registry entry ids covers namespaces that
+     * belong to no mod (a script calling {@code event.create('mymod:cool_gem')}, data packs, and so
+     * on).
      *
-     * <p>不按注册表分：一个命名空间能不能用与它出现在哪个注册表无关，过滤不到东西只是空结果，
-     * 不是错误。前缀式写法（{@code "@create"}）用 {@code template("@", namespace())}。
+     * <p>Namespaces are not split by registry: whether a namespace works does not depend on which
+     * registry it appears in, and a filter that matches nothing returns an empty result instead of
+     * an error. For the prefixed form ({@code "@create"}), use {@code template("@", namespace())}.
      */
     record NamespaceValue() implements AdapterInputShape {}
     /**
-     * TypeScript 模板字面量类型，用于「固定前后缀 + 可补全 id」的字符串语法。
+     * A TypeScript template literal type, used for string syntax that has a fixed prefix and
+     * suffix around a completable id.
      *
-     * <p>渲染成 <code>`prefix${hole}suffix`</code>，例如 {@code template("#", registryTag("Item"))}
-     * 得到 <code>`#${RegistryTypes.ItemTag}`</code>。相比裸 {@code string}，模板类型不会吞掉联合里
-     * 其它成员的字面量补全，因此可以在保留 id 补全的同时接纳 {@code @mod} / {@code /regex} 这类语法。
+     * <p>It renders as <code>`prefix${hole}suffix`</code>; for example
+     * {@code template("#", registryTag("Item"))} renders as <code>`#${RegistryTypes.ItemTag}`</code>.
+     * Unlike a bare {@code string}, a template type does not swallow the literal completions of the
+     * other members of a union, so id completion still works next to syntax such as {@code @mod} or
+     * {@code /regex}.
      */
     record TemplateValue(String prefix, AdapterInputShape hole, String suffix) implements AdapterInputShape {}
-    /** 逃生舱：直接给出任意 TypeScript 片段。 */
+    /** Escape hatch: emits an arbitrary TypeScript snippet. */
     record RawValue(String ts) implements AdapterInputShape {}
 
     /** Typed callbacks with fixed, required parameters, shared by TypeScript and Python declarations. */
@@ -173,11 +183,11 @@ public sealed interface AdapterInputShape permits
     }
 
     /**
-     * 对象字面量的一个字段。
+     * One field of an object literal.
      *
-     * @param name     字段名
-     * @param shape    字段类型形状
-     * @param required 是否必填（false 时类型后加 {@code ?}）
+     * @param name     field name
+     * @param shape    field type shape
+     * @param required whether the field is required ({@code ?} is appended to the type when false)
      */
     record Slot(String name, AdapterInputShape shape, boolean required) {
         public static Slot req(String name, AdapterInputShape shape) { return new Slot(name, shape, true); }

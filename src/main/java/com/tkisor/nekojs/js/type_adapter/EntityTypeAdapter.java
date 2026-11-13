@@ -5,11 +5,11 @@ import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.world.entity.EntityType;
 
 /**
- * EntityType 适配器：纯 id 查询，委托 {@link SimpleRegistryBasedAdapter}。
+ * EntityType adapter: resolves an entity type purely by id and delegates to {@link SimpleRegistryBasedAdapter}.
  *
- * <p>历史：原手写 {@link AbstractJSTypeAdapter} 子类（曾出现 return null /
- * NoSuchElementException），现迁移到通用基类，逻辑等价（补 {@code minecraft:} 前缀 +
- * tryParse + getOptional + NekoId/Identifier host）。
+ * <p>It used to be a handwritten {@link AbstractJSTypeAdapter} subclass (which could return null or throw
+ * NoSuchElementException); it now uses the shared base class with equivalent behavior (adds the {@code minecraft:}
+ * prefix, then tryParse + getOptional, with NekoId/Identifier as the host object).
  */
 public class EntityTypeAdapter extends SimpleRegistryBasedAdapter<EntityType<?>> {
 

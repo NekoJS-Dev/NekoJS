@@ -65,7 +65,10 @@ public final class NekoNodeRuntime implements AutoCloseable {
         return crypto;
     }
 
-    /** 单调时钟（纳秒），供 process.hrtime / performance.now 使用（Date.now 只有毫秒且非单调）。 */
+    /**
+     * Monotonic clock in nanoseconds for process.hrtime and performance.now; Date.now only has
+     * milliseconds and is not monotonic.
+     */
     public long nanoTime() {
         return System.nanoTime();
     }

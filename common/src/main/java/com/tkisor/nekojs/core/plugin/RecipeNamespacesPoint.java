@@ -9,26 +9,28 @@ import java.util.Map;
 import java.util.Objects;
 
 /**
- * 内置扩展点 {@code nekojs:recipe_namespaces}（ADR-0001 自包含 Point 文件）。
- * merge 策略 {@link MergePolicy#failFast}：命名空间冲突立即抛错。
+ * Built-in extension point {@code nekojs:recipe_namespaces}. The merge policy is
+ * {@link MergePolicy#failFast}: a namespace conflict throws immediately.
  */
 public final class RecipeNamespacesPoint {
 
-    /** 扩展点 id（observable 契约）。 */
+    /** Extension point id. */
     public static final String ID = "nekojs:recipe_namespaces";
 
     private RecipeNamespacesPoint() {
     }
 
-    /** 显式声明形态（与直接覆写 NekoJSPlugin 对应钩子等价收集）：插件被 {@code nekojs:recipe_namespaces} 扩展点收集。 */
+    /** Explicit declaration form: the plugin is collected by the {@code nekojs:recipe_namespaces} extension point, the
+     * same result as overriding the matching NekoJSPlugin hook directly. */
     public interface Contributor extends NekoJSPlugin {
 
-        /** 注册配方命名空间 Java handler——{@code event.recipes.<namespace>.<method>(...)} 的方法实现层。 */
+        /** Registers the Java handler for a recipe namespace. It implements the methods behind
+         * {@code event.recipes.<namespace>.<method>(...)}. */
         default void registerRecipeNamespaces(RecipeNamespaceRegister registry) {
         }
     }
 
-    /** 累积器：命名空间冲突 fail-fast；snapshot 后密封。 */
+    /** Accumulator: a namespace conflict fails fast; it is sealed after snapshot. */
     static final class Bucket implements RecipeNamespaceRegister, Sealable {
         private final Map<String, RecipeNamespaceEntry> namespaces = new LinkedHashMap<>();
         private boolean sealed;
@@ -58,7 +60,7 @@ public final class RecipeNamespacesPoint {
         }
     }
 
-    /** 扩展点定义（由 {@link NekoBuiltinPointsPlugin} 清单注册）。 */
+    /** The extension point definition, registered from the {@link NekoBuiltinPointsPlugin} list. */
     public static final NekoPluginExtensionPoint<NekoJSPlugin, Bucket, Map<String, RecipeNamespaceEntry>> POINT =
             NekoPluginExtensionPoint.<NekoJSPlugin, Bucket, Map<String, RecipeNamespaceEntry>>builder(ID, NekoJSPlugin.class)
                     .merge(MergePolicy.failFast())

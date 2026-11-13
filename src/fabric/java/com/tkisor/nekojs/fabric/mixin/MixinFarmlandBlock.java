@@ -12,31 +12,33 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 /**
- * {@code BlockEvents.farmlandTrample} 的 fabric 挂点：
- * {@code FarmlandBlock#fallOn} 内 {@code turnToDirt} 调用点（INVOKE 注入）。
+ * Fabric hook for {@code BlockEvents.farmlandTrample}: the {@code turnToDirt} call site inside
+ * {@code FarmlandBlock#fallOn} (INVOKE injection).
  *
- * <p>javap 实证（minecraft-merged-deobf-26.1.2.jar）：
+ * <p>Checked with javap (minecraft-merged-deobf-26.1.2.jar):
  * <ul>
- *   <li>26.x 类名为 {@code FarmlandBlock}（不是 1.21.x 的 {@code FarmBlock}）：
- *       {@code public void fallOn(Level, BlockState, BlockPos, Entity, double)}，
- *       方法体判定链：{@code level instanceof ServerLevel} → 随机数
- *       {@code < 0.5 + fallDistance} → {@code LivingEntity} → 玩家或
- *       {@code MOB_GRIEFING=true} → {@code bbWidth^2 * bbHeight > 0.512F} →
- *       {@code turnToDirt(entity, state, level, pos)}。</li>
- *   <li><b>注入点说明</b>：原设计想在 {@code turnToDirt} 调用点（偏移 97）注入，
- *       但 INVOKE 扫 0（static 调用点 + 本 fork 的选择器组合的已知怪癖），
- *       改为 {@code Entity.getBbWidth()} 调用点（偏移 71，invokevirtual、
- *       CP owner == 声明类，与本文档同批次其他已验证挂点同型）——此点在体型
- *       检查之前，即 ServerLevel/随机/LivingEntity/玩家或 MOB_GRIEFING 判定
- *       已全部通过。偏差：体型过小（{@code bbWidth^2*bbHeight <= 0.512}）时
- *       本事件多触发（该情况下原版也不会塌地）；取消语义不变——{@code ci.cancel()}
- *       后会跳过体型检查与 {@code turnToDirt}（以及 {@code super.fallOn}），
- *       实体不再把耕地踩塌成土路。</li>
+ *   <li>In 26.x the class is {@code FarmlandBlock}, not the 1.21.x {@code FarmBlock}. It has
+ *       {@code public void fallOn(Level, BlockState, BlockPos, Entity, double)}, whose body tests
+ *       in order: {@code level instanceof ServerLevel}, a random number
+ *       {@code < 0.5 + fallDistance}, {@code LivingEntity}, a player or
+ *       {@code MOB_GRIEFING=true}, {@code bbWidth^2 * bbHeight > 0.512F}, then
+ *       {@code turnToDirt(entity, state, level, pos)}.</li>
+ *   <li><b>Injection point</b>: the original plan was the {@code turnToDirt} call site
+ *       (offset 97), but the INVOKE scan found nothing (a known quirk with static call sites and
+ *       this fork's selector combination). The mixin uses the {@code Entity.getBbWidth()} call
+ *       site instead (offset 71, invokevirtual with the CP owner equal to the declaring class,
+ *       the same shape as other verified hooks in this batch). That point comes after the
+ *       ServerLevel, random, LivingEntity and player-or-MOB_GRIEFING tests have all passed.
+ *       The difference: an entity that is too small ({@code bbWidth^2*bbHeight <= 0.512}) still
+ *       fires the event, though vanilla would not trample in that case either. Cancelling behaves
+ *       the same: {@code ci.cancel()} skips the size check, {@code turnToDirt} and
+ *       {@code super.fallOn}, so the entity no longer turns farmland into dirt.</li>
  * </ul>
  *
- * <p>客户端说明：{@code turnToDirt} 调用点位于 {@code instanceof ServerLevel}
- * 守卫之后，客户端路径不会到达；仍保留一层 {@code isClientSide()} 短路以抗未来
- * 原版改动（SERVER 总线只收服务端实例）。
+ * <p>Client side: the {@code turnToDirt} call site sits after the {@code instanceof ServerLevel}
+ * guard, so the client path never reaches it. The mixin still keeps an {@code isClientSide()}
+ * short-circuit in case vanilla changes, because the SERVER bus only receives server-side
+ * instances.
  */
 @Mixin(FarmlandBlock.class)
 public abstract class MixinFarmlandBlock {

@@ -5,9 +5,10 @@ import net.minecraft.world.entity.Entity;
 import org.spongepowered.asm.mixin.Mixin;
 
 /**
- * {@code EntityExtension} 的 fabric 注入（等价 NeoForge 的 interface injection）：
- * default 方法全在接口上（含 {@code neko$pdata()}，持久化读写经 {@code EntityPDataStore}
- * → {@code NekoEntityPDataMixin} 的字段），本类只需挂上接口。
+ * Fabric injection of {@code EntityExtension}, equivalent to NeoForge's interface injection. All
+ * the default methods live on the interface, including {@code neko$pdata()}, whose persistent
+ * reads and writes go through {@code EntityPDataStore} and the {@code NekoEntityPDataMixin}
+ * field, so this class only has to attach the interface.
  */
 @Mixin(Entity.class)
 public interface MixinEntity extends EntityExtension {

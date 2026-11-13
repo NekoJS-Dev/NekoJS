@@ -10,19 +10,25 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 最小 classfile 注解读取器：直接解析 .class 字节的常量池与注解属性。
+ * Minimal classfile annotation reader: parses the constant pool and the annotation attributes of
+ * .class bytes directly.
  *
- * <p>为什么不用反射：ModDev 的 test 环境会用 javaagent 在内存里改写注解类定义（mixin
- * 类在 test JVM 里注解被清空，磁盘字节完好）；也不依赖 ASM（测试 classpath 上不可靠）。
- * {@code getResourceAsStream} 返回的是原始文件字节，不受 agent 影响，且 RuntimeVisible 与
- * RuntimeInvisible（CLASS retention）注解都读得到。
+ * <p>Why not reflection: ModDev's test environment rewrites annotation class definitions in memory
+ * with a javaagent (mixin classes lose their annotations in the test JVM while the bytes on disk
+ * stay intact). ASM is not an option either, it is unreliable on the test classpath.
+ * {@code getResourceAsStream} returns the raw file bytes, which the agent does not touch, and it
+ * sees both RuntimeVisible and RuntimeInvisible (CLASS retention) annotations.
  *
- * <p>只覆盖 mixin 验证需要的注解形状：String / Class / 枚举 / 注解嵌套 / 上述类型的数组。
- * 其它 element_value 类型解析为 null 并跳过。
+ * <p>Only the annotation shapes the mixin checks need are supported: String / Class / enum /
+ * nested annotation / arrays of those. Every other element_value type parses as null and is
+ * skipped.
  */
 final class ClassFileAnnotations {
 
-    /** 一个注解：内部名类型（如 {@code Lorg/spongepowered/asm/mixin/Mixin;}）+ 成员名→值。 */
+    /**
+     * One annotation: the type as an internal name (for example
+     * {@code Lorg/spongepowered/asm/mixin/Mixin;}) plus member name to value.
+     */
     record AnnotationData(String type, Map<String, Object> values) {
         String memberString(String name) {
             Object v = values.get(name);
@@ -58,7 +64,7 @@ final class ClassFileAnnotations {
         }
     }
 
-    /** 读取并解析一个 class 字节流（internalName 仅用于错误信息）。 */
+    /** Reads and parses one class byte stream; {@code internalName} is used in error messages only. */
     static ClassData parse(String internalName, InputStream in) throws IOException {
         DataInputStream d = new DataInputStream(in);
         if (d.readInt() != 0xCAFEBABE) {
@@ -93,9 +99,9 @@ final class ClassFileAnnotations {
             switch (tag) {
                 case 1 -> pool[i] = d.readUTF();
                 case 3, 4 -> d.skipBytes(4);            // Integer/Float
-                case 5, 6 -> { d.skipBytes(8); i++; }   // Long/Double 占双槽
+                case 5, 6 -> { d.skipBytes(8); i++; }   // Long/Double take two constant pool slots
                 case 7, 8, 16, 19, 20 -> d.skipBytes(2); // Class/String/MethodType/Module/Package
-                case 9, 10, 11, 12, 17, 18 -> d.skipBytes(4); // 各种 ref/NameAndType/Dynamic
+                case 9, 10, 11, 12, 17, 18 -> d.skipBytes(4); // ref, NameAndType and Dynamic entries
                 case 15 -> d.skipBytes(3);              // MethodHandle
                 default -> throw new IOException("unknown constant pool tag " + tag);
             }
@@ -176,10 +182,10 @@ final class ClassFileAnnotations {
         return switch (tag) {
             case 's' -> pool[d.readUnsignedShort()];
             case 'e' -> {
-                d.readUnsignedShort(); // 枚举类型名
-                yield pool[d.readUnsignedShort()]; // 枚举常量名
+                d.readUnsignedShort(); // enum type name
+                yield pool[d.readUnsignedShort()]; // enum constant name
             }
-            case 'c' -> pool[d.readUnsignedShort()]; // 内部名
+            case 'c' -> pool[d.readUnsignedShort()]; // internal name
             case '@' -> readAnnotation(d, pool);
             case '[' -> {
                 int n = d.readUnsignedShort();
@@ -187,7 +193,8 @@ final class ClassFileAnnotations {
                 for (int i = 0; i < n; i++) list.add(readElementValue(d, pool));
                 yield list;
             }
-            // B/C/D/F/I/J/S/Z：const_value_index 仍占 u2，必须消费掉否则流错位（remap=false 的 Z 就在这）
+            // B/C/D/F/I/J/S/Z: const_value_index is still a u2 and must be consumed or the stream desyncs
+            // (the Z values with remap=false land here)
             case 'B', 'C', 'D', 'F', 'I', 'J', 'S', 'Z' -> {
                 d.skipBytes(2);
                 yield null;

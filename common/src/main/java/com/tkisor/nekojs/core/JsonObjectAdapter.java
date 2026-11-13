@@ -46,8 +46,8 @@ public final class JsonObjectAdapter implements JSTypeAdapter<JsonObject> {
     }
 
     /**
-     * 把字符串包装为 gson {@link JsonPrimitive}，供需要走 JsonElement 路径的适配器
-     * （如 {@code CodecAdapter} 的 string 分支）复用。
+     * Wraps a string as a gson {@link JsonPrimitive} so adapters that go through the JsonElement
+     * path (such as the string branch of {@code CodecAdapter}) can reuse it.
      */
     public static JsonElement primitiveJson(String s) {
         return new JsonPrimitive(s);

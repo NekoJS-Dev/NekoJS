@@ -1,5 +1,5 @@
-// 1.21.1 实现，与版本树 src/ 下的同名 26.x 文件成对。内容等于那份文件在本节点求值后的形态。
-// 26.x 侧行为变更时须同步本文件。
+// 1.21.1 implementation, paired with the same-named 26.x file under src/ in the version tree.
+// The content is that file evaluated at this node; keep this file in sync when 26.x behavior changes.
 package com.tkisor.nekojs.wrapper.registry;
 
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -43,11 +43,12 @@ public class FoodBuilderJS {
     }
 
     /**
-     * 添加药水效果
-     * @param effectId 效果ID，如 "strength" 或 "minecraft:strength"
-     * @param durationTicks 持续时间 (20 tick = 1秒)
-     * @param amplifier 等级 (0 = I级, 1 = II级)
-     * @param probability 获得该效果的概率 (0.0 ~ 1.0)
+     * Adds a mob effect to the food.
+     *
+     * @param effectId the effect id, such as "strength" or "minecraft:strength"
+     * @param durationTicks how long the effect lasts in ticks (20 ticks = 1 second)
+     * @param amplifier the effect level (0 = level I, 1 = level II)
+     * @param probability the chance of getting the effect (0.0 to 1.0)
      */
     public FoodBuilderJS effect(ResourceLocation effectId, int durationTicks, int amplifier, float probability) {
         if (effectId != null) {
@@ -68,10 +69,10 @@ public class FoodBuilderJS {
             builder.fast();
         }
 
-        // 1.21.1 中，药水效果直接添加在 FoodProperties 上
+        // In 1.21.1 the mob effects are added directly to FoodProperties
         for (EffectEntry e : effects) {
-            // 1.21.1 推荐使用 getHolder 来获取包含 Registry 信息的 Holder 对象；
-            // effect 用 Supplier 重载（直接传 MobEffectInstance 的旧重载已废弃）
+            // 1.21.1 prefers getHolder(), which returns a Holder that carries the registry information;
+            // the effect overload takes a Supplier (the old overload that took a MobEffectInstance is deprecated)
             BuiltInRegistries.MOB_EFFECT.getHolder(e.effectId()).ifPresent(effectHolder ->
                     builder.effect(() -> new MobEffectInstance(effectHolder, e.durationTicks(), e.amplifier()), e.probability())
             );

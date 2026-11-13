@@ -4,13 +4,13 @@ import java.util.Optional;
 import java.util.regex.Pattern;
 
 /**
- * A controlled UI resource identifier ({@code namespace:path}). Follows the same
- * grammar and safety rules as the ticket 29 asset ids written by
- * {@code AssetGeneratorJS}: lowercase namespace and path, no {@code ..} segments,
- * at most one {@code :}. A missing namespace defaults to {@code minecraft}.
+ * A controlled UI resource identifier ({@code namespace:path}). Follows the same grammar
+ * and safety rules as the asset ids written by {@code AssetGeneratorJS}: lowercase
+ * namespace and path, no {@code ..} segments, at most one {@code :}. A missing namespace
+ * defaults to {@code minecraft}.
  *
- * <p>Ids are the only way images, icons, and fonts enter the UI contract; file
- * paths and URLs are not accepted.
+ * <p>Ids are the only way images, icons, and fonts enter the UI API; file paths and URLs
+ * are not accepted.
  */
 public record UiResourceId(String namespace, String path) {
     /** Namespace grammar shared with vanilla resource locations: [a-z0-9_.-]. */

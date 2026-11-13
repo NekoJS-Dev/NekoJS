@@ -7,24 +7,26 @@ import com.tkisor.nekojs.api.event.EventGroupRegistry;
 import java.util.Map;
 
 /**
- * 内置扩展点 {@code nekojs:events}（ADR-0001 自包含 Point 文件）。
- * merge 策略 {@link MergePolicy#failFast}（同名事件组冲突由 registry 注册时报错）。
+ * The built-in {@code nekojs:events} extension point; a self-contained Point file (ADR-0001).
+ * The merge policy is {@link MergePolicy#failFast}: a duplicate event group name is reported by
+ * the registry at registration time.
  *
- * <p>孪生点 {@code nekojs:client_events}（{@link ClientEventsPoint}）依赖本点：
- * V2 依赖语义（ADR-0002）的内置首个用例。
+ * <p>The twin point {@code nekojs:client_events} ({@link ClientEventsPoint}) depends on this one.
+ * This is the first built-in use of the V2 dependency semantics (ADR-0002).
  */
 public final class EventsPoint {
 
-    /** 扩展点 id（observable 契约）。 */
+    /** The extension point id; part of the observable contract. */
     public static final String ID = "nekojs:events";
 
     private EventsPoint() {
     }
 
-    /** 显式声明形态（与直接覆写 NekoJSPlugin 对应钩子等价收集）：插件被 {@code nekojs:events} 扩展点收集。 */
+    /** Explicit declaration form, collected the same way as overriding the matching NekoJSPlugin
+     * hook: the plugin is collected by the {@code nekojs:events} extension point. */
     public interface Contributor extends NekoJSPlugin {
 
-        /** 注册服务端事件组（{@code ServerEvents.*}/{@code PlayerEvents.*} 等）。 */
+        /** Registers server event groups, such as {@code ServerEvents.*}/{@code PlayerEvents.*}. */
         default void registerEvents(EventGroupRegistry registry) {
         }
     }
@@ -52,7 +54,8 @@ public final class EventsPoint {
     }
 
     /**
-     * 事件组产物的合并视图：客户端进程用 client_events 产物（已并入 events 产物），
+     * Merged view of the event group products: a client process uses the client_events
+     * product, which already includes the events product.
      */
     @SuppressWarnings("unchecked")
     public static Map<String, EventGroup> mergedEventGroups(Map<String, Object> products) {
@@ -67,7 +70,7 @@ public final class EventsPoint {
         return groups;
     }
 
-    /** 扩展点定义（由 {@link NekoBuiltinPointsPlugin} 清单注册）。 */
+    /** Extension point definition, registered by the {@link NekoBuiltinPointsPlugin} manifest. */
     public static final NekoPluginExtensionPoint<NekoJSPlugin, EventGroupRegistry, Map<String, EventGroup>> POINT = point(plugin -> null);
 
     static NekoPluginExtensionPoint<NekoJSPlugin, EventGroupRegistry, Map<String, EventGroup>> point(

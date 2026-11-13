@@ -4,13 +4,15 @@ import com.tkisor.nekojs.api.annotation.ContractReceiver;
 import java.util.Objects;
 
 /**
- * 单个 mod 的只读元信息快照（脚本侧类型名 {@code ModInfo}，由 {@code @ContractReceiver("ModInfo")} 指定）。
+ * Read-only metadata snapshot of a single mod. Its script-side type name is {@code ModInfo}, set by
+ * {@code @ContractReceiver("ModInfo")}.
  *
- * <p>由 {@link PlatformFacade#getInfo(String)} 返回；三个字段均为非空、非空白字符串。不可变。
+ * <p>Returned by {@link PlatformFacade#getInfo(String)}. All three fields are non-null, non-blank
+ * strings. The record is immutable.
  *
  * @param id      mod id
- * @param name    mod 显示名
- * @param version mod 版本字符串
+ * @param name    mod display name
+ * @param version mod version string
  */
 @ContractReceiver("ModInfo")
 public record ModInfoValue(String id, String name, String version) {

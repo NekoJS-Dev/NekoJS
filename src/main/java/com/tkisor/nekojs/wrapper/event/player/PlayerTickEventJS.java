@@ -4,8 +4,8 @@ import lombok.Getter;
 import net.minecraft.world.entity.player.Player;
 
 /**
- * 玩家 tick 事件的中立 payload（tickPre / tickPost 共用；成员 {@code event.player}，
- * 与 NeoForge 原生 PlayerTickEvent 的 getPlayer() 同形）。
+ * Loader-neutral payload for the player tick event (shared by tickPre / tickPost; the member
+ * {@code event.player} has the same shape as NeoForge native PlayerTickEvent's getPlayer()).
  */
 public class PlayerTickEventJS {
 

@@ -10,9 +10,9 @@ import java.util.Locale;
 import java.util.Map;
 
 /**
- * Bounded, repeatable {@link JavaClassLoadTelemetrySink} implementation (ticket 30).
+ * Bounded, repeatable {@link JavaClassLoadTelemetrySink} implementation.
  *
- * <p>Privacy and size bounds — what this recorder collects and what it never collects:
+ * <p>Privacy and size bounds, covering what this recorder collects and what it never collects:
  * <ul>
  *   <li><b>Includes</b>: the script type, the script id (engine-internal authored path
  *       identity such as {@code server_scripts/foo.js}, never an absolute filesystem path),
@@ -27,9 +27,9 @@ import java.util.Map;
  *
  * <p>Repeatable collection: {@link #snapshot()} returns the currently retained entries in
  * recording order and can be called any number of times with the same result until new
- * observations arrive. Telemetry remains disable-able and degradable: without a sink
+ * observations arrive. Telemetry stays disable-able and degradable: without a sink
  * (see {@link JavaClassLoadTelemetry#setSink}) nothing is recorded at all, and installing this
- * recorder can be undone by re-installing {@code null} at any time.
+ * recorder can be undone by installing {@code null} at any time.
  *
  * <p>Thread safety: {@code recordAttempt}/{@code recordLoad} may be called from any thread
  * (the telemetry scope is thread-local); {@link #snapshot()} may race with concurrent
@@ -59,7 +59,7 @@ public final class JavaClassLoadTelemetryRecorder implements JavaClassLoadTeleme
         this(MAX_ENTRIES);
     }
 
-    /** Test seam: a smaller bound exercises eviction without producing 8192 entries. */
+    /** Smaller bound used by tests to exercise eviction without producing 8192 entries. */
     JavaClassLoadTelemetryRecorder(int maxEntries) {
         if (maxEntries <= 0) {
             throw new IllegalArgumentException("maxEntries must be positive: " + maxEntries);

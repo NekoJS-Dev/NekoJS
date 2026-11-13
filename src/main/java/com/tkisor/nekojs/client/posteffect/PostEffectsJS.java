@@ -1,8 +1,11 @@
-// TODO(fabric): fabric 侧还没有对应实现，整文件守卫等移植完成后去掉
+// Fabric has no equivalent implementation yet; remove the whole-file guard once the port is
+// done.
 //? if neoforge {
-// 26.x 实现，本文件不应再出现版本守卫。1.21.1 的实现是 versions/1.21.1/src 下的同名文件，
-// 改本文件行为时须同步它。
-// 脚本面的 @Doc/@Param 文案两侧本就不同，探针类型 golden 会校验，别照抄到孪生文件。
+// 26.x implementation, so this file must not contain version guards. The 1.21.1 implementation
+// is the same-named file under versions/1.21.1/src; changing this file's behavior means
+// updating that one too.
+// The @Doc/@Param text on the script side already differs between the two trees and the
+// probe-type golden checks it, so do not copy it into the twin file.
 package com.tkisor.nekojs.client.posteffect;
 
 import com.tkisor.nekojs.api.annotation.Doc;
@@ -15,23 +18,23 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Runtime post-effect binding ({@code PostEffects}, feature 8b). Client scripts only.
+ * Runtime post-effect binding ({@code PostEffects}) for client scripts.
  *
- * <p><b>Runtime binding face (ticket 28).</b> This binding keeps exactly the runtime
- * operations: {@link #set}/{@link #clear}/{@link #toggle}/{@link #current} (plus
- * {@link #isActive}) work with any effect that exists as a resource — the vanilla presets
- * {@code minecraft:invert}, {@code minecraft:spider}, {@code minecraft:creeper},
- * {@code minecraft:blur}, {@code minecraft:entity_outline}, {@code minecraft:transparency}
- * (see {@link #PRESETS}) and any {@code post_effect} JSON supplied by resource packs or
- * other mods. These members are <b>not</b> reload transaction operations.
+ * <p><b>Runtime binding face.</b> This binding keeps exactly the runtime operations:
+ * {@link #set}/{@link #clear}/{@link #toggle}/{@link #current} (plus {@link #isActive}) work
+ * with any effect that exists as a resource, the vanilla presets {@code minecraft:invert},
+ * {@code minecraft:spider}, {@code minecraft:creeper}, {@code minecraft:blur},
+ * {@code minecraft:entity_outline}, {@code minecraft:transparency} (see {@link #PRESETS}) and
+ * any {@code post_effect} JSON supplied by resource packs or other mods. These members are
+ * <b>not</b> reload transaction operations.
  *
  * <p><b>Declaration face.</b> Runtime chains are declared through
  * {@code ClientEvents.postEffects} ({@code event.register(id, options)} /
- * {@code event.unregister(id)}) — the declaration lifecycle is generation-scoped, lives in
- * an inert candidate plan and applies only at the commit point. Use
+ * {@code event.unregister(id)}). The declaration lifecycle is generation-scoped, lives in an
+ * inert candidate plan and applies only at the commit point. Use
  * {@link #activeGeneration()} / {@link #hasDefinition} / {@link #installed()} for the
- * read-only declaration query; the previous direct {@code PostEffects.register} entry point
- * is gone (see the ticket 28 migration table).
+ * read-only declaration query; the direct {@code PostEffects.register} entry point no longer
+ * exists.
  *
  * <pre>
  * // client_scripts

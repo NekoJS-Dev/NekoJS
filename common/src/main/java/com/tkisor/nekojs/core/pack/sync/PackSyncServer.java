@@ -11,26 +11,29 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * 包分发服务端 gather（平台无关）：{@link #collectSyncPacks()} 取启用的 GLOBAL + WORLD
- * 包中 {@code clientSync != false} 者，生成快照（syncId / 哈希 / manifest 原文 / 内容文件）。
- * 是否分发由平台入口根据 {@link #enabled()} 决定；{@code hashOnly} 模式只发哈希不发 bundle。
+ * Server side of pack distribution, independent of the platform. {@link #collectSyncPacks()}
+ * takes the enabled GLOBAL and WORLD packs whose {@code clientSync != false} and turns them into
+ * snapshots (syncId, hash, raw manifest, content files). The platform entry point decides from
+ * {@link #enabled()} whether anything is distributed. In {@code hashOnly} mode only hashes are
+ * sent, no bundle.
  */
 public final class PackSyncServer {
 
     /**
-     * 配置阶段推送任务的 id（各平台的 {@code ConfigurationTask.Type} 共用同一字符串，
-     * 保证 NeoForge 与 fabric 的任务身份一致）。
+     * Id of the configuration-phase push task. Every platform's {@code ConfigurationTask.Type}
+     * uses the same string, so the task identity matches on NeoForge and fabric.
      */
     public static final String TASK_ID = NekoJS.MODID + ":pack_sync";
 
     private PackSyncServer() {}
 
-    /** 当前 engine.toml 的 packSync 是否启用（mode != off）。 */
+    /** Whether packSync is enabled in the current engine.toml (mode is not off). */
     public static boolean enabled() {
         return ClassFilter.INSTANCE.config().packSyncEnabled();
     }
 
-    /** 当前 mode 是否为 hashOnly（只同步哈希、客户端不执行远端包）。 */
+    /** Whether the current mode is hashOnly. Only hashes are synced, so the client never executes
+     * the remote packs. */
     public static boolean hashOnly() {
         return SandboxConfig.PACK_SYNC_HASH_ONLY.equalsIgnoreCase(ClassFilter.INSTANCE.config().packSyncMode());
     }
@@ -45,7 +48,8 @@ public final class PackSyncServer {
         return gatheredPackCount > 0 && !hashOnly();
     }
 
-    /** gather 待分发包：enabled && clientSync 的 GLOBAL + WORLD 包。 */
+    /** Gathers the packs to distribute: the enabled GLOBAL and WORLD packs whose clientSync flag is
+     * set. */
     public static List<SyncedPack> collectSyncPacks() {
         List<SyncedPack> out = new ArrayList<>();
         for (ScriptPack pack : ScriptPackRegistry.get().enabledPacks()) {
@@ -68,7 +72,8 @@ public final class PackSyncServer {
         return out;
     }
 
-    /** syncId = {@code <scope idSegment>:<packId>}，如 {@code packs:demo} / {@code worldpacks:demo}。 */
+    /** Builds the syncId as {@code <scope idSegment>:<packId>}, for example {@code packs:demo} or
+     * {@code worldpacks:demo}. */
     public static String syncId(ScriptPack pack) {
         return pack.scope().idSegment() + ":" + pack.id();
     }

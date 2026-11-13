@@ -12,23 +12,27 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 /**
- * 玩家进度事件（{@code PlayerEvents.advancement}）的 fabric 钩子。
+ * The Fabric hook for the player advancement event ({@code PlayerEvents.advancement}).
  *
- * <p>NeoForge 26.1.2 触发点（userdev 补丁实证）：{@code PlayerAdvancements#award} 内
+ * <p>NeoForge 26.1.2 fires it inside {@code PlayerAdvancements#award}:
  * {@code if (!wasDone && progress.isDone()) { rewards.grant(...);
  * display.ifPresent(display -> { ...announce...; onAdvancementEarnedEvent(player, holder); }) }}
- * ——「刚完成」且<b>带 display</b> 的进度才触发（与 announce 的 gamerule 无关）。
+ * — only an advancement that has just completed and <b>has a display</b> fires (the announce
+ * gamerule does not matter).
  *
- * <p>注入点（javap -c minecraft-merged-deobf-26.1.2 实证）：{@code award} 的
- * {@code holder.value().display().ifPresent(...)}（偏移 70-84，InvokeDynamic #334）
- * 生成私有合成方法 {@code lambda$award$0(AdvancementHolder, DisplayInfo)}——其 HEAD 注入
- * 得到 holder + display（player 经 @Shadow 字段取），语义与 NeoForge 的 ifPresent 内触发
- * 完全一致（无 display 的进度不触发）。{@code rewards.grant} 调用点（偏移 67）虽同属
- * 「刚完成」分支，但它先于 display 检查——挂它会为无 display 的进度多发事件，未采用。
+ * <p>Injection point (checked with javap -c on minecraft-merged-deobf-26.1.2): the
+ * {@code holder.value().display().ifPresent(...)} call in {@code award} (offsets 70-84,
+ * InvokeDynamic #334) becomes the private synthetic method
+ * {@code lambda$award$0(AdvancementHolder, DisplayInfo)}. Injecting at its HEAD yields the holder
+ * and the display (the player comes from a @Shadow field), which matches firing inside NeoForge's
+ * ifPresent exactly: an advancement without a display does not fire. The {@code rewards.grant}
+ * call site (offset 67) is in the same "just completed" branch but runs before the display check;
+ * hooking it would fire for advancements without a display, so it is not used.
  *
- * <p>注意：{@code lambda$award$0} 是 private synthetic 方法，javac 在 MC 重构时可能改名——
- * defaultRequire=1 会在改名时硬失败（不静默丢钩子），届时照此注释改挂点为
- * {@code Optional.ifPresent} INVOKE + {@code @ModifyVariable} 捕获 holder。
+ * <p>{@code lambda$award$0} is private synthetic, so javac may rename it when Minecraft is
+ * refactored. defaultRequire=1 turns that into a hard failure instead of a silently lost hook; in
+ * that case move the hook point to the {@code Optional.ifPresent} INVOKE and capture the holder
+ * with {@code @ModifyVariable}.
  */
 @Mixin(PlayerAdvancements.class)
 public abstract class PlayerAdvancementsMixin {

@@ -1,7 +1,8 @@
-// fabric 节点的目录平台提供者：镜像共享树 NeoForgeCatalogPlatformProvider（整文件
-// neoforge 守卫），差异只有三处——hostExtensions 少 ItemStack/BlockState 两个源（两扩展
-// 接口在 fabric 仍整文件守卫，类不存在），snippets/registryTypes/modIds 逐字复用。
-// ItemStackExtension/BlockStateExtension 移植批次落地后，本文件与共享树版合并回单副本。
+// Catalog platform provider for the Fabric node. It mirrors the shared NeoForgeCatalogPlatformProvider
+// (guarded neoforge for the whole file) with three differences: hostExtensions omits the ItemStack and
+// BlockState sources because both extension interfaces are still guarded whole-file on Fabric and the
+// classes do not exist; snippets, registryTypes and modIds are reused verbatim. Once ItemStackExtension
+// and BlockStateExtension are ported, this file merges back into the shared copy.
 package com.tkisor.nekojs.fabric;
 
 import com.tkisor.nekojs.api.ScriptType;
@@ -40,7 +41,8 @@ import net.minecraft.world.level.block.state.BlockState;
 import java.util.Collection;
 import java.util.List;
 
-/** fabric 侧的 probe/workspace 目录数据源：注册表类型、host 扩展、配方命名空间、snippets。 */
+/** Probe and workspace catalog source for Fabric: registry types, host extensions, recipe namespaces
+ * and snippets. */
 public class FabricCatalogPlatformProvider implements NekoCatalogPlatformProvider {
     @Override
     public Collection<RecipeNamespaceCatalogEntry> recipeNamespaces() {
@@ -60,8 +62,9 @@ public class FabricCatalogPlatformProvider implements NekoCatalogPlatformProvide
 
     @Override
     public Collection<HostExtensionSource> hostExtensions() {
-        // 与 NeoForge 版同为九源：ItemStack/BlockState 扩展随第 16 批 inject 链激活
-        // （MixinItemStack/MixinBlockState 进 nekojs-fabric-shared.mixins.json）
+        // Nine sources, same as the NeoForge version: the ItemStack and BlockState extensions join once the
+        // inject chain is active and MixinItemStack/MixinBlockState are listed in
+        // nekojs-fabric-shared.mixins.json
         return List.of(
                 HostExtensionSource.any(ItemStack.class, ItemStackExtension.class),
                 HostExtensionSource.any(Item.class, ItemExtension.class),
@@ -87,7 +90,8 @@ public class FabricCatalogPlatformProvider implements NekoCatalogPlatformProvide
                 FabricCatalogPlatformProvider::tagIds);
     }
 
-    /** 与 NeoForge 版同义：26.x 走 getTags()，标签未加载时为空流（probe 侧回退 string）。 */
+    /** Same meaning as the NeoForge version: 26.x uses getTags(); the stream is empty while tags are not
+     * loaded, so the probe side falls back to a string. */
     private static <T> List<String> tagIds(net.minecraft.core.Registry<T> registry) {
         return registry.getTags()
                 .map(named -> named.key().location().toString())

@@ -17,7 +17,8 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Vec3Adapter smoke test：坐标保留小数，与 BlockPosAdapter 的取整语义区分验证。
+ * Smoke test for Vec3Adapter: coordinates keep their fraction, checked against the rounding
+ * behavior of BlockPosAdapter.
  */
 class Vec3AdapterTest {
 

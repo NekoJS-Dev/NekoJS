@@ -6,15 +6,17 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.Level;
 
 /**
- * 实体离开维度/世界事件（{@code EntityEvents.leaveLevel}）的**加载器中立**载荷。
+ * Loader-neutral payload for the entity leaving a dimension / world event
+ * ({@code EntityEvents.leaveLevel}).
  *
- * <p>语义近似 NeoForge {@code EntityLeaveLevelEvent}（实体从 level 移除）。fabric 侧
- * via fabric-api {@code ServerEntityEvents.ENTITY_UNLOAD}（fabric-lifecycle-events-v1
- * 4.1.1，FQN 已从 {@code entity.event.v1} 迁到 {@code event.lifecycle.v1}）——
- * 其在 {@code ServerLevel$EntityCallbacks#onTrackingEnd} HEAD 触发
- * （源码实证：实体被移除前，覆盖死亡移除/维度传送/区块卸载）。
+ * <p>The meaning is close to NeoForge {@code EntityLeaveLevelEvent} (the entity is removed
+ * from the level). fabric uses fabric-api {@code ServerEntityEvents.ENTITY_UNLOAD}
+ * (fabric-lifecycle-events-v1 4.1.1, whose FQN moved from {@code entity.event.v1} to
+ * {@code event.lifecycle.v1}); it fires at the HEAD of
+ * {@code ServerLevel$EntityCallbacks#onTrackingEnd} (source-verified: before the entity is
+ * removed, which covers death removal, dimension teleport and chunk unload).
  *
- * <p>不可取消。
+ * <p>Not cancellable.
  */
 @Doc("Fired when an entity is unloaded / removed from a ServerLevel (EntityEvents.leaveLevel). Dispatched by entity type.")
 @Doc("Not cancellable. Server-side instances only.")

@@ -1,5 +1,6 @@
-// 26.x 实现，本文件不应再出现版本守卫。1.21.1 的实现是 versions/1.21.1/src 下的同名文件，
-// 改本文件行为时须同步它。
+// 26.x implementation; version guards should no longer appear in this file. The 1.21.1
+// implementation is the file of the same name under versions/1.21.1/src, so keep it in sync when
+// changing behavior here.
 //? if neoforge {
 package com.tkisor.nekojs.platform;
 
@@ -87,7 +88,7 @@ public class NeoForgePlatform implements IPlatform {
             modCache = new LinkedHashMap<>();
             for (var mod : ModList.get().getMods()) {
                 String id = mod.getModId();
-                // 初始化我们自己的 ModInfo 实现
+                // Build our own ModInfo implementation
                 IModInfo info = new ModInfo(
                         id,
                         mod.getDisplayName(),
@@ -144,8 +145,9 @@ public class NeoForgePlatform implements IPlatform {
 
     @Override
     public List<String> defaultScanPackages() {
-        // com.mojang: MC API 签名大量引用 datafixers(Either)/brigadier/blaze3d/authlib——
-        // 不放行则 probe 只生成引用它们的 import 而无声明，IDE 里这些类型全部悬空
+        // com.mojang: MC API signatures reference datafixers(Either)/brigadier/blaze3d/authlib heavily.
+        // Without this package the probe emits imports referencing those types but no declarations,
+        // leaving every one of them unresolved in the IDE
         return List.of("net.minecraft", "net.neoforged", "com.mojang");
     }
 }

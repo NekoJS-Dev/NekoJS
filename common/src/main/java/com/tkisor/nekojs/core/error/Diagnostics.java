@@ -3,24 +3,27 @@ package com.tkisor.nekojs.core.error;
 import com.tkisor.nekojs.NekoJS;
 
 /**
- * 宿主侧诊断通道：把散落在各处的「catch-and-continue」失败从 DEBUG/静默
- * 升级为带作用域标签的可见报告。
+ * Host-side diagnostics channel: it turns catch-and-continue failures scattered around the code
+ * from DEBUG or silence into visible reports tagged with a scope.
  *
- * <p>边界（与 {@link ErrorTracker} 分工）：ErrorTracker 只记录脚本入口执行、事件/timer
- * callback 等<strong>脚本归因</strong>错误并进入游戏内错误面板；Diagnostics 面向宿主侧
- * 「某个东西悄悄不工作了」的工程性失败——发现目录部分失败、预检 schema 降级、同步丢文件、
- * probe/editor 配置未写入等。默认经根 logger 以 {@code [scope] message} 形式输出 WARN/ERROR；
- * 宿主可 {@link #install(Sink)} 换装自己的汇聚端（如未来转发进错误面板）。
+ * <p>Division of work with {@link ErrorTracker}: ErrorTracker records only errors attributed to a
+ * script (entry execution, event/timer callbacks) and feeds the in-game error panel; Diagnostics
+ * covers host-side engineering failures where "something quietly stopped working" — a partial
+ * directory discovery, a preflight schema downgrade, a file dropped during sync, a probe/editor
+ * config that was not written. By default it logs WARN/ERROR through the root logger as
+ * {@code [scope] message}; a host can call {@link #install(Sink)} to swap in its own sink.
  *
- * <p>调用契约：report 永不抛错（诊断通道自身故障只降级为根 logger），可在任意 catch 块
- * 直接使用；scope 用稳定的小写串（如 {@code script-discovery}、{@code script-sync}），
- * 便于用户 grep 与宿主端按 scope 过滤/限流。
+ * <p>Calling rules: report never throws (a failure inside the channel itself falls back to the
+ * root logger), so it can be used inside any catch block. Use a stable lower-case scope string
+ * (such as {@code script-discovery} or {@code script-sync}) so users can grep it and a host can
+ * filter or throttle by scope.
  */
 public final class Diagnostics {
 
     public enum Severity { WARN, ERROR }
 
-    /** 一次诊断报告：scope 定位子系统，message 面向用户（中文），throwable 可为 null。 */
+    /** One diagnostic report: scope identifies the subsystem, message is meant for the user,
+     * throwable may be null. */
     public record Event(String scope, Severity severity, String message, Throwable throwable) {}
 
     @FunctionalInterface
@@ -32,7 +35,7 @@ public final class Diagnostics {
 
     private Diagnostics() {}
 
-    /** 宿主换装汇聚端；传 null 恢复默认根 logger 行为。 */
+    /** Swaps in the host's sink; passing null restores the default root logger behavior. */
     public static void install(Sink newSink) {
         sink = newSink == null ? Diagnostics::logToRootLogger : newSink;
     }
@@ -49,7 +52,7 @@ public final class Diagnostics {
         try {
             sink.accept(event);
         } catch (Throwable suppressed) {
-            // 诊断通道绝不向调用方抛错；sink 自身故障退回根 logger
+            // The diagnostics channel never throws at its caller; a failing sink falls back to the root logger.
             logToRootLogger(event);
         }
     }

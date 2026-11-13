@@ -83,7 +83,7 @@ public final class PackActivationCoordinator implements AutoCloseable {
                 .anyMatch(pack -> pack.manifest().descriptor() != null && pack.manifest().descriptor().entries().containsKey(type));
     }
 
-    /** A legacy STARTUP boot also consumes the one loader initialization boundary. */
+    /** A legacy STARTUP boot also counts as the one loader initialization. */
     public synchronized void sealStartup() { startupEvaluated = true; }
 
     /** Null selector means a complete type replacement, including the legacy partition. */

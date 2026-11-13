@@ -3,39 +3,45 @@ package com.tkisor.nekojs.core.modification;
 import java.util.List;
 
 /**
- * 修改计划的平台/版本 Adapter 接缝（票 39 AC11）：MC 应用只存在 Adapter——
- * 26.x 与 1.21.1 的 item default components、block/state 属性、注册时机与同步差异
- * 由各节点 Adapter 各自实现并记录，common 不感知任何 MC 类型。
+ * Platform and version adapter for modification plans. Minecraft application lives only in
+ * adapters: the 26.x and 1.21.1 differences in item default components, block/state properties,
+ * registration timing and syncing are implemented and recorded by each node adapter. common does
+ * not know any MC type.
  *
- * <p>契约（与 {@link ModificationCandidatePlan} 的联合预检/联合发布边界对齐）：
+ * <p>Contract, aligned with the joint preflight and joint publish of
+ * {@link ModificationCandidatePlan}:
  * <ul>
- *   <li>{@link #preflight(List)} 在候选 STATE_PLAN 阶段调用：解析每个目标、用
- *       <b>基线</b>（NekoJS 持有的原始值，见 AC7）校验属性不变量、确认 Adapter 可应用
- *       整批。可以自由抛出——抛出即整批失败（保留旧 active）。不得产生对外可见副作用
- *       （只读解析/校验）。</li>
- *   <li>{@link #apply(List)} 在 commit 点调用：<b>先恢复全部 NekoJS 持有基线，再按声明
- *       顺序应用新完整计划</b>（AC7）。preflight 通过后 apply 不得抛（违反
- *       {@code CandidateStatePlan#publish} 契约时 global/shared 写集不发布、计划自身
- *       部分副作用不回滚）；平台无法证明某字段可恢复的字段必须在 preflight 拒绝整批，
- *       不得把静默 stale 当成功。</li>
+ *   <li>{@link #preflight(List)} is called in the candidate STATE_PLAN stage: it resolves each
+ *       target, validates the property invariants against the <b>baseline</b> (the original values
+ *       NekoJS holds), and confirms the adapter can apply the whole batch. It may throw freely; a
+ *       throw fails the whole batch and the old active state stays. It must not produce visible
+ *       side effects; it only resolves and validates.</li>
+ *   <li>{@link #apply(List)} is called at the commit point: it <b>restores every baseline NekoJS
+ *       holds, then applies the complete new plan in declaration order</b>. Once preflight passed,
+ *       apply must not throw; when it violates the {@code CandidateStatePlan#publish} contract, the
+ *       global/shared write set is not published and partial side effects of the plan itself are
+ *       not rolled back. A field the platform cannot prove restorable must make preflight reject
+ *       the whole batch; silent stale state is not success.</li>
  * </ul>
  *
- * <p>恢复/apply 只承诺 NekoJS 拥有且 Adapter 已证明可恢复的字段；不承诺回滚任意 Java
- * 对象内部状态、其他 mod、世界、网络或文件副作用（spec 09 外部副作用边界）。
+ * <p>Restore and apply only cover fields NekoJS owns and the adapter proved restorable. They do not
+ * roll back the internal state of arbitrary Java objects, other mods, the world, the network or
+ * file side effects.
  */
 public interface ModificationApplier {
 
-    /** Adapter 节点标识（诊断/capability 记录用，如 {@code "26.x-shared"}）。 */
+    /** Adapter identifier used for diagnostics, such as {@code "26.x-shared"}. */
     String adapterId();
 
     /**
-     * 联合预检（候选期）：目标解析 + 基线不变量校验 + 可恢复性确认。抛出即整批失败。
+     * Preflights candidate declarations: resolves targets, validates baseline invariants,
+     * and confirms rollback safety. Throwing fails the entire batch.
      */
     void preflight(List<ModificationDeclaration> declarations);
 
     /**
-     * 应用（commit 点）：恢复 NekoJS 持有基线 → 按声明顺序应用完整新计划。
-     * preflight 通过后不得抛。
+     * Applies modifications at commit: restores the baseline held by NekoJS, then applies
+     * the new plan in declaration order. Must not throw once preflight passes.
      */
     void apply(List<ModificationDeclaration> declarations);
 }

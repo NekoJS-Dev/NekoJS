@@ -1,4 +1,4 @@
-// TODO(fabric): fabric 侧还没有对应实现，整文件守卫等移植完成后去掉
+// fabric has no matching implementation yet; remove this whole-file guard once the port lands
 //? if neoforge {
 package com.tkisor.nekojs.platform;
 
@@ -16,17 +16,20 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * ItemStack 注入接口的跨平台契约：本测试层被 1.21.1 / 26.1 / 26.2 三个平台共同挂载，
- * 各自 classpath 上的 {@code ItemStackExtension}（独立源码树维护）必须满足同一套形状——
+ * Cross-platform contract for the ItemStack injection interface: this test layer is mounted by the
+ * 1.21.1, 26.1 and 26.2 platforms, and each classpath's {@code ItemStackExtension} (maintained in
+ * its own source tree) must have the same shape.
  *
  * <ul>
- *   <li>与原版 {@code ItemStack} 撞名的方法改成显式唯一 JS 名（{@code @Remap}）：
- *       {@code setCountAndReturn / enchantById / hasGlint / setGlint}；</li>
- *   <li>原样可用的原版成员（copy/getItem/setCount/enchant/isEnchanted...）不得再包
- *       {@code neko$} facade——前缀剥掉后落回原版名会让 GraalJS 重载解析在
- *       「String 直传 vs Holder 适配」之间踩空，真机上表现为 "Unsupported target type"；</li>
- *   <li>残留的 holder 型 {@code neko$enchant} 重载必须 {@code @HideFromJS}，脚本侧
- *       只走 {@code enchantById}。</li>
+ *   <li>Methods whose name collides with vanilla {@code ItemStack} get an explicit unique JS name
+ *       via {@code @Remap}: {@code setCountAndReturn / enchantById / hasGlint / setGlint};</li>
+ *   <li>Vanilla members that already work as-is (copy/getItem/setCount/enchant/isEnchanted...)
+ *       must not be wrapped in a {@code neko$} facade again — stripping the prefix falls back to
+ *       the vanilla name, and GraalJS overload resolution then fails between "pass a String
+ *       directly" and "adapt to Holder", which shows up on a real client as
+ *       "Unsupported target type";</li>
+ *   <li>Any remaining holder-typed {@code neko$enchant} overload must be {@code @HideFromJS} so
+ *       scripts only use {@code enchantById}.</li>
  * </ul>
  */
 class ItemStackExtensionContractTest {
@@ -50,7 +53,7 @@ class ItemStackExtensionContractTest {
         assertNull(declared(ext, "neko$setCount", int.class));
         assertNull(declared(ext, "neko$isEnchanted"));
         assertNull(declared(ext, "neko$setEnchanted", boolean.class));
-        // String 直传的附魔入口已被 enchantById 取代；Holder 重载单独处理（见下）
+        // The String overload of enchant is replaced by enchantById; the Holder overload is covered separately below
         assertNull(declared(ext, "neko$enchant", String.class, int.class));
     }
 

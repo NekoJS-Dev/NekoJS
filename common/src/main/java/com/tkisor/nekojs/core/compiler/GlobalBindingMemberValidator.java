@@ -15,27 +15,35 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * 全局绑定成员 preflight（事件外场景）：脚本任意位置对 schema 绑定（Utils/Item/…含事件组）
- * 的成员访问检查。三层：
+ * Preflight check of global binding members outside events: checks member access on schema
+ * bindings (Utils/Item/… including event groups) anywhere in a script. Three layers:
  * <ol>
- *   <li><b>直接成员</b>：{@code Utils.serverTel()}（拼错）按 {@link ScriptBindingSchema.BindingMembers#memberNames()}
- *       检查（含 DelegatingBinding 的 helper + 目标类静态）；</li>
- *   <li><b>链式类型流</b>：{@code Item.of(x).witherCont(3)}——绑定经调用/属性取值后的后续成员
- *       按 {@link BindingMembers#valueClasses()} 的反射成员检查（第二级及更深）；</li>
- *   <li><b>未定义标识符</b>：作为成员访问对象（{@code Util.xxx}——绑定名拼错）或调用目标
- *       （{@code qwq()}）的未知标识符。已知集合 = 文件内声明（含参数）+ import/class/catch/
- *       解构/for-of 的源级补收 + schema 绑定名 + {@link ScriptBindingSchema#knownGlobals 运行时收割的
- *       全局全集}。globals 未登记（测试/降级）时该项整体跳过。裸标识符表达式（{@code qwq} 单独
- *       成句）**不报**：ValParser 会把 {@code typeof x} 的操作数泄漏为独立语句，无法与真未定义区分。</li>
+ *   <li><b>Direct members</b>: {@code Utils.serverTel()} (a typo) is checked against
+ *       {@link ScriptBindingSchema.BindingMembers#memberNames()} (covers helper bindings on
+ *       DelegatingBinding plus the target class's static members);</li>
+ *   <li><b>Chained type flow</b>: {@code Item.of(x).witherCont(3)} — members reached after a
+ *       call or property read on a binding are checked against the reflected members of
+ *       {@link BindingMembers#valueClasses()} (second level and deeper);</li>
+ *   <li><b>Undefined identifiers</b>: unknown identifiers used as the object of a member access
+ *       ({@code Util.xxx}, a misspelled binding name) or as the call target ({@code qwq()}).
+ *       The known set is declarations in the file (parameters included), names collected from
+ *       import/class/catch/destructuring/for-of, schema binding names, and
+ *       {@link ScriptBindingSchema#knownGlobals the full set of globals collected at runtime}.
+ *       When globals are not registered (tests, degraded mode) this layer is skipped entirely.
+ *       A bare identifier used as an expression statement ({@code qwq} on its own) is
+ *       **not** reported: ValParser leaks the operand of {@code typeof x} as a separate
+ *       statement, so it cannot be told apart from a real undefined name.</li>
  * </ol>
  *
- * <p>报告不阻止编译/执行；ValParser 解析失败的文件整文件跳过（warn 日志）。
+ * <p>Reporting does not block compilation or execution; a file ValParser fails to parse is
+ * skipped entirely (warn log).
  */
 public final class GlobalBindingMemberValidator {
 
     /**
-     * JS 关键字黑名单：ValParser 把 {@code if (x)} / {@code catch (e)} 等关键字前缀结构
-     * 解析成 CallExpr(关键字, 参数)，未定义标识符检查必须放行这些「伪调用目标」。
+     * JS keyword blacklist. ValParser parses keyword-prefixed constructs such as {@code if (x)}
+     * and {@code catch (e)} as CallExpr(keyword, args), so the undefined-identifier check must let
+     * these pseudo call targets through.
      */
     private static final Set<String> JS_KEYWORDS = Set.of(
             "if", "else", "for", "while", "do", "switch", "case", "default", "try", "catch",
@@ -69,7 +77,7 @@ public final class GlobalBindingMemberValidator {
         try {
             ast = parsed.ast();
         } catch (Throwable e) {
-            // 与 EventCallbackSourceValidator 一致：不静默跳过，记日志提示该文件未获 preflight 保护
+            // Same as EventCallbackSourceValidator: do not skip silently; log that this file has no preflight protection
             com.tkisor.nekojs.NekoJS.LOGGER.warn(
                     "Binding preflight skipped for {}: source not parseable by ValParser ({}: {})",
                     file, e.getClass().getSimpleName(), e.getMessage());
@@ -79,7 +87,7 @@ public final class GlobalBindingMemberValidator {
         SourceFacts facts = parsed.bindingFacts(ast);
         Map<String, String> remap = facts.remap();
 
-        // 局部变量类型流：const s = Item.of(x) → s 的后续成员按返回类型检查（两遍传播声明间依赖）
+        // Local variable type flow: const s = Item.of(x) means later members of s are checked against its return type (two passes propagate dependencies between declarations)
         Map<String, Set<Class<?>>> localTypes = new HashMap<>();
         collectLocalTypes(ast, schema, remap, localTypes);
         collectLocalTypes(ast, schema, remap, localTypes);
@@ -90,12 +98,13 @@ public final class GlobalBindingMemberValidator {
         checkBlock(ast, schema, remap, localTypes, known, file, source, reported, view);
     }
 
-    // ==================== 已知标识符集合 ====================
+    // ==================== Known identifier set ====================
 
     /**
-     * 文件内可解析的标识符全集。AST 侧取扁平并集（所有声明名 + 所有函数/箭头参数——跨作用域
-     * 并集只会漏报不会误报）；AST 覆盖不了的声明形态（import/class/catch/解构/for-of）用源级
-     * 正则补收——ValParser 是有损解析器，这些语法在 AST 里会碎成无法辨识的片段。
+     * Every identifier resolvable in this file. The AST gives a flat union of all declared names and
+     * all function/arrow parameters (a cross-scope union can only under-report); forms it cannot cover
+     * (import/class/catch/destructuring/for-of) come from source-level regexes since ValParser is a lossy
+     * parser and those constructs break up into unrecognizable fragments.
      */
     private static Set<String> collectKnownIdentifiers(SourceFacts facts,
                                                         Map<String, ScriptBindingSchema.BindingMembers> schema,
@@ -104,7 +113,7 @@ public final class GlobalBindingMemberValidator {
         known.addAll(facts.declaredNames());
         Set<String> globals = view == null ? Set.of() : view.knownGlobals();
         if (globals.isEmpty()) {
-            // 运行时全局全集未登记：未定义标识符检查无法安全进行，跳过该项（成员检查照常）
+            // The runtime global set is not registered: the undefined-identifier check cannot run safely, so it is skipped (member checks still run)
             return null;
         }
         known.addAll(globals);
@@ -133,8 +142,8 @@ public final class GlobalBindingMemberValidator {
         } else if (node instanceof ValNode.ArrowFunc af) {
             out.addAll(af.params());
         }
-        // 名字提取与子节点递归必须相互独立：箭头/函数体内部的声明（如回调里的 const 局部）
-        // 也是文件可见标识符——只收集参数不递归 body 会让回调内局部被误报为未知标识符
+        // Name extraction and child recursion must stay independent: a declaration inside an arrow/function body
+        // (a callback's const local, say) is file-visible too, so collecting parameters alone would report it as unknown.
         if (node instanceof ValNode.VarDecl decl) collectDeclaredNames(decl.init(), out);
         if (node instanceof ValNode.Block b) for (ValNode s : b.stmts()) collectDeclaredNames(s, out);
         if (node instanceof ValNode.CallExpr c) {
@@ -150,7 +159,7 @@ public final class GlobalBindingMemberValidator {
         }
     }
 
-    /** AST 覆盖不了的声明：ESM import 名、class 名、catch 参数、解构声明、for-of/in 变量。 */
+    /** Declarations the AST cannot cover: ESM import names, class names, catch parameters, destructuring declarations, for-of/in variables. */
     private static void collectSourceLevelNames(String source, Set<String> out) {
         Matcher imports = IMPORT_CLAUSE.matcher(source);
         while (imports.find()) {
@@ -159,7 +168,7 @@ public final class GlobalBindingMemberValidator {
         matchAll(source, CLASS_DECLARATION, out);
         matchAll(source, FUNCTION_DECLARATION, out);
         matchAll(source, CATCH_BINDING, out);
-        // catch (e) 单参数形态（上一条只覆盖多参可选绑定形态）
+        // Single-parameter catch (e) form; the pattern above only covers the multi-parameter optional binding form
         matchAll(source, CATCH_PARAMETER, out);
         Matcher destructure = DESTRUCTURING_BINDING.matcher(source);
         while (destructure.find()) {
@@ -177,7 +186,7 @@ public final class GlobalBindingMemberValidator {
         }
     }
 
-    /** 从 import 子句 / 解构模式片段中提取标识符（覆盖 {@code a as b}、{@code a: c}、默认值、rest）。 */
+    /** Extracts identifiers from an import clause or destructuring pattern fragment (covers {@code a as b}, {@code a: c}, default values and rest). */
     private static void addIdentifiersIn(String clause, Set<String> out) {
         Matcher m = IDENTIFIER.matcher(clause);
         while (m.find()) out.add(m.group());
@@ -194,7 +203,7 @@ public final class GlobalBindingMemberValidator {
         if (node instanceof ValNode.ArrowFunc af) for (ValNode s : af.body()) collectRemaps(s, remap);
     }
 
-    /** 局部变量 → 其初始化表达式的类型（沿绑定/其它已解析局部传播；调用 collectLocalTypes 两遍覆盖声明间依赖）。 */
+    /** Local variable -> the type of its initializer (propagated through bindings and other resolved locals; collectLocalTypes runs twice to cover dependencies between declarations). */
     private static void collectLocalTypes(ValNode node, Map<String, ScriptBindingSchema.BindingMembers> schema,
                                           Map<String, String> remap, Map<String, Set<Class<?>>> out) {
         if (node instanceof ValNode.VarDecl decl && decl.init() != null) {
@@ -216,7 +225,7 @@ public final class GlobalBindingMemberValidator {
         }
     }
 
-    // ==================== 检查主体 ====================
+    // ==================== Check body ====================
 
     private static void checkBlock(ValNode node,
                                    Map<String, ScriptBindingSchema.BindingMembers> schema,
@@ -241,7 +250,7 @@ public final class GlobalBindingMemberValidator {
         }
         if (node instanceof ValNode.ArrowFunc af) for (ValNode s : af.body()) checkBlock(s, schema, remap, localTypes, known, file, source, reported, view);
         if (node instanceof ValNode.FuncDecl fd) for (ValNode s : fd.body()) checkBlock(s, schema, remap, localTypes, known, file, source, reported, view);
-        // 链式中间节点：外层 MemberAccess 只查自己这级，object() 侧的每一级也要被独立访问到
+        // Chained intermediate nodes: an outer MemberAccess only checks its own level, so every level on the object() side must be visited on its own
         if (node instanceof ValNode.MemberAccess m) {
             checkBlock(m.object(), schema, remap, localTypes, known, file, source, reported, view);
         }
@@ -252,9 +261,9 @@ public final class GlobalBindingMemberValidator {
     }
 
     /**
-     * 成员访问检查：对象侧能走类型流（schema 绑定的 {@code valueClasses}）时按反射成员查
-     * （链式第二级及更深）；否则回退到既有的「直接绑定名 + 成员名表」检查；对象是未知标识符时
-     * 报未定义标识符（globals 已登记时）。
+     * Member access check: when the object side has a type flow (schema-bound {@code valueClasses}) the
+     * member is looked up reflectively (second chain level and deeper); otherwise this falls back to the
+     * existing binding-name + member-table check. An unknown identifier is reported when globals are registered.
      */
     private static void checkMemberAccess(ValNode.MemberAccess access,
                                           Map<String, ScriptBindingSchema.BindingMembers> schema,
@@ -305,7 +314,7 @@ public final class GlobalBindingMemberValidator {
         }
     }
 
-    /** 链式类型流：标识符 → schema 绑定的 valueClasses；属性取值/调用的返回类型沿链传播。 */
+    /** Chained type flow: identifier -> schema-bound valueClasses; the return type of a property read or a call propagates along the chain. */
     private static Set<Class<?>> resolveType(ValNode node,
                                              Map<String, ScriptBindingSchema.BindingMembers> schema,
                                              Map<String, String> remap,
@@ -345,7 +354,7 @@ public final class GlobalBindingMemberValidator {
         return null;
     }
 
-    /** 未定义标识符：仅在成员访问对象 / 调用目标位置报（裸标识符因 typeof 泄漏不报）。 */
+    /** Undefined identifier: reported only at a member-access object / call-target position (a bare identifier is not reported because of typeof leakage). */
     private static void checkUnknownIdentifier(ValNode.Identifier id,
                                                Map<String, ScriptBindingSchema.BindingMembers> schema,
                                                Map<String, String> remap,
@@ -362,7 +371,7 @@ public final class GlobalBindingMemberValidator {
                 "unknown-identifier " + id.name(), view);
     }
 
-    // ==================== 报告 ====================
+    // ==================== Reporting ====================
 
     private static String suggestion(Set<String> candidates, String member) {
         String s = JavaMemberIndex.suggestMember(candidates, member);

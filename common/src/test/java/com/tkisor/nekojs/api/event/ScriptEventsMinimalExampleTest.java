@@ -27,24 +27,25 @@ import java.util.Map;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
- * 票 14 AC10：Script 事件的最小可运行示例链路——按生产序列（STARTUP 声明 → {@code ScriptEvents.post} → SERVER 监听 + 触发）
- * 经真实 Graal 求值端到端跑通。
+ * The smallest runnable chain for script events: follow the production sequence (STARTUP
+ * declaration, {@code ScriptEvents.post}, SERVER listening and firing) end to end through a real
+ * Graal evaluation.
  *
- * <p>链路与 {@code ScriptManager.doLoadScripts} 相同：bindEvents（内置组 + 动态组）
- * → 脚本执行 → {@code ScriptEvents.post(registrar)}。示例只使用已通过 gate 的 tier
- * （动态声明 + 监听 + post），不触碰 NativeEvents（legacy/raw 面，见
- * {@code NativeEventsLegacyTierCharacterizationTest}）。
+ * <p>The chain matches {@code ScriptManager.doLoadScripts}: bindEvents (built-in groups plus
+ * dynamic groups), then script execution, then {@code ScriptEvents.post(registrar)}. The example
+ * only uses what has passed the gate (dynamic declaration, listening and post) and does not touch
+ * NativeEvents, the legacy/raw path (see {@code NativeEventsLegacyTierCharacterizationTest}).
  */
 class ScriptEventsMinimalExampleTest {
 
-    /** startup 侧：声明命名事件组。 */
+    /** Startup side: declares the named event groups. */
     static final String STARTUP_EXAMPLE = """
             // startup_scripts/events.js —— ScriptEvents 动态声明（票 14 示例）
             ScriptEvents.server(event => event.register('MyEvents', 'bossKilled'));
             ScriptEvents.client(event => event.register('HudEvents', 'cooldownEnded'));
             """;
 
-    /** server 侧：监听 + 脚本自己触发。 */
+    /** Server side: listens, then fires the event from the script itself. */
     static final String SERVER_EXAMPLE = """
             // server_scripts/boss.js —— 监听动态事件并触发
             MyEvents.bossKilled(payload => {
@@ -53,7 +54,7 @@ class ScriptEventsMinimalExampleTest {
             MyEvents.bossKilled.post({ boss: 'ender_dragon' });
             """;
 
-    /** console.log 捕获器（示例脚本保持 console.log 形态，测试内重定向）。 */
+    /** Captures console.log; the example scripts keep the console.log form and the test redirects it. */
     public static final class LogCapture {
         volatile String lastLine;
 
@@ -106,14 +107,14 @@ class ScriptEventsMinimalExampleTest {
 
     @Test
     void minimalExampleRunsTheDeclareListenPostChain() {
-        // (1) STARTUP：绑定事件组（含 ScriptEvents 注册总线）并执行声明脚本
+        // (1) STARTUP: bind the event groups (including the ScriptEvents registration bus) and run the declaring script
         bridge.bindEvents(startupContext.getBindings("js"), ScriptType.STARTUP);
         startupContext.eval("js", STARTUP_EXAMPLE);
 
-        // (2) 生产序列：脚本执行完 → ScriptEvents.post(registrar) 落登记
+        // (2) Production sequence: once the scripts have run, ScriptEvents.post(registrar) records the registrations
         ScriptEvents.post(scriptEvents);
 
-        // (3) SERVER：动态组随 bindEvents 绑定；重定向 console.log 后执行示例
+        // (3) SERVER: bindEvents binds the dynamic groups; redirect console.log, then run the example
         LogCapture capture = new LogCapture();
         serverContext.getBindings("js").putMember("capture", capture);
         serverContext.eval("js", "globalThis.console = { log: (m) => capture.record(m) };");
@@ -123,7 +124,8 @@ class ScriptEventsMinimalExampleTest {
         assertEquals("boss killed: ender_dragon", capture.lastLine,
                 "the minimal example must deliver listen + post end to end");
 
-        // (4) 两个动态组各自落位：SERVER-target 组在 server 环境，CLIENT-target 组不在
+        // (4) Each dynamic group lands on its own side: the SERVER-target group is in the server environment,
+        // the CLIENT-target group is not
         var serverGroups = ScriptEventRegistry.groupsFor(ScriptType.SERVER);
         var clientGroups = ScriptEventRegistry.groupsFor(ScriptType.CLIENT);
         assertEquals(1, serverGroups.get("MyEvents").size());

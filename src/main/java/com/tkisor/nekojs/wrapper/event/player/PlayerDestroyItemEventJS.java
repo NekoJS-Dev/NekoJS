@@ -6,15 +6,19 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.ItemStack;
 
 /**
- * 玩家物品损坏事件（{@code PlayerEvents.destroyed}，按物品 id 分发）的加载器中立载荷。
+ * Loader-neutral payload for the player item broken event ({@code PlayerEvents.destroyed},
+ * dispatched by item id).
  *
- * <p>NeoForge 侧对应原生 {@code PlayerDestroyItemEvent}（getOriginal 为损坏前的物品栈拷贝）；
- * 本载荷统一为 {@code itemStack}：损坏触发点（{@code ItemStack#applyDamage} 的碎裂分支）
- * 上的物品栈——伤害值已封顶、出槽前一刻的原数量（可能大于 1，每损坏一个触发一次）。
+ * <p>On NeoForge it corresponds to the native {@code PlayerDestroyItemEvent} (getOriginal is a
+ * copy of the stack before it broke). This payload uses {@code itemStack}: the stack at the
+ * break point (the breaking branch of {@code ItemStack#applyDamage}), with the damage already
+ * capped and the count as it was before leaving the slot. The count can be greater than 1, and
+ * the event fires once per broken item.
  *
- * <p>fabric 侧挂点与 NeoForge 全覆盖语义对齐：所有经 {@code ItemStack#hurtAndBreak}
- * 走耐久损耗的物品（挖方块/攻击/物品使用/盾牌格挡/钓鱼竿）在真正碎裂时触发；
- * 非玩家（如僵尸手中的工具）与 infinite materials 会被过程过滤。
+ * <p>The fabric hook matches NeoForge's full coverage: every item that loses durability through
+ * {@code ItemStack#hurtAndBreak} (block breaking, attacking, item use, shield blocking, fishing
+ * rod) fires when it actually breaks. Non-player holders (such as a tool in a zombie's hand)
+ * and infinite materials are filtered out along the way.
  */
 @Doc("Fired when a player's item breaks from durability damage (PlayerEvents.destroyed, dispatched by item id).")
 @Doc("event.itemStack is the broken stack at the break point (damage capped, count still before the -1 of the broken item).")

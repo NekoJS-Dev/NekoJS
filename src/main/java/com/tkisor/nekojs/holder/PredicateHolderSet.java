@@ -15,10 +15,11 @@ import java.util.stream.Stream;
 //?}
 
 /**
- * 用 GraalJS 谓词函数过滤注册表元素的惰性 HolderSet（对应 {@code {filter:(item)=>boolean}} 语法）。
- * {@link #contents()} 遍历 registry，对每个 holder 经 {@code argumentMapper} 映射成参数对象
- * （item 端是 ItemStack，fluid 端是 FluidStack），执行 JS 谓词，返回 true 才收录。
- * 仅运行时匹配（含 JS 函数无法序列化）。
+ * Lazy HolderSet that filters registry elements with a GraalJS predicate function (the
+ * {@code {filter:(item)=>boolean}} syntax). {@link #contents()} walks the registry, maps each
+ * holder to an argument object through {@code argumentMapper} (an ItemStack on the item side,
+ * a FluidStack on the fluid side), runs the JS predicate and keeps the holders it accepts.
+ * Runtime matching only, since a JS function cannot be serialized.
  */
 public final class PredicateHolderSet<T> extends HolderSet.ListBacked<T> {
     private final HolderLookup.RegistryLookup<T> lookup;

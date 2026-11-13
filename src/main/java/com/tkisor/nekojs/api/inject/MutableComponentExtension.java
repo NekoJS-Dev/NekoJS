@@ -1,5 +1,5 @@
-// 26.x 实现，本文件不应再出现版本守卫。1.21.1 的实现是 versions/1.21.1/src 下的同名文件，
-// 改本文件行为时须同步它。
+// 26.x implementation; version guards must not reappear in this file. The 1.21.1 implementation
+// is the file with the same name under versions/1.21.1/src, so change it too when behavior here changes.
 package com.tkisor.nekojs.api.inject;
 
 import com.tkisor.nekojs.api.annotation.RemapByPrefix;

@@ -9,18 +9,19 @@ import java.util.List;
 import java.util.Objects;
 
 /**
- * 条目信息（tooltip）事件的对象（{@code RecipeViewerEvents.addInformation}）。
+ * Event object for {@code RecipeViewerEvents.addInformation}, which attaches tooltip lines to
+ * entries.
  *
- * <p>脚本通过 {@code event.add(entry, 'text')} 或 {@code event.addAll(entry, ...)}
- * 为条目附加查看器 tooltip 信息；平台层在 JEI 注册期（{@code registerRecipes}）
- * 应用，因此信息在每次资源 reload 后更新。
+ * <p>Scripts attach viewer tooltip lines to an entry with {@code event.add(entry, 'text')} or
+ * {@code event.addAll(entry, ...)}. The platform applies them during JEI registration
+ * ({@code registerRecipes}), so the lines are refreshed on every resource reload.
  */
 @Doc("Event object for RecipeViewerEvents.addInformation; attaches tooltip lines to entries.")
 public final class RecipeViewerInformationJS {
     private final List<Object> entries = new ArrayList<>();
     private final List<List<String>> information = new ArrayList<>();
 
-    /** 为条目添加一行 tooltip。 */
+    /** Adds one tooltip line to an entry. */
     @Doc("Adds one tooltip line to an entry.")
     @Param(name = "entry", value = "item id string or ItemStack-like value")
     @Param(name = "info", value = "tooltip line; null/empty lines are ignored")
@@ -28,7 +29,8 @@ public final class RecipeViewerInformationJS {
         addAll(entry, info);
     }
 
-    /** 为条目添加多行 tooltip（可变参数，可传单个字符串或字符串数组）。 */
+    /** Adds several tooltip lines to an entry; the varargs accept a single string or a string
+     * array. */
     @Doc("Adds multiple tooltip lines to an entry.")
     @Param(name = "entry", value = "item id string or ItemStack-like value")
     @Param(name = "info", value = "tooltip lines; null/empty lines are ignored")
@@ -47,14 +49,16 @@ public final class RecipeViewerInformationJS {
         }
     }
 
-    /** 已收集的条目（与 {@link #information()} 平行，只读视图）。 */
+    /** Returns a read-only view of the collected entries, index-aligned with
+     * {@link #information()}. */
     @Doc("Returns the collected entries, parallel to information().")
     @Return("a copy of the collected entries")
     public List<Object> entries() {
         return List.copyOf(entries);
     }
 
-    /** 每条目对应的 tooltip 行（与 {@link #entries()} 平行，只读视图）。 */
+    /** Returns the tooltip lines for each entry, read-only and index-aligned with
+     * {@link #entries()}. */
     @Doc("Returns the tooltip lines for each entry, parallel to entries().")
     @Return("a copy; the list at index i belongs to entries().get(i)")
     public List<List<String>> information() {

@@ -1,5 +1,6 @@
-// 1.21.1 实现，与版本树 src/ 下的同名 26.x 文件成对。内容等于那份文件在本节点求值后的形态。
-// 26.x 侧行为变更时须同步本文件。
+// 1.21.1 implementation, paired with the file of the same name under the version tree's src/
+// that targets 26.x. Its content equals that file as evaluated for this node.
+// Update this file when behavior changes on the 26.x side.
 package com.tkisor.nekojs.api.inject;
 
 import com.tkisor.nekojs.api.annotation.RemapByPrefix;

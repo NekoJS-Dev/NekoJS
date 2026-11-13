@@ -15,10 +15,10 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * 内置 probe backend 的插件化注册：NekoProbeBuiltinPlugin 经
- * {@code nekojs:probe_backends} 扩展点注册 ("typescript","builtin") 与
- * ("python","builtin")，bootstrap 后全局单例必须包含两者且已 lock。
- * "builtin" 名字是各平台 NekoJSCommands 的字符串契约，不可漂移。
+ * Plugin registration of the built-in probe backends: NekoProbeBuiltinPlugin registers
+ * ("typescript","builtin") and ("python","builtin") through the {@code nekojs:probe_backends}
+ * extension point, and after bootstrap the global singleton must contain both and be locked.
+ * The name "builtin" is a string contract with NekoJSCommands on every platform and must not drift.
  */
 class NekoProbeBuiltinPluginTest {
 
@@ -50,7 +50,8 @@ class NekoProbeBuiltinPluginTest {
 
     @Test
     void bootstrapWithoutBuiltinPluginLeavesNoDefaultTypescriptBackend() {
-        // 兜底语义：扩展点不再硬编码注册，没有插件就没有 backend（发现机制必须能找到 NekoProbeBuiltinPlugin）
+        // Fallback semantics: the extension point no longer hardcodes registrations, so without the plugin
+        // there is no backend (discovery must be able to find NekoProbeBuiltinPlugin)
         NekoPluginBootstrap.bootstrap(List.of(), new ScriptPropertyRegistry.Impl());
 
         assertFalse(ProbeBackendRegistry.get().backend("typescript", "builtin").isPresent());

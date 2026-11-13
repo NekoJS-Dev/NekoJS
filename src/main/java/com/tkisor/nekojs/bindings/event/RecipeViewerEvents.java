@@ -9,16 +9,16 @@ import com.tkisor.nekojs.wrapper.viewer.RecipeViewerInformationJS;
 import com.tkisor.nekojs.wrapper.viewer.RecipeViewerRecipeListJS;
 
 /**
- * 配方查看器集成事件（JEI）。脚本在 CLIENT 脚本中监听，事件由
- * {@code RecipeViewerJeiPlugin} 在 JEI 运行时重建（资源 reload）时触发。
+ * Recipe viewer integration events (JEI). Scripts listen from CLIENT scripts; the events are
+ * fired by {@code RecipeViewerJeiPlugin} when JEI rebuilds at runtime (resource reload).
  *
- * <p>与 KubeJS 的 RecipeViewerEvents 对齐（裁剪）：条目事件按类型定向
- * （{@code 'item'} / {@code 'fluid'}），配方/类别按 id 定向。
+ * <p>Matches KubeJS RecipeViewerEvents, trimmed down: entry events dispatch by type
+ * ({@code 'item'} / {@code 'fluid'}), recipe and category events dispatch by id.
  */
 public interface RecipeViewerEvents {
     EventGroup GROUP = EventGroup.of("RecipeViewerEvents");
 
-    /** 条目类型 key：脚本以 {@code RecipeViewerEvents.addEntries('item', ...)} 定向。 */
+    /** Entry type key: scripts dispatch on it with {@code RecipeViewerEvents.addEntries('item', ...)}. */
     DispatchKey<RecipeViewerEntryListJS, String> ENTRY_TYPE_KEY = new DispatchKey<>() {
         @Override
         public Class<String> keyType() {
@@ -31,23 +31,25 @@ public interface RecipeViewerEvents {
         }
     };
 
-    /** 向查看器添加条目（脚本传物品/流体 id 或对象）。 */
+    /** Adds entries to the viewer. Scripts pass item or fluid ids, or objects. */
     EventBusJS<RecipeViewerEntryListJS, String> ADD_ENTRIES =
             GROUP.client("addEntries", RecipeViewerEntryListJS.class, ENTRY_TYPE_KEY);
 
-    /** 从查看器移除条目（非彻底移除，仍可由其他途径查看）。 */
+    /** Removes entries from the viewer. This is not a permanent removal: other paths can still
+     * make them visible. */
     EventBusJS<RecipeViewerEntryListJS, String> REMOVE_ENTRIES =
             GROUP.client("removeEntries", RecipeViewerEntryListJS.class, ENTRY_TYPE_KEY);
 
-    /** 按配方 id 隐藏配方（可定向类别）。 */
+    /** Hides recipes by recipe id; the call can be narrowed to a category. */
     EventBusJS<RecipeViewerRecipeListJS, Void> REMOVE_RECIPES =
             GROUP.client("removeRecipes", RecipeViewerRecipeListJS.class);
 
-    /** 按类别 id 隐藏整个查看器类别。 */
+    /** Hides a whole viewer category by category id. */
     EventBusJS<RecipeViewerCategoryListJS, Void> REMOVE_CATEGORIES =
             GROUP.client("removeCategories", RecipeViewerCategoryListJS.class);
 
-    /** 为条目附加 tooltip 信息（JEI 注册期应用，资源 reload 后更新）。 */
+    /** Attaches tooltip information to entries. Applied during JEI registration and refreshed
+     * after a resource reload. */
     EventBusJS<RecipeViewerInformationJS, Void> ADD_INFORMATION =
             GROUP.client("addInformation", RecipeViewerInformationJS.class);
 }

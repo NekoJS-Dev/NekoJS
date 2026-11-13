@@ -4,10 +4,10 @@ import com.tkisor.nekojs.api.annotation.ContractReceiver;
 import java.util.Objects;
 
 /**
- * NBT compound 的一个键值条目（脚本侧类型 {@code NbtEntry}）。
+ * One key/value entry of an NBT compound, exposed to scripts as {@code NbtEntry}.
  *
- * @param key   键名，不能为 {@code null}
- * @param value 值，不能为 {@code null}
+ * @param key   member name; must not be {@code null}
+ * @param value member value; must not be {@code null}
  */
 @ContractReceiver
 public record NbtEntry(String key, NbtValue value) {

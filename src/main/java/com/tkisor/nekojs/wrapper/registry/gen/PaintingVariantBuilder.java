@@ -1,5 +1,5 @@
-// 26.x 实现，本文件不应再出现版本守卫。1.21.1 的实现是 versions/1.21.1/src 下的同名文件，
-// 改本文件行为时须同步它。
+// 26.x implementation. No version guards belong in this file. The 1.21.1 implementation is the file
+// with the same name under versions/1.21.1/src; whenever you change behavior here, change that file too.
 package com.tkisor.nekojs.wrapper.registry.gen;
 
 import com.tkisor.nekojs.wrapper.registry.TaggableBuilder;
@@ -11,10 +11,10 @@ import java.util.Optional;
 import net.minecraft.resources.Identifier;
 
 /**
- * 画变种 builder：宽高（16 的倍数，单位像素）、纹理资源 id（指向
- * {@code assets/<ns>/textures/painting/<path>.png}），可选标题 / 作者。
+ * Painting variant builder: width and height in pixels, a multiple of 16, and a texture resource id
+ * pointing at {@code assets/<ns>/textures/painting/<path>.png}, plus an optional title and author.
  * <pre>
- * event.paintingVariant('mymod:sea', b =&gt; { b.width = 32; b.height = 16; b.title = '大海' })
+ * event.paintingVariant('mymod:sea', b =&gt; { b.width = 32; b.height = 16; b.title = 'Ocean' })
  * </pre>
  */
 public class PaintingVariantBuilder extends RegistryObjectBuilder<PaintingVariant>
@@ -22,7 +22,7 @@ public class PaintingVariantBuilder extends RegistryObjectBuilder<PaintingVarian
 
     private int width = 16;
     private int height = 16;
-    /** 纹理资源 id（默认与注册 id 相同）。 */
+    /** Texture resource id. Defaults to the registration id. */
     private String assetId = null;
     private String title = null;
     private String author = null;
@@ -49,7 +49,8 @@ public class PaintingVariantBuilder extends RegistryObjectBuilder<PaintingVarian
         this.height = height;
     }
 
-    /** 纹理资源 id（已归一化：空白视为未声明——build 期本来就走同一分支）。 */
+    /** Texture resource id, already normalized: a blank value counts as not set, which takes the same
+     * branch at build time. */
     public String getAssetId() {
         return assetId;
     }
@@ -80,7 +81,8 @@ public class PaintingVariantBuilder extends RegistryObjectBuilder<PaintingVarian
         }
     }
 
-    /** {@link TaggableBuilder}：画作 tag（如 {@code minecraft:placeable}）归属 PAINTING_VARIANT 注册表。 */
+    /** {@link TaggableBuilder}: painting tags (such as {@code minecraft:placeable}) belong to the
+     * PAINTING_VARIANT registry. */
     @Override
     public ResourceKey<? extends Registry<?>> getTagRegistry() {
         return Registries.PAINTING_VARIANT;

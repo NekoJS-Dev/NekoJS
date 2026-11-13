@@ -8,10 +8,12 @@ import java.util.List;
 import java.util.Objects;
 
 /**
- * 模块描述符：模块 id、脚本类型、契约版本、修订号、契约身份与依赖列表。
+ * Module descriptor: module id, script type, contract version, revision number, contract identity and
+ * dependency list.
  *
- * <p>构造时按 tier 校验：FEATURE/PLATFORM/ADDON 须有契约版本；VERSION/UNSAFE_NATIVE 须有
- * 正数修订号。依赖列表拷贝为不可变列表。
+ * <p>The constructor validates by tier: FEATURE, PLATFORM and ADDON need a contract version;
+ * VERSION and UNSAFE_NATIVE need a positive revision number. The dependency list is copied into an
+ * immutable list.
  */
 public record ApiModuleDescriptor(
         String moduleId,

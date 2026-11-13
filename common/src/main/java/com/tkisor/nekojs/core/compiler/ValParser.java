@@ -31,8 +31,9 @@ public final class ValParser {
             ValNode s = parseStatement(root);
             if (s != null) stmts.add(s);
             if (pos == before) {
-                // 防死循环：parseExpr 失败会恢复 pos，若语句未被消费则强制前进，
-                // 让未知语法（如 ';' 开头的表达式）被跳过而不是挂死 preflight。
+                // Guards against an endless loop: a failed parseExpr call restores pos, so a statement
+                // that consumed nothing is skipped by advancing one character. Unknown syntax such as an
+                // expression starting with ';' is skipped instead of hanging preflight.
                 pos++;
             }
         }
@@ -257,9 +258,9 @@ public final class ValParser {
         ValNode lhs = parseMemberChain();
         if (lhs instanceof ValNode.Identifier id) {
             if (match("=>")) { skipWs(); return parseArrowBody(List.of(id.name()), saved); }
-            // 括号箭头: saved 指向 '('
+            // Parenthesized arrow: saved points at the '('
         }
-        // 检查括号参数箭头
+        // Check for an arrow with parenthesized parameters
         if (lhs == null) { pos = saved; return null; }
         return lhs;
     }
@@ -345,7 +346,7 @@ public final class ValParser {
                     int beforeArg = pos;
                     ValNode a = parseExpr(); if (a != null) args.add(a);
                     skipWs(); if (peek() == ',') pos++; skipWs();
-                    if (pos == beforeArg) pos++; // 防死循环：未消费的实参（如 ';'）强制跳过
+                    if (pos == beforeArg) pos++; // Guard against an infinite loop: force-skip an argument that was not consumed (such as ';')
                 }
                 if (peek() == ')') pos++;
                 obj = new ValNode.CallExpr(obj, args, pos, pos);
@@ -395,7 +396,7 @@ public final class ValParser {
             skipWsCmt(); if (pos >= n || peek() == '}') { pos++; break; }
             int before = pos;
             ValNode s = parseStatement(block); if (s != null) stmts.add(s);
-            if (pos == before) pos++; // 防死循环：未消费的语句（如裸操作符）强制跳过
+            if (pos == before) pos++; // Guards against an endless loop: a statement that consumed nothing, such as a bare operator, is skipped
         }
         return new ValNode.Block(stmts, block.parent(), block.scope(), start, pos);
     }

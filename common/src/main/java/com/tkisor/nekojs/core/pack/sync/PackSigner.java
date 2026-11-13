@@ -11,8 +11,9 @@ import java.security.Signature;
 import java.util.List;
 
 /**
- * 包签名器（Ed25519，JDK {@code java.security}）。供测试与包作者离线签名工具使用——
- * 服务器只透传 manifest 内嵌的签名块，签名发生在打包阶段。
+ * Signs packs with Ed25519 through JDK {@code java.security}. Used by tests and by offline signing
+ * tools for pack authors; the server only passes along the signature block embedded in the manifest,
+ * and signing happens in the packaging step.
  */
 public final class PackSigner {
 
@@ -26,14 +27,16 @@ public final class PackSigner {
         }
     }
 
-    /** X.509/SPKI 编码公钥 → base64（manifest {@code signature.publicKey} 格式）。 */
+    /**
+     * Encodes an X.509/SPKI public key as base64, the manifest {@code signature.publicKey} format.
+     */
     public static String encodePublicKey(PublicKey publicKey) {
         return PackSignaturePayload.encodeBase64(publicKey.getEncoded());
     }
 
     /**
-     * 对包快照签名并返回 manifest 可嵌入的签名块：
-     * {@code {algorithm, keyId, publicKey, signature}}。
+     * Signs a pack snapshot and returns the signature block to embed in the manifest:
+     * {@code {algorithm, keyId, publicKey, signature}}.
      */
     public static JsonObject sign(
         String keyId,
@@ -61,7 +64,10 @@ public final class PackSigner {
         return block;
     }
 
-    /** 兼容重载：只持有私钥时签名（公钥由调用方另行编码嵌入）。 */
+    /**
+     * Compatibility overload: signs with the private key alone; the caller encodes and embeds the public
+     * key separately.
+     */
     public static JsonObject sign(
         String keyId,
         PrivateKey privateKey,

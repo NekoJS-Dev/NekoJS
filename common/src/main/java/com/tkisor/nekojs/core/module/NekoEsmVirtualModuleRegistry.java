@@ -16,10 +16,10 @@ public final class NekoEsmVirtualModuleRegistry implements NekoVirtualModuleView
     private final Map<String, String> sources = new ConcurrentHashMap<>();
     private final Map<String, String> displayPaths = new ConcurrentHashMap<>();
     private final Map<String, String> displayPathsByFileName = new ConcurrentHashMap<>();
-    /** fileName（哈希 .mjs 文件名）→ 当前拥有该 file-name 条目的模块 key。 */
+    /** Maps a filename hash of an .mjs file to the current module key for that entry. */
     private final Map<String, String> keyByFileName = new ConcurrentHashMap<>();
     private final Map<String, Integer> generations = new ConcurrentHashMap<>();
-    /** key（path 字符串，与 SOURCES 同键）→ 所属 ScriptType；跨类型共享模块（node:/java:/裸包名）为 null。 */
+    /** Maps a path key (consistent with SOURCES) to its {@link ScriptType}; returns null for shared modules (node:, java:, or bare package names). */
     private final Map<String, ScriptType> types = new ConcurrentHashMap<>();
 
     public NekoEsmVirtualModuleRegistry(Path gameRoot) {
@@ -133,11 +133,12 @@ public final class NekoEsmVirtualModuleRegistry implements NekoVirtualModuleView
     }
 
     /**
-     * 仅清空指定 {@link ScriptType} 的虚拟 ESM 模块（含对应 generation 计数）。
-     * moduleId 内嵌 nekojs root 相对路径（如 {@code server_scripts/foo.mjs}，可带
-     * {@code #cjs-interop}、{@code #dynamic}、{@code #namespace-capture:...} 合成后缀），
-     * 据此推导所属类型；{@code node:}、{@code java:}、裸包名等跨类型共享模块不受影响。
-     * 避免单机单类型 reload 误清其它类型已解析的虚拟 URI（重新生成哈希路径）。
+     * Clears virtual ESM modules for a specific {@link ScriptType} (including generation count).
+     * The moduleId embeds a path relative to the nekojs root (e.g., {@code server_scripts/foo.mjs},
+     * potentially with suffixes like {@code #cjs-interop}, {@code #dynamic}, or
+     * {@code #namespace-capture:...}). Cross-type shared modules ({@code node:}, {@code java:}, bare package names)
+     * are unaffected. This avoids accidentally clearing virtual URIs resolved for other types
+     * when reloading a single type.
      */
     public void clear(ScriptType type) {
         if (type == null) {
@@ -223,10 +224,10 @@ public final class NekoEsmVirtualModuleRegistry implements NekoVirtualModuleView
     }
 
     /**
-     * 从 moduleId 推导所属 {@link ScriptType}：moduleId 通常是 nekojs root 相对路径
-     * （如 {@code server_scripts/foo.mjs}），也可能带 {@code #cjs-interop}、{@code #dynamic}、
-     * {@code #namespace-capture:...} 等合成后缀；{@code node:}、{@code java:}、裸包名等
-     * 非脚本路径 moduleId 为跨类型共享模块，返回 null。
+     * Derives the {@link ScriptType} from a moduleId. The moduleId is usually a path relative to the
+     * nekojs root, potentially including suffixes like {@code #cjs-interop}, {@code #dynamic}, or
+     * {@code #namespace-capture:...}. Non-script paths (e.g., {@code node:}, {@code java:}, bare package names)
+     * are considered cross-type shared modules and return null.
      */
     private ScriptType scriptTypeOf(String moduleId) {
         if (moduleId == null || moduleId.isBlank()) {

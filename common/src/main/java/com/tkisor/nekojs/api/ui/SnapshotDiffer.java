@@ -10,12 +10,12 @@ import java.util.Objects;
 import java.util.Set;
 
 /**
- * Pure comparator behind the ticket 45 difference report: a reference
- * {@link InspectorSnapshot} versus an actual one, no host state involved. Nodes are
- * matched by structural path (root index, then child index plus type/key/id), so the
- * report stays meaningful across reloads where host identities change. The screenshot
- * and reference image never produce entries: pixel evidence is auxiliary by contract;
- * only public measurements and behavior facts are compared.
+ * Pure comparator behind the difference report: a reference {@link InspectorSnapshot}
+ * versus an actual one, with no host state involved. Nodes are matched by structural path
+ * (root index, then child index plus type/key/id), so the report stays meaningful across
+ * reloads where host identities change. The screenshot and reference image never produce
+ * entries: pixel evidence is auxiliary; only public measurements and behavior facts are
+ * compared.
  */
 public final class SnapshotDiffer {
     private SnapshotDiffer() {

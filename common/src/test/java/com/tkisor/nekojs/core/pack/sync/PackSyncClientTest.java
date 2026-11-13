@@ -49,16 +49,18 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * 客户端同步管线集成测试：签名 → 落盘 → 重扫哈希对照 → 信任 → 激活/重载 的全链路，
- * 以及各拒绝分支（未签名、未信任、哈希错配）的断连语义与 hashOnly 客户端模式。
+ * End-to-end client sync tests: signature, write to disk, rescan and compare hashes, trust, then
+ * activation and reload, plus the disconnect behavior of each rejection branch (unsigned,
+ * untrusted, hash mismatch) and the hashOnly client mode.
  */
 class PackSyncClientTest {
 
     @BeforeAll
     static void initPlatform() throws Exception {
         TestPlatformInit.ensureInitialized();
-        // 隔离：清掉上一轮测试 JVM 留在共享 gamedir 的信任库（keyId pinning 会跨轮残留，
-        // 与本轮随机生成的签名密钥冲突——等价玩家换钥场景，但非本测试关注点）
+        // Isolation: delete the trust store an earlier test JVM left in the shared gamedir. keyId
+        // pinning survives across runs and conflicts with the signing keys generated this round,
+        // which looks like a player changing keys but is not what this test covers.
         java.nio.file.Files.deleteIfExists(
             com.tkisor.nekojs.core.fs.NekoJSPaths.get().config().resolve(PackSyncTrustStore.FILE_NAME));
     }
@@ -196,14 +198,15 @@ class PackSyncClientTest {
         assertEquals(1, active.size());
         assertEquals("demo", active.get(0).id());
         assertTrue(active.get(0).enabled());
-        assertEquals(1, reloads.get()); // 激活后触发一次 CLIENT 重载
+        assertEquals(1, reloads.get()); // Activation triggers one CLIENT reload.
 
-        // 信任服务器即信任其签名密钥（v1 pinning）：keyId 已入信任库
+        // Trusting the server also trusts its signing key (v1 pinning), so the keyId is now in the
+        // trust store.
         JsonObject signature = JsonParser.parseString(manifest).getAsJsonObject().getAsJsonObject("signature");
         String keyId = signature.get("keyId").getAsString();
         assertTrue(PackSyncTrustStore.get().trustedPublicKey(keyId) != null);
 
-        // 断线：卸载并再次重载
+        // Disconnect unloads the packs and reloads once more.
         PackSyncClient.handleDisconnect(runtimeRoot);
         assertTrue(ScriptPackRegistry.get().serverCachePacks().isEmpty());
         assertEquals(2, reloads.get());
@@ -568,7 +571,8 @@ class PackSyncClientTest {
         config("all", false);
         String manifest = signed("packs:demo", "GLOBAL", "key-mismatch");
         SyncedPack pack = pack("packs:demo", "GLOBAL", manifest, "client_scripts/hud.js", "hud()");
-        // 哈希清单被篡改：预期哈希与 bundle 实际内容不一致 → 落盘重扫后检出
+        // Tampered hash list: the expected hash does not match the bundle content, and the rescan after
+        // writing catches it.
         List<PackSyncClient.HashEntry> wrong = List.of(new PackSyncClient.HashEntry("packs:demo", "deadbeef"));
         PackSyncClient.handleHashList(runtimeRoot, "srv-mismatch.test", wrong);
 
@@ -580,7 +584,7 @@ class PackSyncClientTest {
 
     @Test
     void hashOnlyClientNeverExecutesAndEmptyListClears() {
-        // 先以 all 模式激活一个包（复用信任 + bundle 流程）
+        // First activate a pack in all mode, reusing the trust and bundle flow.
         config("all", false);
         installCountingReloadHook();
         String manifest = signed("packs:demo", "GLOBAL", "key-hashonly");
@@ -590,15 +594,16 @@ class PackSyncClientTest {
         assertNull(PackSyncClient.handleBundle(runtimeRoot, List.of(pack)).disconnect());
         assertEquals(1, ScriptPackRegistry.get().serverCachePacks().size());
 
-        // 切到 hashOnly：bundle 被忽略
+        // Switch to hashOnly: bundles are ignored.
         config("hashOnly", false);
         PackSyncClient.handleHashList(runtimeRoot, "srv-hashonly.test", hashes(pack));
         assertTrue(ScriptPackRegistry.get().serverCachePacks().isEmpty());
-        assertEquals(2, reloads.get()); // hashOnly 清空时触发重载
+        assertEquals(2, reloads.get()); // An empty hash list in hashOnly mode triggers a reload.
         assertNull(PackSyncClient.handleBundle(runtimeRoot, List.of(pack)).disconnect());
         assertTrue(ScriptPackRegistry.get().serverCachePacks().isEmpty());
 
-        // 空清单同样清空（幂等：已空则不再重载）
+        // An empty list clears the same way. It is idempotent, so nothing is reloaded when nothing is
+        // loaded.
         PackSyncClient.handleHashList(runtimeRoot, "srv-hashonly.test", List.of());
         assertEquals(2, reloads.get());
     }
@@ -753,7 +758,7 @@ class PackSyncClientTest {
                         PackSyncClient.normalizeRemoteAddress(new java.net.InetSocketAddress("PLAY.Example.COM", 25565))));
     }
 
-    /* ================= 辅助 ================= */
+    /* ================= Helpers ================= */
 
     private static NekoRuntimeRoot runtimeRoot(NekoRuntimeTrustContext trustContext, graal.graalvm.polyglot.Engine engine) {
         NekoJSPaths paths = NekoJSPaths.get();

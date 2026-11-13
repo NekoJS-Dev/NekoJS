@@ -16,12 +16,15 @@ import net.neoforged.neoforge.event.tick.ServerTickEvent;
 
 @EventBusSubscriber(modid = NekoJS.MODID)
 public final class PDataSyncListener {
-    /** loader entry 装配完成后注入的窄生命周期 handle（bind）；server tick 触发时必已就绪。 */
+    /**
+     * A narrow lifetime handle that the loader entry injects after assembly (bind); it is always ready
+     * when a server tick fires.
+     */
     private static volatile NekoRuntimeRoot runtimeRoot;
 
     private PDataSyncListener() {}
 
-    /** 由 {@code NekoJSMod} 在 root 装配后调用；早于任何 server tick。 */
+    /** Called by {@code NekoJSMod} after the root is assembled; it runs before any server tick. */
     public static void bind(NekoRuntimeRoot root) {
         runtimeRoot = root;
     }

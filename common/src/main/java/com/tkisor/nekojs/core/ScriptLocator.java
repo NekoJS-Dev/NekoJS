@@ -18,13 +18,14 @@ import java.util.Set;
 import java.util.stream.Stream;
 
 /**
- * 专门负责在文件系统中发现和整理脚本文件
+ * Finds script files on disk and puts them in order.
  *
- * <p>发现顺序：脚本包（GLOBAL 字母序 → WORLD 字母序，见 {@link ScriptPackRegistry#enabledPacks()}）
- * 的 {@code <pack>/<type>_scripts/} 目录在前，平铺的 {@code nekojs/<type>_scripts/} 在后；
- * 同一目录内按路径排序。包内脚本的 ScriptId path 携带 {@code packs/<id>/} 或
- * {@code worldpacks/<id>/} 前缀（见 {@link ScriptPack#idPathPrefix()}），据此可在世界卸载时
- * 按前缀反注册该包注册的监听器。
+ * <p>Discovery order: the {@code <pack>/<type>_scripts/} directories of script packs come first
+ * (GLOBAL packs by name, then WORLD packs by name, see {@link ScriptPackRegistry#enabledPacks()}),
+ * followed by the flat {@code nekojs/<type>_scripts/} directory; files in one directory are sorted
+ * by path. A script inside a pack carries a {@code packs/<id>/} or {@code worldpacks/<id>/} prefix
+ * in its ScriptId path (see {@link ScriptPack#idPathPrefix()}), so unloading a world can
+ * unregister that pack's listeners by prefix.
  */
 public final class ScriptLocator {
 
@@ -39,7 +40,8 @@ public final class ScriptLocator {
     }
 
     /**
-     * 参数化版本：包列表由调用方提供（测试注入用），平铺目录仍取 {@code ScriptTypeEnv.scriptsDir(type)}。
+     * Same discovery with the pack list supplied by the caller, so tests can inject it. The flat
+     * directory still comes from {@code ScriptTypeEnv.scriptsDir(type)}.
      */
     public static List<ScriptContainer> discover(
         ScriptType type,

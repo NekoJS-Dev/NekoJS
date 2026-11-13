@@ -19,10 +19,11 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * {@link NodeModuleTypeDocs} 测试：{@code extractTS}（.ts 类型注解）
- * 以及 {@code registerBuiltin} 的端到端提取链路。
+ * Tests for {@link NodeModuleTypeDocs}: {@code extractTS} (.ts type annotations) and the end-to-end
+ * extraction path of {@code registerBuiltin}.
  *
- * <p>成员签名以 {@code export} 暴露（{@code declare module} 内非 export 声明对 require() 不可见）。
+ * <p>Member signatures are exposed with {@code export}; a non-export declaration inside
+ * {@code declare module} is invisible to require().
  */
 class NodeModuleTypeDocsTest {
 
@@ -280,7 +281,7 @@ class NodeModuleTypeDocsTest {
         assertTrue(out.contains("export const a: number;"), out);
     }
 
-    // ============ registerBuiltin 端到端 ============
+    // ============ registerBuiltin end to end ============
 
     @Test
     void registerBuiltinAllNodeModulesAutoExtracted() throws IOException {
@@ -304,7 +305,7 @@ class NodeModuleTypeDocsTest {
         assertTrue(all.contains("interface Console {"), all);
         assertTrue(all.contains("declare var console: Console;"), all);
         assertEquals(1, entries.stream().filter(entry -> entry.id().equals("nekojs.node-auto.console-global")).count());
-        // 自动提取的 example.ts 模块声明
+        // Module declarations extracted automatically from example.ts
         assertTrue(all.contains("declare module 'node:example' {"), all);
         assertTrue(all.contains("declare module 'example' {"), all);
         assertTrue(all.contains("export function getInfo(id: number): ExampleInfo;"), all);
@@ -312,7 +313,8 @@ class NodeModuleTypeDocsTest {
         assertTrue(all.contains("export const version: string;"), all);
         assertTrue(all.contains("interface ExampleInfo { id: number; name: string }"), all);
         assertTrue(all.contains("type Status = 'ok' | 'error';"), all);
-        // 所有内置 node 模块均由 .ts 自动提取（无手写回退）；node:path 关键签名在
+        // Every built-in node module is extracted automatically from its .ts file, with no handwritten
+        // fallback; the key node:path signatures follow
         assertTrue(all.contains("declare module 'node:path'"), all);
         assertTrue(all.contains("join(...parts: string[]): string"), all);
         assertTrue(all.contains("declare module 'nekojs/jsx-runtime' {"), all);
@@ -373,7 +375,7 @@ class NodeModuleTypeDocsTest {
                         && entry.declaration().contains("export const createWorkspace:")));
     }
 
-    // ============ 通用降级 ============
+    // ============ Fallback behavior ============
 
     @Test
     void tsReturnsEmptyWhenNoDefineCall() {
@@ -394,7 +396,8 @@ class NodeModuleTypeDocsTest {
 
     @Test
     void exampleTsIsErasedToRunnableJs() throws Exception {
-        // example.ts 在运行时由 loadManifest 擦除后 eval；确认擦除不抛异常且类型被干净移除
+        // loadManifest erases example.ts and evals it at runtime; this checks that erasure throws nothing
+        // and removes the types cleanly
         String src = readResource("nekojs/node/modules/example.ts");
         String js = NekoTypeScriptCompiler.eraseTypescript(Path.of("example.ts"), src);
         assertFalse(js.contains("interface ExampleInfo"), "interface must be erased:\n" + js);
@@ -411,7 +414,7 @@ class NodeModuleTypeDocsTest {
         }
     }
 
-    // ============ extractTS 增强：class / 嵌套对象 / 多 define / getter-setter ============
+    // ============ extractTS extensions: classes, nested objects, several define calls, getter/setter ============
 
     @Test
     void extractsClassMembers() {
@@ -480,8 +483,10 @@ class NodeModuleTypeDocsTest {
 
     @Test
     void topLevelTypeAliasWithArrowMemberNotTruncated() {
-        // type X = { m?: (a: T) => R; ... }：=> 的 > 曾被 typeDeclEnd 误判为泛型闭合（与 ()[]{} 共用 depth），
-        // 在首个 ; 处提前截断，丢失闭合 } 与后续成员 → 外层 declare module 借用闭合 }，TS 报 "Expected '}'"。
+        // type X = { m?: (a: T) => R; ... }: typeDeclEnd must not count the > in => as a generic close,
+        // because it shares depth with ()[]{}; doing so cuts the alias at the first ; and drops the closing
+        // } and the members after it. The enclosing declare module then reuses that }, and TS reports
+        // "Expected '}'".
         String src = """
 ;(function () {
   type NekoTestExtra = { mapStackLine?: (line: string) => string; formatError?: (error: unknown) => string }
@@ -498,12 +503,13 @@ class NodeModuleTypeDocsTest {
 
     @Test
     void nodeModuleJSDocCommentsExtracted() throws Exception {
-        // .ts node 模块顶层声明前的 /** */ JSDoc 随导出签名一并提取，使补全可见文档（实现与声明同源）
+        // JSDoc comments above top-level declarations of a .ts node module are extracted together with the
+        // export signature, so completion shows the docs; implementation and declaration share one source
         String src = readResource("nekojs/node/modules/example.ts");
         String out = NodeModuleTypeDocs.extractTS(src);
         assertTrue(out.contains("/** 根据 id 构造示例信息。 */"), out);
         assertTrue(out.contains("/** 返回当前状态。 */"), out);
-        // 注释紧贴其后的 export function 签名（经 indentBlock 各缩进 4 空格）
+        // Each comment sits directly above its export function signature, indented 4 spaces by indentBlock
         assertTrue(out.contains("/** 根据 id 构造示例信息。 */\n    export function getInfo(id: number): ExampleInfo;"), out);
         assertTrue(out.contains("/** 返回当前状态。 */\n    export function status(): Status;"), out);
     }

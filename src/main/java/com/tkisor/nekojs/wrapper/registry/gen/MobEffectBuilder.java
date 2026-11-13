@@ -5,23 +5,24 @@ import net.minecraft.world.effect.MobEffect;
 import net.minecraft.world.effect.MobEffectCategory;
 
 /**
- * 状态效果 builder：类别决定 HUD 图标底色，颜色为 ARGB int。
+ * Status effect builder. The category sets the background color of the HUD icon; the color is an
+ * ARGB int.
  * <pre>
  * event.mobEffect('mymod:wither_touch', b =&gt; { b.category = 'harmful'; b.color = 0x8B0000 })
  * </pre>
  */
 public class MobEffectBuilder extends RegistryObjectBuilder<MobEffect> {
 
-    /** 类别名：beneficial / harmful / neutral（默认 neutral）。 */
+    /** Category name: beneficial / harmful / neutral. Defaults to neutral. */
     private String category = "neutral";
-    /** ARGB 颜色（如 0x8B0000）。 */
+    /** ARGB color, such as 0x8B0000. */
     private int color = 0xFFFFFF;
 
     public MobEffectBuilder(Identifier id) {
         super(id);
     }
 
-    /** 类别名（已归一化小写）。 */
+    /** Category name, already lowercased. */
     public String getCategory() {
         return category;
     }
@@ -45,7 +46,8 @@ public class MobEffectBuilder extends RegistryObjectBuilder<MobEffect> {
             case "harmful" -> MobEffectCategory.HARMFUL;
             default -> MobEffectCategory.NEUTRAL;
         };
-        // MobEffect 的构造器为 protected，用匿名子类实例化（不做任何方法覆盖）。
+        // The MobEffect constructor is protected, so this instantiates an anonymous subclass and overrides
+        // nothing.
         return new MobEffect(resolved, color) {};
     }
 }

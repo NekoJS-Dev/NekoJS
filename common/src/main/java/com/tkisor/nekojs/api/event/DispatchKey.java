@@ -9,7 +9,8 @@ import java.util.function.Function;
  */
 public interface DispatchKey<E, K> {
 
-    // keyType 的泛型边界由调用方（EventBusJS/EventGroup）保证，Class 本身是擦除的
+    // The generic bound of keyType is guaranteed by the caller (EventBusJS/EventGroup); the Class
+    // itself is erased
     @SuppressWarnings("unchecked")
     static <E, K> DispatchKey<E, K> of(Class<? super K> keyType, Function<? super E, K> toKey) {
         return new DispatchKeyImpl<>((Class<K>) keyType, toKey);

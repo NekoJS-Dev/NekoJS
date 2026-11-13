@@ -8,9 +8,10 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * 票 07 owner-thread 调度门的纯单元契约：串行进入、reload 不重入、LOAD 在 RELOAD
- * 内嵌套放行（STARTUP reset+load）、回调内请求拒绝、close 优先与关闭后拒绝、
- * 同线程 close 嵌套拒绝、隔离失败标记只由显式恢复清除。
+ * Unit checks for the owner-thread scheduling gate: entries run one at a time, reload is not
+ * reentrant, LOAD nests inside RELOAD (STARTUP reset plus load), requests from inside a callback
+ * are rejected, close wins over other operations and is rejected after shutdown, a same-thread
+ * nested close is rejected, and the isolation-failure mark is only cleared by an explicit reset.
  */
 class ScriptLifecycleGateTest {
 
@@ -34,8 +35,9 @@ class ScriptLifecycleGateTest {
                 gate.tryEnter(ScriptLifecycleGate.Operation.RELOAD));
         assertEquals(ScriptLifecycleGate.Decision.REJECTED_REENTRANT,
                 gate.tryEnter(ScriptLifecycleGate.Operation.RELOAD));
-        // RELOAD 内的一层 LOAD 是 STARTUP reset+load 的既有嵌套形状（见
-        // loadNestedInReloadIsAllowedForStartupResetPath）；此处只证 RELOAD 不重入。
+        // One nested LOAD inside RELOAD is the existing shape of the STARTUP reset plus load path (see
+        // loadNestedInReloadIsAllowedForStartupResetPath); this test only shows that RELOAD itself
+        // is not reentrant.
         gate.exit(ScriptLifecycleGate.Operation.RELOAD);
     }
 
@@ -46,7 +48,8 @@ class ScriptLifecycleGateTest {
                 gate.tryEnter(ScriptLifecycleGate.Operation.RELOAD));
         assertEquals(ScriptLifecycleGate.Decision.EXECUTED,
                 gate.tryEnter(ScriptLifecycleGate.Operation.LOAD));
-        // RELOAD 内的 LOAD 内再 LOAD 仍拒绝：只有一层既有嵌套被放行
+        // A LOAD inside the LOAD nested in RELOAD is still rejected: only the one existing nesting level
+        // is allowed.
         assertEquals(ScriptLifecycleGate.Decision.REJECTED_REENTRANT,
                 gate.tryEnter(ScriptLifecycleGate.Operation.LOAD));
         gate.exit(ScriptLifecycleGate.Operation.LOAD);
@@ -90,7 +93,7 @@ class ScriptLifecycleGateTest {
         assertEquals(ScriptLifecycleGate.Decision.REJECTED_REENTRANT,
                 gate.tryEnter(ScriptLifecycleGate.Operation.RELOAD));
         ScriptLifecycleGate.exitCallback();
-        // 仍在外层回调内：继续拒绝
+        // Still inside the outer callback, so the request is still rejected.
         assertEquals(ScriptLifecycleGate.Decision.REJECTED_REENTRANT,
                 gate.tryEnter(ScriptLifecycleGate.Operation.RELOAD));
         ScriptLifecycleGate.exitCallback();
@@ -119,12 +122,13 @@ class ScriptLifecycleGateTest {
         ScriptLifecycleGate gate = new ScriptLifecycleGate();
         assertEquals(ScriptLifecycleGate.Decision.EXECUTED,
                 gate.tryEnter(ScriptLifecycleGate.Operation.RELOAD));
-        // lifecycle 体内的同线程 close 只留下抢占标志，不内联拆除
+        // A same-thread close while the lifecycle is running only sets the preemption flag; it does not
+        // tear anything down inline.
         assertEquals(ScriptLifecycleGate.Decision.REJECTED_REENTRANT,
                 gate.tryEnter(ScriptLifecycleGate.Operation.CLOSE));
         assertTrue(gate.isInLifecycle());
         gate.exit(ScriptLifecycleGate.Operation.RELOAD);
-        // lifecycle 结束后 close 正常进入
+        // Once the lifecycle has ended, close enters normally.
         assertEquals(ScriptLifecycleGate.Decision.EXECUTED,
                 gate.tryEnter(ScriptLifecycleGate.Operation.CLOSE));
         gate.exit(ScriptLifecycleGate.Operation.CLOSE);
@@ -141,7 +145,7 @@ class ScriptLifecycleGateTest {
                 gate.tryEnter(ScriptLifecycleGate.Operation.RELOAD));
         assertEquals(ScriptLifecycleGate.Decision.REJECTED_CLOSED,
                 gate.tryEnter(ScriptLifecycleGate.Operation.LOAD));
-        // 已关闭后的重复 close 保持幂等放行（空清理）
+        // A repeated close after shutdown still passes idempotently (there is nothing left to clean up).
         assertEquals(ScriptLifecycleGate.Decision.EXECUTED,
                 gate.tryEnter(ScriptLifecycleGate.Operation.CLOSE));
         gate.exit(ScriptLifecycleGate.Operation.CLOSE);
@@ -159,7 +163,8 @@ class ScriptLifecycleGateTest {
         ScriptLifecycleGate gate = new ScriptLifecycleGate();
         gate.markActiveFailed();
         assertTrue(gate.isActiveFailed());
-        // closeRequested/closed 不隐式清除隔离失败：恢复入口只有显式 lifecycle
+        // closeRequested and closed do not implicitly clear the isolation-failure mark: only an explicit
+        // lifecycle call clears it.
         gate.requestClose();
         assertTrue(gate.isActiveFailed());
         gate.clearActiveFailed();

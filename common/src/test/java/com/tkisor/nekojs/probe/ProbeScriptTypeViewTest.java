@@ -36,7 +36,7 @@ import java.util.function.Function;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-/** Exercises output views across the public metadata seam and both production declaration backends. */
+/** Exercises output views across the public metadata API and both production declaration backends. */
 class ProbeScriptTypeViewTest {
     private static final List<Class<?>> NATIVE_TYPES = List.of(VillagerTradeDeclarationEventJS.class,
             VillagerTradeReloadEventJS.class, VillagerTradeQuerySurface.class);

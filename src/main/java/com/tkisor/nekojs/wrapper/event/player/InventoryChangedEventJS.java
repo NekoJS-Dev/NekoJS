@@ -6,10 +6,11 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 
 /**
- * 玩家物品栏变化事件（{@code PlayerEvents.inventoryChanged}）。
+ * Payload for the player inventory changed event ({@code PlayerEvents.inventoryChanged}).
  *
- * <p>由挂在玩家 {@code inventoryMenu} 上的 {@code ContainerListener} 在槽位变化时触发，
- * 按物品 id 分发（脚本可 {@code PlayerEvents.inventoryChanged('minecraft:stone', event => ...)}）。
+ * <p>It fires from a {@code ContainerListener} attached to the player's {@code inventoryMenu}
+ * when a slot changes, and listeners are dispatched by item id (a script can use
+ * {@code PlayerEvents.inventoryChanged('minecraft:stone', event => ...)}).
  */
 @Doc("Event fired when a slot in a player's inventory changes (PlayerEvents.inventoryChanged).")
 @Doc("Listeners are dispatched by item id, e.g. PlayerEvents.inventoryChanged('minecraft:stone', event => ...).")

@@ -14,27 +14,30 @@ import java.util.Set;
 import java.util.TreeSet;
 
 /**
- * Golden 重生成支持：系统属性 {@code nekojs.golden.regenerate=true}（gradle 任务 {@code regenerateGoldens}
- * 设置）时，各 golden 对比测试把**实际产物**覆盖写回 golden 资源目录，随后以 assumption 跳过断言，
- * 让重生成运行整体通过；跑完后人工 review 资源目录并提交。
+ * Golden regeneration support. When the system property {@code nekojs.golden.regenerate=true} is set
+ * (the {@code regenerateGoldens} gradle task sets it), each golden comparison test writes its actual
+ * output over the golden resource directory and then skips its assertions with an assumption, so the
+ * whole regeneration run passes. Review the resource directory by hand afterwards and commit it.
  */
 final class ProbeGoldenSupport {
 
     private ProbeGoldenSupport() {}
 
-    /** 是否处于 golden 重生成模式。 */
+    /** Whether golden regeneration mode is active. */
     static boolean regenerateEnabled() {
         return Boolean.getBoolean("nekojs.golden.regenerate");
     }
 
     /**
-     * 类路径资源目录解析为 Path（仅支持 file: 协议，与各测试的 golden 加载口径一致）；不可解析返回 null。
+     * Resolves a classpath resource directory to a Path. Only the file: protocol is supported, which
+     * matches how the tests load goldens. Returns null when the directory cannot be resolved.
      *
-     * <p>重生成模式下重写到 <b>src/test/resources 源树</b>：Gradle 下类路径资源指向
-     * {@code build/resources/test} 副本，镜像写副本会被 processTestResources 重新覆盖成
-     * src 的旧内容——regen 等于空操作。断言（非 regen）模式仍读 build 副本（由 processTestResources
-     * 从 src 同步，内容一致）。非 Gradle 布局（独立运行时 classpath 直指 src）找不到
-     * build/resources/test 段则原样返回。
+     * <p>In regeneration mode the write goes to the <b>src/test/resources source tree</b> instead.
+     * Under Gradle the classpath resource points at the {@code build/resources/test} copy, and
+     * processTestResources overwrites that copy from src, so writing the copy would make regeneration
+     * a no-op. Assertion mode (no regen) still reads the build copy, which processTestResources keeps
+     * in sync with src. A non-Gradle layout (a standalone runner whose classpath points straight at
+     * src) has no build/resources/test segment, so the path is returned unchanged.
      */
     static Path resourceDir(Class<?> owner, String basePath) {
         var url = owner.getResource(basePath);
@@ -62,9 +65,10 @@ final class ProbeGoldenSupport {
     }
 
     /**
-     * 把 {@code actualRoot} 的整棵文件树镜像覆盖到 {@code goldenRoot}（保留结构，逐文件字节复制），
-     * 并删除 golden 中 actual 已不存在的文件及随之清空的目录。镜像语义让重生成幂等：
-     * 无论哪个 golden 测试先跑，资源目录最终都与实际产物一致。
+     * Mirrors the whole file tree under {@code actualRoot} onto {@code goldenRoot}, keeping the
+     * structure and copying each file byte for byte, then deletes the files that no longer exist in
+     * actual and the directories that become empty. Mirroring makes regeneration idempotent: whichever
+     * golden test runs first, the resource directory ends up matching the actual output.
      */
     static void mirrorTree(Path actualRoot, Path goldenRoot) throws IOException {
         if (!Files.isDirectory(actualRoot)) {
@@ -105,7 +109,8 @@ final class ProbeGoldenSupport {
                 return FileVisitResult.CONTINUE;
             }
         });
-        // 深度优先删空目录（子目录先于父目录），非空目录的 delete 会失败并被忽略
+        // Deletes empty directories depth-first, so children go before their parents. Deleting a directory
+        // that is not empty fails and the failure is ignored.
         for (Path dir : emptyCandidateDirs) {
             try (var list = Files.list(dir)) {
                 if (list.findAny().isEmpty()) {

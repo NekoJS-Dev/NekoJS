@@ -1,6 +1,7 @@
 //~ mc_legacy_api
-// 本文件启用文件级 mc_legacy_api（26.x 活形态无 .identifier()，1.21.1 求值形态无 .identifier()
-// ——门槛已核验；变量名 identifier/location 为行为中性的改名差异）。
+// This file enables the file-level mc_legacy_api flag: the live 26.x form has no .identifier() and the
+// evaluated 1.21.1 form has none either, so the threshold is verified. The variable names
+// identifier/location differ only by rename and do not change behavior.
 package com.tkisor.nekojs.js.type_adapter;
 
 import com.tkisor.nekojs.api.AdapterInputShape;
@@ -13,15 +14,17 @@ import net.minecraft.resources.Identifier;
 import static com.tkisor.nekojs.api.AdapterInputShape.*;
 
 /**
- * 基于 {@link Registry} 的通用适配器，服务于<b>纯 id 查询、无跨类型转换</b>的注册表类型
- * （{@code MobEffect}、{@code Potion}、{@code SoundEvent} 等）。
+ * Generic adapter backed by a {@link Registry}, for registry types that need <b>only id lookup and no
+ * cross-type conversion</b> ({@code MobEffect}, {@code Potion}, {@code SoundEvent} and similar).
  *
- * <p>构造形态：{@code new SimpleRegistryBasedAdapter<>(registry, type, registryName)}。
- * {@code registryName} 用于 probe {@code registry(...)} 形状（生成 {@code $MobEffect_} 别名）。
+ * <p>Constructor: {@code new SimpleRegistryBasedAdapter<>(registry, type, registryName)}.
+ * {@code registryName} feeds the probe {@code registry(...)} shape, which generates the
+ * {@code $MobEffect_} alias.
  *
- * <p>能力：string id（自动补 {@code minecraft:} 前缀） / {@link NekoId} / {@link Identifier} /
- * 自身类型 host。无跨类型转换、无对象/数组语法 —— 需要这些的类型（Item/Block 互转、
- * Ingredient 前缀分派）请手写 {@link AbstractJSTypeAdapter} 子类，不要硬塞进本类。
+ * <p>Accepts a string id (with the {@code minecraft:} prefix added when missing), {@link NekoId},
+ * {@link Identifier}, or a host of the target type. It does no cross-type conversion and has no object
+ * or array syntax; types that need those (Item/Block conversion, Ingredient prefix dispatch) belong in
+ * a hand-written {@link AbstractJSTypeAdapter} subclass rather than this class.
  *
  * @author ZZZank
  */
@@ -74,7 +77,7 @@ public class SimpleRegistryBasedAdapter<T> extends AbstractJSTypeAdapter<T> {
         if (targetType.isInstance(host)) {
             return targetType.cast(host);
         }
-        return null; // 不识别
+        return null; // Not recognized
     }
 
     private T getFromRegistry(Identifier id) {

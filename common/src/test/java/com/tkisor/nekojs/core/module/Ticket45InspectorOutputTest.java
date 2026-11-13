@@ -47,13 +47,12 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Ticket 45 fake-host inspector output, executed against the real common JSX runtime:
- * the {@code ui-inspector.tsx} fixture renders one representative UI at all six viewport
- * profiles, and this suite collects the guest layout snapshots through the shared
- * {@link InspectorSnapshots} path — the same code the NeoForge host runs — then pins the
- * decorated records against a read-only golden file. Real-client capture on NeoForge
- * 26.2 is NOT RUN here (no Minecraft client); the host-side glue has its own guarded
- * smoke suite in {@code client.ui.Ticket45InspectorSmokeTest}.
+ * Fake-host inspector output, executed against the real common JSX runtime. The
+ * {@code ui-inspector.tsx} fixture renders one representative UI at all six viewport profiles, and
+ * this suite collects the guest layout snapshots through the shared {@link InspectorSnapshots} path
+ * (the same code the NeoForge host runs), then pins the decorated records against a read-only golden
+ * file. Real-client capture on NeoForge 26.2 does not run here because there is no Minecraft client;
+ * the host-side glue has its own guarded smoke suite in {@code client.ui.Ticket45InspectorSmokeTest}.
  */
 class Ticket45InspectorOutputTest {
 
@@ -182,8 +181,8 @@ class Ticket45InspectorOutputTest {
         Value guest = proof.getMember("snapshots").getArrayElement(5);
         InspectorSnapshot guestPath = InspectorSnapshots.read(
                 proof.getMember("rootId").asString(), proof.getMember("source").asString(), guest);
-        // A host that receives the same snapshot shape as plain host data (never crossing
-        // the guest boundary) must read the identical record through the shared path.
+        // A host that receives the same snapshot data as plain host objects, with no guest objects involved,
+        // must read back an identical record through the shared path.
         InspectorSnapshot hostPath = InspectorSnapshots.read(guestPath.rootId(), guestPath.source(),
                 toPlainSnapshot(guestPath));
         assertEquals(guestPath, hostPath,

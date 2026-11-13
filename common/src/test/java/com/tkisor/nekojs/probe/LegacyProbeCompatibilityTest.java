@@ -62,7 +62,7 @@ class LegacyProbeCompatibilityTest {
         assertEquals(resource("legacy-events.expected.d.ts"), normalize(actual));
     }
 
-    /** ScriptEvents 声明的自定义事件：载荷 any，并额外渲染 post（脚本可自己触发）。 */
+    /** Custom event declared by ScriptEvents: the payload is any, and post is rendered so scripts can fire it. */
     @Test
     void scriptDefinedEventRendersAnyPayloadAndPost() {
         var aliases = new TypeAliasRegistry();
@@ -79,7 +79,10 @@ class LegacyProbeCompatibilityTest {
                 "script events must not leak java.lang.Object as the payload type: " + actual);
     }
 
-    /** 重生成模式（-Dnekojs.golden.regenerate=true）：实际产物覆盖写回 golden 后跳过断言。 */
+    /**
+     * Regenerate mode (-Dnekojs.golden.regenerate=true): overwrite the golden with the actual output,
+     * then skip assertions.
+     */
     private static void maybeRegenerate(String name, String actual) throws Exception {
         if (!ProbeGoldenSupport.regenerateEnabled()) return;
         Path dir = ProbeGoldenSupport.resourceDir(LegacyProbeCompatibilityTest.class, "/nekojs/probe/");

@@ -32,13 +32,13 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 /**
- * 票据 12 AC9：随票交付的 .ts / .jsx / .tsx 最小可运行示例冒烟。
+ * Smoke tests for the minimal runnable .ts, .jsx and .tsx examples.
  *
- * <p>示例源文件在 {@code common/src/test/resources/nekojs/language-ts-examples/}（交付物，
- * 内容同时内联于基线迁移材料）。测试把它们拷入隔离 gameDir 后经最高调用者 seam
- * （{@link NekoScriptModuleLoaderHost#loadEntry}）真实装载，断言文档承诺的输出与
- * source-map 行为一致。示例只使用已过 gate 的语言能力：类型擦除、classic JSX
- * element/fragment、TSX 组合与 ESM import。
+ * <p>The example sources live in {@code common/src/test/resources/nekojs/language-ts-examples/}.
+ * Each test copies them into an isolated gameDir and loads them for real through
+ * {@link NekoScriptModuleLoaderHost#loadEntry}, asserting that the documented output matches the
+ * source-map behavior. The examples use only supported features: type erasure, classic JSX
+ * elements and fragments, TSX composition and ESM imports.
  */
 class TypeScriptJsxExamplesSmokeTest {
 

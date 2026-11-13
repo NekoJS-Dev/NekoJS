@@ -12,8 +12,9 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * 信任存储测试：bucket 信任写入后重建实例可读回（持久化）、地址规范化、
- * 签名公钥 pinning 增查、损坏文件按空存储降级。
+ * Trust store tests: a trusted bucket is still there after the store is rebuilt (persistence),
+ * addresses are normalized, signing keys are added and looked up by pinning, and a corrupt file
+ * degrades to an empty store.
  */
 class PackSyncTrustStoreTest {
 
@@ -30,7 +31,7 @@ class PackSyncTrustStoreTest {
         store.trustServer("play.example.com");
         assertTrue(store.isServerTrusted(bucket));
 
-        // 重建实例（= 重启游戏）从盘读回
+        // A rebuilt instance (a game restart) reads the trust back from disk.
         PackSyncTrustStore reloaded = new PackSyncTrustStore(file);
         assertTrue(reloaded.isServerTrusted(bucket));
         assertTrue(Files.isRegularFile(file));
@@ -54,7 +55,7 @@ class PackSyncTrustStoreTest {
         assertEquals("KEYDATA", store.trustedPublicKey("author-key"));
         assertNull(store.trustedPublicKey("other-key"));
 
-        // 覆盖写（同 keyId 换钥）
+        // Overwrite: the same keyId gets a new key.
         store.trustPublicKey("author-key", "ROTATED", "cc:dd", "play.example.com");
         assertEquals("ROTATED", store.trustedPublicKey("author-key"));
     }
@@ -68,7 +69,7 @@ class PackSyncTrustStoreTest {
         assertFalse(store.isServerTrusted("whatever"));
         assertNull(store.trustedPublicKey("whatever"));
 
-        // 降级后仍可写入新信任（覆盖损坏文件）
+        // After the fallback the store still accepts new trust and overwrites the corrupt file.
         store.trustServer("play.example.com");
         assertTrue(new PackSyncTrustStore(file).isServerTrusted(PackSyncTrustStore.bucketFor("play.example.com")));
     }

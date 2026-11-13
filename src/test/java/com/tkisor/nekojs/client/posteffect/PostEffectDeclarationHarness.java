@@ -28,19 +28,19 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 票 28 脚本路径 fixture harness（版本树测试树）：真实 root + 真实 Graal 管线 +
- * <b>真实</b> {@link PostEffectDomainOwner}（客户端 Adapter），脚本经
- * {@code ClientEvents.postEffects} 声明 register/unregister，候选收集/commit 点由
- * production 的 domain collector 接缝驱动。
+ * Script-path fixture harness for post-effect declarations (version-tree test tree): a real root, the
+ * real Graal pipeline and a real {@link PostEffectDomainOwner} (the client adapter). Scripts declare
+ * register/unregister through {@code ClientEvents.postEffects}, and the production domain collector
+ * drives candidate collection and the commit point.
  *
- * <p>形态与票 39 的 {@code Ticket39ModificationScriptHarness} 同构（同一装配序列、同一
- * Platform/gameDir 桩），只是 ScriptType 换成 CLIENT：CLIENT 是唯一有本域候选的
- * ScriptType，非事务初始加载由 {@link #loadAndApplyInitialPlan()} 显式模拟客户端主线程
- * 上的收集点。
+ * <p>Same shape as {@code Ticket39ModificationScriptHarness}: same assembly sequence, same
+ * Platform/gameDir stub, only the ScriptType differs, because CLIENT is the only ScriptType with
+ * candidates in this domain. {@link #loadAndApplyInitialPlan()} simulates the non-transactional
+ * initial load, which in production collects on the client main thread.
  */
 final class PostEffectDeclarationHarness implements AutoCloseable {
 
-    /** 额外事件组（默认只挂 ClientEvents）。 */
+    /** Extra event groups. By default only ClientEvents is wired. */
     private final Map<String, EventGroup> groups = new LinkedHashMap<>();
     private final Bridge bridge = new Bridge(groups);
     private final StubPluginRuntime pluginRuntime = new StubPluginRuntime(groups);
@@ -66,7 +66,7 @@ final class PostEffectDeclarationHarness implements AutoCloseable {
         root.createScriptManager(ScriptType.CLIENT).discoverScripts();
     }
 
-    /** Platform 桩与 gameDir（测试树约定：{@code TestGameDirs.unique} 按 PID 隔离）。 */
+    /** Platform stub and gameDir. Test-tree convention: {@code TestGameDirs.unique} isolates by PID. */
     static void ensurePlatformInitialized() {
         try {
             java.lang.reflect.Field instance = com.tkisor.nekojs.platform.Platform.class.getDeclaredField("INSTANCE");
@@ -91,14 +91,15 @@ final class PostEffectDeclarationHarness implements AutoCloseable {
         }
     }
 
-    /** 写一份 CLIENT 脚本（同名覆盖）。 */
+    /** Writes a CLIENT script, overwriting a file with the same name. */
     void writeClientScript(String name, String source) throws Exception {
         Path dir = ScriptTypeEnv.scriptsDir(ScriptType.CLIENT);
         Files.createDirectories(dir);
         Files.writeString(dir.resolve(name), source);
     }
 
-    /** 非事务初始加载 + 初始 generation 收集点（生产由客户端 setup 触发）。 */
+    /** Non-transactional initial load plus the initial generation collection point, which production
+     * triggers from client setup. */
     void loadAndApplyInitialPlan() throws Exception {
         var manager = root.scriptManagerOf(ScriptType.CLIENT);
         manager.discoverScripts();
@@ -106,12 +107,13 @@ final class PostEffectDeclarationHarness implements AutoCloseable {
         owner.applyInitialPlan();
     }
 
-    /** 事务式 CLIENT reload（生产由 F3+T 资源 reload 触发；DOMAIN_PLAN 收集 + commit）。 */
+    /** Transactional CLIENT reload, triggered in production by an F3+T resource reload: collects the
+     * DOMAIN_PLAN candidate and commits it. */
     void reloadClientScripts() {
         root.reload(ScriptType.CLIENT);
     }
 
-    /** 清空 CLIENT 脚本目录（每例独立，避免跨例残留）。 */
+    /** Empties the CLIENT script directory so leftover files from one test cannot reach the next. */
     static void clearClientScripts() throws Exception {
         Path dir = ScriptTypeEnv.scriptsDir(ScriptType.CLIENT);
         Files.createDirectories(dir);
@@ -122,15 +124,17 @@ final class PostEffectDeclarationHarness implements AutoCloseable {
         }
     }
 
-    /** 已安装定义 id 的字符串快照（只读查询面；不断言私有静态 Map）。 */
+    /** Read-only snapshot of the installed definition ids as strings. It does not assert on the private
+     * static map. */
     static List<String> installedIds() {
         return PostEffectManager.installedDefinitions().keySet().stream()
                 .map(String::valueOf).sorted().toList();
     }
 
     /**
-     * 清空进程级已安装定义（独立用例互不污染）：走 production Adapter 的 installGeneration
-     * 接缝，显式退役当前全部 id；不推进 owner 的 generation（用例从干净代开始）。
+     * Clears the process-wide installed definitions so independent tests do not affect each other. It
+     * goes through the installGeneration path of the production adapter and explicitly retires every
+     * current id. It does not advance the owner generation, so a test starts from a clean generation.
      */
     static void resetDeclarations() {
         java.util.Set<net.minecraft.resources.Identifier> installed =
@@ -148,7 +152,8 @@ final class PostEffectDeclarationHarness implements AutoCloseable {
         }
     }
 
-    /** 脚本面事件组绑定（生产形状：{@code EventGroupJS} 包每个组）。 */
+    /** Binds the script-facing event groups the way production does, wrapping each group in
+     * {@code EventGroupJS}. */
     private static final class Bridge implements ScriptEventBridge {
         private final Map<String, EventGroup> groups;
 
@@ -167,7 +172,7 @@ final class PostEffectDeclarationHarness implements AutoCloseable {
         }
     }
 
-    /** 插件运行时桩：只广告事件组与空绑定面。 */
+    /** Plugin runtime stub that advertises event groups and an empty binding set. */
     private static final class StubPluginRuntime implements IPluginRuntime {
         private final Map<String, EventGroup> groups;
 

@@ -7,25 +7,26 @@ import java.lang.reflect.*;
 import java.util.*;
 
 /**
- * 成员可见性查询工具。
+ * Member visibility query tool.
  * <p>
- * 外部 mod（如 .d.ts 生成器）可通过此类查询任意 Java 类在 NekoJS 沙盒中
- * 对 JavaScript 暴露的成员名称和可见性。
- * 结果使用 {@link JSBinding} 封装，方便区分 public/非public 以及其他修饰符。
+ * An external mod (a .d.ts generator, for example) can use this class to query which members of any
+ * Java class NekoJS exposes to JavaScript, and their visibility.
+ * Results are wrapped in {@link JSBinding}, which makes it easy to tell public from non-public
+ * members and to read the other modifiers.
  * </p>
  */
 public final class MemberVisibilityQuery {
 
     private MemberVisibilityQuery() {}
 
-    // ==================== 数据结构 ====================
+    // ==================== Data structures ====================
 
     /**
-     * 封装成员在 JS 侧的绑定信息与元数据
+     * Wraps the JS-side binding information and metadata of a member.
      *
-     * @param jsName 映射后暴露给 JS 的名称
-     * @param member 原始的 Java 反射成员
-     * @param <T>    Member 的具体类型（Method, Field, Constructor）
+     * @param jsName the name exposed to JS after remapping
+     * @param member the original Java reflection member
+     * @param <T>    the concrete Member type (Method, Field, Constructor)
      */
     public record JSBinding<T extends Member>(String jsName, T member) {
 
@@ -45,29 +46,30 @@ public final class MemberVisibilityQuery {
             return Modifier.isStatic(member.getModifiers());
         }
 
-        /** 字段是否为 final（可用于生成 .d.ts 中的 readonly） */
+        /** Returns whether the field is final (can mark the .d.ts property readonly). */
         public boolean isFinal() {
             return Modifier.isFinal(member.getModifiers());
         }
     }
 
-    // ==================== 类级别 ====================
+    // ==================== Class level ====================
 
     /**
-     * 判断一个类在 JS 侧是否完全不可见。
+     * Determines whether a class is completely invisible on the JS side.
      */
     public static boolean isClassVisible(Class<?> clazz) {
         return !clazz.isAnnotationPresent(HideFromJS.class);
     }
 
-    // ==================== 批量查询（遍历继承链） ====================
+    // ==================== Batch queries (walking the inheritance chain) ====================
 
     /**
-     * 获取类中所有对 JS 暴露的实例方法（含继承的，含非 public）。
-     * key 为 remap 后的名称。如有名称冲突，子类方法覆盖父类方法。
+     * Returns every instance method of the class that is exposed to JS, including inherited and
+     * non-public ones. Keys are the remapped names. On a name collision, the subclass method
+     * overrides the superclass method.
      *
-     * @param clazz 要查询的 Java 类
-     * @return remap后方法名 → JSBinding 的不可变映射
+     * @param clazz the Java class to query
+     * @return an immutable map from remapped method name to JSBinding
      */
     public static Map<String, JSBinding<Method>> getVisibleMethods(Class<?> clazz) {
         Map<String, JSBinding<Method>> result = new LinkedHashMap<>();
@@ -76,7 +78,7 @@ public final class MemberVisibilityQuery {
 
         for (Class<?> cls : hierarchy) {
             for (Method m : cls.getDeclaredMethods()) {
-                // 跳过桥接方法和合成方法
+                // Skip bridge and synthetic methods.
                 if (m.isBridge() || m.isSynthetic()) continue;
 
                 String jsName = remapMember(m);
@@ -90,11 +92,12 @@ public final class MemberVisibilityQuery {
     }
 
     /**
-     * 获取类中所有对 JS 暴露的静态字段（含继承的，含非 public）。
-     * key 为 remap 后的名称。子类不覆盖父类同名字段。
+     * Returns every static field of a class that is exposed to JS, including inherited fields and
+     * non-public ones. Keys are the remapped names. A subclass field does not replace a parent
+     * field that has the same name.
      *
-     * @param clazz 要查询的 Java 类
-     * @return remap后字段名 → JSBinding 的不可变映射
+     * @param clazz the Java class to query
+     * @return an immutable map from remapped field name to JSBinding
      */
     public static Map<String, JSBinding<Field>> getVisibleFields(Class<?> clazz) {
         Map<String, JSBinding<Field>> result = new LinkedHashMap<>();
@@ -106,7 +109,7 @@ public final class MemberVisibilityQuery {
 
                 String jsName = remapMember(f);
                 if (jsName != null) {
-                    // 子类不覆盖父类同名字段
+                    // A subclass field does not replace a parent field of the same name.
                     result.putIfAbsent(jsName, new JSBinding<>(jsName, f));
                 }
             }
@@ -117,10 +120,10 @@ public final class MemberVisibilityQuery {
     }
 
     /**
-     * 获取类中所有对 JS 暴露的构造器（含非 public）。
+     * Returns every constructor of a class that is exposed to JS, including non-public ones.
      *
-     * @param clazz 要查询的 Java 类
-     * @return 可见构造器绑定的不可变列表
+     * @param clazz the Java class to query
+     * @return an immutable list of bindings for the visible constructors
      */
     public static List<JSBinding<Constructor<?>>> getVisibleConstructors(Class<?> clazz) {
         if (!isClassVisible(clazz)) {
@@ -128,10 +131,10 @@ public final class MemberVisibilityQuery {
         }
 
         List<JSBinding<Constructor<?>>> result = new ArrayList<>();
-        // getDeclaredConstructors() 包含 private/protected/public
+        // getDeclaredConstructors() includes private, protected and public constructors.
         for (Constructor<?> ctor : clazz.getDeclaredConstructors()) {
             if (!ctor.isSynthetic()) {
-                // 构造器无需 remap，名称固定为其类名（或在JS中用 new 调用）
+                // Constructors need no remap: the name is always the class simple name, called with new from JS.
                 String name = clazz.getSimpleName();
                 result.add(new JSBinding<>(name, ctor));
             }
@@ -139,11 +142,11 @@ public final class MemberVisibilityQuery {
         return Collections.unmodifiableList(result);
     }
 
-    // ==================== 辅助与内部逻辑 ====================
+    // ==================== Helpers and internals ====================
 
     /**
-     * 获取类的继承链：从顶层父类（不含 Object）到当前类。
-     * 保证父类在前，子类在后，方便 Map 覆盖操作。
+     * Returns the superclass chain of a class, from the topmost parent (excluding Object) down to
+     * the class itself. Parents come before subclasses so that map overwrites work.
      */
     private static List<Class<?>> getHierarchy(Class<?> clazz) {
         List<Class<?>> hierarchy = new ArrayList<>();
@@ -156,7 +159,7 @@ public final class MemberVisibilityQuery {
         return hierarchy;
     }
 
-    /** 委托 {@link JavaMemberIndex#remapName}：隐藏成员从可见集合剔除，未映射成员保留原名。 */
+    /** Delegates to {@link JavaMemberIndex#remapName}: hidden members are dropped, unmapped ones keep their name. */
     private static @Nullable String remapMember(Member member) {
         return JavaMemberIndex.remapName(member, null, member.getName());
     }

@@ -7,9 +7,10 @@ import net.minecraft.world.item.ItemStack;
 import java.util.List;
 
 /**
- * 物品 tooltip 事件的中立 payload（成员 {@code event.itemStack} / {@code event.lines}）。
- * {@code lines} 是渲染前可变的 tooltip 行列表——监听器直接增删改其中的
- * {@link Component}；fabric 桥投递的是原列表（mutate 即生效，不可取消整段渲染）。
+ * Loader-neutral payload for the item tooltip event (members {@code event.itemStack} /
+ * {@code event.lines}). {@code lines} is the mutable list of tooltip lines before rendering,
+ * so a listener adds, removes or replaces the {@link Component}s directly. The fabric bridge
+ * passes the original list (mutations take effect; it cannot cancel the whole rendering).
  */
 public class ItemTooltipEventJS {
 

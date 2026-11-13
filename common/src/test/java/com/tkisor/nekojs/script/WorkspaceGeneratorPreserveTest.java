@@ -15,8 +15,8 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Ticket 30 reload/validation boundary: workspace configs the user edited in their external
- * IDE are never overwritten or deleted by regeneration; missing configs are created once.
+ * Regeneration never overwrites or deletes workspace configs the user edited in their external
+ * IDE. A missing config is created once.
  */
 class WorkspaceGeneratorPreserveTest {
 

@@ -23,7 +23,10 @@ public class NekoJSFileSystem implements FileSystem {
     private final NekoJSPaths paths;
     private final SandboxPolicy policy;
     private Path currentWorkingDirectory;
-    /** 已准备字节读取目标（W3 显式注入：与装配侧共享的 runtime-owned 缓存实例）。 */
+    /**
+     * Injected cache that reads prepared bytes: the same runtime-owned cache instance the
+     * assembly side shares.
+     */
     private final NekoModulePipelineCache preparationCache;
     private final NekoVirtualModuleView virtualModules;
 
@@ -95,7 +98,8 @@ public class NekoJSFileSystem implements FileSystem {
 
     @Override
     public void createDirectory(Path dir, FileAttribute<?>... attrs) throws IOException {
-        // 写/删统一走 SandboxPolicy（此前无条件放行到 gameDir，且不保护 nekojs/config）
+        // Writes and deletes all go through SandboxPolicy, which keeps them inside the allowed
+        // roots and protects nekojs/config.
         Path verifiedPath = policy.resolveWrite(dir);
         Files.createDirectory(verifiedPath, attrs);
     }
@@ -298,7 +302,8 @@ public class NekoJSFileSystem implements FileSystem {
                                 return true;
                             }
                         } catch (IOException e) {
-                            // 目录遍历中单个条目不可读时跳过；debug 记录避免完全静默
+                            // Skip a directory entry that cannot be read while listing; log it at debug level so
+                            // the failure is not completely silent.
                             NekoJS.LOGGER.debug("Skipping inaccessible directory entry while listing: {}", path, e);
                         }
                     }

@@ -30,8 +30,8 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * 票据 11 AC8：本地 trusted 与远端 explicitly-authorized source 复用同一
- * prepare/resolve/execute 阶段，只让 trust 决策影响授权结果。
+ * A local trusted source and a remote explicitly-authorized source reuse the same prepare, resolve
+ * and execute stages; only the trust decision changes the authorization result.
  */
 class NekoModuleTrustStageTest {
     @TempDir
@@ -71,7 +71,7 @@ class NekoModuleTrustStageTest {
         Path file = gameDir.resolve("nekojs/server_scripts/trust-denied.cjs");
         String source = "module.exports = 1;\n";
 
-        // 缺凭证。
+        // Missing credential.
         Exception missing = assertThrows(Exception.class, () -> pipeline.prepare(file, source, null));
         NekoModuleError deniedMissing = NekoModulePipelinePrepareTest.assertStaged(
                 missing, NekoModuleError.Stage.PREPARE, NekoModuleError.OWNER_PACK_TRUST);
@@ -79,7 +79,7 @@ class NekoModuleTrustStageTest {
         assertTrue(deniedMissing.getMessage().contains("javascript"), "拒绝不得隐藏语言边界: " + deniedMissing.detail());
         assertTrue(deniedMissing.getMessage().contains("COMMONJS"), deniedMissing.detail());
 
-        // 错配凭证（其它文件的凭证）。
+        // Mismatched credential: the credential of a different file.
         Path other = gameDir.resolve("nekojs/server_scripts/trust-other.cjs");
         Exception mismatched = assertThrows(Exception.class,
                 () -> pipeline.prepare(file, source, NekoTrustApprovedSource.local(other)));

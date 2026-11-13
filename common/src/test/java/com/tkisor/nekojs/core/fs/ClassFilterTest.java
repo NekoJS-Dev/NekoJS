@@ -9,12 +9,13 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * 表驱动校验 {@link ClassFilter} 黑名单：新增前缀必须有代表性 FQCN 被拒，
- * 同时确认黑名单没有误伤脚本正常可用的类（脚本仍可加载 MC / JDK 值类型 / nekojs 非 core 包）。
+ * Table-driven checks of the {@link ClassFilter} blacklist. Each new prefix must reject a
+ * representative FQCN, and the blacklist must not catch classes that scripts legitimately use
+ * (scripts still load MC classes, JDK value types and nekojs packages outside core).
  */
 class ClassFilterTest {
 
-    /** 常规黑名单新前缀 -> 代表性 FQCN：全部必须在默认配置下被拒。 */
+    /** A new blacklist prefix -> a representative FQCN. Every pair must be rejected under the default config. */
     private static final List<String[]> NEW_BLACKLIST_PREFIXES = List.of(
             new String[]{"com.tkisor.nekojs.core", "com.tkisor.nekojs.core.fs.ClassFilter"},
             new String[]{"com.tkisor.nekojs.core", "com.tkisor.nekojs.core.fs.NekoJSPaths"},
@@ -31,13 +32,14 @@ class ClassFilterTest {
             new String[]{"com.oracle.truffle", "com.oracle.truffle.api.TruffleLanguage"},
             new String[]{"java.lang.Module", "java.lang.Module"});
 
-    /** 既有黑名单抽样：防止新增条目时意外移除旧的防线。 */
+    /** A sample of existing blacklist entries: adding entries must not accidentally drop an older defence line. */
     private static final List<String> LEGACY_DENIED = List.of(
             "java.lang.Runtime", "java.lang.System", "java.lang.Class",
             "java.io.File", "java.nio.file.Path", "java.net.Socket",
             "sun.misc.Unsafe", "com.sun.management.OperatingSystemMXBean");
 
-    /** 默认配置下应放行的类：JDK 值/集合类型、MC 游戏类、nekojs 脚本可见包（core 之外）。 */
+    /** Classes that must pass under the default config: JDK value and collection types, MC game classes,
+     * and nekojs packages scripts can see (outside core). */
     private static final List<String> ALLOWED = List.of(
             "java.lang.String", "java.util.ArrayList", "java.util.HashMap",
             "net.minecraft.world.item.ItemStack",
@@ -72,14 +74,15 @@ class ClassFilterTest {
 
     @Test
     void reflectGatedPrefixDeniedByDefaultAndAllowedWhenReflectionEnabled() {
-        // java.lang.invoke.MethodHandles 属于 allowReflection 门控组：默认拒绝，显式开启后放行
+        // java.lang.invoke.MethodHandles belongs to the allowReflection group: denied by default,
+        // allowed once reflection is enabled.
         String gated = "java.lang.invoke.MethodHandles";
         assertFalse(new ClassFilter(SandboxConfig.defaultConfig()).test(gated));
 
         ClassFilter allowReflect = new ClassFilter(withAllowReflection(SandboxConfig.defaultConfig(), true));
         assertTrue(allowReflect.test(gated));
 
-        // 同一门控组前缀：java.lang.reflect.* 随开关切换
+        // Same group prefix: java.lang.reflect.* follows the switch as well.
         assertFalse(new ClassFilter(SandboxConfig.defaultConfig()).test("java.lang.reflect.Method"));
         assertTrue(allowReflect.test("java.lang.reflect.Method"));
     }
@@ -92,7 +95,7 @@ class ClassFilterTest {
 
     @Test
     void nekojsCoreStaysDeniedEvenWhenAllGatedGroupsEnabled() {
-        // 即使宿主显式开启全部高危开关，core 内部实现也绝不允许脚本 lookup
+        // Even with every high-risk flag enabled by the host, scripts may never look up core internals.
         SandboxConfig allOn = new SandboxConfig(true, true, true, true, true, true, true, true);
         ClassFilter filter = new ClassFilter(allOn);
         assertFalse(filter.test("com.tkisor.nekojs.core.fs.ClassFilter"));

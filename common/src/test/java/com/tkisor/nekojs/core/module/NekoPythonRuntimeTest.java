@@ -39,14 +39,17 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * 票据 13 AC1/AC2（执行侧）/ AC3（执行侧）/ AC4 / AC6：Python 转译产物经统一
- * Resolution/Cache 与真实 Graal 执行；既有 Python 语义（缩进、定义/类/调用、注释、
- * 模块 import）由执行结果固定；运行时异常经 source map 回到 authored .py 行列并保留
- * 模块身份；Python 与 JS/ESM 混合加载的错误阶段和模块归属可观察；依赖变化使缓存失效。
+ * Exercises the Python transpiler output through the shared Resolution/Cache and a real Graal
+ * execution. Existing Python semantics (indentation, definitions/classes/calls, comments, module
+ * imports) are pinned by execution results; runtime exceptions map back through the source map to
+ * their authored .py line and column while keeping the module identity; error stages and module
+ * ownership stay observable when Python and JS/ESM load together; a changed dependency invalidates
+ * the cache.
  *
- * <p>观测点是最高调用者 seam：{@code loadEntry}/{@code loadEntryAsync} 的返回值、
- * 异常对象字段（stage/owner/sourcePath/sourceLine/sourceColumn/moduleId）、guest cause
- * 与 shared prepared cache。不读私有 parser 对象身份。
+ * <p>Observations are made at the top-level caller: the value returned by
+ * {@code loadEntry}/{@code loadEntryAsync}, the exception object fields
+ * (stage/owner/sourcePath/sourceLine/sourceColumn/moduleId), the guest cause and the shared
+ * prepared cache. Private parser object identity is not inspected.
  */
 class NekoPythonRuntimeTest {
 
@@ -97,7 +100,7 @@ class NekoPythonRuntimeTest {
         return file;
     }
 
-    // ---- AC1/AC2: existing Python semantics run through the unified pipeline ----
+    // ---- Existing Python semantics run through the shared pipeline ----
 
     @Test
     void indentationDefinitionsCallsAndCommentsRunUnchanged() throws Exception {
@@ -169,7 +172,7 @@ class NekoPythonRuntimeTest {
                 "named import and namespace import must expose the same module identity");
     }
 
-    // ---- AC3 (execution side): runtime failures map back to authored .py positions ----
+    // ---- Runtime failures map back to authored .py positions ----
 
     @Test
     void runtimeFailureInRaisedFunctionReportsAuthoredLineAndIdentity() throws Exception {
@@ -200,7 +203,8 @@ class NekoPythonRuntimeTest {
 
     @Test
     void runtimeFailureInCommonJsShapedPythonReportsAuthoredLineNotGeneratedLine() throws Exception {
-        // 无顶层 define/assign 的脚本是 CJS 形态：产物含 __nekoDiv 等前置助手行。
+        // A script without a top-level define or assignment is CJS-shaped, so its output carries prepended
+        // helper lines such as __nekoDiv.
         write("cjs-mode.py", "from nekojs import *\n"
                 + "print('start')\n"
                 + "print(10 / 0)\n");
@@ -216,11 +220,12 @@ class NekoPythonRuntimeTest {
         assertTrue(staged.sourceColumn() > 0, staged.detail());
     }
 
-    /** AC3 前半：Python 源解析错误在准备阶段报告 authored 位置（与词法/发射期错误同族）。 */
+    /** Python source parse errors report the authored position during preparation, like lexer and
+     * emit-stage errors. */
     @Test
     void pythonSourceParseErrorIsReportedAtPrepareWithTheAuthoredLine() throws Exception {
-        // 未闭合的调用在 Python 文法里直到文件末尾才报错（NEWLINE 落在第 4 行），
-        // 位置取 parser 实际报告的行列，不编造调用开始行。
+        // An unclosed call fails only at end of file in Python (NEWLINE lands on line 4), so the position is
+        // the line and column the parser actually reports, not the line the call starts on.
         Path file = write("bad_parse_runtime.py", "def f():\n    return 1\nvalue = f(\n");
 
         Exception failure = assertThrows(Exception.class, () -> cache.prepare(file));
@@ -233,19 +238,20 @@ class NekoPythonRuntimeTest {
     }
 
     /**
-     * AC3 后半：**生成 JS 的 link 失败**。Python 的 {@code from <sibling> import <name>} 会转译成
-     * ESM 静态 import；被 import 的模块若没有该导出，失败发生在 JS 这一侧（link），而不是
-     * Python 源解析侧——
+     * A link failure of the generated JS. Python's {@code from <sibling> import <name>} transpiles into
+     * an ESM static import; if the imported module does not export that name, the failure happens in JS
+     * during linking, not in Python source parsing:
      *
      * <ul>
-     *   <li>{@code cache.prepare} 必须**成功**（Python 源合法，转译也成功）；</li>
-     *   <li>{@code loadEntry} 抛 {@code Stage.LINK} / {@code Module Resolution/Cache}，
-     *       cause 是 {@link NekoEsmLinkException}（真实 JS link 诊断）；</li>
-     *   <li>与 {@code EXECUTE}（运行期异常）和 {@code PREPARE}（Python 源错误）可区分。</li>
+     *   <li>{@code cache.prepare} must succeed, because the Python source and the transpile are valid;</li>
+     *   <li>{@code loadEntry} throws {@code Stage.LINK} / {@code Module Resolution/Cache}, whose cause
+     *       is {@link NekoEsmLinkException}, the real JS link diagnostic;</li>
+     *   <li>the failure stays distinguishable from {@code EXECUTE} (runtime exception) and
+     *       {@code PREPARE} (Python source error).</li>
      * </ul>
      *
-     * <p>红侧证据：若把 link 失败错标为 EXECUTE（例如宿主吞掉 {@code NekoEsmLinkException}），
-     * 本用例的 stage 断言即失败。
+     * <p>The stage assertion fails if link failures are mislabeled as {@code EXECUTE}, for example when
+     * the host swallows {@code NekoEsmLinkException}.
      */
     @Test
     void generatedJsLinkFailureIsDistinguishedFromPythonSourceAndExecutionErrors() throws Exception {
@@ -256,7 +262,8 @@ class NekoPythonRuntimeTest {
         Path entry = write("link_entry.py", "from link_sibling import absent_name\n"
                 + "value = 1\n");
 
-        // 准备阶段看不到该错误：Python 源合法，转译成 `import { absent_name } from './link_sibling'`。
+        // Preparation cannot see this: the source is valid and transpiles to
+        // `import { absent_name } from './link_sibling'`.
         NekoPreparedModule prepared = cache.prepare(entry);
         assertEquals("python", prepared.languageId());
         assertTrue(prepared.code().contains("import { absent_name }"), prepared.code());
@@ -273,7 +280,8 @@ class NekoPythonRuntimeTest {
         assertInstanceOf(NekoEsmLinkException.class, staged.getCause(),
                 "the diagnostic must be the real generated-JS link failure, not a Python source error");
 
-        // 与 EXECUTE 的区分：同一 sibling 的「存在但运行期抛错」是另一条路径（EXECUTE）。
+        // Distinguishing it from EXECUTE: the same sibling that exists but throws at runtime takes the other
+        // path (EXECUTE).
         write("link_sibling.py", "def present():\n"
                 + "    raise ValueError('sibling-runtime-boom')\n");
         write("link_entry.py", "from link_sibling import present\n"
@@ -316,13 +324,15 @@ class NekoPythonRuntimeTest {
                 + "\n"
                 + "value = 1\n");
 
-        // 异步入口（loadEntryAsync）与同步入口必须归因一致：失败的 .py 子模块带自己的身份与 authored 行。
+        // loadEntryAsync must attribute failures like the sync entry: the failing .py child keeps its identity
+        // and authored line.
         Throwable failure;
         try {
             failure = assertThrows(ExecutionException.class,
                     () -> host.loadEntryAsync("./server_scripts/src/dyn_outer.py").get(10, TimeUnit.SECONDS));
         } catch (AssertionError notAFuture) {
-            // 宿主在 future 之前同步抛出阶段错误时，直接观测该错误。
+            // When the host throws the stage error synchronously before returning a future, observe that error
+            // directly.
             failure = assertThrows(Exception.class,
                     () -> host.loadEntryAsync("./server_scripts/src/dyn_outer.py"));
         }
@@ -335,7 +345,7 @@ class NekoPythonRuntimeTest {
                 "the async child's authored raise line must be reported: " + staged.detail());
     }
 
-    // ---- AC4: the same resolution/cache seam invalidates Python modules ----
+    // ---- The same resolution/cache invalidates Python modules ----
 
     @Test
     void changedPythonDependencyIsReloadedThroughTheSharedCache() throws Exception {
@@ -357,12 +367,14 @@ class NekoPythonRuntimeTest {
     }
 
     /**
-     * AC5 的**自动**失效路径：不调用 {@code invalidateModuleTree}／{@code invalidate}，
-     * 仅改动被 import 的 .py 后重跑入口。宿主的 {@code refreshPreparedExecutionTree} 必须在
-     * 入口缓存命中之前发现子模块的 prepared key 变化并使之失效。
+     * Dependency-driven invalidation: nothing calls {@code invalidateModuleTree} or {@code invalidate},
+     * only the imported .py changes before the entry runs again. The host's
+     * {@code refreshPreparedExecutionTree} must notice the child module's prepared key change and
+     * invalidate it before the entry is served from the cache.
      *
-     * <p>与 {@code changedPythonDependencyIsReloadedThroughTheSharedCache}（显式
-     * {@code invalidateModuleTree}）互补：那条证明显式失效，这条证明依赖驱动失效。
+     * <p>Complements {@code changedPythonDependencyIsReloadedThroughTheSharedCache}, which calls
+     * {@code invalidateModuleTree} explicitly: that test proves explicit invalidation, this one
+     * proves invalidation driven by the dependency.
      */
     @Test
     void changedPythonDependencyIsObservedWithoutAnExplicitInvalidate() throws Exception {
@@ -374,7 +386,7 @@ class NekoPythonRuntimeTest {
         Value before = asValue(host.loadEntry("./server_scripts/src/auto_entry.py"));
         assertEquals("auto-one", before.getMember("value").asString());
 
-        // 只改盘上内容，不做任何显式 invalidate / clear。
+        // Only the file on disk changes; no explicit invalidate or clear.
         Files.writeString(paths.serverScripts().resolve("src/auto_lib.py"),
                 "def tag():\n    return 'auto-two'\n");
 
@@ -401,7 +413,7 @@ class NekoPythonRuntimeTest {
                 "the imported Python module must be evaluated once, like any other module identity");
     }
 
-    // ---- AC6: mixed Python / JS / ESM error attribution ----
+    // ---- Mixed Python, JS and ESM error attribution ----
 
     @Test
     void pythonAndEsmModulesImportEachOtherWithObservableAttribution() throws Exception {

@@ -25,94 +25,102 @@ import net.minecraft.util.RandomSource;
 import net.minecraft.server.level.ServerLevel;
 
 /**
- * 方块事件面的 fabric 桥 v2：portalSpawn / neighborNotify / farmlandTrample /
- * placed / entityPlaced / fluidPlaced / randomTick / blockEntityTick
- * Native NeoForge counterparts are declared in that platform's BlockEvents implementation.
+ * Fabric bridge v2 for block events: portalSpawn / neighborNotify / farmlandTrample /
+ * placed / entityPlaced / fluidPlaced / randomTick / blockEntityTick.
+ * NeoForge declares the native counterparts in that platform's BlockEvents implementation.
  * Fabric uses mixins where no Fabric API callback exists.
  *
- * <p>Buses declared here extend the Fabric {@link BlockEvents} {@code GROUP}
- * （与 broken 及 v1 的 rightClicked/leftClicked 同名合并），按 Block 分发
- * （与 NeoForge 侧 {@code dispatchByBlock} 的 {@code state.getBlock()} 键一致）：
+ * <p>The buses declared here extend the Fabric {@link BlockEvents} {@code GROUP} (merged by
+ * name with broken and v1's rightClicked/leftClicked) and dispatch by Block, the same key as
+ * {@code state.getBlock()} in NeoForge's {@code dispatchByBlock}:
  * <ul>
- *   <li>{@code portalSpawn}——可取消（取消则传送门方块不生成）；</li>
- *   <li>{@code neighborNotify}——可取消（取消则本次邻居通知不送达）；</li>
- *   <li>{@code farmlandTrample}——可取消（取消则耕地不塌）。</li>
+ *   <li>{@code portalSpawn}: cancellable (cancelling stops the portal blocks from forming);</li>
+ *   <li>{@code neighborNotify}: cancellable (cancelling drops this neighbor notification);</li>
+ *   <li>{@code farmlandTrample}: cancellable (cancelling keeps the farmland from turning to dirt).</li>
  * </ul>
  *
- * <p><b>关键初始化纪律</b>：与 {@code FabricLevelEventBindingsV2} 相同——
- * {@code EventGroup} 在插件引导完成后冻结，本类总线的 {@code GROUP.add} 必须
- * 发生在冻结之前（{@code NekoJSFabricMod.onInitialize} 早期
- * {@code FabricBlockEventBindings.register()} 内追加一行 {@code bootstrap()}）。
+ * <p><b>Initialization rule</b>: same as {@code FabricLevelEventBindingsV2}. The
+ * {@code EventGroup} freezes after plugin bootstrap, so the {@code GROUP.add} calls for these
+ * buses must happen before that freeze: {@code NekoJSFabricMod.onInitialize} calls
+ * {@code bootstrap()} from {@code FabricBlockEventBindings.register()} early on.
  */
 public final class FabricBlockEventBindingsV2 {
 
     private FabricBlockEventBindingsV2() {}
 
-    /** 传送门生成前（server 脚本，按传送门方块 dispatch；可取消）。 */
+    /** Before a portal generates (server scripts, dispatched by the portal block; cancellable). */
     public static final EventBusJS<BlockPortalSpawnEventJS, Block> PORTAL_SPAWN =
             BlockEvents.GROUP.add("portalSpawn", ScriptType.SERVER, EventBusJS.of(
                     BlockPortalSpawnEventJS.class, true,
                     DispatchKey.of(Block.class, BlockPortalSpawnEventJS::getBlock)));
 
-    /** 方块邻居通知（server 脚本，按被通知方块 dispatch；可取消）。 */
+    /** A block receives a neighbor notification (server scripts, dispatched by the notified block;
+     * cancellable). */
     public static final EventBusJS<BlockNeighborNotifyEventJS, Block> NEIGHBOR_NOTIFY =
             BlockEvents.GROUP.add("neighborNotify", ScriptType.SERVER, EventBusJS.of(
                     BlockNeighborNotifyEventJS.class, true,
                     DispatchKey.of(Block.class, BlockNeighborNotifyEventJS::getBlock)));
 
-    /** 耕地被踩塌（server 脚本，按耕地方块 dispatch；可取消）。 */
+    /** Farmland is trampled (server scripts, dispatched by the farmland block; cancellable). */
     public static final EventBusJS<BlockFarmlandTrampleEventJS, Block> FARMLAND_TRAMPLE =
             BlockEvents.GROUP.add("farmlandTrample", ScriptType.SERVER, EventBusJS.of(
                     BlockFarmlandTrampleEventJS.class, true,
                     DispatchKey.of(Block.class, BlockFarmlandTrampleEventJS::getBlock)));
 
     /**
-     * 方块放置（server 脚本；可取消）。26.x 事实（补丁源码实证）：NeoForge 侧
-     * placed/entityPlaced 同绑 {@code BlockEvent.EntityPlaceEvent}，其唯一 post 点
-     * 是末影人放置——fabric 侧 {@code MixinEndermanLeaveBlockGoal} 同构，一次放置
-     * 双总线投递。分发键取被放置方块（NF 侧取快照脚下方块，差异记入载荷 javadoc）。
+     * A block is placed (server scripts; cancellable). On 26.x, NeoForge binds both
+     * placed/entityPlaced to {@code BlockEvent.EntityPlaceEvent}, whose only post site is the
+     * enderman placement; fabric's {@code MixinEndermanLeaveBlockGoal} is the same, so one
+     * placement posts to both buses. The dispatch key is the placed block (NeoForge uses the block
+     * under the snapshot's feet); the difference is in the payload javadoc.
      */
     public static final EventBusJS<BlockPlacedEventJS, Block> PLACED =
             BlockEvents.GROUP.add("placed", ScriptType.SERVER, EventBusJS.of(
                     BlockPlacedEventJS.class, true,
                     DispatchKey.of(Block.class, BlockPlacedEventJS::getBlock)));
 
-    /** 实体放置（server 脚本；可取消）——与 {@link #PLACED} 同点双投递。 */
+    /** An entity places a block (server scripts; cancellable); posts to both buses at the same site
+     * as {@link #PLACED}. */
     public static final EventBusJS<BlockPlacedEventJS, Block> ENTITY_PLACED =
             BlockEvents.GROUP.add("entityPlaced", ScriptType.SERVER, EventBusJS.of(
                     BlockPlacedEventJS.class, true,
                     DispatchKey.of(Block.class, BlockPlacedEventJS::getBlock)));
 
     /**
-     * 流体硬化成方块（server 脚本；可取消）。覆盖 LiquidBlock 的黑曜石/圆石/玄武岩
-     * 转换点 + LavaFluid.spreadTo 成石点——是 NF 26.1.2 覆盖范围的超集（NF 不含
-     * LiquidBlock 三处、多火焰蔓延两处），语义差异记入移植台账。
+     * A fluid hardens into a block (server scripts; cancellable). Covers the obsidian / cobblestone
+     * / basalt conversion sites in LiquidBlock plus the spreadTo stone site in LavaFluid. This is
+     * a superset of NeoForge 26.1.2, which covers none of the three LiquidBlock sites and two
+     * fewer fire-spread sites; the difference is recorded in the port log.
      */
     public static final EventBusJS<BlockFluidPlacedEventJS, Block> FLUID_PLACED =
             BlockEvents.GROUP.add("fluidPlaced", ScriptType.SERVER, EventBusJS.of(
                     BlockFluidPlacedEventJS.class, true,
                     DispatchKey.of(Block.class, BlockFluidPlacedEventJS::getBlock)));
 
-    /** 方块随机 tick（server 脚本，按方块 dispatch；不可取消；高频，无监听器短路）。 */
+    /** A block random-ticks (server scripts, dispatched by block; not cancellable; high frequency, so
+     * it short-circuits when there are no listeners). */
     public static final EventBusJS<BlockRandomTickEventJS, Block> RANDOM_TICK =
             BlockEvents.GROUP.server("randomTick", BlockRandomTickEventJS.class,
                     DispatchKey.of(Block.class, BlockRandomTickEventJS::getBlock));
 
-    /** 方块实体 tick（server 脚本，按 BlockEntityType dispatch；不可取消；高频）。 */
+    /** A block entity ticks (server scripts, dispatched by BlockEntityType; not cancellable; high
+     * frequency). */
     public static final EventBusJS<BlockEntityTickEventJS, BlockEntityType<?>> BLOCK_ENTITY_TICK =
             BlockEvents.GROUP.server("blockEntityTick", BlockEntityTickEventJS.class,
                     DispatchKey.of(BlockEntityType.class, BlockEntityTickEventJS::getType));
 
-    /** 触发本类初始化把总线注册进 {@code BlockEvents.GROUP}（详见类注释的冻结纪律）。 */
+    /** Initializes this class so its buses register into {@code BlockEvents.GROUP} (see the freeze
+     * rule in the class comment). */
     public static void bootstrap() {
-        // 空方法体：访问任一总线常量即完成类初始化
+        // Empty body: touching any bus constant initializes the class.
     }
 
     /**
-     * 传送门生成前：{@code MixinPortalShape} 在
-     * {@code PortalShape#createPortalBlocks(LevelAccessor)} 的 HEAD 调用。
+     * Before a portal generates: {@code MixinPortalShape} calls this at the HEAD of
+     * {@code PortalShape#createPortalBlocks(LevelAccessor)}.
      *
-     * @return true 表示监听器取消了传送门生成（mixin 应 {@code ci.cancel()}）
+     * @return true if a listener cancelled the portal generation, in which case the mixin should
+     *         call {@code ci.cancel()}
      */
     public static boolean postPortalSpawn(LevelAccessor level, BlockPos pos, BlockState state,
                                           PortalShape portalSize) {
@@ -124,12 +132,13 @@ public final class FabricBlockEventBindingsV2 {
     }
 
     /**
-     * 方块邻居通知：{@code MixinNeighborUpdater} 在
-     * {@code NeighborUpdater#executeUpdate(Level, BlockState, BlockPos, Block,
-     * Orientation, boolean)} 的 HEAD 调用（26.x 单邻居变更与 updateNeighborsAt
-     * 都收敛到此汇点，javap 实证）。
+     * A block receives a neighbor notification: {@code MixinNeighborUpdater} calls this at the HEAD
+     * of {@code NeighborUpdater#executeUpdate(Level, BlockState, BlockPos, Block,
+     * Orientation, boolean)}. On 26.x both single-neighbor changes and updateNeighborsAt funnel
+     * into this point, as javap shows.
      *
-     * @return true 表示监听器取消了本次通知（mixin 应 {@code ci.cancel()}）
+     * @return true if a listener cancelled this notification, in which case the mixin should call
+     *         {@code ci.cancel()}
      */
     public static boolean postNeighborNotify(Level level, BlockState state, BlockPos pos,
                                              Block sourceBlock, Orientation orientation,
@@ -144,12 +153,12 @@ public final class FabricBlockEventBindingsV2 {
     }
 
     /**
-     * 耕地被踩塌：{@code MixinFarmlandBlock} 在
-     * {@code FarmlandBlock#fallOn} 的 {@code turnToDirt} INVOKE 点调用
-     * （原版判定通过后才触达，javap 实证）。
+     * Farmland is trampled: {@code MixinFarmlandBlock} calls this at the {@code turnToDirt} INVOKE
+     * point of {@code FarmlandBlock#fallOn}, which is only reached after the vanilla check passes
+     * (javap shows this).
      *
-     * @return true 表示监听器取消了踩塌（mixin 应 {@code ci.cancel()}，
-     *         {@code turnToDirt} 不再执行）
+     * @return true if a listener cancelled the trampling, in which case the mixin should call
+     *         {@code ci.cancel()} and {@code turnToDirt} does not run
      */
     public static boolean postFarmlandTrample(Level level, BlockPos pos, BlockState state,
                                               float fallDistance, Entity entity) {
@@ -162,13 +171,14 @@ public final class FabricBlockEventBindingsV2 {
     }
 
     /**
-     * 方块放置：{@code MixinEndermanLeaveBlockGoal} 在 {@code canPlaceBlock} HEAD 调用
-     * （javap 实证：NF 26.1.2 的 {@code EntityPlaceEvent} 唯一 post 点同位次）。
-     * 一次放置向 placed 与 entityPlaced 双总线投递（与 NF 侧双绑定同构），共用同一
-     * 只读载荷实例。
+     * A block is placed: {@code MixinEndermanLeaveBlockGoal} calls this at the HEAD of
+     * {@code canPlaceBlock} (javap shows that the only post site of {@code EntityPlaceEvent} in
+     * NeoForge 26.1.2 is the same place). One placement posts to both the placed and entityPlaced
+     * buses, the same as NeoForge's double binding, and both share one read-only payload instance.
      *
-     * @return true 表示任一总线的监听器取消了放置（mixin 应
-     *         {@code cir.setReturnValue(false)}，放置不发生、实体保留方块）
+     * @return true if a listener on either bus cancelled the placement, in which case the mixin
+     *         should call {@code cir.setReturnValue(false)}: the placement does not happen and the
+     *         entity keeps the block
      */
     public static boolean postPlaced(Level level, BlockPos pos, BlockState state,
                                      BlockState placedAgainst, Entity entity) {
@@ -176,17 +186,20 @@ public final class FabricBlockEventBindingsV2 {
             return false;
         }
         BlockPlacedEventJS payload = new BlockPlacedEventJS(level, pos, state, placedAgainst, entity);
-        // 不短路：两总线都要收到事件（NF 侧同一事件对象投两条绑定，取消态共享）
+        // No short-circuit: both buses must receive the event (NeoForge posts the same event object to
+        // both bindings and they share the cancelled state).
         boolean cancelled = PLACED.post(payload, state.getBlock());
         cancelled |= ENTITY_PLACED.post(payload, state.getBlock());
         return cancelled;
     }
 
     /**
-     * 流体硬化成方块：{@code MixinLiquidBlock}（黑曜石/圆石/玄武岩转换点）与
-     * {@code MixinLavaFluid}（spreadTo 成石点）在各自 setBlock INVOKE 点调用。
+     * A fluid hardens into a block: {@code MixinLiquidBlock} (the obsidian / cobblestone / basalt
+     * conversion sites) and {@code MixinLavaFluid} (the spreadTo stone site) call this at their
+     * respective setBlock INVOKE points.
      *
-     * @return true 表示监听器取消了硬化（mixin 侧语义：流体不转化、继续流动）
+     * @return true if a listener cancelled the hardening, which for the mixins means the fluid does
+     *         not convert and keeps flowing
      */
     public static boolean postFluidPlaced(LevelAccessor level, BlockPos pos,
                                           BlockState newState, BlockState oldState) {
@@ -198,9 +211,9 @@ public final class FabricBlockEventBindingsV2 {
     }
 
     /**
-     * 方块随机 tick：{@code MixinBlockBehaviourRandomTick} 在
-     * {@code BlockBehaviour.BlockStateBase#randomTick} HEAD 调用（与 NeoForge 侧既有
-     * mixin 同点孪生；接口 default randomTick 会被原版覆写绕过，见 ticket 24 D5）。
+     * A block random-ticks: {@code MixinBlockBehaviourRandomTick} calls this at the HEAD of
+     * {@code BlockBehaviour.BlockStateBase#randomTick}, the twin of the existing NeoForge mixin.
+     * Vanilla overrides bypass the interface's default randomTick.
      */
     public static void postRandomTick(ServerLevel level, BlockPos pos, BlockState state,
                                       RandomSource random) {
@@ -211,8 +224,8 @@ public final class FabricBlockEventBindingsV2 {
     }
 
     /**
-     * 方块实体 tick：{@code MixinLevelChunkBoundTickingBlockEntity} 在
-     * {@code LevelChunk$BoundTickingBlockEntity#tick} HEAD 调用（失效实体由 mixin 过滤）。
+     * A block entity ticks: {@code MixinLevelChunkBoundTickingBlockEntity} calls this at the HEAD
+     * of {@code LevelChunk$BoundTickingBlockEntity#tick}; the mixin filters out invalid entities.
      */
     public static void postBlockEntityTick(BlockEntity blockEntity) {
         if (!BLOCK_ENTITY_TICK.hasListeners()) {

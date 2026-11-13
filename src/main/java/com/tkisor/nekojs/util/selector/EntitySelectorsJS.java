@@ -13,35 +13,39 @@ import java.util.List;
 import java.util.function.Consumer;
 
 /**
- * 全局绑定 {@code EntitySelectors}：{@link EntitySelectorBuilderJS} 的工厂与查询入口。
+ * Global {@code EntitySelectors} binding: the factory and query entry point for
+ * {@link EntitySelectorBuilderJS}.
  *
- * <p>source contract 归类（ticket 25）：query binding——factory/builder/query 只读查询，
- * 不事件化、无生命周期 Point；server/test side 限定（查询需 {@code ServerLevel}）。
- * 非法输入抛带域+调用入口的普通错误（源位置由统一错误管线从脚本栈提取），不含修复提示。
+ * <p>A query binding: the factory, builder and query only read, they never fire events and have no
+ * lifecycle Point. Queries need a {@code ServerLevel}, so they are limited to the server and test
+ * side. Invalid input throws an ordinary error that carries the domain and the call entry point
+ * (the source position comes from the script stack through the shared error pipeline); it carries
+ * no fix hint.
  *
- * <p><b>作用域基座（工单 25 双轴审查后钉住现状）</b>：{@link #builder()} / {@link #create}
- * 的基座是<b>玩家集合</b>（{@code includesEntities=false}，等价 {@code @a}）；
- * {@link #allEntities()} / {@link #nearestEntity()} / {@link #randomEntity()} 的基座是
- * <b>实体集合</b>。{@code type(...)} / {@code typeTag(...)} <b>不</b>切作用域（仅玩家类型
- * 会调整该位），所以查非玩家实体必须用实体基座预设。
+ * <p><b>Scope base</b>: {@link #builder()} and {@link #create} start from a <b>player set</b>
+ * ({@code includesEntities=false}, equivalent to {@code @a}); {@link #allEntities()} /
+ * {@link #nearestEntity()} / {@link #randomEntity()} start from an <b>entity set</b>.
+ * {@code type(...)} and {@code typeTag(...)} do <b>not</b> change the scope (only a player type
+ * adjusts that bit), so finding a non-player entity requires an entity base preset.
  *
- * <p>脚本示例：
+ * <p>Script example:
  * <pre>{@code
- * // 32 格内的 5 头牛（按距离排序）——实体基座 + 类型过滤
+ * // Five cows within 32 blocks, sorted by distance: entity base + type filter
  * const cows = EntitySelectors.find(level,
  *     EntitySelectors.allEntities().type('minecraft:cow').distance(0, 32).limit(5).create());
- * // 最近的玩家
+ * // The nearest player
  * const players = EntitySelectors.find(level, EntitySelectors.nearestPlayer().create(),
  *     player.x, player.y, player.z);
  * }</pre>
  *
- * <p>{@code find} 的锚点（x/y/z）同时是距离量测原点与体积选区锚点；不传时为
- * {@code (0, 0, 0)}。builder 的 {@code x()/y()/z()} 会覆盖锚点的对应分量
- * （原版 selector 语义）。排序选择器（nearest/furthest/random）务必显式传锚点。
+ * <p>The {@code find} anchor (x/y/z) is both the origin for distance measurement and the anchor of
+ * the volume selection; when it is not passed it defaults to {@code (0, 0, 0)}. The builder's
+ * {@code x()/y()/z()} override the matching component of the anchor (vanilla selector semantics).
+ * Always pass the anchor explicitly for ordering selectors (nearest/furthest/random).
  */
 public class EntitySelectorsJS {
 
-    /** 从 builder 配置回调创建 selector：{@code create(b => b.type('minecraft:cow'))}。 */
+    /** Creates a selector from a builder config callback, e.g. {@code create(b => b.type('minecraft:cow'))}. */
     public EntitySelector create(Consumer<EntitySelectorBuilderJS> config) {
         if (config == null) {
             throw new IllegalArgumentException("EntitySelectors.create: config must not be null");
@@ -51,50 +55,52 @@ public class EntitySelectorsJS {
         return builder.create();
     }
 
-    /** 空构建器（后续链式配置）。 */
+    /** Returns an empty builder for chained configuration. */
     public EntitySelectorBuilderJS builder() {
         return new EntitySelectorBuilderJS();
     }
 
-    /** 全部玩家（{@code @a}）。 */
+    /** All players ({@code @a}). */
     public EntitySelectorBuilderJS allPlayers() {
         return EntitySelectorBuilderJS.allPlayers();
     }
 
-    /** 全部实体（含玩家，{@code @e}）。 */
+    /** All entities, players included ({@code @e}). */
     public EntitySelectorBuilderJS allEntities() {
         return EntitySelectorBuilderJS.allEntities();
     }
 
-    /** 最近的玩家（{@code @p}）。 */
+    /** The nearest player ({@code @p}). */
     public EntitySelectorBuilderJS nearestPlayer() {
         return EntitySelectorBuilderJS.nearestPlayer();
     }
 
-    /** 最近的实体（含玩家）。 */
+    /** The nearest entity, players included. */
     public EntitySelectorBuilderJS nearestEntity() {
         return EntitySelectorBuilderJS.nearestEntity();
     }
 
-    /** 随机玩家（{@code @r}）。 */
+    /** A random player ({@code @r}). */
     public EntitySelectorBuilderJS randomPlayer() {
         return EntitySelectorBuilderJS.randomPlayer();
     }
 
-    /** 随机实体（含玩家）。 */
+    /** A random entity, players included. */
     public EntitySelectorBuilderJS randomEntity() {
         return EntitySelectorBuilderJS.randomEntity();
     }
 
     /**
-     * 在指定维度执行 selector，返回匹配实体（含玩家；{@code includesEntities=false}
-     * 的 selector 只查玩家）。锚点默认 {@code (0, 0, 0)}。
+     * Runs a selector in the given level and returns the matching entities, players included.
+     * A selector built with {@code includesEntities=false} only finds players. The anchor
+     * defaults to {@code (0, 0, 0)}.
      */
     public List<? extends Entity> find(ServerLevel level, EntitySelector selector) {
         return find(level, selector, 0, 0, 0);
     }
 
-    /** 在指定维度执行 selector，锚点为 {@code (x, y, z)}（距离原点 / 体积选区锚）。 */
+    /** Runs a selector in the given level with anchor {@code (x, y, z)}, used for distance and
+     * volume selection. */
     public List<? extends Entity> find(ServerLevel level, EntitySelector selector, double x, double y, double z) {
         if (level == null) {
             throw new IllegalArgumentException("EntitySelectors.find: level must not be null");
@@ -108,31 +114,30 @@ public class EntitySelectorsJS {
         try {
             return selector.findEntities(source);
         } catch (Exception e) {
-            // findEntities 声明 CommandSyntaxException，但脚本构建的 selector
-            // （usesSelector=false）不会触发语法/权限分支；防御性兜底转运行时异常
+            // findEntities declares CommandSyntaxException, but a selector built by a script
+            // (usesSelector=false) never takes the syntax or permission path; this catch is a
+            // defensive fallback that turns the failure into a runtime exception
             throw new IllegalStateException("EntitySelectors.find: entity selector query failed", e);
         }
     }
 
     /**
-     * 解析实体类型 tag id（如 {@code 'minecraft:skeletons'}）为 {@link TagKey}。
+     * Resolves an entity type tag id (such as {@code 'minecraft:skeletons'}) to a {@link TagKey}.
      *
-     * <p><b>characterization（工单 25 双轴审查后钉住现状）</b>：本方法<b>不</b>校验该
-     * tag 是否已被当前数据包声明——未声明的 tag 会得到一个没有任何成员的
-     * {@link TagKey}，于是使用它的过滤条件恒假、查询恒返回空（silent no-op）。
+     * <p>This method does <b>not</b> check that the current data pack declares the tag. An
+     * undeclared tag resolves to a {@link TagKey} with no members, so any filter that uses it is
+     * always false and the query always returns nothing (a silent no-op).
      *
-     * <p>这是<b>已记录的缺口</b>（REPORT §7 N8，owner = 维护者裁决 / domain 票）：spec 04
-     * 禁止静默 no-op，因此「未声明即抛带域+入口的普通错误」是期望修法——该修法在本票
-     * 实现过并经游戏内实证，但它是<b>公开语义变更</b>（静默空结果 → 报错），超出工单 25
-     * 「建立 fixture」的授权（项目纪律：公开语义变更先回决策），故回退为现状并在此写明。
-     * 游戏内证据：{@code runserver-25971-postfix-extract.log} 的
-     * {@code builder().typeTag('nekojs:no_such_tag') -> EntitySelectorBuilderJS@…}（无异常）。
+     * <p>That silent no-op is a known gap. Throwing a normal error that names the domain and the
+     * entry point would fix it, but that turns a silently empty result into an error, which is a
+     * public behavior change, so it needs a maintainer decision instead of being done here.
      *
-     * <p><b>唯一保留的入参校验是 {@code null}</b>（审查明确保留 AC3「错误含域+调用入口」
-     * 的合规改进，同 {@code distance}/limit 等消息前缀）：{@code tagId == null} 抛带域+入口的
-     * 普通错误，而不是让 {@code Identifier.parse(null)} 抛裸 NPE。它不改变任何既有可观察语义
-     * （原本就是错误路径，只是错误类型与可读性），由
-     * {@code EntitySelectorsQueryBindingTest.typeTagNullErrorCarriesDomainAndEntry} 守护。
+     * <p>The only input validation kept is {@code null}: {@code tagId == null} throws a normal
+     * error that names the domain and the entry point, the same prefix used by the
+     * {@code distance} and limit messages, instead of letting {@code Identifier.parse(null)}
+     * throw a bare NPE. This changes no observable behavior, since a null id was already an
+     * error path; only the error type and its readability change. The behavior is covered by
+     * {@code EntitySelectorsQueryBindingTest.typeTagNullErrorCarriesDomainAndEntry}.
      */
     static TagKey<EntityType<?>> resolveEntityTypeTag(String tagId) {
         if (tagId == null) {

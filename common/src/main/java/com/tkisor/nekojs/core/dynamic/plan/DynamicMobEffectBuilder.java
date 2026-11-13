@@ -4,9 +4,9 @@ import java.util.Locale;
 import java.util.Set;
 
 /**
- * MobEffect 动态定义 builder（{@code event.mobEffect(id, cb)}）：HUD 分类与 ARGB 颜色。
- * 分类是与 vanilla MobEffectCategory 对应的封闭字符串集合（beneficial/harmful/neutral），
- * 由 Adapter 在合法应用点解析为 MC 枚举。
+ * Builder for a dynamic MobEffect definition ({@code event.mobEffect(id, cb)}): HUD category and
+ * ARGB color. The category is a closed set of strings matching vanilla MobEffectCategory
+ * (beneficial/harmful/neutral); the Adapter resolves it to the MC enum at the apply point.
  */
 public final class DynamicMobEffectBuilder extends DynamicDefinitionBuilder {
 
@@ -15,7 +15,7 @@ public final class DynamicMobEffectBuilder extends DynamicDefinitionBuilder {
     private String category = "neutral";
     private int color = 0xFFFFFF;
 
-    /** 分类：neutral（默认）/ beneficial / harmful；大小写不敏感，规范化为小写。 */
+    /** Category: neutral (default), beneficial or harmful. Case-insensitive; normalized to lower case. */
     public DynamicMobEffectBuilder setCategory(String category) {
         String normalized = DynamicDefinitionType.normalizeToken(category, "mob effect category");
         if (!CATEGORIES.contains(normalized)) {
@@ -26,7 +26,7 @@ public final class DynamicMobEffectBuilder extends DynamicDefinitionBuilder {
         return this;
     }
 
-    /** 效果颜色（ARGB int，如 {@code 0x8B0000}）。 */
+    /** Effect color as an ARGB int, for example {@code 0x8B0000}. */
     public DynamicMobEffectBuilder setColor(int color) {
         this.color = color;
         return this;

@@ -25,20 +25,19 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Defect D-B regression (ticket 23): {@code DataGeneratorJS.json(path, value)} must serialize
- * JS object arguments to real JSON when called from script code on the real GraalJS engine.
+ * Regression test for defect D-B: {@code DataGeneratorJS.json(path, value)} must serialize JS
+ * object arguments to real JSON when called from script code on the real GraalJS engine.
  *
  * <p>Root cause: values proxied from GraalJS into the {@code Object} parameter arrive as host
  * {@code Map}/{@code List} proxies ({@code com.oracle.truffle.polyglot.PolyglotMap/List}), never
- * as {@code graal.graalvm.polyglot.Value}, so the old {@code instanceof Value} branch was
- * unreachable from scripts and the {@code String.valueOf} fallback wrote literal
- * {@code [object Object]} / {@code [object Array]} (proven by the 2026-09-28 runServer smoke,
- * ticket 23 REPORT "D-B 分诊").
+ * as {@code graal.graalvm.polyglot.Value}, so the {@code instanceof Value} branch was unreachable
+ * from scripts and the {@code String.valueOf} fallback wrote the literal
+ * {@code [object Object]} / {@code [object Array]}.
  *
- * <p>Test geometry: a real GraalJS {@link Context} wired like {@code NekoSandboxFactory.build}
- * (same {@link NekoSharedHostAccess} + {@link ClassFilter} + interop options, precedent
- * {@code AdvancedJavaInteropSmokeTest}); the generator is exposed as a binding and called from
- * JS — the same host-method conversion boundary production scripts go through.
+ * <p>The test builds a real GraalJS {@link Context} the way {@code NekoSandboxFactory.build}
+ * does (same {@link NekoSharedHostAccess} + {@link ClassFilter} + interop options, as in
+ * {@code AdvancedJavaInteropSmokeTest}), exposes the generator as a binding and calls it from
+ * JS, so the argument goes through the same host-method conversion as production scripts.
  */
 class DataGeneratorJsJsonRealEngineTest {
 

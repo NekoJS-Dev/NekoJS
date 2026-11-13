@@ -9,29 +9,32 @@ import com.tkisor.nekojs.script.ScriptTypedValue;
 import java.util.Map;
 
 /**
- * 内置扩展点 {@code nekojs:bindings}（ADR-0001 自包含 Point 文件）。
+ * The built-in {@code nekojs:bindings} extension point; a self-contained Point file (ADR-0001).
  *
- * <p><b>闭包特例</b>：collector 按 client 环境过滤 ScriptType（专用服务器不收集
- * CLIENT 绑定），谓词捕获每轮 bootstrap 的 client 值——由
- * {@link #point(boolean)} 静态工厂在注册期构造。
+ * <p><b>Closure special case</b>: the collector filters ScriptType by the client environment (a
+ * dedicated server collects no CLIENT bindings), and the predicate captures the client value of
+ * each bootstrap round. The {@link #point(boolean)} static factory builds it at registration
+ * time.
  *
- * <p>累积器为按 {@link ScriptType} 惰性创建的 {@link BindingRegistry}；
- * finisher 冻结为 {@code ScriptType → (name → Binding)} 快照。
+ * <p>The accumulator is a {@link BindingRegistry} created lazily per {@link ScriptType}; the
+ * finisher freezes it into a {@code ScriptType → (name → Binding)} snapshot.
  */
 public final class BindingsPoint {
 
-    /** 扩展点 id（observable 契约）。 */
+    /** The extension point id; part of the observable contract. */
     public static final String ID = "nekojs:bindings";
 
     private BindingsPoint() {
     }
 
-    /** 显式声明形态（与直接覆写 NekoJSPlugin 对应钩子等价收集）：插件被 {@code nekojs:bindings} 扩展点收集。 */
+    /** Explicit declaration form, collected the same way as overriding the matching NekoJSPlugin
+     * hook: the plugin is collected by the {@code nekojs:bindings} extension point. */
     public interface Contributor extends NekoJSPlugin {
 
         /**
-         * 注册全局绑定（脚本可直接引用的全局名，如 {@code Item}/{@code Ingredient}）。
-         * 绑定可以是 Java 类、实例或 {@code Binding.of(...)} 显式声明值类型（供 preflight 校验）。
+         * Registers global bindings: global names a script can reference directly, such as
+         * {@code Item}/{@code Ingredient}. A binding can be a Java class, an instance, or a value
+         * type declared explicitly with {@code Binding.of(...)} for preflight checks.
          */
         default void registerBinding(BindingRegistry registry) {
         }
@@ -58,7 +61,8 @@ public final class BindingsPoint {
         }
     }
 
-    /** 扩展点定义（由 {@link NekoBuiltinPointsPlugin} 清单注册时构造）。 */
+    /** The extension point definition, built when the {@link NekoBuiltinPointsPlugin} manifest
+     * registers it. */
     public static NekoPluginExtensionPoint<NekoJSPlugin, ScriptTypedValue<BindingRegistry>, Map<ScriptType, Map<String, Binding>>> point(
             boolean client) {
         return point(client, plugin -> null);

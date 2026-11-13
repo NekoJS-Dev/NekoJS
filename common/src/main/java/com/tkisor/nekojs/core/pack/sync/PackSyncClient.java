@@ -23,37 +23,48 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.BooleanSupplier;
 
 /**
- * 包分发客户端管线（平台无关）：接收哈希清单与 bundle → 落盘缓存（路径穿越防护）→
- * 从盘重扫重算哈希对照预期 → 验签（Ed25519 + keyId pinning）→ 信任判定 → 激活
- * SERVER_CACHE 包并触发 CLIENT 脚本重载。未信任/被拒时返回断连消息（v1 UX：断连 +
- * 提示 {@code /nekojs trust <address>} 后重连）。
+ * Client-side pack distribution pipeline, independent of the platform: receives the hash manifest
+ * and bundle, saves them to the cache with traversal protection, rescans the disk and recomputes the
+ * hash against the expected values, verifies the signature (Ed25519 with keyId pinning), decides
+ * trust, then activates the SERVER_CACHE packs and triggers a CLIENT script reload. If trust fails
+ * or the pack is rejected, it returns the disconnect message (v1 UX: disconnect and tell the player
+ * to run {@code /nekojs trust <address>} and reconnect).
  *
- * <p>线程模型：平台处理器在网络线程收包，经 {@code enqueueWork} 切主线程执行本类方法；
- * NeoForge 配置阶段的处理器用 {@link #prepareMainThreadWork}/{@link #completeMainThreadWork}/
- * {@link #awaitMainThreadWork} 阻塞网络线程直到主线程执行完毕——保证后续注册表同步
- * 在远端脚本执行之后进行。无配置阶段的加载器改为登录后执行，无需阻塞。
+ * <p>Threading: platform handlers receive packets on the network thread and switch to the main
+ * thread through {@code enqueueWork} to run the methods here. The NeoForge configuration-phase
+ * handler blocks the network thread with {@link #prepareMainThreadWork},
+ * {@link #completeMainThreadWork} and {@link #awaitMainThreadWork} until the main thread finishes,
+ * so the following registry sync happens after the remote scripts have run. Loaders without a
+ * configuration phase run this after login and do not block.
  *
- * <p>客户端自身 engine.toml 语义：mode=off 忽略全部同步包；mode=hashOnly 清空并永不
- * 执行远端包（单人/本地内存连接由平台入口直接跳过同步）。
+ * <p>The client's own engine.toml: mode=off ignores every synced pack; mode=hashOnly clears the
+ * cache and never runs remote packs (single player and local memory connections skip sync entirely
+ * at the platform entry point).
  */
 public final class PackSyncClient {
 
-    /** bundle 体量上限（防恶意巨型包撑爆内存/磁盘）。 */
+    /** Bundle size limits, so a malicious oversized pack cannot exhaust memory or disk. */
     public static final int MAX_PACKS_PER_BUNDLE = 64;
     public static final int MAX_FILES_PER_PACK = 4096;
     public static final int MAX_FILE_BYTES = 8 * 1024 * 1024;
     public static final int MAX_MANIFEST_BYTES = 256 * 1024;
     public static final long MAX_TOTAL_BUNDLE_BYTES = 64L * 1024 * 1024;
 
-    /** 主线程执行等待上限（避免主线程死锁时网络线程被永久挂起）。 */
+    /**
+     * Limit on how long to wait for main-thread work, so a deadlocked main thread cannot hang the
+     * network thread forever.
+     */
     private static final long MAIN_THREAD_WAIT_SECONDS = 30;
 
-    /** 平台安装的 CLIENT 脚本重载钩子（loader entry 注入的 root.reload(CLIENT) 守卫包装）。 */
+    /** CLIENT script reload hook installed by the platform: a guarded root.reload(CLIENT) wrapper from the loader entry. */
     private static volatile BooleanSupplier clientReloadHook;
 
     private static volatile CountDownLatch mainThreadLatch;
 
-    /** 当前连接的同步会话状态（哈希清单与 bundle 处理器共享）。 */
+    /**
+     * Sync session state for the current connection, shared by the hash manifest handler and the bundle
+     * handler.
+     */
     private static String activeBucket;
     private static String activeAddress;
     private static Map<String, String> expectedHashes = Map.of();
@@ -66,18 +77,20 @@ public final class PackSyncClient {
         clientReloadHook = hook;
     }
 
-    /** 网络线程调用：登记一个 latch，主线程任务完成后 {@link #completeMainThreadWork}。 */
+    /** Called on the network thread: registers a latch that the main-thread task completes through
+     * {@link #completeMainThreadWork}. */
     public static void prepareMainThreadWork() {
         mainThreadLatch = new CountDownLatch(1);
     }
 
-    /** 主线程任务 finally 中调用。 */
+    /** Called in the finally block of the main-thread task. */
     public static void completeMainThreadWork() {
         CountDownLatch latch = mainThreadLatch;
         if (latch != null) latch.countDown();
     }
 
-    /** 网络线程调用：阻塞至主线程任务完成（超时放行并 WARN）。 */
+    /** Called on the network thread: blocks until the main-thread task finishes, or logs a WARN and
+     * continues when the wait times out. */
     public static void awaitMainThreadWork() {
         CountDownLatch latch = mainThreadLatch;
         if (latch == null) return;
@@ -92,11 +105,12 @@ public final class PackSyncClient {
         }
     }
 
-    /* ================= 哈希清单 ================= */
+    /* ================= Hash list ================= */
 
     /**
-     * 处理哈希清单（主线程）。空清单 = 清空远端包并重载；hashOnly 客户端模式同样清空
-     * 且永不执行。非空清单记录预期哈希，等待随后的 bundle。
+     * Handles a hash list on the main thread. An empty list clears the remote packs and reloads;
+     * the hashOnly client mode clears them in the same way and never executes them. A non-empty
+     * list records the expected hashes and waits for the bundle that follows.
      */
     public static synchronized Outcome handleHashList(NekoRuntimeRoot runtimeRoot,
                                                       String serverAddress, List<HashEntry> entries) {
@@ -147,7 +161,8 @@ public final class PackSyncClient {
         }
 
         if (hashes.isEmpty()) {
-            // 服务器无同步包：清空远端缓存包（缓存文件保留）并重载客户端脚本
+            // The server has no synced packs: unload the cached remote packs (the cache files stay) and
+            // reload the client scripts
             if (!revoked) {
                 Outcome outcome = deactivateAndReload("server sent an empty pack hash list", previousState, runtimeRoot, true);
                 if (outcome.shouldDisconnect()) {
@@ -168,16 +183,19 @@ public final class PackSyncClient {
             }
             pendingRollbackState = null;
         }
-        // 非 hashOnly：同 bucket 的 replacement 保留旧 active 集，等待 bundle 事务替换。
-        // 这样新 bundle 在 hash/persist/trust/reload 任一阶段失败时，旧物理目录和运行时仍可恢复。
+        // Not hashOnly: a replacement in the same bucket keeps the old active set until the bundle
+        // transaction replaces it. If the new bundle fails while hashing, persisting, trusting or
+        // reloading, the old physical directory and runtime can still be restored.
         return Outcome.accepted();
     }
 
     /* ================= bundle ================= */
 
     /**
-     * 处理 bundle（主线程）：校验体量 → 落盘 → 重扫重哈希对照 → 验签 → 信任判定 →
-     * 激活 + 重载 + pinning 签名公钥。返回 Outcome：disconnect 非空时平台应断连并展示消息。
+     * Handles a bundle on the main thread: size check, write to disk, rescan and recompute the
+     * hashes, verify signatures, decide trust, then activate, reload and pin the signing keys.
+     * Returns an Outcome; when disconnect is non-null the platform disconnects and shows the
+     * message.
      */
     public static synchronized Outcome handleBundle(NekoRuntimeRoot runtimeRoot, List<SyncedPack> packs) {
         if (clientModeOff()) {
@@ -195,7 +213,8 @@ public final class PackSyncClient {
             return outcome;
         }
         if (activeBucket == null) {
-            // 未见过哈希清单（异常顺序）：以内存侧自算哈希做落盘自检基准
+            // No hash list seen (unexpected order): fall back to hashes computed in memory as the baseline
+            // for the on-disk check
             activeAddress = "unknown";
             activeBucket = PackSyncTrustStore.bucketFor(activeAddress);
             Map<String, String> hashes = new LinkedHashMap<>();
@@ -253,15 +272,16 @@ public final class PackSyncClient {
                 }
             }
 
-            // 2) 写入同 bucket 的 staging 目录。旧 active 目录只在 runtime replacement
-            //    真正开始时移动到 rollback 目录，因此 hash/persist 失败没有破坏性副作用。
+            // 2) Write into a staging directory in the same bucket. The old active directory only moves
+            //    to the rollback directory when the runtime replacement really starts, so a hash
+            //    or persist failure has no destructive effect.
             stagingRoot = ServerPackCache.createStagingRoot(bucketDir);
             for (SyncedPack pack : packs) {
                 if (!expectedHashes.containsKey(pack.syncId())) continue;
                 ServerPackCache.stagePack(stagingRoot, pack.syncId(), pack.manifestJson(), pack.files());
             }
 
-            // 3) 从 staging 目录重扫 + 重算哈希对照预期。
+            // 3) Rescan the staging directory and recompute the hashes to compare against the expected ones.
             Map<String, ServerPackCache.CachedPack> resolved = new LinkedHashMap<>();
             for (Map.Entry<String, String> expected : expectedHashes.entrySet()) {
                 ServerPackCache.CachedPack cached = ServerPackCache.loadPack(stagingRoot, expected.getKey());
@@ -290,12 +310,13 @@ public final class PackSyncClient {
             }
 
             if (resolved.isEmpty()) {
-                // 预期清单为空却推了 bundle（全部为意外包）——只记录，不断连
+                // A bundle arrived with an empty expected list (every pack unexpected): log it, do not disconnect
                 NekoJS.LOGGER.warn("Server pack bundle contained no expected packs; nothing to activate");
                 return Outcome.accepted();
             }
 
-            // 4) 信任判定和远端 key 证据都在 physical replacement 前完成。
+            // 4) The trust decision and the remote key evidence are both settled before the physical
+            // replacement.
             if (!trustStore.isServerTrusted(activeBucket)) {
                 restoreConnectionState(previousState);
                 return Outcome.disconnect(untrustedMessage(activeAddress));
@@ -388,9 +409,10 @@ public final class PackSyncClient {
         }
     }
 
-    /* ================= 断线 ================= */
+    /* ================= Disconnect ================= */
 
-    /** 断线/离开世界：卸载 SERVER_CACHE 包（缓存文件保留）；有 active CLIENT runtime 时必须重载。 */
+    /** Disconnect or leaving the world: unloads the SERVER_CACHE packs (the cache files stay).
+     * Reloads when a CLIENT runtime is active. */
     public static synchronized Outcome handleDisconnect(NekoRuntimeRoot runtimeRoot) {
         ActiveState previousState = activeState();
         pendingRollbackState = null;
@@ -405,7 +427,7 @@ public final class PackSyncClient {
         return outcome;
     }
 
-    /* ================= 内部 ================= */
+    /* ================= Internals ================= */
 
     private static Outcome deactivateAndReload(String reason, ActiveState previousState,
                                                NekoRuntimeRoot runtimeRoot, boolean reloadRequired) {
@@ -751,7 +773,7 @@ public final class PackSyncClient {
         return ClassFilter.INSTANCE.config().packSyncAllowUnsigned();
     }
 
-    /** 哈希清单条目（平台 payload → common 的映射单位）。 */
+    /** One hash-list entry; platform payloads map to this type in common. */
     public record HashEntry(String syncId, String hash) {}
 
     private record ActiveState(String address, String bucket, Map<String, String> expectedHashes,
@@ -776,7 +798,8 @@ public final class PackSyncClient {
         }
     }
 
-    /** bundle 处理结果：disconnect 非空时平台断连并展示消息。 */
+    /** Result of handling a bundle. When disconnect is non-null the platform disconnects and shows
+     * the message. */
     public record Outcome(String disconnect) {
 
         static Outcome accepted() {

@@ -38,16 +38,18 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * 票 16 AC9 的证据链 fixture：调用者 Interface（facade 组/payload）、契约（builder 契约
- * 反射）、TS/Python declaration（probe 后端生产渲染器）与本地行为测试由<b>同一契约输入</b>
- * 派生——事件条目进 catalog（一组一条、SERVER side）、builder 条目与 runtime member/
- * fingerprint 同源，TS 与 Python 成员语义一致。
+ * Fixture for the evidence chain: the caller interface (facade group and payload), the contract (builder
+ * contract reflection), the TS and Python declarations (rendered by the production probe renderer), and the
+ * local behavior tests all derive from <b>the same contract input</b>. Event entries enter the catalog (one
+ * per group, SERVER side), builder entries share their source with runtime members and fingerprints, and the
+ * TS and Python members mean the same thing.
  *
- * <p>口径遵循票 14/15 惯例：TS/Python parity 以内存断言承载（Python 不入 golden）；
- * declaration 形状由 {@code DynamicRegistryEventsDeclarationGoldenTest} 冻结为
- * contract/golden（两份 golden：facade 事件声明 + 三个冻结类型的 Builder 声明，
- * 由生产 probe 渲染器渲染；golden 只冻结声明形状，能力结论见 baseline REPORT 能力表
- * ——公开激活仍由事务/同步 gate（票 21）裁决）。
+ * <p>TS/Python parity is checked with in-memory assertions; Python output is not part of a golden.
+ * {@code DynamicRegistryEventsDeclarationGoldenTest} freezes the declaration shape as a contract/golden: two
+ * goldens, the facade event declaration and the Builder declaration of the three frozen types, rendered by
+ * the production probe renderer. The golden freezes only the declaration shape; the capability conclusions
+ * live in the baseline REPORT table, and public activation is still decided by the transactional and
+ * synchronous gate.
  */
 class DynamicRegistryDeclarationParityTest {
 
@@ -108,11 +110,11 @@ class DynamicRegistryDeclarationParityTest {
             assertTrue(entry.members().stream().anyMatch(
                     member -> member.kind() == RegistryBuilderSurfaceEntry.MemberKind.WRITABLE_PROPERTY),
                     entry.builderName() + " 至少有一个可写属性（双形态 setter）");
-            // sugarName = 事件直达入口名（event.item / event.soundEvent / event.mobEffect）
+            // sugarName is the name of the direct event entry point: event.item, event.soundEvent, event.mobEffect.
             assertTrue(DynamicDefinitionType.byApiName(entry.sugarName()).isPresent(),
                     "sugarName 是冻结的类型直达入口名: " + entry.sugarName());
         }
-        // 条目成员与 runtime 契约同源（名字集合一致）
+        // The entry members come from the same source as the runtime contract, so the name sets match.
         RegistryBuilderSurfaceEntry item = entries.get(0);
         Set<String> declared = Set.copyOf(item.members().stream().map(RegistryBuilderSurfaceEntry.Member::name)
                 .toList());
@@ -130,7 +132,7 @@ class DynamicRegistryDeclarationParityTest {
             assertEquals(1, count("interface " + builder + " {", ts), builder + " TS 接口恰好一次");
             assertEquals(1, count("class " + builder + "(Protocol):", py), builder + " Python 类恰好一次");
         }
-        // setter 双形态与属性成员两侧一致（同一成员名出现）
+        // The two setter forms and the property members agree on both sides: the same member name appears in each.
         for (String member : List.of("maxStackSize", "rarity", "fireResistant", "fixedRange", "category",
                 "color", "mode")) {
             assertTrue(ts.contains(member), "TS 声明含成员 " + member);

@@ -34,7 +34,7 @@ import java.util.WeakHashMap;
  */
 public final class FabricClientEventBindings {
 
-    /** 与 NeoForge 侧 bindings/event/client/ClientEvents 同名（fabric 子集）。 */
+    /** Same names as bindings/event/client/ClientEvents on NeoForge (a fabric subset). */
     public static final EventGroup CLIENT_EVENTS = EventGroup.of("ClientEvents");
 
     public static final EventBusJS<ClientTickEventJS, Void> TICK_PRE =
@@ -69,7 +69,8 @@ public final class FabricClientEventBindings {
     }
 
     /**
-     * @param loadClientScripts CLIENT 脚本加载动作（客户端资源就绪后、CLIENT_STARTED 时机）
+     * @param loadClientScripts loads the CLIENT scripts; runs once the client resources are ready,
+     *                          at {@code CLIENT_STARTED}
      */
     public static void register(Runnable loadClientScripts) {
         ClientLifecycleEvents.CLIENT_STARTED.register(client -> loadClientScripts.run());
@@ -86,15 +87,16 @@ public final class FabricClientEventBindings {
         // Fabric's HUD layer API is the native 26.x equivalent of RenderGuiEvent.
         HudElementRegistry.attachElementAfter(
                 VanillaHudElements.BOSS_BAR, HUD_ELEMENT_ID, FabricClientEventBindings::dispatchHud);
-        // 与 NeoForge 侧 NekoJSClient#onClientTickPost 同：tick 上冲刷 CLIENT 侧 node timers
+        // Same as NekoJSClient#onClientTickPost on NeoForge: flush CLIENT-side node timers on the tick.
         ClientTickEvents.END_CLIENT_TICK.register(client ->
                 com.tkisor.nekojs.fabric.NekoJSFabricMod.flushClientNodeTimers());
 
         ScreenEvents.AFTER_INIT.register((client, screen, scaledWidth, scaledHeight) ->
                 installScreenPainter(ScreenEvents.afterExtract(screen)));
 
-        // 物品 tooltip（孪生 ItemEvents.TOOLTIP，按物品 id dispatch）：lines 是渲染前的
-        // 可变列表，监听器 mutate 即生效（fabric 回调不可取消整段渲染，删空列表即近似取消）
+        // Item tooltips (the twin of ItemEvents.TOOLTIP, dispatched by item id). lines is the mutable list
+        // from before rendering, so mutating it in a listener takes effect. The fabric callback cannot
+        // cancel the whole render, so emptying the list is the closest thing to cancelling.
         bridge.bindDispatched(
                 com.tkisor.nekojs.bindings.event.ItemEvents.TOOLTIP,
                 listener -> ItemTooltipCallback.EVENT.register((stack, ctx, flag, lines) ->

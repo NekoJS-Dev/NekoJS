@@ -44,24 +44,28 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * AC1（ticket 09）最高调用者测试：facade、数据类型与事件注册类是
- * {@link NormativeApiContract}（经 {@link CoreManagedApiBootstrap}）的<b>唯一</b>反射输入。
+ * Top-level caller test: the facades, data types and event registration classes are the
+ * <b>only</b> reflection input of {@link NormativeApiContract} (through
+ * {@link CoreManagedApiBootstrap}).
  *
- * <p>测试只穿过最高调用者 Seam（{@code CoreManagedApiBootstrap.load}/
- * {@code buildContract} → {@code JsApiSurfaceResolver} → {@code ApiManifestGenerator}），
- * 不测试反射器私有内部状态。核心手段是<b>双记账</b>：测试侧独立重放与
- * {@code buildContract} 完全相同的反射调用序列，再断言契约符号列表与之逐元素相等——
- * 任何绕过反射输入（手写符号、第二 JSON、隐式补充清单）进入契约都会让本测试变红。
+ * <p>The test only goes through {@code CoreManagedApiBootstrap.load} /
+ * {@code buildContract} → {@code JsApiSurfaceResolver} → {@code ApiManifestGenerator} and never
+ * inspects reflector internals. The core technique is <b>double bookkeeping</b>: the test
+ * replays exactly the same reflection call sequence as {@code buildContract} and asserts that the
+ * contract symbol list equals it element by element. Any symbol that reaches the contract while
+ * bypassing reflection (a hand-written symbol, a second JSON file, an implicit supplement list)
+ * turns the test red.
  */
 class NormativeApiContractOwnerTest {
 
     private static final URI TEST_CODE_SOURCE = URI.create("file:///test-nekojs-owner.jar");
 
     /**
-     * 测试侧维护的规范输入清单（与 {@code CoreManagedApiBootstrap.buildContract} 的
-     * 反射序列一一对应）。该清单是「契约输入集合恰好等于反射集合」断言的独立副本：
-     * 两侧任何一侧未同步（新增/删除 facade、数据类型或事件注册类）测试立即失败，
-     * 迫使变更显式经过本文件审阅。
+     * Normative input list maintained by the test, matching the reflection sequence of
+     * {@code CoreManagedApiBootstrap.buildContract} one to one. It is the independent copy used by
+     * the assertion "contract input set equals reflection set": if either side falls out of sync
+     * (a facade, data type or event registration class is added or removed), the test fails
+     * immediately, which forces the change through review of this file.
      */
     private static List<ApiSymbol> reflectExpectedInputs() {
         List<ApiSymbol> symbols = new ArrayList<>();
@@ -173,7 +177,7 @@ class NormativeApiContractOwnerTest {
         }
     }
 
-    /** 与 {@code CoreManagedApiBootstrapTest} 一致的最小测试环境。 */
+    /** Minimal test environment, identical to the one in {@code CoreManagedApiBootstrapTest}. */
 
     private static final class EmptyPlatform implements IPlatform {
         @Override public boolean isClient() { return false; }

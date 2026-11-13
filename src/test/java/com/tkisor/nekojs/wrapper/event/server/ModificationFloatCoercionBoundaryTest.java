@@ -14,27 +14,24 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Float-coercion defect regression (2026-09-29 hotfix, discovered by the ticket 36
- * maintainer trial, author task 04): the trial script wrote {@code block.friction = 0.9}
- * and {@code block.jumpFactor = 1.1}. Script numbers are doubles, and
- * {@code Value.asFloat()} refuses any double that cannot round-trip through
- * {@code float} exactly, so the property write threw a raw engine
- * {@code PolyglotException} ("Invalid or lossy primitive coercion") from
- * {@link ModificationViewSurface} — and at the DOMAIN_PLAN collection point that
- * exception failed the whole server reload for the 'item-block-modification' domain.
+ * Float-coercion defect regression: the trial script wrote {@code block.friction = 0.9} and
+ * {@code block.jumpFactor = 1.1}. Script numbers are doubles, and {@code Value.asFloat()}
+ * refuses any double that cannot round-trip through {@code float} exactly, so the property
+ * write threw a raw engine {@code PolyglotException} ("Invalid or lossy primitive coercion")
+ * from {@link ModificationViewSurface}. At the DOMAIN_PLAN collection point that exception
+ * failed the whole server reload for the 'item-block-modification' domain.
  *
- * <p>Same defect class as D6 (int saturation): a JS number meeting a narrow Java
- * primitive at a script-facing seam. Fix policy (D6 precedent): the surface's numeric
- * coercion normalizes explicitly — finite numbers narrow to {@code float} with Java
- * casting semantics, {@code int}/{@code long} require integral in-range values, and
- * every rejection is an English {@link IllegalArgumentException} carrying the member
- * name so the failing call is legible.
+ * <p>Same defect class as the int saturation case, where a JS number meets a narrow Java
+ * primitive. The fix normalizes numeric coercion explicitly: finite numbers
+ * narrow to {@code float} with Java casting semantics, {@code int}/{@code long} require
+ * integral in-range values, and every rejection is an English
+ * {@link IllegalArgumentException} carrying the member name so the failing call is legible.
  *
- * <p>Registry-free geometry (mirrors {@code ModificationSetterPropertyParityTest}):
- * a real GraalJS {@link Context} drives a stand-in view with the production
+ * <p>Registry-free geometry (mirrors {@code ModificationSetterPropertyParityTest}): a real
+ * GraalJS {@link Context} drives a stand-in view with the production
  * {@link BlockModificationJS} member shape (float friction/jumpFactor, int lightLevel)
- * through {@link ModificationViewSurface}, in both delivery forms — the wrapped
- * surface and the production {@code Consumer} + bare ProxyObject view form that
+ * through {@link ModificationViewSurface}, in both delivery forms: the wrapped surface and
+ * the production {@code Consumer} plus bare ProxyObject view form that
  * {@code BlockModificationEventJS#modify} uses.
  */
 class ModificationFloatCoercionBoundaryTest {
@@ -158,9 +155,9 @@ class ModificationFloatCoercionBoundaryTest {
 
     /**
      * Stand-in view with the production {@code BlockModificationJS} member shape
-     * (float friction/jumpFactor, int lightLevel) — the surface derives its member
-     * catalog by reflection, so no Minecraft classes are needed to exercise the exact
-     * coercion seam the trial hit.
+     * (float friction/jumpFactor, int lightLevel). The surface derives its member catalog by
+     * reflection, so no Minecraft classes are needed to exercise the exact coercion path the
+     * trial hit.
      */
     public static final class FloatPropertyView implements graal.graalvm.polyglot.proxy.ProxyObject {
 

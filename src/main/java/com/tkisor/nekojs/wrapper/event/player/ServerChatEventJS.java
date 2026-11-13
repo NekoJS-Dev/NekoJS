@@ -4,8 +4,9 @@ import lombok.Getter;
 import net.minecraft.world.entity.player.Player;
 
 /**
- * 聊天事件的中立 payload（fabric 桥首用）。成员对齐契约：{@code event.player} /
- * {@code event.username} / {@code event.message}（均为可移植字符串/实体）。
+ * Loader-neutral payload for the chat event (first used by the fabric bridge). The members
+ * are {@code event.player} / {@code event.username} / {@code event.message}, all portable
+ * strings or entities.
  */
 public class ServerChatEventJS {
 

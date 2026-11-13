@@ -1,4 +1,5 @@
-// TODO(fabric): fabric 侧还没有对应实现，整文件守卫等移植完成后去掉
+// TODO(fabric): the fabric side has no matching implementation yet; remove this whole-file guard
+// once the port is done
 //? if neoforge {
 //? if >=26 {
 package com.tkisor.nekojs.platform.compat;
@@ -10,11 +11,11 @@ import java.util.ServiceLoader;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * 版本 compat 接线回归（26.x 专属）：26-shared 的 LevelExtension 经
- * {@link McVersionCompat} 取 LIGHTNING_BOLT 类型，26.1（EntityType）与
- * 26.2（EntityTypes）各提供一份 provider。1.21.1 的 LevelExtension 是独立实现，
- * 不经过该门面，也不提供 services 条目——所以本测试只放在 26-shared 测试树
- * （仅 26.1/26.2 编译执行）。
+ * Wiring regression for the version compat layer (26.x only): the 26-shared LevelExtension gets the
+ * {@code LIGHTNING_BOLT} type through {@link McVersionCompat}, and 26.1 ({@code EntityType}) and
+ * 26.2 ({@code EntityTypes}) each provide a provider. The 1.21.1 LevelExtension is a separate
+ * implementation; it does not go through that facade and provides no services entry, so this test
+ * lives only in the 26-shared test tree and compiles and runs on 26.1/26.2 only.
  */
 class McVersionCompatWiringTest {
 

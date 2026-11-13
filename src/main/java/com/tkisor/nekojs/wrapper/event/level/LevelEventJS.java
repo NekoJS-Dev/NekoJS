@@ -4,8 +4,8 @@ import lombok.Getter;
 import net.minecraft.server.level.ServerLevel;
 
 /**
- * 维度（Level）事件的中立 payload（loaded / unloaded / tickPre / tickPost 共用；
- * 成员 {@code event.level}，与 NeoForge 原生 LevelEvent 的 getLevel() 同形）。
+ * Loader-neutral payload for level events (shared by loaded / unloaded / tickPre / tickPost;
+ * the member {@code event.level} has the same shape as NeoForge native LevelEvent's getLevel()).
  */
 public class LevelEventJS {
 

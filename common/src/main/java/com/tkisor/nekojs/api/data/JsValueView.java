@@ -3,55 +3,57 @@ package com.tkisor.nekojs.api.data;
 import java.util.Collection;
 
 /**
- * JS 值的抽象视图，屏蔽底层 GraalVM {@code Value}。
+ * Abstract view of a JS value that hides the underlying GraalVM {@code Value}.
  *
- * <p>把脚本侧值分成 null / 字符串 / 数字 / 布尔 / host object / 数组 / proxy object
- * 等类别，供 {@link JsTypeAdapter} 在不依赖引擎实现的前提下检查与读取值。
+ * <p>It sorts script-side values into null, string, number, boolean, host object, array and
+ * proxy object, so a {@link JsTypeAdapter} can inspect and read them without depending on the
+ * engine implementation.
  */
 public interface JsValueView {
-    /** 是否为 {@code null}。 */
+    /** Returns whether the value is {@code null}. */
     boolean isNull();
-    /** 是否为字符串。 */
+    /** Returns whether the value is a string. */
     boolean isString();
-    /** 是否为数字。 */
+    /** Returns whether the value is a number. */
     boolean isNumber();
-    /** 是否为布尔。 */
+    /** Returns whether the value is a boolean. */
     boolean isBoolean();
-    /** 是否为 Java host object。 */
+    /** Returns whether the value is a Java host object. */
     boolean isHostObject();
-    /** 是否为数组。 */
+    /** Returns whether the value is an array. */
     boolean isArray();
 
-    /** 是否为 JS proxy object；默认 {@code false}。 */
+    /** Returns whether the value is a JS proxy object; {@code false} by default. */
     default boolean isProxyObject() {
         return false;
     }
 
-    /** 返回底层 proxy object；非 proxy 时抛 {@link UnsupportedOperationException}。 */
+    /** Returns the underlying proxy object; throws {@link UnsupportedOperationException} when the value is not a proxy. */
     default Object asProxyObject() {
         throw new UnsupportedOperationException("value is not a proxy object");
     }
 
-    /** 返回字符串值；非字符串时抛异常。 */
+    /** Returns the string value; throws when the value is not a string. */
     String asString();
-    /** 返回整数值（截断小数）。 */
+    /** Returns the value as an int, truncating any fractional part. */
     int asInt();
-    /** 返回 double 值。 */
+    /** Returns the value as a double. */
     double asDouble();
-    /** 返回布尔值。 */
+    /** Returns the value as a boolean. */
     boolean asBoolean();
 
-    /** 返回 host object，并强制转换为指定类型；无法转换时返回 {@code null}。 */
+    /** Returns the value as a host object, cast to the given type; returns {@code null} when the
+     *  value cannot be converted. */
     <T> T asHostObject(Class<T> type);
 
-    /** 是否包含指定成员。 */
+    /** Returns whether the value has the given member. */
     boolean hasMember(String key);
-    /** 读取指定成员。 */
+    /** Returns the member with the given key. */
     JsValueView getMember(String key);
-    /** 读取指定下标元素。 */
+    /** Returns the element at the given index. */
     JsValueView getArrayElement(long index);
-    /** 数组长度。 */
+    /** Returns the number of elements in the array. */
     long getArraySize();
-    /** 所有成员名。 */
+    /** Returns the names of all members. */
     Collection<String> getMemberKeys();
 }

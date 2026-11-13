@@ -9,17 +9,18 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * Generation-scoped, inert candidate plan for villager trade declarations (ticket 22 AC1/AC4).
+ * Generation-scoped candidate plan for villager trade declarations. It holds data only and never
+ * touches a live registry.
  *
- * <p>Collection only accumulates declarations (and, for the reload sub-event, the trade sets a
- * script marked as no longer managed) — the plan holds pure JVM data and cannot mutate a live
- * registry. It joins the same joint preflight/publish boundary as the global/shared write set
- * ({@code CandidateStatePlan}), so a failed candidate publishes nothing and the old active
- * trades keep serving.
+ * <p>Collection only accumulates declarations, and for the reload sub-event also the trade sets a
+ * script marked as no longer managed. The plan holds pure JVM data and cannot mutate a live
+ * registry. It joins the same joint preflight/publish path as the global/shared write set
+ * ({@code CandidateStatePlan}), so a failed candidate publishes nothing and the old active trades
+ * keep serving.
  *
  * <p>Idempotence inside one batch: declarations are keyed by
- * {@link VillagerTradeDeclaration#key()}, so the same declaration twice in one batch (same
- * script or not) becomes one listing.
+ * {@link VillagerTradeDeclaration#key()}, so the same declaration twice in one batch, from the
+ * same script or not, becomes one listing.
  */
 public final class VillagerTradeCandidatePlan implements CandidateStatePlan {
 

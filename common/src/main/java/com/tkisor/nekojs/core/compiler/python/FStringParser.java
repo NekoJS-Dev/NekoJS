@@ -17,16 +17,18 @@ import java.util.List;
  */
 final class FStringParser {
 
-    /** 匹配 "python (parse|lex) error at line L, col C: " 前缀，用于换算相对坐标。 */
+    /** Matches the "python (parse|lex) error at line L, col C: " prefix so the relative coordinates
+     * can be converted. */
     private static final java.util.regex.Pattern ERROR_POSITION =
             java.util.regex.Pattern.compile("^python (?:parse|lex) error at line (\\d+), col (\\d+): ");
 
     private FStringParser() {}
 
     /**
-     * @param baseLine FSTRING 记号所在源码行（1-based）
-     * @param baseCol  f-string 首个内容字符的源码列（1-based；记号列指向引号，单引号串为 col+1，
-     *                 三引号串差 2 列——可接受，行号总是准确的）
+     * @param baseLine source line of the FSTRING token (1-based)
+     * @param baseCol  source column of the first content character of the f-string (1-based; the token
+     *                 column points at the quote, so a single-quoted string is col+1 and a triple-quoted
+     *                 one is off by 2 columns, which is acceptable because the line number is always exact)
      */
     static PythonNode.FString parse(String raw, int baseLine, int baseCol) {
         List<PythonNode> parts = new ArrayList<>();
@@ -99,11 +101,12 @@ final class FStringParser {
     }
 
     /**
-     * 把插值表达式重新词法+语法分析。解析错误原本以片段内相对坐标报告（f"{1 +}" 报 col 4），
-     * 这里用 FSTRING 记号的行/列加上片段内偏移换算回源码坐标（首个物理行的错误按
-     * baseCol + offset + 相对列 修正；跨行的错误行号累加、列号保持相对值）。
+     * Re-lexes and re-parses an interpolation expression. Parse errors are reported in fragment-relative
+     * coordinates (f"{1 +}" reports col 4), so the FSTRING token line/column plus the in-fragment offset
+     * map back to source coordinates: on the first physical line shift by baseCol + offset + relative
+     * column, while across lines the line number accumulates and the column stays relative.
      *
-     * @param offset 片段首字符在 f-string 原文内的 0-based 下标
+     * @param offset 0-based index of the fragment's first character in the f-string source
      */
     private static PythonNode parseInterpolation(String exprText, int baseLine, int baseCol, int offset) {
         if (exprText.isEmpty()) {

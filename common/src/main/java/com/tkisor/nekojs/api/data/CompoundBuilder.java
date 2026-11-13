@@ -3,13 +3,15 @@ package com.tkisor.nekojs.api.data;
 import java.util.List;
 
 /**
- * NBT 复合标签构建器接口（链式，产出不可变 {@link NbtValue.CompoundValue}）。
+ * Interface for building an NBT compound tag. The methods chain and produce an immutable
+ * {@link NbtValue.CompoundValue}.
  *
- * <p>定义在 common-api 以便 {@code NbtFacade.compound()} 能返回有类型的接口，
- * 而非裸 {@code Object}（避免类型泄漏）。实现 {@link com.tkisor.nekojs.wrapper.nbt.CompoundTagBuilderJS}
- * 在 common 层。
+ * <p>Declared in common-api so {@code NbtFacade.compound()} can return a typed interface
+ * instead of a bare {@code Object}, which avoids leaking the type. The implementation
+ * {@link com.tkisor.nekojs.wrapper.nbt.CompoundTagBuilderJS} lives in the common layer.
  *
- * <p>脚本通过 {@code NBT.compound()} 创建，用 {@code put/putByte/.../build()} 累积条目。
+ * <p>Scripts create the builder with {@code NBT.compound()} and add entries with
+ * {@code put/putByte/.../build()}.
  */
 public interface CompoundBuilder {
 
@@ -33,21 +35,21 @@ public interface CompoundBuilder {
 
     CompoundBuilder putIntArray(String key, int... values);
 
-    /** 放入嵌套复合标签（由另一个 builder 构建）。 */
+    /** Puts a nested compound tag built by another builder. */
     CompoundBuilder putCompound(String key, CompoundBuilder builder);
 
-    /** 放入列表（元素为已构建的 {@link NbtValue}）。 */
+    /** Puts a list whose elements are already built {@link NbtValue} instances. */
     CompoundBuilder putList(String key, List<NbtValue> values);
 
-    /** 放入列表（可变参数）。 */
+    /** Puts a list from varargs. */
     CompoundBuilder putList(String key, NbtValue... values);
 
-    /** 是否包含指定 key。 */
+    /** Returns whether the given key has been added. */
     boolean contains(String key);
 
-    /** 已收集的条目数。 */
+    /** Returns the number of entries collected so far. */
     int size();
 
-    /** 构建为不可变 {@link NbtValue.CompoundValue}。 */
+    /** Builds the immutable {@link NbtValue.CompoundValue}. */
     NbtValue.CompoundValue build();
 }

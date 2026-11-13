@@ -6,26 +6,27 @@ import com.tkisor.nekojs.api.surface.ApiTypeRef;
 import java.lang.reflect.Type;
 
 /**
- * 类型槽 IR：同时持有原始 Java {@link Type} 与语言中性的 {@link ApiTypeRef}。
+ * A type slot: holds the original Java {@link Type} and the language-neutral {@link ApiTypeRef}.
  *
- * <p>双轨设计的关键意义：
+ * <p>Why both:
  * <ul>
- *   <li><b>TS 默认渲染</b>（未编辑）：用 {@code TypeConverter.toTypeScript(sourceType)}，
- *       与旧 {@code ClassDeclGenerator} 逐字一致 —— TS 产物零回归风险。</li>
- *   <li><b>Python 渲染 / modify_type 编辑后</b>：用 {@link #ref}（{@link ApiTypeRef}），
- *       语言中性、可被事件改写。</li>
+ *   <li><b>Default TS rendering</b> (slot not edited): uses {@code TypeConverter.toTypeScript(sourceType)},
+ *       which produces the same text as {@code ClassDeclGenerator}, so TS output does not change.</li>
+ *   <li><b>Python rendering, and after a modify_type edit</b>: uses {@link #ref} ({@link ApiTypeRef}),
+ *       which is language-neutral and can be changed by the event.</li>
  * </ul>
- * 当 {@link #overridden} 为 true（modify_type 改写过本槽），renderer 渲染 {@link #ref}；否则渲染 {@link #sourceType}。
- * 合成成员（modify_type addMethod 等）的 {@code sourceType} 为 null，必走 {@code ref}。
+ * When {@link #overridden} is true (modify_type changed this slot), the renderer renders {@link #ref};
+ * otherwise it renders {@link #sourceType}. A synthetic member (modify_type addMethod and friends)
+ * has a null {@code sourceType} and must go through {@code ref}.
  */
 public final class TypeSlot {
-    public final Type sourceType;   // 原始 Java 类型；合成时为 null
-    public ApiTypeRef ref;          // 语言中性类型（始终非 null）
+    public final Type sourceType;   // Original Java type; null for synthetic members
+    public ApiTypeRef ref;          // Language-neutral type, never null
     /** Explicit input metadata for the TypeScript backend. */
     public AdapterInputShape inputShape;
     /** Explicit TypeScript output expression; other backends retain the Java type. */
     public String outputTypeScript;
-    public boolean overridden;      // modify_type 改写过 ref
+    public boolean overridden;      // modify_type has changed ref
 
     public TypeSlot(Type sourceType, ApiTypeRef ref) {
         this.sourceType = sourceType;

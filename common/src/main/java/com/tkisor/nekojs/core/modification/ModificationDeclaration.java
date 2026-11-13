@@ -6,26 +6,28 @@ import java.util.Map;
 import java.util.Objects;
 
 /**
- * 一条 Item/Block 属性修改声明（票 39）：candidate 收集期由脚本回调产出、经平台 Adapter
- * 规范化后的<b>纯 JVM</b> 数据——目标由领域种类 + 归一化 id 表达，属性值只允许
- * String/Number/Boolean/null/嵌套 Map（key 为 String、值递归同约束），不携带任何
- * MC/loader 类型。MC 应用（组件/属性写入）只发生在 commit 点的平台/版本 Adapter。
+ * Single item or block property modification declaration. Produced by script callbacks during
+ * candidate collection and normalized by platform adapters into <b>pure JVM</b> data. Targets are
+ * identified by domain kind and normalized ID. Property values only permit String, Number, Boolean,
+ * null, and nested Maps (with String keys and recursively matching values), carrying no Minecraft
+ * or loader types. Applying modifications to Minecraft components or attributes occurs only at commit
+ * through platform/version adapters.
  *
- * <p>同一计划内声明的<b>顺序就是重放顺序</b>：与旧行为 characterization 一致，同目标
- * 的后一声明整体替换前一声明（每次从基线叠加，不按属性合并）——不引入同 key 拒绝，
- * 也不新增未裁定的合并政策（工单 AC6）。
+ * <p>Declarations replay in the order they appear in the plan: a later declaration for the same target
+ * completely replaces earlier declarations (applying over the baseline without property merging),
+ * without rejecting duplicate keys.
  *
- * <p>不可变；{@link #properties()} 返回只读视图。
+ * <p>Immutable; {@link #properties()} returns an unmodifiable view.
  */
 public final class ModificationDeclaration {
 
-    /** 领域种类（平台 Adapter 约定的工作名）：{@code "item"} / {@code "block"}。 */
+    /** Domain kind agreed upon with platform adapters: {@code "item"} or {@code "block"}. */
     private final String kind;
-    /** 归一化目标 id（{@code namespace:path}，缺省命名空间已补全）。 */
+    /** Normalized target ID ({@code namespace:path}, with default namespace filled in). */
     private final String targetId;
-    /** 规范化属性值（写入序保持；同名属性后写覆盖前写）。 */
+    /** Normalized property values (preserves insertion order; later writes overwrite earlier ones for the same property). */
     private final Map<String, Object> properties;
-    /** 声明来源脚本 id（失败归因/诊断用；可为 null）。 */
+    /** ID of the script where the declaration originated (used for diagnostics and failure attribution; can be null). */
     private final String scriptId;
 
     public ModificationDeclaration(String kind, String targetId, Map<String, Object> properties, String scriptId) {
@@ -57,7 +59,7 @@ public final class ModificationDeclaration {
         return scriptId;
     }
 
-    /** 值只允许纯 JVM 形态（Adapter 规范化的产物）；MC 对象在 common 侧结构性拒绝。 */
+    /** Restricts values to plain JVM types produced by adapter normalization; rejects Minecraft objects in common. */
     private static Object requirePlainValue(Object value, String name) {
         if (value == null || value instanceof String || value instanceof Boolean
                 || value instanceof Integer || value instanceof Long

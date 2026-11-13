@@ -52,18 +52,23 @@ public interface JSTypeAdapterRegistry {
     }
 
     /**
-     * alias 注册：目标类型 X 复用来源类型 Y 的适配器（输入识别、输入形状、优先级全部透传），
-     * 值先转成 Y 再经 {@code converter} 变成 X。
+     * Registers an alias: target type X reuses the adapter of source type Y, including its
+     * input recognition, input shapes and precedence. The value is converted to Y first and
+     * then passed through {@code converter} to become X.
      *
-     * <p>来源适配器在首次转换时惰性解析，注册顺序无关。alias 链允许，环不允许。
+     * <p>The source adapter is resolved lazily on the first conversion, so registration order
+     * does not matter. Alias chains are allowed; cycles are not.
      *
-     * @throws IllegalArgumentException 当 {@code target == from}
+     * @throws IllegalArgumentException when {@code target == from}
      */
     default <F, T> void registerAlias(Class<T> target, Class<F> from, Function<F, T> converter) {
         register(new AliasJSTypeAdapter<>(target, from, converter, null, this));
     }
 
-    /** 同 {@link #registerAlias(Class, Class, Function)}，但显式指定优先级（默认沿用来源适配器）。 */
+    /**
+     * Same as {@link #registerAlias(Class, Class, Function)}, but sets the precedence
+     * explicitly. Without it, the alias inherits the precedence of the source adapter.
+     */
     default <F, T> void registerAlias(Class<T> target, Class<F> from, Function<F, T> converter,
                                       ConversionPrecedence precedence) {
         register(new AliasJSTypeAdapter<>(target, from, converter, precedence, this));

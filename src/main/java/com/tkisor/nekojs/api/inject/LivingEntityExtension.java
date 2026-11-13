@@ -75,8 +75,10 @@ public interface LivingEntityExtension extends LivingEntitySpec {
     }
 
     @Override
-    // 26.1（1.21.2）的 hurt(DamageSource,float) 已废弃（引入 hurtServer）；26.2 恢复为 final 非废弃。
-    // 同一份共享代码需跨版本编译；@SuppressWarnings 两时代皆无害（1.21.1 的 hurt 未废弃），统一不设守卫
+    // hurt(DamageSource, float) is deprecated in 26.1 (1.21.2), which added hurtServer; it is final and
+    // non-deprecated again in 26.2. The same shared code compiles against both versions, and
+    // @SuppressWarnings("deprecation") is harmless on each (hurt is not deprecated in 1.21.1), so
+    // no version guard is used.
     @SuppressWarnings("deprecation")
     default void neko$damage(float amount) {
         self().hurt(self().damageSources().generic(), amount);

@@ -1,5 +1,6 @@
-// 1.21.1 实现，与版本树 src/ 下的同名 26.x 文件成对。内容等于那份文件在本节点求值后的形态。
-// 26.x 侧行为变更时须同步本文件。
+// 1.21.1 implementation, paired with the same-named 26.x file under the version tree's src/. The content
+// is what that file becomes once evaluated for this node. Keep this file in sync when the 26.x behavior
+// changes.
 package com.tkisor.nekojs.listener;
 
 import com.google.gson.JsonElement;
@@ -35,22 +36,25 @@ import net.neoforged.neoforge.event.AddReloadListenerEvent;
 public class ServerEventListener {
     private static volatile boolean schemaAutoDiscovered;
 
-    /** loader entry 装配完成后注入的窄生命周期 handle（bind）；server 事件触发时必已就绪。 */
+    /** Narrow lifecycle handle injected by bind() once the loader entry is assembled; always set before
+     * any server event fires. */
     private static volatile NekoRuntimeRoot runtimeRoot;
 
-    /** 由 {@code NekoJSMod} 在 root 装配后调用；早于任何 server/world 事件。 */
+    /** Called by {@code NekoJSMod} after the root is assembled; always before any server or world
+     * event. */
     public static void bind(NekoRuntimeRoot root) {
         runtimeRoot = root;
     }
 
     static {
-        // loot table 加载（reload 流程）时应用脚本在 lootTables 事件中的修改。
+        // Applies script changes from the lootTables event while loot tables load (part of the reload flow).
         NeoForge.EVENT_BUS.addListener(LootTableEventJS::onLootTableLoad);
     }
 
     /**
-     * 开服自动 probe（probe.toml {@code runAtStartup = true} 时启用，默认关闭）：
-     * 服务器完全启动后跑一次默认 TS backend，结果摘要进日志；失败不影响开服。
+     * Startup probe, enabled by {@code runAtStartup = true} in probe.toml (off by default): runs the
+     * default TS backend once the server has fully started and writes a summary of the results to the
+     * log. A failure does not affect server startup.
      */
     @SubscribeEvent
     public static void onServerStarted(ServerStartedEvent event) {
@@ -76,7 +80,8 @@ public class ServerEventListener {
         }
     }
 
-    /** 修改域 owner（root 授权 domain collector；未注册返回 null，启动收集点跳过）。 */
+    /** Modification domain owner from the domain collector the root provides; returns {@code null} when
+     * no owner is registered, and the startup collection step then skips it. */
     private static com.tkisor.nekojs.wrapper.event.server.ModificationDomainOwner modificationDomain() {
         com.tkisor.nekojs.core.lifecycle.CandidateDomainCollector collector =
                 runtimeRoot == null ? null
@@ -97,8 +102,9 @@ public class ServerEventListener {
     }
 
     /**
-     * 内容签名未变化时零开销；变化时在服务器线程上 repository.reload + setSelected +
-     * server.reloadResources，随后把 nekojs 包 id 从 worldData 配置中剔除（不落盘）。
+     * Costs nothing while the content signature is unchanged. When it changed, runs repository.reload,
+     * setSelected and server.reloadResources on the server thread, then removes the nekojs pack id
+     * from the worldData config (without writing it to disk).
      */
     private static void mountScriptPackData(net.minecraft.server.MinecraftServer server) {
         try {
@@ -114,9 +120,10 @@ public class ServerEventListener {
     }
 
     /**
-     * 激活存档侧世界脚本包（{@code <world>/nekojs_packs/}）。常规 SERVER reload 发生在
-     * 资源装载期（{@link #onServerResourceReload}），早于本事件，因此有世界包被激活时
-     * 补一次完整 SERVER reload 把包内脚本纳入；无世界包则零开销。
+     * Activates the world script packs stored in the save ({@code <world>/nekojs_packs/}). The regular
+     * SERVER reload runs during resource loading ({@link #onServerResourceReload}), before this event,
+     * so a full SERVER reload runs here to pick up the pack scripts when any world pack was activated.
+     * With no world packs it costs nothing.
      */
     private static void activateWorldPacks(net.minecraft.server.MinecraftServer server) {
         var worldPacks = com.tkisor.nekojs.core.pack.ScriptPackRegistry.get()
@@ -131,14 +138,16 @@ public class ServerEventListener {
     }
 
     /**
-     * 卸载世界脚本包：按包前缀反注册 SERVER 监听器与 timer；单人环境下 CLIENT 侧同样
-     * 清理（客户端脚本会在下次进世界时整体重载，这里只清内存中的监听器，避免返回标题
-     * 界面后世界包回调仍在菜单 tick 上触发）。
+     * Unloads the world script packs: unregisters SERVER listeners and timers by pack prefix. In
+     * single-player the CLIENT side is cleaned up as well; client scripts reload as a whole on the next
+     * world join, so clearing only the in-memory listeners here stops world pack callbacks from firing
+     * on menu ticks after the player returns to the title screen.
      */
     @SubscribeEvent
     public static void onServerStopped(net.neoforged.neoforge.event.server.ServerStoppedEvent event) {
         var removed = com.tkisor.nekojs.core.pack.ScriptPackRegistry.get().deactivateWorldPacks();
-        // 脚本包 datapack 挂载与村民交易快照随服务器实例一起失效；重置以便下次挂载。
+        // The script pack datapack mount and the villager trade snapshot die with the server instance;
+        // reset them so the next mount starts clean.
         ScriptPackDataManager.reset();
 
         com.tkisor.nekojs.wrapper.event.server.ModificationDomainOwner modificationDomain = modificationDomain();
@@ -175,7 +184,7 @@ public class ServerEventListener {
         } catch (Exception e) {
             com.tkisor.nekojs.script.ScriptTypeEnv.logger(ScriptType.SERVER).error("Script overload failed: ", e);
         }
-        // loot table JSON 管理（reload 流程先于 loot 解析，修改当次 reload 生效）
+        // Loot table JSON handling: the reload flow runs before loot parsing, so a change applies to that reload.
         ServerEvents.LOOT_TABLES.post(new LootTableEventJS());
         postGenerateData();
     }
@@ -188,12 +197,14 @@ public class ServerEventListener {
     }
 
     /**
-     * 数据生成事件：脚本与插件把 datapack JSON 写入 {@code <gameDir>/nekojs/data}（磁盘
-     * datapack，懒读保证 reload 时序正确）。目前支持单一 {@code after_mods} 阶段。
+     * Data generation event: scripts and plugins write datapack JSON to {@code <gameDir>/nekojs/data},
+     * a datapack on disk read lazily so the reload order stays correct. Only one stage is supported
+     * today, {@code after_mods}.
      *
-     * <p>ticket 23 聚合：插件 {@code generateData} hook 与脚本 {@code ServerEvents.generateData}
-     * 经 {@link PluginGenerationHooks#runGenerateData} 走同一条候选收集→校验→原子发布路径
-     * （不再各自直写 active 根）；发布失败保留旧数据，详见 {@code DataGenerationBatch}。
+     * <p>The plugin {@code generateData} hook and the script {@code ServerEvents.generateData} event
+     * both go through {@link PluginGenerationHooks#runGenerateData}: candidates are collected,
+     * validated and published atomically, so neither writes the active root directly. A failed publish
+     * keeps the previous data; see {@code DataGenerationBatch}.
      */
     private static void postGenerateData() {
         try {

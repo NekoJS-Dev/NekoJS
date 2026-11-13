@@ -16,14 +16,14 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * 票 16 AC4 的 runtime contract test（真实 GraalJS）：显式 setter 调用
- * （{@code b.setMaxStackSize(16)}）与 JavaBean-style property 写入（{@code b.maxStackSize = 16}）
- * 经 {@link DynamicBuilderSurface} 转发到<b>同一个</b> setter {@code Method}——同一条校验、
- * 规范化与 definition fingerprint 路径。
+ * Runtime behavior test on real GraalJS: an explicit setter call ({@code b.setMaxStackSize(16)}) and
+ * a JavaBean-style property write ({@code b.maxStackSize = 16}) are forwarded by
+ * {@link DynamicBuilderSurface} to the <b>same</b> setter {@code Method}, so both take one
+ * validation, normalization and definition fingerprint path.
  *
- * <p>Graal 宿主对象 property 写不落 setter 是票 15 characterization 证伪过的事实
- * （spec 08 预授权 ProxyObject seam）；本票不接受「GraalMC 临时 property 实验」作为
- * 集成通过证据，行为由本测试在 GraalJS 运行时固定（GraalJS 坐标升级时重跑）。
+ * <p>A property write on a Graal host object does not reach the setter, as earlier characterization
+ * runs proved; a temporary property experiment on GraalMC cannot count as integration evidence, so
+ * this test pins the behavior in the GraalJS runtime itself. Rerun it after a GraalJS upgrade.
  */
 class DynamicBuilderSurfaceParityTest {
 
@@ -32,7 +32,7 @@ class DynamicBuilderSurfaceParityTest {
         TestPlatformInit.ensureInitialized();
     }
 
-    /** 在真实 GraalJS 里对 item surface 执行一段脚本，返回规范化读数。 */
+    /** Runs a script against the item surface in real GraalJS and returns the normalized readings. */
     private static List<String> readingsOf(String script) {
         DynamicItemBuilder builder = new DynamicItemBuilder();
         try (Context context = Context.newBuilder("js").allowAllAccess(true).build()) {
@@ -47,7 +47,7 @@ class DynamicBuilderSurfaceParityTest {
         return DynamicBuilderContract.of(DynamicItemBuilder.class).normalizedPropertyReadings(builder);
     }
 
-    /** 在真实 GraalJS 里对 item builder 配置后取 fingerprint（同一 id）。 */
+    /** Runs a script against the item builder in real GraalJS and returns the fingerprint for the given id. */
     private static String itemFingerprint(String id, String script) {
         DynamicItemBuilder builder = new DynamicItemBuilder();
         try (Context context = Context.newBuilder("js").allowAllAccess(true).build()) {
@@ -62,7 +62,7 @@ class DynamicBuilderSurfaceParityTest {
         return DynamicDefinition.of(DynamicDefinitionType.ITEM, id, builder).fingerprint();
     }
 
-    /** 在真实 GraalJS 里执行一段预期抛错的脚本，返回异常消息。 */
+    /** Runs a script that should throw in real GraalJS and returns the exception message. */
     private static String errorOf(String script) {
         try (Context context = Context.newBuilder("js").allowAllAccess(true).build()) {
             ScriptContextRegistry.bind(context, ScriptType.SERVER);
@@ -93,7 +93,7 @@ class DynamicBuilderSurfaceParityTest {
                 b.setMaxStackSize(16).setRarity('epic').setFireResistant(true).setMode('reloadable');
                 """);
         assertEquals(viaSetter, viaProperty, "两种写法必须产生同一份规范化读数");
-        // 大小写与默认值规范化：'EPIC' ≡ 'epic'（同一 setter 内归一）
+        // Case and default normalization: 'EPIC' and 'epic' are the same, normalized inside the setter.
         assertEquals(List.of(
                 "fireResistant=true",
                 "maxStackSize=16",
@@ -112,7 +112,8 @@ class DynamicBuilderSurfaceParityTest {
 
     @Test
     void fingerprintIsStableAcrossInstancesAndReloadsAndChangesWithAnyField() {
-        // AC5：相同定义（新 builder 实例）重复收集 → 同 fingerprint；任一字段变化 → 可识别
+        // The same definition built twice from new builder instances gives the same fingerprint; any field
+        // change shows up there.
         String first = itemFingerprint("mymod:ruby", "b.setMaxStackSize(16); b.setRarity('rare');");
         String repeat = itemFingerprint("mymod:ruby", "b.setMaxStackSize(16); b.setRarity('rare');");
         assertEquals(first, repeat, "相同定义跨实例/跨轮次得到相同 fingerprint（不依赖对象身份）");
@@ -179,7 +180,7 @@ class DynamicBuilderSurfaceParityTest {
                         """);
                 assertNull(builder.getFixedRange(), "b.fixedRange = null 与从未写入是同一规范化状态（抑制）");
 
-                // 显式 setter 形态同一条路径
+                // The explicit setter form takes the same path.
                 context.eval("js", "s.setFixedRange(32)");
                 assertEquals(32f, builder.getFixedRange());
             } finally {
@@ -190,7 +191,8 @@ class DynamicBuilderSurfaceParityTest {
 
     @Test
     void builderSurfaceDoesNotWrapStartupDrainBuilders() {
-        // 结构保证（AC7 前置）：动态 builder 不实现启动期 RegistryObjectBuilder（不进 drain）
+        // Structural guarantee: a dynamic builder does not implement the startup RegistryObjectBuilder, so it
+        // never enters the drain.
         for (DynamicDefinitionBuilder builder : List.of(
                 new DynamicItemBuilder(), new DynamicSoundEventBuilder(), new DynamicMobEffectBuilder())) {
             Class<?> superclass = builder.getClass().getSuperclass();

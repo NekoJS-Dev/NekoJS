@@ -105,11 +105,11 @@ final class DynamicRegistrySet<T> {
     }
 
     /**
-     * Rollback surgery (ticket 21 activation adapter): unregisters the given ids —
-     * the ones a degraded activation attempt newly registered — with full index
-     * surgery and drops their claims. Callers must only pass ids that came through
-     * {@link #ensureRegistered}; the mode-based filter of {@link #clearWorldRegistrations}
-     * does not apply (rollback is per activation attempt, not per mode).
+     * Rolls back a failed activation attempt: unregisters the given ids, the ones that attempt
+     * newly registered, with full index surgery, and drops their claims. Callers must pass only
+     * ids that came through {@link #ensureRegistered}; the mode-based filter of
+     * {@link #clearWorldRegistrations} does not apply, because rollback works per activation
+     * attempt, not per mode.
      */
     void unregisterTrusted(List<Identifier> ids) {
         if (ids.isEmpty()) return;

@@ -1,12 +1,12 @@
 package com.tkisor.nekojs.core.villager;
 
 /**
- * Adapter-level unavailability of villager trade mutation (ticket 22 AC9).
+ * Reports that villager trade mutation is unavailable at the adapter level.
  *
- * <p>Two concrete cases: the node has no implementation at all (Fabric today) and the node has
- * one but cannot commit right now (the reloadable trade registries are not ready at this point
- * of the server lifecycle). Both must surface as an explicit unavailable/blocked result — never
- * as a silent no-op or a fake success.
+ * <p>Two concrete cases: the node has no implementation at all (Fabric today), or the node has
+ * one but cannot commit right now because the reloadable trade registries are not ready at this
+ * point of the server lifecycle. Both are reported as an explicit unavailable/blocked result,
+ * never as a silent no-op or a fake success.
  */
 public final class VillagerTradeUnavailableException extends IllegalStateException {
 

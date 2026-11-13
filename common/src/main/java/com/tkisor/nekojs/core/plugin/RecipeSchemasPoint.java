@@ -11,12 +11,13 @@ import java.util.Map;
 import java.util.Objects;
 
 /**
- * 内置扩展点 {@code nekojs:recipe_schemas}（ADR-0001 自包含 Point 文件）。
- * merge 策略 {@link MergePolicy#firstWin}：同 {@code (namespace, type)} 首胜 + warn。
+ * Built-in extension point {@code nekojs:recipe_schemas}. The merge policy is
+ * {@link MergePolicy#firstWin}: the first entry for a {@code (namespace, type)} pair wins and
+ * the later entry logs a warning.
  */
 public final class RecipeSchemasPoint {
 
-    /** 扩展点 id（observable 契约）。 */
+    /** Extension point id. */
     public static final String ID = "nekojs:recipe_schemas";
 
     private static final Logger LOGGER = LoggerFactory.getLogger("nekojs.bootstrap");
@@ -25,15 +26,17 @@ public final class RecipeSchemasPoint {
     private RecipeSchemasPoint() {
     }
 
-    /** 显式声明形态（与直接覆写 NekoJSPlugin 对应钩子等价收集）：插件被 {@code nekojs:recipe_schemas} 扩展点收集。 */
+    /** Explicit declaration form: the plugin is collected by the {@code nekojs:recipe_schemas} extension point, the
+     * same result as overriding the matching NekoJSPlugin hook directly. */
     public interface Contributor extends NekoJSPlugin {
 
-        /** 注册配方 schema 覆盖（同 {@code (namespace, type)} 首胜）。 */
+        /** Registers a recipe schema override. The first entry for a {@code (namespace, type)} pair wins. */
         default void registerRecipeSchemas(RecipeSchemaRegister registry) {
         }
     }
 
-    /** 累积器：同 {@code (namespace, type)} 首胜并告警；snapshot 后密封。 */
+    /** Accumulator: the first entry for a {@code (namespace, type)} pair wins and a warning is logged. It
+     * is sealed after snapshot. */
     static final class Bucket implements RecipeSchemaRegister, Sealable {
         private final Map<String, Map<String, RecipeTypeDefinition>> overrides = new LinkedHashMap<>();
         private boolean sealed;
@@ -70,7 +73,7 @@ public final class RecipeSchemasPoint {
         }
     }
 
-    /** 扩展点定义（由 {@link NekoBuiltinPointsPlugin} 清单注册）。 */
+    /** The extension point definition, registered from the {@link NekoBuiltinPointsPlugin} list. */
     public static final NekoPluginExtensionPoint<NekoJSPlugin, Bucket, Map<String, Map<String, RecipeTypeDefinition>>> POINT =
             NekoPluginExtensionPoint.<NekoJSPlugin, Bucket, Map<String, Map<String, RecipeTypeDefinition>>>builder(ID, NekoJSPlugin.class)
                     .merge(POLICY)

@@ -8,23 +8,29 @@ import java.util.Locale;
 import java.util.Objects;
 
 /**
- * 错误面板的纯数据快照模型。
+ * Pure data snapshot model for the error panel.
  *
- * <p>模型只负责“当前快照 + 搜索 + 稳定 ID 选中”这三个概念；列表滚动、展开和渲染状态由 UI 自行持有。
- * 输入中的畸形 DTO 会被跳过，合法 DTO 的字符串字段（特别是 fullDetails）原样保留，不做展示层改写。</p>
+ * <p>The model covers three concepts only: the current snapshot, the search, and selection by
+ * stable id; list scrolling, expansion and rendering state belong to the UI. Malformed DTOs in
+ * the input are skipped, and the string fields of valid DTOs (fullDetails in particular) are kept
+ * as they are, never rewritten for display.</p>
  */
 public final class ErrorDashboardModel {
     private volatile Snapshot snapshot = Snapshot.EMPTY;
 
     public ErrorDashboardModel() {}
 
-    /** 替换完整错误快照；同一 ID 的选中会转移到新 DTO，选中被过滤或消失时清空。 */
+    /** Replaces the full error snapshot; selection follows the same id to the new DTO and is cleared
+     * when that error is filtered out or gone. */
     public void update(List<ErrorSummaryDTO> errors) {
         List<ErrorSummaryDTO> safeErrors = safeErrors(errors);
         this.snapshot = this.snapshot.withErrors(safeErrors);
     }
 
-    /** 设置搜索词；null 与空白都表示不过滤，匹配使用 {@link Locale#ROOT} 的大小写规则。 */
+    /**
+     * Sets the search term. null and blank both mean no filtering; matching uses
+     * {@link Locale#ROOT} case rules.
+     */
     public void setSearch(String search) {
         this.snapshot = this.snapshot.withSearch(search == null ? "" : search);
     }
@@ -33,7 +39,10 @@ public final class ErrorDashboardModel {
         return snapshot.search();
     }
 
-    /** 选中一个当前可见的稳定 ID。null 清空选中；未知或被过滤的 ID 不改变现有选中。 */
+    /**
+     * Selects a currently visible error by its stable id. null clears the selection; an
+     * unknown or filtered-out id leaves the current selection unchanged.
+     */
     public void select(String id) {
         this.snapshot = this.snapshot.select(id);
     }
@@ -42,17 +51,17 @@ public final class ErrorDashboardModel {
         return snapshot.visibleErrors();
     }
 
-    /** 返回当前选中的 DTO；没有可见选中时返回 {@code null}。 */
+    /** Returns the selected DTO, or {@code null} when no visible error is selected. */
     public ErrorSummaryDTO selectedError() {
         return snapshot.selectedError();
     }
 
-    /** 完整快照中的错误条数；不受搜索过滤影响。 */
+    /** Number of errors in the full snapshot; search filtering does not affect it. */
     public int totalErrors() {
         return snapshot.errors().size();
     }
 
-    /** 完整快照的总出现次数；使用 long 累加避免多个 int 计数相加溢出。 */
+    /** Total occurrences in the full snapshot. Summed as long so many int counts cannot overflow. */
     public long totalOccurrences() {
         long total = 0L;
         for (ErrorSummaryDTO error : snapshot.errors()) {
@@ -67,7 +76,8 @@ public final class ErrorDashboardModel {
         }
         List<ErrorSummaryDTO> result = new ArrayList<>(errors.size());
         for (ErrorSummaryDTO error : errors) {
-            // id 是面板的稳定选中键；其余字符串为空仍可显示，但 null 会让渲染层产生隐式契约。
+            // id is the panel's stable selection key. The other strings may be empty and still render, but
+            // a null would create an implicit requirement for the renderer.
             if (error != null && error.id() != null && !error.id().isBlank()
                     && error.path() != null && error.message() != null && error.fullDetails() != null) {
                 result.add(error);
@@ -90,7 +100,10 @@ public final class ErrorDashboardModel {
         return value.toLowerCase(Locale.ROOT).contains(normalizedQuery);
     }
 
-    /** 不可变视图状态；volatile 替换让并发的读者始终看到某一代完整快照。 */
+    /**
+     * Immutable view state. The field is volatile and replaced as a whole, so concurrent readers
+     * always see one complete snapshot generation.
+     */
     private record Snapshot(
             List<ErrorSummaryDTO> errors,
             List<ErrorSummaryDTO> visibleErrors,

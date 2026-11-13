@@ -32,8 +32,8 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * 票据 11 AC6：准备失败、resolve/link 失败、缓存失败、执行失败可区分 owner 与阶段；
- * 错误不延迟成无来源的 Graal 异常。
+ * Failures in prepare, resolve/link, cache and execution can be told apart by owner and stage, and
+ * an error does not surface later as a Graal exception with no source.
  */
 class NekoModuleErrorStageTest {
     @TempDir
@@ -79,7 +79,7 @@ class NekoModuleErrorStageTest {
         NekoModulePipeline pipeline = new NekoModulePipeline(
                 new NekoCompilationPipeline(), compilers, SandboxConfig.defaultConfig());
 
-        // 非法 Python（unexpected token）：转译错误自带 file + position。
+        // Invalid Python (unexpected token): the transpile error carries the file and the position.
         Exception failure = assertThrows(Exception.class, () -> pipeline.prepare(
                 Path.of("server_scripts/stage-bad.py"), "def broken(:\n  ???\n"));
 
@@ -163,7 +163,8 @@ class NekoModuleErrorStageTest {
 
     @Test
     void executeFailureCarriesExecuteStageAndModule() throws Exception {
-        // 未配置 executor/factory 的裸 host：装载失败归执行环境，不伪装成解析失败。
+        // A bare host with no executor or factory configured: a load failure belongs to the execution
+        // environment and is not reported as a resolution failure.
         try (Context bare = Context.newBuilder("js").allowAllAccess(true).build()) {
             NekoScriptModuleLoaderHost bareHost = new NekoScriptModuleLoaderHost(
                     bare, new NekoModuleResolver(paths.gameDir(), paths.root(), paths.nodeModules(),

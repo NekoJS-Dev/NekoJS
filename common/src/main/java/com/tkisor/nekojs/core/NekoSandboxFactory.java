@@ -23,8 +23,9 @@ import java.util.LinkedHashSet;
 import java.util.Set;
 
 /**
- * 实例化沙盒工厂：使用注入的 {@link NekoCoreContext}（paths/engine/sandboxConfig/classFilter）+
- * {@link ScriptCompilerRegistry}（require extension alias）创建 per-{@link ScriptType} GraalVM {@link Context}。
+ * Creates sandbox contexts. Uses the injected {@link NekoCoreContext} (paths, engine, sandbox
+ * config, class filter) and {@link ScriptCompilerRegistry} (require extension aliases) to build one
+ * GraalVM {@link Context} per {@link ScriptType}.
  */
 public final class NekoSandboxFactory {
     // Prefix console.warn with [NekoJS_WARN] and console.debug with [NekoJS_DEBUG]
@@ -54,8 +55,9 @@ public final class NekoSandboxFactory {
             """;
 
     /**
-     * 携带 out/err {@link LoggerStream} 引用：Graal 关闭 Context 时只 detach 不 close，
-     * 由上层销毁路径在 context.close() 之后补 close() 冲刷末行未换行缓冲。
+     * Holds the out/err {@link LoggerStream} references. Graal only detaches these streams when it
+     * closes the Context, it does not close them; the teardown path calls close() after
+     * context.close() to flush a last line that has no trailing newline.
      */
     public record Sandbox(Context context, NekoNodeRuntime nodeRuntime, LoggerStream outStream, LoggerStream errStream) {}
 
@@ -63,7 +65,7 @@ public final class NekoSandboxFactory {
     private final NekoJSPaths paths;
     private final ScriptCompilerRegistry compilers;
     private final NekoSharedHostAccess hostAccess;
-    /** prepared 缓存（W3 显式注入）：与 runtime root 共享同一实例。 */
+    /** Prepared pipeline cache, injected explicitly and shared with the runtime root. */
     private final NekoModulePipelineCache preparationCache;
 
     public NekoSandboxFactory(NekoCoreContext core, NekoJSPaths paths, ScriptCompilerRegistry compilers,

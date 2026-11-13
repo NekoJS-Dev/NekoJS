@@ -1,5 +1,6 @@
-// 1.21.1 实现，与版本树 src/ 下的同名 26.x 文件成对。内容等于那份文件在本节点求值后的形态。
-// 26.x 侧行为变更时须同步本文件。
+// 1.21.1 implementation, paired with the 26.x file of the same name under the version tree's src/.
+// The content is that file as evaluated on this node. Keep this file in sync when the 26.x side
+// changes behavior.
 package com.tkisor.nekojs.wrapper.fluid;
 
 import com.tkisor.nekojs.api.data.NekoId;
@@ -35,19 +36,22 @@ import java.util.regex.Pattern;
 public final class FluidResolver {
     private FluidResolver() {}
 
-    /** 26.x 的 DefaultedRegistry 没有 asLookup()；从 vanilla RegistryAccess 取 lookup。 */
+    /** 26.x's DefaultedRegistry has no asLookup(); take the lookup from vanilla RegistryAccess. */
     private static final HolderLookup.RegistryLookup<Fluid> FLUID_LOOKUP =
         RegistryAccess.fromRegistryOfRegistries(BuiltInRegistries.REGISTRY).lookupOrThrow(Registries.FLUID);
 
     /**
-     * 脚本提供的 regex 源串 → 预编译 Pattern 缓存。{@code /regex/} 语法与 {@code {regex: ...}}
-     * 的模式串来自脚本（非编译期常量，无法 hoist 成 static final）；Pattern 不可变且线程安全，
-     * 按源串去重可在重复解析同一批配方时省去逐次编译。规模以脚本中不同 regex 数为上界。
-     * 非法 regex 抛 PatternSyntaxException，不缓存（与原行为一致）。
+     * Cache from a regex source string supplied by a script to its compiled Pattern. The pattern
+     * strings of the {@code /regex/} syntax and of {@code {regex: ...}} come from scripts, so they
+     * are not compile-time constants and cannot be hoisted into a static final field. A Pattern is
+     * immutable and thread-safe, and keying by source string skips compiling again when the same
+     * batch of recipes is parsed repeatedly. The size is bounded by the number of distinct regexes in
+     * the scripts. An invalid regex throws PatternSyntaxException and is not cached (same as before).
      */
     private static final Map<String, Pattern> REGEX_CACHE = new ConcurrentHashMap<>();
 
-    /** {@code replaceFirst("^#", "")} 的常量模式：parseFluidInput 每次调用都要编译一次。 */
+    /** Constant pattern for {@code replaceFirst("^#", "")}: parseFluidInput would otherwise compile it
+     *  on every call. */
     private static final Pattern LEADING_HASH = Pattern.compile("^#");
 
     private static Pattern compiledRegex(String regex) {
@@ -59,7 +63,7 @@ public final class FluidResolver {
         return cached;
     }
 
-    // ===================== FluidStack（具体 stack，无 tag/通配/命名空间/正则）=====================
+    // ===================== FluidStack (a concrete stack: no tag, wildcard, namespace or regex) =====================
 
     public static FluidStack stackFromString(String raw) {
         String s = normalizeRaw(raw);
@@ -79,7 +83,7 @@ public final class FluidResolver {
 
     public static FluidStack stackFromFluid(Fluid fluid, int amount) {
         if (fluid == Fluids.EMPTY || amount <= 0) return FluidStack.EMPTY;
-        // builtInRegistryHolder 已废弃：从注册表 wrap 等价 holder
+        // builtInRegistryHolder is deprecated: wrap an equivalent holder from the registry
         return new FluidStack(fluid, amount);
     }
 
@@ -256,7 +260,7 @@ public final class FluidResolver {
         return new SizedFluidIngredient(ingredient, amount);
     }
 
-    // ===================== 旧 combine（FluidIngredientJS 仍在用，保持兼容）=====================
+    // ===================== Legacy combine (still used by FluidIngredientJS, kept for compatibility) =====================
 
     public static FluidIngredient combine(List<FluidIngredient> alternatives) {
         List<FluidIngredient> present = alternatives.stream().filter(i -> i != null).toList();
@@ -278,7 +282,7 @@ public final class FluidResolver {
         return FluidIngredient.of(set.toArray(Fluid[]::new));
     }
 
-    // ===================== 内部 helper =====================
+    // ===================== Internal helpers =====================
 
     private static FluidIngredient ingredientOfHolders(HolderSet<Fluid> holders) {
         Fluid[] fluids = holders.stream().map(Holder::value).toArray(Fluid[]::new);

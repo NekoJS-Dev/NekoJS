@@ -24,31 +24,33 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 /**
- * 票 29 AC1/AC3 的 Assets typed binding 回归钉：
- * {@code Assets.blockState/blockModel/itemModel/texture} 是脚本作者的调用者入口，
- * 必须经**生产注册路径**（{@link NekoJSCorePlugin#registerBinding}）解析得到，
- * 且声明面（{@code TypeDocCatalogEntry}）与运行时注册面指向同一个绑定名。
+ * Pins the {@code Assets} typed binding: {@code Assets.blockState/blockModel/itemModel/texture} is
+ * the caller entry for script authors and must resolve through the **production registration path**
+ * ({@link NekoJSCorePlugin#registerBinding}), with the declaration side
+ * ({@code TypeDocCatalogEntry}) and the runtime registration side pointing at the same binding
+ * name.
  *
- * <p>为何需要本 fixture：{@code "档1 首批守卫退场"}（c8066519 / 59919f87）在折叠
- * {@code registerTypeDocs} 排版时，把 {@code registry.register("Assets", new
- * AssetGeneratorJS())} 整行删掉了，只留下同名的文档条目——脚本侧引用 {@code Assets.*}
- * 因此变成「未定义标识符」，而文档/补全仍宣称它存在。文档条目与运行时绑定各写一遍，
- * 正是这类静默丢失的温床，故此处把两者一起钉住。
+ * <p>Why this fixture exists: collapsing the {@code registerTypeDocs} formatting once removed the
+ * whole {@code registry.register("Assets", new AssetGeneratorJS())} line and left only the
+ * documentation entry, so {@code Assets.*} in scripts became an undefined identifier while the
+ * docs and completion still claimed it existed. Writing the documentation entry and the runtime
+ * binding in two places invites exactly that kind of silent loss, so both are pinned together.
  */
 class Ticket29AssetBindingTest {
 
     @BeforeAll
     static void initPlatform() {
-        // 根测试树的最小 Platform 注入（Platform.init 自带防御：已初始化则不动）。
-        // 必须先立桩再触碰 ScriptType：它的静态初始化要 NekoJSPaths.get()。
+        // Minimal Platform injection for the root test tree (Platform.init is defensive: it leaves an
+        // already-initialized platform alone). Install the stub before touching ScriptType, whose
+        // static init needs NekoJSPaths.get().
         try {
             Platform.init(new StubPlatform());
         } catch (RuntimeException ignored) {
-            // 其它测试已初始化过 Platform
+            // Another test already initialized Platform
         }
     }
 
-    /** 走生产注册路径装配 registry（与 bootstrap 期 BindingsPoint 收集同一入口）。 */
+    /** Builds a registry through the production registration path, the same entry BindingsPoint uses during bootstrap. */
     private static BindingRegistry productionBindings(ScriptType scriptType) {
         BindingRegistry.BindingRegistryImpl registry = new BindingRegistry.BindingRegistryImpl(scriptType).scopedTo("nekojs");
         new NekoJSCorePlugin().registerBinding(registry);
@@ -70,7 +72,7 @@ class Ticket29AssetBindingTest {
                         + " describe the same members the runtime binding exposes");
     }
 
-    /** 声明面与运行时面必须指同一个名字：文档条目不配上绑定就是「文档说有、实际没有」。 */
+    /** The declaration side and the runtime side must name the same binding: a documentation entry with no binding documents something that does not exist. */
     @Test
     void assetsDocumentationEntryIsBackedByARuntimeBinding() {
         List<TypeDocCatalogEntry> docs = new ArrayList<>();
@@ -99,7 +101,7 @@ class Ticket29AssetBindingTest {
         }
     }
 
-    /** 根测试树的最小 Platform 桩（形态照 KeyBindEventsTest / QueryToolDeclarationParityTest）。 */
+    /** Minimal Platform stub for the root test tree, shaped like KeyBindEventsTest / QueryToolDeclarationParityTest. */
     private static final class StubPlatform implements IPlatform {
         @Override
         public boolean isClient() {

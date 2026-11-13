@@ -3,31 +3,35 @@ package com.tkisor.nekojs.core.plugin;
 import com.tkisor.nekojs.api.NekoJSPlugin;
 
 /**
- * 内置扩展点 {@code nekojs:node_type_docs}（ADR-0001 自包含 Point 文件）——
- * {@code nekojs:type_docs}（{@link TypeDocsPoint}）的孪生点：共享累积器
- * {@link TypeDocsPoint.Bucket} 与产物 {@link TypeDocsPoint.TypeDocsSnapshot}，
- * 仅收集的插件集合（Contributor）不同。merge 策略同为 append。
+ * Built-in extension point {@code nekojs:node_type_docs}, the twin of
+ * {@code nekojs:type_docs} ({@link TypeDocsPoint}): both share the accumulator
+ * {@link TypeDocsPoint.Bucket} and the product {@link TypeDocsPoint.TypeDocsSnapshot}, and
+ * they differ only in the set of plugins they collect from (the Contributor interface). The
+ * merge policy is append, the same as type_docs.
  */
 public final class NodeTypeDocsPoint {
 
-    /** 扩展点 id（observable 契约）。 */
+    /** Extension point id; tests and diagnostics depend on this value. */
     public static final String ID = "nekojs:node_type_docs";
 
     private NodeTypeDocsPoint() {
     }
 
-    /** 显式声明形态（与直接覆写 NekoJSPlugin 对应钩子等价收集）：插件被 {@code nekojs:node_type_docs} 扩展点收集。 */
+    /** Explicit declaration form: the plugin is collected by the {@code nekojs:node_type_docs}
+     * extension point, the same as overriding the matching NekoJSPlugin hook. */
     public interface Contributor extends NekoJSPlugin {
 
         /**
-         * 注册 node 模块的补全声明（{@code declare module 'node:xxx' {...}}）。
-         * 与 {@code node_modules} 扩展点配对：前者提供模块实现，本方法提供类型声明。
+         * Registers completion declarations for node modules
+         * ({@code declare module 'node:xxx' {...}}). It pairs with the {@code node_modules}
+         * point: that one supplies the module implementation, this method supplies the type
+         * declarations.
          */
         default void registerNodeTypeDocs(TypeDocsRegister registry) {
         }
     }
 
-    /** 扩展点定义（由 {@link NekoBuiltinPointsPlugin} 清单注册）。 */
+    /** Extension point definition, registered by the {@link NekoBuiltinPointsPlugin} manifest. */
     public static final NekoPluginExtensionPoint<NekoJSPlugin, TypeDocsPoint.Bucket, TypeDocsPoint.TypeDocsSnapshot> POINT =
             NekoPluginExtensionPoint.<NekoJSPlugin, TypeDocsPoint.Bucket, TypeDocsPoint.TypeDocsSnapshot>builder(ID, NekoJSPlugin.class)
                     .merge(MergePolicy.append())

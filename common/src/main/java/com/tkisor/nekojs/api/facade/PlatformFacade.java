@@ -3,36 +3,40 @@ package com.tkisor.nekojs.api.facade;
 import java.util.List;
 
 /**
- * 平台信息门面，暴露为脚本侧全局对象 {@code Platform}。
+ * Platform information facade, exposed to scripts as the global object {@code Platform}.
  *
- * <p>提供运行环境（客户端/服务端、开发环境）、加载器、Minecraft 版本以及已加载 mod
- * 的只读信息。所有方法只返回基础类型或 {@link ModInfoValue}，不暴露 Minecraft 原生对象。
+ * <p>It reports the runtime environment (logical client or server, development or not), the loader,
+ * the Minecraft version and read-only information about loaded mods. Every method returns only
+ * primitive types or {@link ModInfoValue}; Minecraft native objects are never exposed.
  */
 public interface PlatformFacade {
-    /** 当前进程是否为逻辑客户端。 */
+    /** Whether the current process is the logical client. */
     boolean isClient();
 
-    /** 是否运行在开发/调试环境。 */
+    /** Whether the game runs in a development or debugging environment. */
     boolean isDevelopment();
 
-    /** 当前 Minecraft 版本字符串（如 {@code "1.21.1"}）。 */
+    /** Current Minecraft version string, for example {@code "1.21.1"}. */
     String getMcVersion();
 
-    /** 当前 mod 加载器标识（如 {@code "neoforge"}、{@code "forge"}）。 */
+    /** Current mod loader id, for example {@code "neoforge"} or {@code "forge"}. */
     String getLoaderId();
 
-    /** 当前 mod 加载器版本字符串。 */
+    /** Current mod loader version string. */
     String getLoaderVersion();
 
-    /** 指定 modId 是否已加载；modId 为 {@code null} 或空白时抛异常。 */
+    /** Whether the given modId is loaded; a {@code null} or blank modId throws. */
     boolean isLoaded(String modId);
 
-    /** 返回指定 modId 的元信息；mod 未加载时返回 {@code null}。 */
+    /** Returns the metadata for the given modId, or {@code null} if that mod is not loaded. */
     ModInfoValue getInfo(String modId);
 
-    /** 所有已加载 mod 的 id 列表（按字典序排序）。 */
+    /** Ids of all loaded mods, sorted alphabetically. */
     List<String> getList();
 
-    /** 当前平台支持的平台能力标识列表（小写、下划线转连字符，按字典序排序）。 */
+    /**
+     * Capability ids this platform supports: lowercase, underscores replaced by hyphens, sorted
+     * alphabetically.
+     */
     List<String> capabilities();
 }

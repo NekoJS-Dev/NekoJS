@@ -31,9 +31,10 @@ public interface TypeDocsRegister {
     }
 
     /**
-     * 登记 typed Builder 面的结构化契约条目（ticket 15）：由版本树对 builder 类的
-     * 契约反射派生，TS/Python declaration 后端从同一输入渲染。default 空实现保持
-     * 既有实现方兼容。
+     * Records a structured entry for the typed Builder side. The version tree derives it by
+     * reflecting over a builder class's API, and the TS and Python declaration backends render
+     * from the same input. The default implementation is empty, so existing implementors
+     * stay compatible.
      */
     default void registerRegistryBuilderSurface(RegistryBuilderSurfaceEntry entry) {
     }

@@ -4,9 +4,10 @@ import lombok.Getter;
 import net.minecraft.server.level.ServerPlayer;
 
 /**
- * 玩家重生事件的中立 payload（成员 {@code event.player} 为重生后的实体；
- * {@code oldPlayer} 为重生前实体，{@code alive} 表示旧实体是否仍存活——末地返回式
- * 重生为 true，死亡重生为 false；fabric AFTER_RESPAWN 的三参全量）。
+ * Loader-neutral payload for the player respawn event. The member {@code event.player} is the
+ * entity after respawning, {@code oldPlayer} is the entity before it, and {@code alive} tells
+ * whether the old entity is still alive: true for a respawn that returns from the End, false
+ * for a death respawn. fabric's AFTER_RESPAWN passes all three.
  */
 public class PlayerRespawnEventJS {
 

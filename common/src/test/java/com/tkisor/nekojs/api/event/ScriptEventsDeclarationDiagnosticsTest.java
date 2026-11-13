@@ -38,22 +38,26 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * 票 14 AC3：ScriptEvents 动态声明的可诊断失败与声明派生 parity。
+ * Diagnosable failures of dynamic ScriptEvents declarations, plus declaration parity.
  *
- * <p>可诊断失败面：
+ * <p>Failures that must be diagnosable:
  * <ul>
- *   <li>注册冲突——组名撞内置事件组 / 撞内置 binding / 跨来源同 key 重复，均为带明确
- *       消息的 {@link IllegalArgumentException}；</li>
- *   <li>非法标识符（group/name 不是 JS identifier）直接拒绝；</li>
- *   <li>未知组/成员——内置组与动态组的脚本侧访问都给出「No such ... bus」错误，
- *       side 不适用给出「not available in SIDE」；</li>
- *   <li>side 过滤——SERVER-target 动态组在 CLIENT 环境不绑定（脚本可见性）。</li>
+ *   <li>registration conflicts: the group name clashes with a built-in event group, with a
+ *       built-in binding, or repeats the same key from another source. All throw
+ *       {@link IllegalArgumentException} with a specific message;</li>
+ *   <li>invalid identifiers: a group or name that is not a JS identifier is rejected outright;</li>
+ *   <li>unknown group or member: script-side access to a built-in or a dynamic group reports
+ *       "No such ... bus", and a side where the group does not apply reports
+ *       "not available in SIDE";</li>
+ *   <li>side filtering: a SERVER-target dynamic group is not bound in a CLIENT environment, so
+ *       scripts there cannot see it.</li>
  * </ul>
  *
- * <p>parity 面：动态事件走与内置事件<strong>同一条</strong> catalog 派生路径
- * （{@link NekoScriptCatalog#events}）产出 {@link EventCatalogEntry}，再分别驱动
- * TS（{@link EventDeclarationGenerator}）与 Python（{@link PythonEventRenderer}）
- * 声明生成——两个后端消费同一 entry 列表，成员形状一致（any payload + post 恰好一次）。
+ * <p>Parity: dynamic events go through the <strong>same</strong> catalog derivation as built-in
+ * events ({@link NekoScriptCatalog#events}) and produce an {@link EventCatalogEntry}. Those
+ * entries then drive TS ({@link EventDeclarationGenerator}) and Python
+ * ({@link PythonEventRenderer}) declaration generation, so both backends consume one entry list
+ * and produce the same member shape: an any payload and a post that fires exactly once.
  */
 class ScriptEventsDeclarationDiagnosticsTest {
 
@@ -89,7 +93,7 @@ class ScriptEventsDeclarationDiagnosticsTest {
         }
     }
 
-    // ---- 注册冲突与非法输入：可诊断失败 ----
+    // ---- Registration conflicts and invalid input: diagnosable failures ----
 
     @Test
     void groupNameConflictingWithBuiltInEventGroupIsRejected() {
@@ -132,9 +136,10 @@ class ScriptEventsDeclarationDiagnosticsTest {
     void reloadCleanupMakesReregistrationPossibleAfterDiagnosableConflict() {
         scriptEvents.register(ScriptType.SERVER, "MyEvents", "bossKilled", "scripts/a.js");
 
-        // 生产序列（ScriptManager.doLoadScripts）：STARTUP reload 先全量清理定义，
-        // 再重放 ScriptEvents.post。未经清理的重复注册（含同来源）在注册入口即被
-        // 可诊断拒绝——不会静默叠加第二条定义。
+        // The production sequence (ScriptManager.doLoadScripts): a STARTUP reload clears all
+        // definitions first, then replays ScriptEvents.post. A repeat registration that was not
+        // cleared, including one from the same source, is rejected at the registration entry with a
+        // diagnosable error; it never silently stacks a second definition.
         IllegalArgumentException conflict = assertThrows(IllegalArgumentException.class,
                 () -> scriptEvents.register(ScriptType.SERVER, "MyEvents", "bossKilled", "scripts/a.js"));
         assertTrue(conflict.getMessage().contains("MyEvents.bossKilled"),
@@ -147,14 +152,14 @@ class ScriptEventsDeclarationDiagnosticsTest {
                 .filter(e -> e.group().equals("MyEvents")).count(),
                 "full STARTUP sweep must remove the dynamic definitions");
 
-        // 清理后同 key 重注册成功，目录仍恰好一条（reload 不双注册）
+        // Re-registering the same key after the cleanup succeeds, and the catalog still holds exactly one entry
         scriptEvents.register(ScriptType.SERVER, "MyEvents", "bossKilled", "scripts/a.js");
         assertEquals(1, NekoScriptCatalog.events(runtime).stream()
                 .filter(e -> e.group().equals("MyEvents")).count(),
                 "post-cleanup re-registration yields exactly one catalog entry");
     }
 
-    // ---- 未知组 / 未知成员 / side 错误：脚本侧可诊断 ----
+    // ---- Unknown group, unknown member, wrong side: diagnosable from the script side ----
 
     @Test
     void unknownDynamicGroupMemberIsDiagnosed() {
@@ -197,8 +202,9 @@ class ScriptEventsDeclarationDiagnosticsTest {
         bridge.bindEvents(serverBindings, ScriptType.SERVER);
         assertTrue(serverBindings.hasMember("MyEvents"),
                 "SERVER-target dynamic group is visible to server scripts");
-        // 监听 + 触发的外部行为（ScriptEventBusJS：调用即监听，post 即触发；
-        // post 的 JS 对象经 as(Object.class) 成 PolyglotMap，回传 JS 后按属性读取）
+        // External behavior of listening and firing (ScriptEventBusJS: calling registers a listener,
+        // post fires it; the JS object passed to post becomes a PolyglotMap through as(Object.class)
+        // and is read back by property in JS)
         Value bus = serverBindings.getMember("MyEvents").getMember("bossKilled");
         bus.execute(context.eval("js",
                 "(payload) => recorder.ledger(payload ? payload.boss : null)"));
@@ -216,7 +222,7 @@ class ScriptEventsDeclarationDiagnosticsTest {
         }
     }
 
-    // ---- TS / Python declaration parity：同一 catalog 派生路径 ----
+    // ---- TS and Python declaration parity: one shared catalog derivation path ----
 
     @Test
     void runtimeMembersAndDeclarationsDeriveFromTheSameCatalogEntries() {
@@ -226,22 +232,22 @@ class ScriptEventsDeclarationDiagnosticsTest {
                 .map(e -> e.group() + "." + e.name()).toList());
         assertTrue(entries.getFirst().scriptDefined());
 
-        // 同一 entry 列表 → TS 声明
+        // The same entry list drives the TS declarations
         TypeAliasRegistry aliases = new TypeAliasRegistry();
         String ts = new EventDeclarationGenerator(aliases, new AdapterAliasGenerator(aliases))
                 .generate(entries, ScriptType.SERVER);
-        // 同一 entry 列表 → Python 声明
+        // The same entry list drives the Python declarations
         String py = new PythonEventRenderer(new ApiTypeRefPyRenderer(Set.of()), Set.of())
                 .render(ScriptType.SERVER, entries, null);
 
-        // TS：any payload + post 恰好一次
+        // TS: an any payload, and post exactly once
         assertEquals(1, countOccurrences(ts, "function bossKilled(handler: ((payload: any) => void)): void;"),
                 "TS declares the script event listener exactly once");
         assertEquals(1, countOccurrences(ts, "function post(payload?: any): void;"),
                 "TS declares the script event post member exactly once");
         assertFalse(ts.contains("$Object"), "no java.lang.Object leak as payload");
 
-        // Python：Any payload + post 恰好一次（与 TS 同一 catalog 条目派生）
+        // Python: an Any payload and post exactly once, derived from the same catalog entry as TS
         assertEquals(1, countOccurrences(py,
                 "def __call__(self, handler: Callable[[Any], None]) -> None: ..."),
                 "Python declares the script event listener exactly once");
@@ -261,7 +267,7 @@ class ScriptEventsDeclarationDiagnosticsTest {
         return count;
     }
 
-    // ---- 脚本侧 ledger（监听回调记录） ----
+    // ---- Script-side ledger (records listener callbacks) ----
 
     public static final class Recorder {
         public volatile String lastBoss;
@@ -271,9 +277,9 @@ class ScriptEventsDeclarationDiagnosticsTest {
         }
     }
 
-    // ---- 测试基建 ----
+    // ---- Test infrastructure ----
 
-    /** ScriptContextRegistry 的窄封装（避免测试类直接 import 内部 registry）。 */
+    /** Narrow wrapper over ScriptContextRegistry, so the test class does not import the internal registry. */
     private static final class ScriptContextRegistryBridge {
         static void bind(Context ctx) {
             com.tkisor.nekojs.script.ScriptContextRegistry.bind(ctx, ScriptType.SERVER);

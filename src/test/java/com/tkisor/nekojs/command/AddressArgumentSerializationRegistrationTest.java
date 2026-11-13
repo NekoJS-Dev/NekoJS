@@ -14,20 +14,20 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Serialization registration for the custom trust address argument (ticket-36 regression):
- * a real client join makes the server build ClientboundCommandsPacket, which resolves each
- * argument through ArgumentTypeInfos.byClass and serializes the info's numeric
- * command_argument_type registry id. The 2026-09-29 regression shipped AddressArgument without
- * either registration, so RCON dispatch (which never serializes the tree) passed while every
- * real world entry failed with "Unrecognized argument type".
+ * Serialization registration for the custom trust address argument: a real client join makes the
+ * server build ClientboundCommandsPacket, which resolves each argument through
+ * ArgumentTypeInfos.byClass and serializes the info's numeric command_argument_type registry id. A
+ * release once shipped AddressArgument without either registration, so RCON dispatch, which never
+ * serializes the tree, passed while every real world entry failed with "Unrecognized argument
+ * type".
  *
  * <p>Two legs, matching what a bare JVM can see: {@link #addressArgumentIsRecognized()} pins the
- * class-map half by running the exact supplier the register entry uses;
+ * class-map half by running the exact supplier the register entry uses, and
  * {@link #argumentTypeRegistrationIsWiredInEveryLoaderEntry()} source-traces the wiring the JVM
- * cannot execute — the NeoForge DeferredRegister pair (registry entry + same-instance class map)
+ * cannot execute: the NeoForge DeferredRegister pair (registry entry plus same-instance class map)
  * and the fabric ArgumentTypeRegistry call in the fabric entrypoint. The client-visible halves
  * (registry id on the wire, client-side deserialization) need a mod runtime and are left to the
- * runServer spot-check plus the maintainer re-trial recorded in the evidence pack.
+ * runServer spot-check and a maintainer re-trial.
  */
 class AddressArgumentSerializationRegistrationTest {
 

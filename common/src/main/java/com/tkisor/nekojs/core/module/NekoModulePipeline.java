@@ -26,25 +26,23 @@ import java.util.Objects;
 import java.util.Set;
 
 /**
- * 实例化模块编译管线（Script Preparation）：构造器接收 {@link NekoCompilationPipeline}、
- * {@link ScriptCompilerRegistry}、{@link SandboxConfig}。根据 ESM/CJS 模式和语言插件编译模块。
+ * Instantiated module compilation pipeline (Script Preparation). The constructor takes a
+ * {@link NekoCompilationPipeline}, a {@link ScriptCompilerRegistry}, and a {@link SandboxConfig}, and compiles modules
+ * according to ESM/CJS mode and the language plugins.
  *
- * <p>票据 11（W3）显式注入形态：调用者经构造器传入全部依赖；本类不再持有任何 process-wide
- * static 状态——历史 {@code LEGACY_INSTANCE / bindLegacyInstance / legacyInstance /
- * legacyPrepare / SHARED_COMPILATION_PIPELINE} 已随本票删除（05 总账 A7 的删除条件即
- * “W3 显式注入 pipeline/cache 后删除”；替代 behavior 与 trace 见
- * {@code NekoModulePipelinePrepareTest} / {@code NekoModulePipelineCacheStampTest}，
- * 调用者证据见 {@code ModulePipelineIsolationTest} 的零 static 调用断言）。
- * 需要实例的调用方一律经 {@code NekoRuntimeRoot} 持有的
- * {@link NekoModulePipelineCache}（runtime owner 生命周期）取得，不再有“无实例也能跑”的
- * 静默 fallback。
+ * <p>All dependencies are passed explicitly to the constructor; the class holds no process-wide static state
+ * (the old {@code LEGACY_INSTANCE}, {@code bindLegacyInstance}, {@code legacyInstance}, {@code legacyPrepare}, and
+ * {@code SHARED_COMPILATION_PIPELINE} are gone). Callers that need an instance must get one from the
+ * {@link NekoModulePipelineCache} owned by {@code NekoRuntimeRoot}; there is no "run without an instance" fallback.
+ * Alternative behavior and traces are covered by {@code NekoModulePipelinePrepareTest} and
+ * {@code NekoModulePipelineCacheStampTest}; {@code ModulePipelineIsolationTest} asserts that there are no static calls.
  *
- * <p>输出的 {@link NekoPreparedModule} 携带 language id、module mode、可执行 code、
- * 编译器实际产生或保守 fallback 生成的 source map（sourceURL 仍可作为执行器 fallback）、
- * 原始诊断位置（source path）与稳定 cache key，且不可变。
+ * <p>The produced {@link NekoPreparedModule} carries the language id, module mode, executable code, the source map
+ * produced by the compiler (or a conservative fallback, where the sourceURL can still serve the executor as a fallback),
+ * the original diagnostic source path, and a stable cache key. It is immutable.
  *
- * <p>本类不创建 Graal Context、不决定 HostAccess、不读 Minecraft/loader（见
- * {@code ModulePipelineIsolationTest}）。
+ * <p>This class does not create a Graal Context, does not decide HostAccess, and does not read Minecraft or the loader
+ * (see {@code ModulePipelineIsolationTest}).
  */
 public final class NekoModulePipeline {
     private final NekoCompilationPipeline compilationPipeline;
@@ -58,8 +56,8 @@ public final class NekoModulePipeline {
     }
 
     /**
-     * 纯身份解析：path/extension → source path + requested mode + language id。
-     * 不编译、不读盘、不触碰全局状态。
+     * Resolves identity: path/extension to source path, requested mode, and language ID.
+     * Does not compile, read from disk, or touch global state.
      */
     NekoModuleIdentity identify(Path file) {
         return captureBinding(file).identity();
@@ -72,8 +70,8 @@ public final class NekoModulePipeline {
     }
 
     /**
-     * Cache-owned preparation seam: the binding captured for the source stamp drives the whole
-     * prepare call, and the registry revision is checked before and after compilation.
+     * Cache-owned preparation seam: the binding captured for the source stamp drives the preparation,
+     * and the registry revision is checked before and after compilation.
      */
     NekoPreparedModule prepareCaptured(Path file, String rawSource, NekoTrustApprovedSource approval,
                                        LanguageBinding binding) throws Exception {
@@ -117,9 +115,10 @@ public final class NekoModulePipeline {
     }
 
     /**
-     * 带 trust 凭证的准备门：本地受信与远端显式授权走完全相同的准备阶段，trust 只决定
-     * 授权结果。凭证缺失/不覆盖该文件时抛授权拒绝（stage 仍为 PREPARE、owner 为 Pack Trust，
-     * 且携带 language/mode/source——拒绝不隐藏语言边界）。
+     * Preparation gate with trust credentials: local and remote-authorized sources follow the same
+     * preparation phase; trust only determines the authorization result.
+     * Rejects missing or non-matching credentials with an authorization error (stage remains
+     * PREPARE, owner is Pack Trust).
      */
     NekoPreparedModule prepare(Path file, String rawSource, NekoTrustApprovedSource approval) throws Exception {
         LanguageBinding binding = captureBindingChecked(file);
@@ -131,11 +130,10 @@ public final class NekoModulePipeline {
                                              BuiltinModuleTransformCache transforms) throws Exception {
         ensureBindingCurrent(file, binding);
         String extension = extension(file);
-        // 加载时静态校验：扫描脚本对全局绑定（Utils/Platform/Items 等）的成员访问，
-        // 访问不存在的成员时报错到游戏内错误面板。不阻止编译/执行。
-        // JS 族（原始源即 JS）在编译前对原始源跑；转译语言（.py/.ts/.tsx…）的原始源不是
-        // JS（# 注释、类型注解、def/class 会被 JS-only 的 ValParser 碎成伪调用 → 'Unknown
-        // identifier' 系统性误报），改为在编译后对产物 JS 跑——那才是运行时真正执行的代码。
+        // Run static checks at load time: scans for member access on global bindings (e.g., Utils, Platform, Items)
+        // and reports errors to the in-game dashboard if members are missing. Does not abort compilation or execution.
+        // JS sources run this pre-compilation. Transpiled languages (.py, .ts, etc.) run this post-compilation
+        // on the JS output to avoid false positives from the parser treating non-JS syntax as invalid identifier calls.
         if (config.scriptMemberValidation() && rawPreflightApplies(extension)) {
             validateSource(file, rawSource, schemaView, transforms);
         }
@@ -167,7 +165,7 @@ public final class NekoModulePipeline {
         return null;
     }
 
-    /** 原始源就是 JS、可直接跑 JS-only 预检的扩展名。 */
+    /** File extensions for sources that are already JS and can run JS-only pre-checks directly. */
     static boolean rawPreflightApplies(String extension) {
         return ".js".equals(extension) || ".mjs".equals(extension) || ".cjs".equals(extension) || ".jsx".equals(extension);
     }
@@ -182,7 +180,7 @@ public final class NekoModulePipeline {
         if (!config.enableEsmAuthoring() || requestedMode == NekoModuleMode.COMMONJS) {
             if (language instanceof NekoLegacyLanguagePlugin legacyLanguage) {
                 ScriptCompileResult compiled = legacyLanguage.compiler().compileDetailed(file, rawSource);
-                // CJS 静态分析必须跑在编译产物上：require/module.exports 由转译生成，原始源里不存在
+                // CJS static analysis must run on compiled output: require and module.exports are generated by transpilation, not present in raw source.
                 return NekoPreparedModule.commonJs(languageId, sourcePath, compiled.code(),
                         usableMap(file, rawSource, compiled.code(), compiled.sourceMap()),
                         CjsStaticAnalyzer.analyze(compiled.code()));

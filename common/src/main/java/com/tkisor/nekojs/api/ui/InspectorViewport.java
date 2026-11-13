@@ -1,10 +1,10 @@
 package com.tkisor.nekojs.api.ui;
 
 /**
- * Logical viewport facts for one {@link InspectorSnapshot} frame. Minimal own contract
- * over ticket 43's six-tier profile system: the values derive from the common JSX
- * runtime's public {@code resolveViewport}, so a derivation change there alters only
- * where these values come from, not the inspector fields.
+ * Logical viewport facts for one {@link InspectorSnapshot} frame. A minimal set of
+ * viewport fields over the six-tier profile system: the values derive from the common
+ * JSX runtime's public {@code resolveViewport}, so a change to that derivation moves
+ * only where these values come from, not the inspector fields.
  *
  * @param width         logical viewport width in pixels
  * @param height        logical viewport height in pixels

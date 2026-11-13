@@ -1,12 +1,12 @@
 package com.tkisor.nekojs.api.data;
 
 /**
- * 类型适配器（{@link com.tkisor.nekojs.api.JSTypeAdapter}）转换失败时统一抛出。
- *
- * <p>承载目标类型、期望的输入形状、原始输入等信息，便于脚本端定位问题。所有 adapter
- * 的 {@code apply} 失败均应抛此异常（而非返回 {@code null}，返回 null 会导致下游 NPE）。
- * 继承 {@link RuntimeException}，与 GraalJS {@code targetTypeMapping} 把 adapter 当作
- * {@code Function} 使用的异常传播行为兼容。
+ * Thrown when a type adapter ({@link com.tkisor.nekojs.api.JSTypeAdapter}) fails to convert a
+ * value. Carries the target type, the expected input shape and the original input so the script
+ * can locate the problem. Every failing adapter {@code apply} throws this instead of returning
+ * {@code null}, because a {@code null} return causes an NPE downstream. It extends
+ * {@link RuntimeException}, which matches how GraalJS propagates exceptions from an adapter used
+ * as a {@code Function} through {@code targetTypeMapping}.
  */
 public class ValueConversionException extends RuntimeException {
 
@@ -43,7 +43,7 @@ public class ValueConversionException extends RuntimeException {
     private static String describe(Object v) {
         if (v == null) return "null";
         Class<?> c = v.getClass();
-        // 值类型直接 toString 更直观（如 "minecraft:stone"）
+        // Value types read better through a direct toString (for example "minecraft:stone")
         if (c == String.class) return "string\"" + v + "\"";
         if (v instanceof Number || v instanceof Boolean) return c.getSimpleName() + "(" + v + ")";
         return c.getSimpleName();

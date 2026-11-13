@@ -6,25 +6,26 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
- * Mutable property view handed to {@code ItemEvents.modification} callbacks
- * (ticket 39 起：纯声明缓冲——candidate 收集期只记录规范化属性，live Item/默认组件
- * 由 commit 点的平台 Adapter 应用，见 1.21.1 侧 {@code ModificationDomainOwner}).
+ * Mutable property view handed to {@code ItemEvents.modification} callbacks. It is a pure
+ * declaration buffer: collection only records normalized properties, and the platform Adapter
+ * at the commit point applies them to the live Item and its default components (see
+ * {@code ModificationDomainOwner} on the 1.21.1 side).
  *
- * <h2>JS API（setter 与 property 写入经 {@link ModificationViewSurface} 同一 setter）</h2>
+ * <h2>JS API ({@link ModificationViewSurface} routes setters and property writes to one setter)</h2>
  * <pre>
  * ItemEvents.modification(event {@code ->} {
  *   event.modify('minecraft:diamond', item {@code ->} {
- *     item.maxStackSize = 16;          // 与 item.setMaxStackSize(16) 等价（同一 setter/校验/规范化）
+ *     item.maxStackSize = 16;          // same as item.setMaxStackSize(16) (same setter/validation/normalization)
  *     item.rarity = 'epic';
  *     item.fireResistant = true;
  *   });
  * });
  * </pre>
  *
- * <p>Unset properties keep the item's baseline values. Writing a property records it
- * in the declaration ({@link #normalizedProperties()}); 组件不变量与目标解析由 Adapter
- * 在联合预检（STATE_PLAN）完成。1.21.1 面只有四个基础属性（无 26.x 的
- * food/tool/attack 面——成员差异见 ticket 39 REPORT 五节点差异表）。
+ * <p>Unset properties keep the item's baseline values. Writing a property records it in the
+ * declaration ({@link #normalizedProperties()}). The Adapter checks the component rules and
+ * resolves the target during the preflight (STATE_PLAN). The 1.21.1 side only has these four
+ * basic properties; the 26.x food/tool/attack properties do not exist here.
  */
 public class ItemModificationJS implements graal.graalvm.polyglot.proxy.ProxyObject {
 
@@ -36,7 +37,7 @@ public class ItemModificationJS implements graal.graalvm.polyglot.proxy.ProxyObj
         return surface;
     }
 
-    // ---- ProxyObject：property 写与显式 setter 分发到同一 Java setter ----
+    // ---- ProxyObject: property writes and explicit setters dispatch to the same Java setter ----
 
     @Override
     public Object getMember(String name) {
@@ -120,8 +121,9 @@ public class ItemModificationJS implements graal.graalvm.polyglot.proxy.ProxyObj
     }
 
     /**
-     * 本视图的规范化声明值（ticket 39 候选计划载体）：只含被显式设置的属性。
-     * 组件不变量（stack/damage）与目标解析由 Adapter 在联合预检（STATE_PLAN）完成。
+     * The normalized declarations recorded by this view: only the properties that were set
+     * explicitly. The Adapter checks the component rules (stack/damage) and resolves the target
+     * during the preflight (STATE_PLAN).
      */
     Map<String, Object> normalizedProperties() {
         Map<String, Object> properties = new LinkedHashMap<>();

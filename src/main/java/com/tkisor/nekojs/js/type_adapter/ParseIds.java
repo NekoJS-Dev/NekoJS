@@ -1,20 +1,22 @@
-// 26.x 实现，本文件不应再出现版本守卫。1.21.1 的实现是 versions/1.21.1/src 下的同名文件，
-// 改本文件行为时须同步它。
+// 26.x implementation. This file must not contain version guards again. The 1.21.1 implementation is
+// the same-named file under versions/1.21.1/src, and changing behavior here requires updating it too.
 package com.tkisor.nekojs.js.type_adapter;
 
 import com.tkisor.nekojs.api.data.ValueConversionException;
 import net.minecraft.resources.Identifier;
 
 /**
- * 物品 / 方块 / 物品栈共用的 id 解析公共逻辑，消除 Block/Item/ItemStack 三处重复。
+ * Shared id parsing for items, blocks and item stacks, replacing the duplicated logic in Block, Item
+ * and ItemStack.
  *
- * <p>统一规则：{@code trim} → 缺省补 {@code minecraft:} 前缀 → 拒绝 {@code #} 前缀（tag id）→
- * {@link Identifier#tryParse(String)}，失败抛 {@link ValueConversionException}。
+ * <p>The rules, in order: {@code trim}, add the {@code minecraft:} prefix when missing, reject a
+ * {@code #} prefix (a tag id), then {@link Identifier#tryParse(String)}. A parse failure throws
+ * {@link ValueConversionException}.
  */
 public final class ParseIds {
     private ParseIds() {}
 
-    /** 解析物品/方块 id；空串返回 {@code minecraft:air}。 */
+    /** Parses an item or block id; an empty string returns {@code minecraft:air}. */
     public static Identifier parseItemOrBlockId(String raw) {
         if (raw == null || raw.isBlank()) return Identifier.withDefaultNamespace("air");
         String id = raw.trim();
@@ -31,7 +33,7 @@ public final class ParseIds {
         return location;
     }
 
-    /** 解析正整数计数；非法抛 {@link ValueConversionException}。 */
+    /** Parses a positive integer count; throws {@link ValueConversionException} when the value is invalid. */
     static int parsePositiveCount(String raw) {
         int count;
         try {

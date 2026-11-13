@@ -1,6 +1,7 @@
 //? if >=26 {
-// Orientation（net.minecraft.world.level.redstone）在 1.21.1 不存在——载荷随 26.x 面
-// 一起走版本守卫（1.21.1 侧 neighborNotify 仍走 NeoForge 原生事件，不经本类）。
+// Orientation (net.minecraft.world.level.redstone) does not exist in 1.21.1, so the payload
+// goes with the rest of the 26.x surface behind the version guard (on 1.21.1, neighborNotify
+// still uses the NeoForge native event and does not go through this class).
 package com.tkisor.nekojs.wrapper.event.block;
 
 import com.tkisor.nekojs.api.annotation.Doc;
@@ -12,29 +13,34 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.redstone.Orientation;
 
 /**
- * 方块邻居通知事件（{@code BlockEvents.neighborNotify}）的**加载器中立**载荷。
+ * Loader-neutral payload for the block neighbor notify event
+ * ({@code BlockEvents.neighborNotify}).
  *
- * <p>成员名对齐 NeoForge 26.x {@code BlockEvent.NeighborNotifyEvent}：
- * {@code event.level} / {@code event.pos} / {@code event.state}（被通知的方块）/
- * {@code event.forceRedstoneUpdate}（NeoForge 的 getLevel/getPos/getState/
- * getForceRedstoneUpdate；pos = 被通知的相邻方块，state = 该位置当前方块状态）。
- * 按 {@code state.getBlock()} 分发（与 NeoForge 侧 {@code dispatchByBlock} 一致）。
+ * <p>The member names follow NeoForge 26.x {@code BlockEvent.NeighborNotifyEvent}:
+ * {@code event.level} / {@code event.pos} / {@code event.state} (the notified block) /
+ * {@code event.forceRedstoneUpdate} (NeoForge's getLevel/getPos/getState/
+ * getForceRedstoneUpdate; pos is the neighboring block that gets notified, state is the
+ * current block state at that position). Dispatched by {@code state.getBlock()}, the same as
+ * {@code dispatchByBlock} on the NeoForge side.
  *
- * <p>**26.x 差异——无 notifiedSides**：NeoForge 的 {@code getNotifiedSides()}
- * （EnumSet&lt;Direction&gt;）在 26.x 原版通知流中不存在——邻居更新已改革为
- * {@link Orientation} 概念（{@code NeighborUpdater#executeUpdate} 按单个
- * {@code Orientation} 逐邻居投递，javap 实证），方向集合无聚合点。本例以
- * {@code orientation} + {@code sourceBlock}（发起变更的源方块）替代；
- * 若需 notifiedSides 语义，需自研聚合（见接线清单）。
+ * <p><b>26.x difference: no notifiedSides</b>: NeoForge's {@code getNotifiedSides()}
+ * (EnumSet&lt;Direction&gt;) has no counterpart in the 26.x vanilla notification flow, because
+ * neighbor updates were reworked around the {@link Orientation} concept
+ * ({@code NeighborUpdater#executeUpdate} posts per neighbor with a single {@code Orientation},
+ * as javap shows), so a direction set is never collected in one place. This class uses
+ * {@code orientation} + {@code sourceBlock} (the block that started the change) instead.
+ * Scripts that need notifiedSides semantics have to aggregate on their own.
  *
- * <p>可取消：监听器返回 {@code true} 时跳过本次邻居通知（{@code executeUpdate}
- * 入口取消，被通知方不再收到 {@code handleNeighborChanged}）。
+ * <p>Cancellable: when a listener returns {@code true}, this neighbor notification is skipped
+ * (the cancel happens at the {@code executeUpdate} entry, so the notified side no longer
+ * receives {@code handleNeighborChanged}).
  *
- * <p>fabric 覆盖说明：26.x 的 SimpleNeighborUpdate（单邻居变更）与
- * FullNeighborUpdate（updateNeighborsAt 六邻居）都收敛到
- * {@code NeighborUpdater#executeUpdate}（javap 实证）——服务端收集器
- * {@code CollectingNeighborUpdater} 与其客户端等价物共用此唯一汇点，
- * 客户端侧在绑定点按 {@code isClientSide} 过滤，SERVER 总线只收服务端实例。
+ * <p>fabric coverage: in 26.x both SimpleNeighborUpdate (a single neighbor change) and
+ * FullNeighborUpdate (the six neighbors of updateNeighborsAt) end up in
+ * {@code NeighborUpdater#executeUpdate} (javap-verified). The server collector
+ * {@code CollectingNeighborUpdater} and its client equivalent share that single sink; the
+ * client side is filtered by {@code isClientSide} at the binding point, so the SERVER bus only
+ * receives server instances.
  */
 @Doc("Fired when a block is notified of a neighbor change (BlockEvents.neighborNotify).")
 @Doc("Return true to cancel the neighbor notification.")

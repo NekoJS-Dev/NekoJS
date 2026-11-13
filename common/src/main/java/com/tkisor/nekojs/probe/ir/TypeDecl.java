@@ -6,37 +6,41 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * 语言中性的类型声明 IR 节点（mutable）。由 {@code TypeReflector} 从 Java {@code Class<?>} 反射产出，
- * 供 {@code TypeScriptClassRenderer}（TS）/ Python renderer（Phase 3）渲染，并由 {@code probe.modify_type}
- * 事件就地编辑。
+ * A language-neutral type declaration node (mutable). {@code TypeReflector} builds it by
+ * reflecting a Java {@code Class<?>}. The {@code TypeScriptClassRenderer} (TS) and the Python
+ * renderer consume it, and the {@code probe.modify_type} event edits it in place.
  *
- * <p>字段直接暴露（包内 + 同 IR 子系统访问）；命名（如 TS 的 {@code $Parent$Child}）由各 renderer
- * 从 {@link #sourceClass} 自行计算，本 IR 不固化任何语言特定的命名。
+ * <p>Fields are exposed directly, readable by the package and the rest of the IR subsystem.
+ * Naming, such as the TS {@code $Parent$Child} form, is computed by each renderer from
+ * {@link #sourceClass}; this IR fixes no language-specific names.
  */
 public final class TypeDecl {
     public enum Kind { CLASS, INTERFACE, ENUM }
 
     public Kind kind;
-    public final Class<?> sourceClass;     // 反射源类；纯合成声明可为 null
-    public final String fqn;               // 全限定名（sourceClass.getName() 或合成名）
-    public final List<TypeParam> typeParams = new ArrayList<>();   // 类级泛型 <T extends Bound>
-    public TypeSlot superType;             // 父类；null = Object/无
+    public final Class<?> sourceClass;     // Reflected source class; null for purely synthetic declarations
+    public final String fqn;               // Fully qualified name: sourceClass.getName(), or a synthetic name
+    public final List<TypeParam> typeParams = new ArrayList<>();   // Class-level type parameters, such as <T extends Bound>
+    public TypeSlot superType;             // Superclass; null means Object or none
     public final List<TypeSlot> interfaces = new ArrayList<>();
     public final List<MethodDecl> constructors = new ArrayList<>();
-    public final List<MethodDecl> methods = new ArrayList<>();     // 含 getter/setter（按标志区分）
+    public final List<MethodDecl> methods = new ArrayList<>();     // Includes getters and setters, told apart by their flags
     public final List<FieldDecl> fields = new ArrayList<>();
     public final List<String> docs = new ArrayList<>();
     /** Native member groups unavailable to reflection; retained declarations remain explicitly incomplete. */
     public final List<String> memberOmissions = new ArrayList<>();
     public boolean hidden;
     /**
-     * 重命名后的类名；null = 用 sourceClass 原名。由 {@code probe.modify_type} 的 {@code renameClass}
-     * 设置，各 renderer 渲染 class/interface/enum 名时优先取之（TS 输出仍带 {@code $} 前缀）。
+     * Renamed class name; null means use the name from sourceClass. Set by {@code renameClass} in
+     * {@code probe.modify_type}. Renderers prefer it when emitting the class, interface or enum
+     * name; TS output keeps the {@code $} prefix.
      */
     public String renameTo;
     /**
-     * 是否被 {@code probe.modify_type} 事件触及过。由 {@code ClassEditor} 的任意编辑操作置 true；
-     * probe backend 据此决定哪些类需要经 renderer 重新渲染并覆盖声明缓存。未触及 → 走旧路径（零回归）。
+     * Whether a {@code probe.modify_type} event has touched this declaration. Any edit through
+     * {@code ClassEditor} sets it to true. The probe backend uses it to decide which classes go
+     * through the renderer again and overwrite the cached declaration. Untouched classes keep the
+     * existing path.
      */
     public boolean mutated;
 
@@ -46,7 +50,7 @@ public final class TypeDecl {
         this.fqn = fqn;
     }
 
-    /** 渲染时使用的类名（renameTo 优先；null = 未改名，renderer 回退到 sourceClass 原名）。 */
+    /** Class name used when rendering: renameTo when set, otherwise the sourceClass name. */
     public String effectiveTypeName() {
         return renameTo;
     }
@@ -66,7 +70,7 @@ public final class TypeDecl {
     /** A class type parameter with its reflected intersection bounds and editable legacy constraint. */
     public static final class TypeParam {
         public final String name;
-        public TypeSlot bound;       // null = 无上界
+        public TypeSlot bound;       // null means no upper bound
         private final TypeSlot originalBound;
         private final ApiTypeRef originalBoundRef;
         private final List<TypeSlot> additionalBounds;

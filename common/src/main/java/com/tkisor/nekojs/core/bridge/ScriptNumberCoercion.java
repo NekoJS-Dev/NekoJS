@@ -3,20 +3,18 @@ package com.tkisor.nekojs.core.bridge;
 import graal.graalvm.polyglot.Value;
 
 /**
- * Normalizes script numbers to narrow Java primitives at script-facing parameter
- * seams (the defect class of D6 and the 2026-09-29 float-coercion hotfix).
+ * Normalizes script numbers to narrow Java primitives where a script passes a value into a
+ * Java parameter.
  *
  * <p>Script numbers are doubles. {@link Value#asFloat()} additionally refuses any
  * double that cannot round-trip through {@code float} exactly, and
  * {@link Value#asInt()}/{@link Value#asLong()} refuse fractional values, so
  * perfectly valid script values such as {@code 0.9} for a float-typed property
  * throw a raw engine {@code PolyglotException} ("Invalid or lossy primitive
- * coercion") at the seam — and at a reload collection point that exception fails
- * the whole reload phase instead of the offending call.
+ * coercion") at the parameter. During a reload collection point such an exception fails
+ * the whole reload phase instead of just the offending call.
  *
- * <p>Following the D6 precedent (script-facing numeric seams normalize
- * explicitly), these methods read the number once as a double and narrow it with
- * an explicit policy:
+ * <p>These methods read the number once as a double and narrow it with an explicit policy:
  *
  * <ul>
  *   <li>{@code toFloat}: any finite number narrows with Java casting semantics;

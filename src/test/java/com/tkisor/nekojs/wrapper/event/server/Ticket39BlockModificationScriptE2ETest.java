@@ -1,5 +1,5 @@
-// 26.x 面：BlockEvents.modification 总线与 BlockModificationJS 属性面是 26.x API
-//（1.21.1 无此总线，见票 39 五节点差异表）。
+// 26.x only: the BlockEvents.modification bus and the BlockModificationJS property face are
+// 26.x APIs (1.21.1 has no such bus).
 //? if >=26 {
 package com.tkisor.nekojs.wrapper.event.server;
 
@@ -25,14 +25,17 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 /**
- * 票 39 AC13 贯穿 fixture（block 半边，26.x）：真实脚本经
- * {@code BlockEvents.modification} 收集声明，commit 点由平台
- * {@link ModificationDomainOwner} Adapter 写入 {@code BlockBehaviour.Properties} +
- * {@code Block} 副本 + 每个 {@code BlockState} 副本（状态相关光照函数走基线恢复）。
+ * End-to-end fixture for the block half on 26.x: a real script collects declarations through
+ * {@code BlockEvents.modification}, and the platform {@link ModificationDomainOwner} Adapter
+ * writes them at the commit point into {@code BlockBehaviour.Properties}, a copy of the
+ * {@code Block}, and a copy of every {@code BlockState} (state-dependent light functions go
+ * through baseline restore).
  *
- * <p>覆盖：应用（多状态方块）、候选期 inert（probe 收集器读到的 live 值仍是旧 active）、
- * 声明移除恢复基线（含原始 per-state 光照函数）、预检拒绝整批保持旧 active。
- * 环境门同 {@code Ticket39ModificationScriptE2ETest}。
+ * <p>Covers: applying (a multi-state block), inertness while candidates are collected (the
+ * probe collector still reads the old active values), baseline restore after a declaration is
+ * removed (including the original per-state light function), and a preflight rejection that
+ * keeps the old active values for the whole batch. The environment gate matches
+ * {@code Ticket39ModificationScriptE2ETest}.
  */
 class Ticket39BlockModificationScriptE2ETest {
 
@@ -64,7 +67,7 @@ class Ticket39BlockModificationScriptE2ETest {
         harness.root.scriptManagerOf(ScriptType.SERVER).loadScripts();
     }
 
-    @SuppressWarnings("deprecation") // 读无上下文当前值：Block 副本的 destroyTime
+    @SuppressWarnings("deprecation") // Reads the current value without a context: the destroyTime of the Block copy
     private static float stoneHardness() {
         return Blocks.STONE.defaultBlockState().getDestroySpeed(null, null);
     }
@@ -124,7 +127,8 @@ class Ticket39BlockModificationScriptE2ETest {
                 "candidate collection must not touch live BlockState copies (inert until commit)");
         assertEquals(Set.of(12), lightValuesOf(Blocks.REDSTONE_LAMP), "commit applies the new plan");
 
-        // 声明移除：成功 reload 后恢复原始 per-state 光照函数（不是常量）
+        // Declaration removal: a successful reload restores the original per-state light function
+        // (not a constant)
         harness.writeServerScript("mod.js", "global.noModification = true\n");
         harness.root.reload(ScriptType.SERVER);
 
@@ -167,7 +171,8 @@ class Ticket39BlockModificationScriptE2ETest {
         assertEquals(4.0f, stoneHardness(), 0.0f);
         assertEquals(true, Blocks.OAK_FENCE.defaultBlockState().requiresCorrectToolForDrops());
 
-        // 第二条声明非法（friction 越界）：整批（含第一条）不提交，旧 active 保留
+        // The second declaration is invalid (friction out of range), so the whole batch, including the
+        // first declaration, is not committed and the old active values stay
         harness.writeServerScript("mod.js", """
                 BlockEvents.modification(event => {
                   event.modify('minecraft:stone', block => block.setHardness(9.0))

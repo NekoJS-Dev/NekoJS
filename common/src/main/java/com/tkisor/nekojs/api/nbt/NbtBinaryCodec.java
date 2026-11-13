@@ -3,19 +3,29 @@ package com.tkisor.nekojs.api.nbt;
 import com.tkisor.nekojs.api.data.NbtValue;
 
 /**
- * NBT 二进制编解码器，负责 {@link NbtValue.CompoundValue} 与压缩二进制（如 gzip 的 NBT 文件）之间的转换。
+ * NBT binary codec: converts between {@link NbtValue.CompoundValue} and compressed binary, such as a
+ * gzip-compressed NBT file.
  *
- * <p>平台在支持时提供原生实现；不支持时使用 {@link #unsupported()} 返回一个所有操作
- * 都抛 {@link NbtBinaryException.Reason#UNSUPPORTED} 的占位实现。
+ * <p>A platform that supports it provides a native implementation; otherwise
+ * {@link #unsupported()} returns a placeholder whose operations all throw
+ * {@link NbtBinaryException.Reason#UNSUPPORTED}.
  */
 public interface NbtBinaryCodec {
-    /** 解压并解析压缩 NBT 二进制为 compound；失败抛 {@link NbtBinaryException}。 */
+    /**
+     * Decompresses compressed NBT binary and parses it into a compound; throws
+     * {@link NbtBinaryException} on failure.
+     */
     NbtValue.CompoundValue decodeCompressed(byte[] compressed, NbtBinaryLimits limits) throws NbtBinaryException;
 
-    /** 把 compound 编码为压缩 NBT 二进制；失败抛 {@link NbtBinaryException}。 */
+    /**
+     * Encodes a compound as compressed NBT binary; throws {@link NbtBinaryException} on failure.
+     */
     byte[] encodeCompressed(NbtValue.CompoundValue root, NbtBinaryLimits limits) throws NbtBinaryException;
 
-    /** 返回所有操作均抛 {@link NbtBinaryException.Reason#UNSUPPORTED} 的占位实现。 */
+    /**
+     * Returns a placeholder implementation whose operations all throw
+     * {@link NbtBinaryException.Reason#UNSUPPORTED}.
+     */
     static NbtBinaryCodec unsupported() {
         return new NbtBinaryCodec() {
             @Override

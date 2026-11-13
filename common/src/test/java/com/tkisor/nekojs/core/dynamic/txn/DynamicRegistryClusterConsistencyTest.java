@@ -13,18 +13,16 @@ import java.util.Map;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * Ticket 21 cross-node runtime smoke (JVM-level cluster): a server coordinator
- * plus real {@link DynamicRegistryClientParticipant} nodes wired through a
- * recording transport, with manually driven deterministic delivery. Success
- * assertions observe the <b>final visible state on every activated node</b>
- * (server adapter live map + each client's ledger/watermark) — never the mere
- * existence of prepare/ack messages (AC3); a rejected batch leaves <b>no</b>
- * partial registration on any node (AC2).
+ * Cross-node runtime smoke test at JVM level: a server coordinator plus real
+ * {@link DynamicRegistryClientParticipant} nodes wired through a recording transport, with
+ * delivery driven manually so it stays deterministic. Success assertions check the
+ * <b>final visible state on every activated node</b> (the server adapter's live map plus each
+ * client's ledger and watermark), never the mere existence of prepare/ack messages. A
+ * rejected batch leaves <b>no</b> partial registration on any node.
  *
- * <p>The adapters here are JVM doubles: these fixtures verify the transaction and
- * sync gates, not any platform Adapter — per-type activation conclusions for the
- * real target Adapter are recorded separately (capability table in the ticket 21
- * baseline REPORT).
+ * <p>The adapters here are JVM doubles: these fixtures verify the transaction and sync gates,
+ * not any platform Adapter. Per-type activation conclusions for the real target Adapter are
+ * recorded separately, in the capability table of the baseline report.
  */
 class DynamicRegistryClusterConsistencyTest {
 
@@ -141,7 +139,7 @@ class DynamicRegistryClusterConsistencyTest {
         }
     }
 
-    // ---- AC3: final consistent visibility on all activated nodes ----
+    // ---- Every activated node ends up with the same visible state ----
 
     @Test
     void allNodesReachTheSameActivatedStateAfterAckAndCommit() {
@@ -172,7 +170,7 @@ class DynamicRegistryClusterConsistencyTest {
         }
     }
 
-    // ---- AC2: one rejection leaves no partial registration anywhere ----
+    // ---- One rejection leaves no partial registration on any node ----
 
     @Test
     void oneClientRejectsAndNoNodeActivatesAnything() {
@@ -203,7 +201,7 @@ class DynamicRegistryClusterConsistencyTest {
         assertFalse(server.lastSummary().committed());
     }
 
-    // ---- AC4: late joiner catch-up; disconnect has a defined cross-node outcome ----
+    // ---- Late joiner catch-up; a disconnect has a defined cross-node outcome ----
 
     @Test
     void lateJoinerCatchesUpViaStateSyncToTheSameState() {

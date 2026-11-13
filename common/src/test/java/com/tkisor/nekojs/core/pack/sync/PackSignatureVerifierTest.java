@@ -15,8 +15,9 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * 签名验证器聚焦测试：签名往返、篡改 manifest、keyId pinning 冲突（常量时间路径）、
- * 未签名包受 allowUnsigned 控制、算法白名单（仅 Ed25519）。
+ * Signature verifier tests: sign and verify round trip, a tampered manifest, a keyId pinning
+ * conflict (constant-time path), unsigned packs gated by allowUnsigned, and the algorithm
+ * allowlist (Ed25519 only).
  */
 class PackSignatureVerifierTest {
 
@@ -76,7 +77,8 @@ class PackSignatureVerifierTest {
         KeyPair attackerKey = PackSigner.generateKeyPair();
         String manifest = signedManifest("packs:demo", "GLOBAL", "author-key", authorKey);
 
-        // 信任库已按 keyId pinning 作者公钥；包内嵌入的是攻击者公钥 → 拒绝（防静默换钥）
+        // The trust store pins the author key under its keyId, but the pack carries the attacker key,
+        // so verification rejects it and a silent key swap cannot pass.
         PackSyncTrustStore trustStore = new PackSyncTrustStore(trustDir.resolve("t3.json"));
         trustStore.trustPublicKey("author-key", PackSigner.encodePublicKey(attackerKey.getPublic()), "fp", "srv");
 
@@ -133,7 +135,8 @@ class PackSignatureVerifierTest {
         assertTrue(result.reason().contains("unsupported signature algorithm"));
     }
 
-    /** 构造带签名块的 manifest：先签无签名原文（验签侧 canonical 化会移除签名键）。 */
+    /** Builds a manifest with a signature block: it signs the unsigned text first, because
+     * verification removes the signature key while canonicalizing. */
     private static String signedManifest(String syncId, String scope, String keyId, KeyPair keyPair) {
         String unsigned = "{\"id\": \"demo\", \"version\": \"1.0.0\", \"authors\": [\"tester\"]}";
         JsonObject signature = PackSigner.sign(keyId, keyPair, syncId, scope, unsigned, FILES);

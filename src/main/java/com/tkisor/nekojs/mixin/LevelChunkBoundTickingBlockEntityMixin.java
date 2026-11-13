@@ -12,11 +12,13 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 /**
- * 方块实体 tick 注入：在 {@code LevelChunk$BoundTickingBlockEntity.tick} HEAD 触发
- * {@link BlockEntityTickEvent}（脚本侧 {@code BlockEvents.blockEntityTick}）。
+ * Injects the block entity tick: fires {@link BlockEntityTickEvent} (script side
+ * {@code BlockEvents.blockEntityTick}) at the HEAD of {@code LevelChunk$BoundTickingBlockEntity.tick}.
  *
- * <p>对所有有 ticker 的方块实体触发（原版 + 脚本）；事件按 {@code BlockEntityType} 分发。
- * 目标内部类在两版本（1.21.1 / 26.x）均为 {@code net.minecraft.world.level.chunk.LevelChunk$BoundTickingBlockEntity}。
+ * <p>Fires for every block entity that has a ticker, vanilla or scripted; the event dispatches by
+ * {@code BlockEntityType}. The target inner class is
+ * {@code net.minecraft.world.level.chunk.LevelChunk$BoundTickingBlockEntity} in both versions
+ * (1.21.1 and 26.x).
  */
 @Mixin(targets = "net.minecraft.world.level.chunk.LevelChunk$BoundTickingBlockEntity")
 public abstract class LevelChunkBoundTickingBlockEntityMixin {

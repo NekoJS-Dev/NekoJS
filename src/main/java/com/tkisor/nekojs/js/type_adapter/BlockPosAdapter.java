@@ -12,8 +12,9 @@ import java.util.Set;
 import static com.tkisor.nekojs.api.AdapterInputShape.*;
 
 /**
- * 把脚本输入适配为 {@link BlockPos}：接受 {@code BlockPos}、{@code Vec3}、{@code {x,y,z}} 对象、
- * {@code [x,y,z]} 数组。坐标取整（{@link BlockPos#containing}）。
+ * Adapts script input to {@link BlockPos}: accepts {@code BlockPos}, {@code Vec3}, an
+ * {@code {x,y,z}} object or an {@code [x,y,z]} array. Coordinates are rounded down to the
+ * block that contains them ({@link BlockPos#containing}).
  *
  * <pre>
  * someApi(BlockPos.of(...))            // self

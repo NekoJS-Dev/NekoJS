@@ -15,9 +15,10 @@ import java.util.List;
 import java.util.function.Consumer;
 
 /**
- * {@code ServerEvents.lootTables} 中 {@code modify} 回调的战利品表包装：
- * JSON-first 操作（改动直接反映到底层 {@link JsonObject}，最后经 {@code setJson} 生效）。
- * 冷门字段（functions / conditions 等）直接操作返回的 {@code toJson()} 或传 raw JSON。
+ * JSON-backed loot table wrapper passed to {@code ServerEvents.lootTables} {@code modify} callbacks.
+ * Edits mutate the underlying {@link JsonObject} in place and are saved via {@code setJson} when
+ * the callback returns. Less common fields (such as {@code functions} or {@code conditions}) can be
+ * edited directly on {@link #toJson()} or passed as raw JSON.
  */
 @Doc("Wrapper for the loot table being modified in a ServerEvents.lootTables.modify callback.")
 @Doc("JSON-first: edits are applied directly to the underlying JsonObject and take effect when the callback returns.")
@@ -28,7 +29,7 @@ public class LootTableJS {
         this.json = json;
     }
 
-    /** 表类型（如 {@code minecraft:chest}）。 */
+    /** Loot table type id (such as {@code minecraft:chest}). */
     @Doc("Gets the loot table type id.")
     @Return("the type id like 'minecraft:chest', or null when the table has no type set")
     public String getType() {
@@ -41,7 +42,7 @@ public class LootTableJS {
         json.addProperty("type", type);
     }
 
-    /** 现有池列表（包装对象，改动直接写回底层 JSON）。 */
+    /** Returns live wrappers over the existing pools; edits write directly to the underlying JSON. */
     @Doc("Gets the pools of this loot table.")
     @Return("live LootPoolJS wrappers over the existing 'pools' array; edits write straight through to the JSON")
     public List<LootPoolJS> getPools() {
@@ -52,7 +53,7 @@ public class LootTableJS {
         return pools;
     }
 
-    /** 追加一个池：传 JS 对象 / JSON 字符串（完整 pool JSON），或 builder 回调。 */
+    /** Appends a loot pool from a JS object or JSON string containing complete pool JSON. */
     @Doc("Appends a loot pool from raw JSON: a JS object, a JSON string, or a prebuilt pool object.")
     @Param(name = "pool", value = "complete pool JSON as a JS object or JSON string")
     @Return("this, for chaining")
@@ -84,7 +85,7 @@ public class LootTableJS {
         return json.getAsJsonArray("pools");
     }
 
-    /** 任意 JS/Java 值 → JsonElement（对象/数组/字符串/数字）。 */
+    /** Converts a JS or Java value (object, array, JSON string, or primitive) into a {@link JsonElement}. */
     static JsonElement toJsonElement(Object value) {
         if (value instanceof JsonElement element) {
             return element;
@@ -98,7 +99,7 @@ public class LootTableJS {
         throw new IllegalArgumentException("[NEKO-5001] 无法转换为 JSON — could not convert value to JSON: " + value);
     }
 
-    /** 任意 JS/Java 值 → JsonObject（要求对象形态）。 */
+    /** Converts a JS or Java value into a {@link JsonObject}, throwing if it is not a JSON object. */
     static JsonObject toJsonObject(Object value) {
         JsonElement element = toJsonElement(value);
         if (!element.isJsonObject()) {

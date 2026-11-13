@@ -37,29 +37,36 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * 票据 11 AC9：legacy CJS bridge 的 characterization、当前保留原因与收缩 gate。
+ * Describes the legacy CJS bridge: its current behavior, the reasons for keeping it and what must
+ * hold before it can be removed.
  *
- * <p>本票所指 legacy CJS bridge = 外部语言经 {@link IScriptCompiler} 注册后走
- * {@code compileDetailed → CJS 静态分析} 的兼容输入路径（见
- * {@link NekoModulePipeline} 的 legacy 分支），以及 node 内建资源直装路径
- * （{@link NekoNodeModuleInstaller} 的 manifest 求值，不经过管线）。
- * 两者都被显式表征；保留原因与删除条件见类注与迁移材料，删除不推迟到 final release
- * 统一清理（条件满足即删），同一公开语义没有第二条长期 pipeline。
+ * <p>The legacy CJS bridge is the compatibility input path where an external language registered
+ * through {@link IScriptCompiler} goes through {@code compileDetailed → CJS static analysis}, the
+ * legacy branch of {@link NekoModulePipeline}. It also covers the direct install path for node
+ * builtin resources, where {@link NekoNodeModuleInstaller} evaluates a manifest without going
+ * through the pipeline. This test characterizes both. The reasons for keeping them and the
+ * removal conditions are listed below; removal happens as soon as the conditions hold and is not
+ * postponed to a final release cleanup, and no public behavior gets a second long-lived pipeline.
  *
- * <p>保留原因：
+ * <p>Why they are kept:
  * <ul>
- *   <li>外部语言插件兼容：已发布的语言以后缀注册参与管线是公开扩展能力，
- *       删除即删除公开语言参与路径（票据约束“不删公开语言”）；</li>
- *   <li>node 内建资源（classpath manifest）语义不同于用户模块（无文件身份/缓存/
- *       reload），直装是独立语义而非第二条用户管线。</li>
+ *   <li>External language plugin compatibility: registering a language by file suffix and taking
+ *       part in the pipeline is a public extension point, so removing the path removes public
+ *       language participation;</li>
+ *   <li>node builtin resources (classpath manifest) behave differently from user modules: they
+ *       have no file identity, cache or reload, so the direct install is its own behavior rather
+ *       than a second user pipeline.</li>
  * </ul>
  *
- * <p>删除条件（收缩 gate，须全部满足；满足后随票删除，不进 final release 统一清理）：
+ * <p>Removal conditions, all of which must hold:
  * <ol>
- *   <li>替代 behavior：同后缀经内置语言插件产出逐字节一致的 code/mode（corpus 对照）；</li>
- *   <li>declaration：managed 声明面覆盖该后缀的模块能力；</li>
- *   <li>trace：全仓无 {@code IScriptCompiler} 该后缀注册（grep 证据）；</li>
- *   <li>无调用者：legacy 分支无生产/测试调用（覆盖率证据）。</li>
+ *   <li>Replacement behavior: the builtin language plugin produces byte-identical code and mode
+ *       for the same suffix (corpus comparison);</li>
+ *   <li>Declaration: the managed declaration surface covers the module capabilities of that
+ *       suffix;</li>
+ *   <li>Trace: no {@code IScriptCompiler} registration for that suffix remains in the repository
+ *       (grep evidence);</li>
+ *   <li>No callers: the legacy branch has no production or test callers (coverage evidence).</li>
  * </ol>
  */
 class LegacyCjsBridgeCharacterizationTest {
@@ -69,7 +76,8 @@ class LegacyCjsBridgeCharacterizationTest {
         TestPlatformInit.ensureInitialized();
     }
 
-    /** 外部语言经 legacy 编译器参与：产物走 CJS 语义，分析跑在编译产物上。 */
+    /** An external language through the legacy compiler: the output uses CJS semantics and analysis
+    runs on the compiled output. */
     @Test
     void legacyCompilerOutputGoesThroughCjsSemantics() throws Exception {
         ScriptCompilerRegistry compilers = ScriptCompilerRegistry.createRuntimeRegistry();
@@ -81,12 +89,12 @@ class LegacyCjsBridgeCharacterizationTest {
 
             @Override
             public String compile(Path file, String sourceCode) {
-                // 模拟转译：生成 require/module.exports（原始源里不存在）。
+                // Simulated transpilation: emits require/module.exports, which the original source does not contain.
                 return "const other = require('./other.upperjs');\n"
                         + "module.exports = { lang: 'upper', dep: other };\n";
             }
         });
-        // ESM 编排关闭时 legacy 后缀走直接 CJS 分支（compileDetailed → CJS 分析）。
+        // With ESM orchestration off, legacy suffixes take the direct CJS branch (compileDetailed → CJS analysis).
         SandboxConfig cjsOnly = new SandboxConfig(false, false, false, false, false, true, false,
                 false);
         NekoModulePipeline pipeline = new NekoModulePipeline(
@@ -105,7 +113,7 @@ class LegacyCjsBridgeCharacterizationTest {
         assertNotNull(prepared.cacheKey());
     }
 
-    /** legacy 路径同样复用同一 prepare 产物形态：没有第二条 pipeline。 */    @Test
+    /** The legacy path produces the same prepared shape: there is no second pipeline. */    @Test
     void legacyPathSharesPreparedShapeWithNativePath() throws Exception {
         ScriptCompilerRegistry compilers = ScriptCompilerRegistry.createRuntimeRegistry();
         compilers.registerLanguage("legacy-idem", Set.of(".idemjs"), new IScriptCompiler() {
@@ -133,7 +141,8 @@ class LegacyCjsBridgeCharacterizationTest {
         assertNotNull(nativeJs.cacheKey());
     }
 
-    /** node 内建资源直装路径：不经过管线（独立语义：classpath 资源，无文件身份/缓存）。 */
+    /** Direct install path for node builtins: it skips the pipeline because classpath resources have no
+    file identity or cache. */
     @Test
     void nodeBuiltinsInstallWithoutPipeline() {
         try (Context context = Context.newBuilder("js").allowAllAccess(true).build()) {
@@ -155,7 +164,8 @@ class LegacyCjsBridgeCharacterizationTest {
         }
     }
 
-    /** legacy 后缀经同一 Resolution/Cache 路径装载执行：require 身份与 CJS 一致。 */
+    /** Legacy suffixes load and run through the same resolution and cache path, so require identity
+    matches CJS. */
     @Test
     void legacyModuleLoadsThroughSharedResolutionCache(@TempDir Path gameDir) throws Exception {
         TestPlatformInit.ensureInitialized(gameDir);
@@ -214,7 +224,8 @@ class LegacyCjsBridgeCharacterizationTest {
         return constructor.newInstance(gameDir);
     }
 
-    /** 收缩 gate 结构证据：管线不再持有 static 可变状态（旧 LEGACY_INSTANCE/SHARED 已删）。 */
+    /** Removal gate, structural evidence: the pipeline holds no static mutable state, and the
+    LEGACY_INSTANCE and SHARED facades are gone. */
     @Test
     void pipelineHoldsNoStaticMutableState() {
         for (Field field : NekoModulePipeline.class.getDeclaredFields()) {
@@ -228,7 +239,8 @@ class LegacyCjsBridgeCharacterizationTest {
         }
     }
 
-    /** 收缩 gate 结构证据：prepared 缓存无 process-wide static（实例由 owner 持有）。 */
+    /** Removal gate, structural evidence: the prepared cache has no process-wide static state; the
+    owner holds the instance. */
     @Test
     void preparationCacheHoldsNoStaticState() {
         for (Field field : NekoModulePipelineCache.class.getDeclaredFields()) {
@@ -240,7 +252,8 @@ class LegacyCjsBridgeCharacterizationTest {
         }
     }
 
-    /** 不新增公共 parser ModuleSPI：管线公开签名只出现 pipeline/registry/config 与产物类型。 */
+    /** Adds no public parser ModuleSPI: public pipeline signatures only expose the pipeline, the
+    registry, the config and prepared types. */
     @Test
     void pipelinePublicSurfaceExposesNoParserSpi() {
         Set<String> forbiddenFragments = Set.of(

@@ -4,17 +4,19 @@ import com.tkisor.nekojs.api.NekoJSPlugin;
 import com.tkisor.nekojs.script.prop.ScriptPropertyRegistry;
 
 /**
- * 内置点定义插件（ADR-0003）：以与第三方完全相同的 {@link NekoPluginExtensionProvider}
- * 路径注册全部内置扩展点，本清单即内置扩展点的<b>显式总索引</b>——新增内置扩展点
- * = 一个自包含 Point 文件 + 本清单一行。
+ * Registers all built-in extension points through the same {@link NekoPluginExtensionProvider}
+ * path that third-party plugins use. This manifest is the <b>explicit index</b> of built-in
+ * points: adding one means a self-contained point file plus one line here.
  *
- * <p><b>内置先行相位：</b>bootstrap 在第三方 provider 回调之前显式调用本插件
- * （引擎对依赖图根部的保证，见 {@code NekoPluginBootstrap#collect}）——不依赖
- * 插件 priority，第三方不可能抢占。本类不经 {@code @RegisterNekoJSPlugin} 扫描
- * 发现，由 bootstrap 直接构造，正是"显式提升"的实现形态。
+ * <p><b>Built-ins run first:</b> bootstrap calls this plugin before any third-party provider
+ * callback (the engine guarantees this for the roots of the dependency graph, see
+ * {@code NekoPluginBootstrap#collect}), so it does not depend on plugin priority and a
+ * third-party plugin cannot get in ahead of it. The bootstrap constructs this class directly
+ * instead of finding it through the {@code @RegisterNekoJSPlugin} scan.
  *
- * <p>闭包特例（{@code script_properties} / {@code bindings}）经构造参数带入每轮
- * bootstrap 的值，注册期以静态工厂构造扩展点。
+ * <p>Two points close over per-bootstrap state ({@code script_properties} and
+ * {@code bindings}): their values arrive as constructor arguments, and registration builds
+ * those points through static factories.
  */
 public final class NekoBuiltinPointsPlugin implements NekoJSPlugin, NekoPluginExtensionProvider {
 

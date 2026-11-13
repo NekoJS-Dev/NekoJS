@@ -107,15 +107,17 @@ public final class ScriptCompilerRegistry {
     }
 
     /**
-     * 按扩展名取编译器。
+     * Returns the compiler for an extension.
      *
-     * <p><b>倒序查找、后注册者胜（last-wins）：</b>从最新注册项向前遍历，第一个声明支持
-     * 该扩展名的编译器获胜——后注册的插件可以用普通 {@code register} 覆盖内置编译器，
-     * 无需 {@link #replaceLanguage}。注册顺序由插件 priority 决定（数值大者先注册），
-     * 因此「覆盖内置」的插件通常需要<b>低于</b>内置插件的 priority（后注册），或直接用
-     * {@code replaceLanguage} 显式替换以消除顺序依赖。同 priority 时按实现类 FQN 再按 owner id
-     * 排序（见 {@code NekoJSBasePluginManager.ORDER}）——在同一份 classpath 上确定，但依赖你的
-     * 类名，别当契约用。
+     * <p><b>The search runs backwards and the last registration wins:</b> the list is walked from the
+     * newest registration down, and the first compiler that claims the extension wins. A plugin
+     * registered later can therefore override a built-in compiler with a plain {@code register} call,
+     * without {@link #replaceLanguage}. Registration order follows plugin priority, where a higher
+     * number registers first, so a plugin that overrides a built-in usually needs a <b>lower</b>
+     * priority than the built-in, or should call {@code replaceLanguage} to replace it explicitly and
+     * drop the ordering dependency. At equal priority, entries are ordered by implementation class FQN and then
+     * by owner id (see {@code NekoJSBasePluginManager.ORDER}); that order is fixed on one classpath
+     * but depends on your class names, so do not rely on it.
      */
     public IScriptCompiler getCompiler(String extension) {
         String dotted = normalizeExtension(extension);
@@ -154,7 +156,7 @@ public final class ScriptCompilerRegistry {
         return new Capture(null, null, null, revision);
     }
 
-    /** 同 {@link #getCompiler(String)} 的 last-wins 语义，返回整个语言插件条目。 */
+    /** Uses the same last-wins rule as {@link #getCompiler(String)} and returns the whole language plugin entry. */
     public NekoScriptLanguage getLanguage(String extension) {
         String dotted = normalizeExtension(extension);
         String bare = dotted.substring(1);

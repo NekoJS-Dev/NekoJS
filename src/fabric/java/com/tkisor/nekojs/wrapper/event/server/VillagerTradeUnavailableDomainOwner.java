@@ -16,17 +16,17 @@ import java.util.List;
 import java.util.Set;
 
 /**
- * Explicitly unavailable villager trade domain owner on Fabric (ticket 22 AC9).
+ * Villager trade domain owner that reports the domain as unavailable on Fabric.
  *
  * <p>Fabric has no {@code RegisterVillagerTradesEvent} equivalent and this port has no trade
- * registry mutation adapter, so the honest answer is <b>unavailable</b> — not a silent no-op.
- * This collector keeps the event surface and the joint candidate boundary intact: a script that
- * declares a trade collects listeners normally, and the batch fails its joint preflight with a
+ * registry mutation adapter, so the honest answer is <b>unavailable</b>, not a silent no-op. This
+ * collector keeps the event surface and candidate collection intact: a script that declares a trade
+ * collects listeners normally, and the batch fails its preflight with a
  * {@link VillagerTradeUnavailableException} naming the node, so the reload reports a structured
  * failure and the old active trades keep serving.
  *
- * <p>The preflight failure reason is recorded once per batch: a script that calls
- * {@code add} repeatedly produces one reason, not a log flood.
+ * <p>The preflight failure reason is recorded once per batch: a script that calls {@code add}
+ * repeatedly produces one reason, not a log flood.
  */
 public final class VillagerTradeUnavailableDomainOwner implements CandidateDomainCollector, AutoCloseable {
 
@@ -86,14 +86,14 @@ public final class VillagerTradeUnavailableDomainOwner implements CandidateDomai
     @Override
     public void collect(Handle handle) {
         VillagerTradeCandidatePlan plan = new VillagerTradeCandidatePlan(applier, state);
-        // Same payload types and the same joint boundary as the other nodes: the batch collects
+        // Same payload types and the same collection path as the other nodes: the batch collects
         // normally and is rejected as a whole by the adapter's explicit unavailable preflight.
         handle.dispatch(ServerEvents.TRADE_DECLARATION, new VillagerTradeDeclarationEventJS(plan));
         handle.dispatch(ServerEvents.TRADE_RELOAD,
                 new VillagerTradeReloadEventJS(plan, state.committedSnapshot()));
         if (plan.isEmpty()) {
-            // No script declared anything (the dispatch reached no listener): the domain does not
-            // participate at all, so an untouched reload behaves exactly as before this ticket.
+            // No script declared anything (the dispatch reached no listener), so the domain does not
+            // participate at all and an untouched reload behaves exactly as before.
             return;
         }
         handle.registerPlan(plan);

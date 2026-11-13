@@ -31,13 +31,13 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Ticket 23 AC2 contract fixture for the common recipe schema/type/namespace seam: a
- * representative {@link RecipeTypeDefinition} (minecraft-style smelting + a namespaced custom
- * type) drives {@link SchemaRecipeBuilder} over a recording {@link RecipeBuilder} — required
- * fields must be supplied, defaults are applied, schema-field setters convert values through
- * the {@link com.tkisor.nekojs.api.recipe.RecipeSchemaHost} (scalar kinds + array wrapping),
- * and unknown members stay unknown. All assertions observe the JSON the builder produced or
- * the host received; no platform (Minecraft/loader) types are involved.
+ * Tests recipe schema, type and namespace handling in common: a representative
+ * {@link RecipeTypeDefinition} (minecraft-style smelting plus a namespaced custom type) drives
+ * {@link SchemaRecipeBuilder} over a recording {@link RecipeBuilder}. Required fields must be
+ * supplied, defaults are applied, schema-field setters convert values through the
+ * {@link com.tkisor.nekojs.api.recipe.RecipeSchemaHost} (scalar kinds and array wrapping), and
+ * unknown members stay unknown. All assertions observe the JSON the builder produced or the
+ * host received; no platform (Minecraft/loader) types are involved.
  */
 class SchemaRecipeBuilderContractTest {
 

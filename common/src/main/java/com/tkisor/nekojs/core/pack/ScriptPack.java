@@ -5,8 +5,9 @@ import com.tkisor.nekojs.api.ScriptType;
 import java.nio.file.Path;
 
 /**
- * 一个已扫描的脚本包：manifest 元数据 + 作用域 + 启用态（状态文件 &gt; manifest 默认）。
- * 包内脚本目录为 {@code <root>/<type.name>_scripts/}，与平铺脚本目录同名规则对齐。
+ * A scanned script pack: manifest metadata, scope and enabled state (the state file wins over the
+ * manifest default). Script directories in the pack are {@code <root>/<type.name>_scripts/}, the
+ * same naming rule as flat script directories.
  */
 public record ScriptPack(
     String id,
@@ -29,16 +30,16 @@ public record ScriptPack(
         return scope.name() + ":" + id;
     }
 
-    /** 本包某脚本类型的脚本目录（可能不存在，调用方自行判空）。 */
+    /** Script directory of this pack for one script type. It may not exist, so callers check first. */
     public Path scriptsDirFor(ScriptType type) {
         return root.resolve(type.scriptsDirectoryName());
     }
 
     /**
-     * 包内脚本 ScriptId path 的前缀段：{@code packs/<id>/}（GLOBAL）或
-     * {@code worldpacks/<id>/}（WORLD）。完整 ScriptId 由
-     * {@code ScriptLocator} 拼接为 {@code nekojs:<type>/<前缀段><包内相对路径>}，
-     * 该前缀同时是世界卸载时按 scriptId 前缀反注册监听器的定位键。
+     * Prefix segment of the ScriptId path for scripts in this pack: {@code packs/<id>/} for GLOBAL or
+     * {@code worldpacks/<id>/} for WORLD. {@code ScriptLocator} builds the full ScriptId as
+     * {@code nekojs:<type>/<prefix segment><path inside the pack>}, and the same prefix is the key used
+     * to unregister listeners by scriptId prefix when a world unloads.
      */
     public String idPathPrefix() {
         if (scope == ScriptPackScope.SERVER_CACHE && manifest.descriptor() != null) {
@@ -47,7 +48,10 @@ public record ScriptPack(
         return scope.idSegment() + "/" + id + "/";
     }
 
-    /** 完整前缀（含 ScriptType 段），用于按包反注册：{@code nekojs:<type>/<idPathPrefix>}。 */
+    /**
+     * Full prefix including the ScriptType segment, used to unregister a whole pack:
+     * {@code nekojs:<type>/<idPathPrefix>}.
+     */
     public String scriptIdPrefix(ScriptType type) {
         return "nekojs:" + type.name + "/" + idPathPrefix();
     }

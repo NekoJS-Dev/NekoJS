@@ -49,12 +49,14 @@ import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * ticket 06 AC6 / AC3：reload 入口的阶段结果契约——
+ * Phase reported by the reload entry points:
  * <ul>
- *   <li>事务式 reload（SERVER/CLIENT/TEST）成功结果的 phase 是 COMMIT（候选+commit）；</li>
- *   <li>STARTUP reload 保持显式非事务边界（reset+load，不可逆平台注册不做候选/commit），
- *       结果 phase 是 STARTUP——入口不把 STARTUP 重载宣称成候选事务成功；</li>
- *   <li>单文件重载失败结果的 phase 是 FILE 且携带 source location。</li>
+ *   <li>a transactional reload (SERVER/CLIENT/TEST) that succeeds reports phase COMMIT
+ *       (candidate plus commit);</li>
+ *   <li>a STARTUP reload keeps the explicit non-transactional path (reset plus load, with no
+ *       candidate or commit for irreversible platform registrations) and reports phase STARTUP,
+ *       so the entry never presents a STARTUP reload as a successful candidate transaction;</li>
+ *   <li>a single-file reload that fails reports phase FILE and carries the source location.</li>
  * </ul>
  */
 class NekoRuntimeRootReloadResultTest {
@@ -109,8 +111,10 @@ class NekoRuntimeRootReloadResultTest {
     }
 
     /**
-     * 独立 Engine：NekoSharedEngine 的 HostAccess 按 factory 实例身份比较（生产进程只有
-     * 一份装配 factory），多 root 各建 factory 会撞共享引擎约束——本测试不依赖该进程级例外。
+     * Builds a standalone Engine. NekoSharedEngine compares HostAccess by factory instance
+     * identity and a production process has a single assembled factory, so a root with its own
+     * factory would hit the shared-engine constraint; this test does not rely on that
+     * process-wide exception.
      */
     private static NekoRuntimeRoot newRoot(ScriptEventBridge bridge) {
         return newRoot(bridge, SandboxConfig.defaultConfig());
@@ -245,7 +249,8 @@ class NekoRuntimeRootReloadResultTest {
         assertFalse(post.hasListeners());
     }
 
-    /** AC6：STARTUP reload 保持 reset+load 非事务语义，结果显式标记 STARTUP 阶段。 */
+    /** A STARTUP reload keeps the non-transactional reset plus load semantics and marks the STARTUP
+     * phase explicitly in the result. */
     @Test
     void startupReloadKeepsExplicitNonTransactionalBoundary() throws Exception {
         writeScript(ScriptType.STARTUP, "marker.js", "console.info('startup marker');\n");
@@ -259,9 +264,10 @@ class NekoRuntimeRootReloadResultTest {
             assertEquals(ReloadPhase.STARTUP, result.phase(),
                     "STARTUP reload must be explicitly marked as the non-transactional boundary (AC6)");
             assertTrue(result.generation() >= 0, "result carries the generation");
-            // AC6：入口给外部调用方的显式判定面——非事务路径必须可被识别，且显式要求
-            // loader restart（不可逆平台注册不回滚），否则只读 success() 的调用方会把
-            // reset+load 读成候选 + commit 事务成功。
+            // The result tells an outside caller which path ran: a non-transactional reload must be
+            // identifiable and must explicitly request a loader restart (irreversible platform
+            // registrations do not roll back). Without that, a caller that only checks success()
+            // would read reset plus load as a successful candidate plus commit transaction.
             assertTrue(result.nonTransactional(), "STARTUP result must be identifiable as non-transactional");
             assertTrue(result.requiresLoaderRestart(), "STARTUP result must ask the caller for a loader restart");
 
@@ -289,7 +295,8 @@ class NekoRuntimeRootReloadResultTest {
         }
     }
 
-    /** AC3/阶段结果：事务式 reload 成功结果的 phase 是 COMMIT；单文件失败结果的 phase 是 FILE. */
+    /** A successful transactional reload reports phase COMMIT; a single-file reload that fails
+     * reports phase FILE. */
     @Test
     void reloadResultPhasesExposeCommitAndFileBoundaries() throws Exception {
         writeScript(ScriptType.SERVER, "marker.js", "console.info('server marker');\n");
@@ -317,8 +324,8 @@ class NekoRuntimeRootReloadResultTest {
             assertEquals(ReloadPhase.FILE, fileResult.phase(),
                     "single-file reload failure must surface the FILE phase");
             assertTrue(fileResult.error() != null, "failure result carries the error");
-            // 审查 A2：FILE 路径此前把 source location 算出来又被 ReloadResult 丢掉，
-            // AC3「失败结果含 source location」在非候选路径不成立
+            // The FILE path computes the source location, and ReloadResult has to keep it: a failed reload
+            // carries the source location on the non-candidate path as well.
             assertTrue(fileResult.sourceLocation() != null
                             && fileResult.sourceLocation().endsWith("missing-file.js"),
                     "FILE failure result must carry the source location: " + fileResult.sourceLocation());

@@ -5,16 +5,16 @@ import graal.graalvm.polyglot.PolyglotException;
 import graal.graalvm.polyglot.Context;
 
 /**
- * Static accessor for script error reporting, breaking the api→core dependency
- * that {@code EventBusJS} previously had on {@code DefaultErrorTracker}.
+ * Static accessor for script error reporting. It breaks the api to core dependency that
+ * {@code EventBusJS} had on {@code DefaultErrorTracker}.
  * <p>
- * Set once during bootstrap（由共享装配函数 {@code NekoRuntimeAssembly} 安装，
- * 包装 root 的 ErrorTracker）; the default no-op implementation silently discards
- * errors until the real reporter is installed.
+ * Set once during bootstrap by the shared assembly function {@code NekoRuntimeAssembly}, which wraps
+ * the root's ErrorTracker. Until the real reporter is installed, the default no-op implementation
+ * discards errors silently.
  *
- * <p>owner 边界（ticket 05 总账 A5）：本类是 root-owned ErrorTracker 的进程级静态报告门面，
- * 只由装配序列 set 一次，不构成第二 runtime owner；供 mixin 等无法注入的静态上下文
- * （如 RecipeManagerMixin）改道读取错误面。
+ * <p>Ownership: this class is a process-wide static reporting front for the root-owned ErrorTracker.
+ * The assembly sequence sets it once, so it does not become a second runtime owner. It lets static
+ * contexts that cannot be injected, such as {@code RecipeManagerMixin}, read the error state.
  */
 public final class ScriptErrorReporter {
     private static volatile Reporter instance = Reporter.NOOP;
@@ -29,10 +29,13 @@ public final class ScriptErrorReporter {
         }
 
         /**
-         * 事件回调（配方脚本等）抛出的 Graal 异常上报（语义同 ErrorTracker#recordEventError）。
-         * <p>线程约束：可从任意线程调用（recipe 处理在服务端线程，mixin 命中点可能在渲染线程）；
-         * 实现须自行保证线程安全。reload 语义：{@code set} 每进程只发生一次（装配期），
-         * reload 不重建 reporter——实现不得假设"每次 reload 换实例"。</p> */
+         * Reports a Graal exception thrown by an event callback (recipe scripts and the like); the
+         * semantics match {@code ErrorTracker#recordEventError}.
+         * <p>Threading: callable from any thread (recipe handling runs on the server thread, and a mixin
+         * hit point may run on the render thread), so an implementation must be thread-safe itself.
+         * Reload: {@code set} runs once per process, during assembly, and a reload does not rebuild the
+         * reporter, so an implementation must not assume a new instance per reload.</p>
+         */
         default void recordEventError(ScriptType type, PolyglotException error) {
             recordCallbackError(type, "event", error);
         }
@@ -41,12 +44,18 @@ public final class ScriptErrorReporter {
             recordCallbackError(context, type, "event", error);
         }
 
-        /** 是否累计有错误（语义同 ErrorTracker#hasErrors）。线程约束同 {@link #recordEventError}。 */
+        /**
+         * Whether any error has been recorded; the semantics match {@code ErrorTracker#hasErrors}.
+         * The threading rule is the same as {@link #recordEventError}.
+         */
         default boolean hasErrors() {
             return false;
         }
 
-        /** 错误条数（语义同 ErrorTracker 错误集合大小 / ErrorSnapshot#count）。线程约束同 {@link #recordEventError}。 */
+        /**
+         * Number of errors; the semantics match the size of the ErrorTracker error set and
+         * {@code ErrorSnapshot#count}. The threading rule is the same as {@link #recordEventError}.
+         */
         default int errorCount() {
             return 0;
         }
@@ -75,7 +84,10 @@ public final class ScriptErrorReporter {
         }
     }
 
-    /** 事件回调 Graal 异常上报（经 root 的 tracker；静态上下文的注入替代面）。 */
+    /**
+     * Reports a Graal exception from an event callback through the root tracker. Static contexts use
+     * this in place of an injected tracker.
+     */
     public static void recordEventError(ScriptType type, PolyglotException error) {
         instance.recordEventError(type, error);
     }

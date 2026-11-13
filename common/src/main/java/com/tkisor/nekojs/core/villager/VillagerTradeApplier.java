@@ -4,27 +4,27 @@ import java.util.List;
 import java.util.Set;
 
 /**
- * Platform/version adapter seam for villager trade declarations (ticket 22 AC5): the actual
- * registry surgery exists only in the adapter — the shared event surface and this whole
- * package contain no Minecraft or loader type.
+ * Platform/version adapter for villager trade declarations. The real registry work exists only in
+ * the adapter; the shared event surface and this whole package contain no Minecraft or loader
+ * type.
  *
- * <p>Contract, aligned with the joint candidate boundary
+ * <p>The adapter follows the joint candidate commit path
  * ({@link com.tkisor.nekojs.core.state.CandidateStatePlan}):
  * <ul>
- *   <li>{@link #preflight(List)} runs during the candidate STATE_PLAN phase: it resolves the
+ *   <li>{@link #preflight(List)} runs during the candidate STATE_PLAN phase. It resolves the
  *       trade sets, checks that the node can apply the whole batch and throws for an unknown
  *       trade set or a node that cannot commit. It must not produce externally visible side
- *       effects (read-only resolution). Throwing fails the whole batch and keeps the old
- *       active trades serving.</li>
+ *       effects (read-only resolution). A throw fails the whole batch and keeps the old active
+ *       trades serving.</li>
  *   <li>{@link #apply(List, Set)} runs at the commit point and owns the <b>whole</b> desired
- *       state: it restores the adapter's vanilla baselines, removes the previously injected
- *       entries (and any trade set the reload event marked obsolete), then applies the
- *       complete declaration list in order. After a passed preflight it must not throw.</li>
+ *       state: it restores the adapter's vanilla baselines, removes the entries injected earlier
+ *       entries (and any trade set the reload event marked obsolete), then applies the complete
+ *       declaration list in order. After a passed preflight it must not throw.</li>
  * </ul>
  *
  * <p>Recovery only covers what NekoJS owns and the adapter proved it can restore: the trade
  * entries NekoJS injected and the trade sets it replaced. It is not a promise to roll back
- * arbitrary Java objects, other mods, worlds, networks or files (spec 09 external side effects).
+ * arbitrary Java objects, other mods, worlds, networks or files.
  */
 public interface VillagerTradeApplier {
 

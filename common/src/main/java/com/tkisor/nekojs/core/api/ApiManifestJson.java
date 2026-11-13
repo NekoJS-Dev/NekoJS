@@ -4,7 +4,7 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.tkisor.nekojs.api.surface.ApiManifest;
 
-/** ApiManifest 的 JSON 编解码（gson；字段排序 + 缩进，输出确定性）。 */
+/** JSON codec for ApiManifest (gson, sorted fields and indentation give deterministic output). */
 public final class ApiManifestJson {
 
     private static final Gson GSON = new GsonBuilder()

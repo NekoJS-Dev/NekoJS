@@ -34,13 +34,12 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Ticket 27 GUI/render presentation-surface fixture: render, world render and screen render
- * callbacks keep reusing the existing {@code ClientEvents} events and Adapters — member
- * uniqueness, payload shapes, side filter, registration-entry vs listener-bus distinction,
- * platform type boundaries and catalog/golden consistency are all asserted through the
- * <b>production registration path</b> ({@link NekoJSCorePlugin#registerEvents} +
- * {@code registerClientEvents}) or read-only golden checks (AC2/AC3/AC6/AC8). Ordinary tests
- * only read the golden, never update it.
+ * Presentation-surface fixture for GUI and render: the render, world render and screen render
+ * callbacks keep reusing the existing {@code ClientEvents} events and Adapters. Member uniqueness,
+ * payload shapes, side filter, registration-entry vs listener-bus distinction, platform type
+ * boundaries and catalog/golden consistency are all asserted through the <b>production registration
+ * path</b> ({@link NekoJSCorePlugin#registerEvents} + {@code registerClientEvents}) or through
+ * read-only golden checks. Ordinary tests only read the golden and never update it.
  */class Ticket27ClientGuiRenderSurfaceTest {
 
     /** Script-visible render / GUI presentation members (registration entries and listener buses). */
@@ -66,7 +65,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
         assertTrue(members.contains("registerMenuScreens") && members.contains("registerRenderers"),
                 "the native screen/renderer registration events stay in ClientEvents: " + members);
 
-        // The catalog member is the field singleton: no duplicated bus (AC2: no second bus).
+        // Each catalog member is the field singleton, so no second bus is created.
         assertSame(ClientEvents.HUD_RENDER, client.getBusHolder("hudRender").getBus(ScriptType.CLIENT));
         assertSame(ClientEvents.WORLD_RENDER, client.getBusHolder("worldRender").getBus(ScriptType.CLIENT));
         assertSame(ClientEvents.SCREEN_RENDER, client.getBusHolder("screenRender").getBus(ScriptType.CLIENT));
@@ -167,10 +166,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
     @Test
     void platformRenderAdapterMountsOnTheClientDistOnly() {
-        // The platform Adapter (ClientRenderEvents) mounts via Dist.CLIENT: a dedicated server
-        // never subscribes to the render hooks (AC3 mount-phase fact); the dispatch-thread
-        // contract is carried by the shared registry javadoc and ClientReloadExecutor
-        // (the CLIENT owner thread is the Render thread).
+        // The platform Adapter (ClientRenderEvents) mounts via Dist.CLIENT, so a dedicated server never
+        // subscribes to the render hooks. The dispatch-thread rule is documented on the shared
+        // registry Javadoc and in ClientReloadExecutor (the CLIENT owner thread is the render thread).
         EventBusSubscriber subscription = ClientRenderEvents.class.getAnnotation(EventBusSubscriber.class);
         assertNotNull(subscription, "the render dispatch hook must mount via EventBusSubscriber");
         assertEquals(List.of(Dist.CLIENT), Arrays.asList(subscription.value()),

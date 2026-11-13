@@ -17,11 +17,12 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 
 /**
- * 26.1 / 26.2 的 {@link EntitySelector} 构建桥：两版本的 13 参构造器形状相同，
- * 但 {@code MinMaxBounds} 的包名不同（26.1 {@code advancements.criterion}、
- * 26.2 {@code advancements.predicates}），26-shared 无法静态引用任一 FQN，
- * 故经反射按运行时存在的 FQN 解析 {@code Doubles} 工厂并调用构造器。
- * 1.21.1 镜像不走本类（其 FQN 唯一，直接静态构建）。
+ * Builds {@link EntitySelector} for 26.1 and 26.2. Both versions have the same 13-argument
+ * constructor, but {@code MinMaxBounds} lives in a different package (26.1
+ * {@code advancements.criterion}, 26.2 {@code advancements.predicates}), so 26-shared cannot
+ * reference either FQN statically. The class resolves the {@code Doubles} factory from the FQN that
+ * exists at runtime and calls the constructor through reflection.
+ * The 1.21.1 copy does not use this class; its FQN is unique, so it builds the selector statically.
  */
 final class EntitySelectorFactory {
 
@@ -56,7 +57,10 @@ final class EntitySelectorFactory {
         return invoke(AT_LEAST, null, v);
     }
 
-    /** 读取范围上界（AABB padding 计算用）；无上界返回 {@code null}。 */
+    /**
+     * Returns the upper bound of the range, used to compute the AABB padding; returns {@code null} when
+     * there is no upper bound.
+     */
     static Double maxOf(Object range) {
         if (range == null) {
             return null;
@@ -70,9 +74,9 @@ final class EntitySelectorFactory {
     }
 
     /**
-     * 反射调用 13 参构造器（currentEntity=false / playerName=null / entityUUID=null /
-     * usesSelector=false，其余由 builder 决定）。{@code range} 为本工厂产出的
-     * Doubles 实例或 {@code null}。
+     * Calls the 13-argument constructor through reflection (currentEntity=false / playerName=null /
+     * entityUUID=null / usesSelector=false; the builder decides the rest). {@code range} is a Doubles
+     * instance produced by this factory, or {@code null}.
      */
     static EntitySelector create(
             int maxResults,
@@ -113,7 +117,7 @@ final class EntitySelectorFactory {
             try {
                 return Class.forName(fqn);
             } catch (ClassNotFoundException ignored) {
-                // 尝试下一个 FQN
+                // Try the next FQN
             }
         }
         NekoJS.LOGGER.warn("MinMaxBounds$Doubles not found for either {} — distance selectors disabled",
@@ -156,7 +160,7 @@ final class EntitySelectorFactory {
     }
 
     private static Method boundsMax() {
-        // Bounds<T>#max() → Optional<T>（26.1/26.2 形状一致）
+        // Bounds<T>#max() -> Optional<T> (same shape in 26.1 and 26.2)
         if (BOUNDS == null) {
             return null;
         }

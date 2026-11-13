@@ -9,29 +9,36 @@ import com.tkisor.nekojs.platform.Platform;
 import net.neoforged.neoforge.client.event.ClientPlayerNetworkEvent;
 
 /**
- * 包分发的客户端连接接线（NeoForge 26.x / 1.21.1 共用）：
+ * Client connection wiring for pack distribution (shared by NeoForge 26.x and 1.21.1):
  *
  * <ul>
- *   <li>安装 CLIENT 脚本重载钩子（{@link PackSyncClient} 管线在激活/卸载
- *       SERVER_CACHE 包后触发整类型重载，与 F3+T 的 CLIENT reload 同路径）。</li>
- *   <li>断线/离开世界（含被信任关口断开）时卸载远端包缓存集合并重载客户端脚本
- *       （缓存文件保留，二次连入按哈希复用）。</li>
+ *   <li>Installs the CLIENT script reload hook: after activating or unloading the SERVER_CACHE
+ *       packs, the {@link PackSyncClient} pipeline reloads the whole type, on the same path as the
+ *       CLIENT reload of F3+T.</li>
+ *   <li>On disconnect or leaving the world (including a disconnect by the trust gate), unloads the
+ *       remote pack cache set and reloads client scripts (the cache files stay and are reused by
+ *       hash on the next connection).</li>
  * </ul>
  *
- * <p>仅客户端注册（由各平台 {@code NekoJSNetwork} 在 Dist.CLIENT 分支调用 {@link #install}）；
- * 本类引用的 {@code ClientPlayerNetworkEvent} 为客户端专属事件类，专用服务器不加载本类。
+ * <p>Only the client registers this: each platform's {@code NekoJSNetwork} calls {@link #install}
+ * in the {@code Dist.CLIENT} branch. The {@code ClientPlayerNetworkEvent} this class references is
+ * a client-only event class, so a dedicated server never loads this class.
  *
- * <p>lifecycle handle 由 loader entry（{@code NekoJSMod}）在 root 装配后 {@link #bind} 注入；
- * 钩子在 pack sync 变更时触发（晚于装配），root 为空判定保留原语义（钩子早于装配即跳过）。
+ * <p>The loader entry ({@code NekoJSMod}) injects the lifecycle handle with {@link #bind} after the
+ * root is assembled. The hooks fire on pack sync changes, which is later than assembly, so the
+ * null check on the root keeps the previous behavior: a hook that fires before assembly is skipped.
  */
 public final class PackSyncClientConnections {
 
-    /** loader entry 装配完成后注入的窄生命周期 handle；钩子触发时按空判定跳过（原语义）。 */
+    /**
+     * Narrow lifecycle handle injected by the loader entry after assembly. A hook that fires while it is
+     * null is skipped, as before.
+     */
     private static volatile NekoRuntimeRoot runtimeRoot;
 
     private PackSyncClientConnections() {}
 
-    /** 由 {@code NekoJSMod} 在 root 装配后调用。 */
+    /** Called by {@code NekoJSMod} after the root is assembled. */
     public static void bind(NekoRuntimeRoot root) {
         runtimeRoot = root;
     }

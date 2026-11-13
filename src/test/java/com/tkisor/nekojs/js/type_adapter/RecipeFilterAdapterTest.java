@@ -1,4 +1,4 @@
-// TODO(fabric): fabric 侧还没有对应实现，整文件守卫等移植完成后去掉
+// The fabric side has no implementation yet; remove this whole-file guard once the port lands.
 //? if neoforge {
 package com.tkisor.nekojs.js.type_adapter;
 
@@ -28,7 +28,8 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import com.tkisor.nekojs.api.data.ValueConversionException;
 
 /**
- * RecipeFilterAdapter smoke test：纯逻辑，无 MC 对象依赖；只断言返回的组合子类型。
+ * Smoke test for {@link RecipeFilterAdapter}: pure logic with no MC objects; it only asserts the
+ * combinator type returned.
  */
 class RecipeFilterAdapterTest {
 
@@ -243,11 +244,12 @@ class RecipeFilterAdapterTest {
 
     @Test
     void nullIsRejectedButEmptyObjectMatchesEverything() {
-        // null：test()=false，apply 不应被路由到；直接调用保持 null（历史行为）
+        // null: test() is false so apply is never routed here; calling it directly still returns null
         assertNull(adapter.apply(null));
 
         try (Context context = Context.newBuilder().build()) {
-            // 空对象 = 无约束 = 匹配全部（And 空列表恒真），而非 apply 返回 null 导致调用方 NPE
+            // An empty object means no constraint, so it matches everything (an empty And list is always true);
+            // returning null from apply would make the caller throw NPE
             Value empty = context.asValue(ProxyObject.fromMap(Map.<String, Object>of()));
             assertTrue(adapter.test(empty));
             RecipeFilter filter = adapter.apply(empty);

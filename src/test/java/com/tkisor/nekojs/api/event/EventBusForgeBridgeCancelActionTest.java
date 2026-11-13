@@ -18,12 +18,11 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 /**
- * {@code bindCancellable} fixture (ticket 24 D4): a cancellable family bus whose native
- * event does not implement {@code ICancellableEvent} must route the script-side cancel
- * result through the adapter-supplied cancel action. Production user:
- * {@code EntityEvents.DAMAGE_PRE}, where cancelling maps to
- * {@code LivingDamageEvent.Pre#setNewDamage(0)} — the zero-damage lever, with the native
- * damage sequence still completing.
+ * {@code bindCancellable} fixture: a cancellable family bus whose native event does not implement
+ * {@code ICancellableEvent} must route the script-side cancel result through the cancel action the
+ * adapter supplies. Production user: {@code EntityEvents.DAMAGE_PRE}, where cancelling maps to
+ * {@code LivingDamageEvent.Pre#setNewDamage(0)}, so damage becomes zero while the native damage
+ * sequence still completes.
  */
 class EventBusForgeBridgeCancelActionTest {
 

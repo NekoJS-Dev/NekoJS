@@ -3,12 +3,13 @@ package com.tkisor.nekojs.api.inject;
 import net.minecraft.nbt.CompoundTag;
 
 /**
- * 实体持久化数据容器的 duck 接口：fabric 由 {@code NekoEntityPDataMixin} 实现到
- * {@code Entity} 上，NeoForge 侧不需要它（{@code Entity#getPersistentData()} 原生存在）。
- * 平台桥用它把两边的持久化读写收敛成同一份代码。
+ * Duck interface for an entity's persistent data container. On fabric {@code NekoEntityPDataMixin}
+ * implements it on {@code Entity}; NeoForge does not need it, because
+ * {@code Entity#getPersistentData()} exists natively. The platform bridge uses it so both sides
+ * share one implementation of the persistent reads and writes.
  */
 public interface NekoEntityPData {
 
-    /** 实体的 NekoJS 持久化数据根（可变，写入即生效；随实体存档读写）。 */
+    /** The NekoJS persistent data root of an entity: mutable, writes apply immediately, saved with the entity. */
     CompoundTag neko$getPDataRoot();
 }

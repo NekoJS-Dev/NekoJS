@@ -11,17 +11,17 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * Payload of the {@code ServerEvents.tradeDeclaration} data sub-event (ticket 22): server
- * scripts append trades to existing trade sets here.
+ * Payload of the {@code ServerEvents.tradeDeclaration} data sub-event: server scripts append
+ * trades to existing trade sets here.
  *
- * <p>First version of the public surface is {@code add} only — no remove/replace/modify.
- * Collection normalizes the configuration into a {@link VillagerTradeDeclaration}; invalid
- * configuration throws, which fails the whole batch (no partial mutation, the old active
- * trades keep serving) instead of silently skipping a trade.
+ * <p>The public surface of the first version is {@code add} only, with no remove/replace/modify.
+ * Collection normalizes the configuration into a {@link VillagerTradeDeclaration}. Invalid
+ * configuration throws, which fails the whole batch and keeps the old active trades serving
+ * instead of silently skipping a trade.
  *
- * <p>The payload is dispatched by the platform/version adapter at its two legal collection
- * points (initial generation on server start and the candidate DOMAIN_PLAN phase of a SERVER
- * reload); it never mutates a live registry itself.
+ * <p>The platform/version adapter dispatches the payload at its two legal collection points: the
+ * initial generation on server start and the candidate DOMAIN_PLAN phase of a SERVER reload. The
+ * payload itself never mutates a live registry.
  */
 @ScriptTypeView(VillagerTradeDeclarationEvent.class)
 public final class VillagerTradeDeclarationEventJS implements VillagerTradeDeclarationEvent {

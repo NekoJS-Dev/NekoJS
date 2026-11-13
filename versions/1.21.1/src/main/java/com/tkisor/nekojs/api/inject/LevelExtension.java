@@ -1,5 +1,6 @@
-// 1.21.1 实现，与版本树 src/ 下的同名 26.x 文件成对。内容等于那份文件在本节点求值后的形态。
-// 26.x 侧行为变更时须同步本文件。
+// 1.21.1 implementation, paired with the file of the same name under the version tree's src/
+// that targets 26.x. Its content equals that file as evaluated for this node.
+// Update this file when behavior changes on the 26.x side.
 package com.tkisor.nekojs.api.inject;
 
 import com.tkisor.nekojs.api.annotation.RemapByPrefix;
@@ -55,10 +56,11 @@ public interface LevelExtension extends LevelSpec {
     }
 
     /**
-     * 在指定坐标设置方块。{@code block} 可以是 {@link Block}、{@link BlockState} 或方块 id 字符串。
-     * 使用 flag {@code 3}（{@code Block.UPDATE_ALL}）：同步客户端 + 通知邻居。
+     * Sets the block at the given position. {@code block} can be a {@link Block}, a
+     * {@link BlockState} or a block id string. It uses flag {@code 3}
+     * ({@code Block.UPDATE_ALL}), which syncs the client and notifies neighbors.
      *
-     * @return 是否实际修改了方块
+     * @return whether the block was actually changed
      */
     default boolean neko$setBlock(int x, int y, int z, Object block) {
         BlockState state = null;
@@ -81,16 +83,17 @@ public interface LevelExtension extends LevelSpec {
     }
 
     /**
-     * 当前世界的白天时间（day time）。
-     * <p>26.x 移除了 {@code getDayTime}，这里改用主世界时钟（{@link Level#getOverworldClockTime()}）。
+     * Day time of the current world.
+     * <p>26.x removed {@code getDayTime}, so this reads the overworld clock
+     * ({@link Level#getOverworldClockTime()}) instead.
      */
     default long neko$getTime() {
         return self().getDayTime();
     }
 
     /**
-     * 设置白天时间，仅在 {@link ServerLevel} 上生效（通过主世界时钟 {@code setTotalTicks} 实现）。
-     * 客户端世界调用为空操作。
+     * Sets the day time. Only effective on a {@link ServerLevel}, implemented through the
+     * overworld clock's {@code setTotalTicks}. A call on a client world does nothing.
      */
     default void neko$setTime(long time) {
         if (self() instanceof ServerLevel serverLevel) {
@@ -98,20 +101,21 @@ public interface LevelExtension extends LevelSpec {
         }
     }
 
-    /** 当前世界中的所有玩家。 */
+    /** All players in the current world. */
     default List<? extends Player> neko$getPlayers() {
         return self().players();
     }
 
-    /** 当前是否正在下雨。 */
+    /** Whether it is currently raining. */
     default boolean neko$isRaining() {
         return self().isRaining();
     }
 
     /**
-     * 设置下雨状态。
-     * <p>26.x 移除了 {@code setWeatherParameters}，这里直接设置雨量等级：{@code 1.0} 表示下雨，
-     * {@code 0.0} 表示停止。该 API 对客户端/服务端世界均可用。
+     * Sets the rain state.
+     * <p>26.x removed {@code setWeatherParameters}, so this sets the rain level directly:
+     * {@code 1.0} starts rain and {@code 0.0} stops it. This API works on both client and
+     * server worlds.
      */
     default void neko$setRaining(boolean raining) {
         if (self() instanceof ServerLevel serverLevel) {
@@ -121,14 +125,15 @@ public interface LevelExtension extends LevelSpec {
     }
 
     /**
-     * 当前是否为白天。
-     * <p>26.x 移除了 {@code Level.isDay()}，这里基于主世界时钟按经典昼夜周期推导：
-     * {@code time % 24000} 落在 {@code [0, 13000)} 视为白天。
+     * Whether it is currently day.
+     * <p>26.x removed {@code Level.isDay()}, so this derives it from the overworld clock using
+     * the classic day/night cycle: {@code time % 24000} in {@code [0, 13000)} counts as day.
      */
     default boolean neko$isDay() {
         return self().isDay();
     }
 
-    /** 返回挂载到该 level 的内存数据容器；首次访问时 lazy 创建并触发 {@code attachLevelData}。 */
+    /** Returns the in-memory data container attached to this level. The first access creates it
+     * lazily and triggers {@code attachLevelData}. */
     AttachedData<Level> neko$data();
 }

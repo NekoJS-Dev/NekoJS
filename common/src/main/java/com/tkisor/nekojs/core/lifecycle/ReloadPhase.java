@@ -1,41 +1,49 @@
 package com.tkisor.nekojs.core.lifecycle;
 
 /**
- * reload 阶段枚举（工单 06 阶段结果契约；票 39 增补 DOMAIN_PLAN）。
+ * Stages of a reload.
  *
- * <p>事务式 reload 依次经过 {@link #PREPARATION} → {@link #BINDING} → {@link #EXECUTION}
- * → {@link #EVENT_PLAN} → {@link #DOMAIN_PLAN} → {@link #STATE_PLAN} → {@link #COMMIT}；
- * 任一阶段失败时失败结果携带失败发生处。{@link #STARTUP} 与 {@link #FILE} 是非候选路径的
- * 显式标记（见工单 06 的 STARTUP restart/unsupported 边界与单文件重载路径）。
+ * <p>A transactional reload runs through {@link #PREPARATION} → {@link #BINDING} →
+ * {@link #EXECUTION} → {@link #EVENT_PLAN} → {@link #DOMAIN_PLAN} → {@link #STATE_PLAN} →
+ * {@link #COMMIT}. A failure at any stage carries the stage it happened in. {@link #STARTUP} and
+ * {@link #FILE} explicitly mark the non-candidate paths: the STARTUP restart/unsupported case and
+ * the single-file reload.
  *
- * <p>审查 A2：原先的 {@code UNKNOWN}（"未归类失败"）随 {@code ReloadResult.failure(type, error)}
- * 删除而去掉——该常量此后没有任何生产者，留着就是死码。
+ * <p>{@code UNKNOWN}, for an unclassified failure, went away with
+ * {@code ReloadResult.failure(type, error)}: nothing produced it afterwards, so keeping it was
+ * dead code.
  */
 public enum ReloadPhase {
-    /** 候选 Context / node runtime 创建。 */
+    /** Creates the candidate Context and node runtime. */
     PREPARATION,
-    /** 事件组、插件 binding、managed global、binding schema 安装进候选 Context。 */
+    /** Installs event groups, plugin bindings, managed globals and binding schemas into the candidate Context. */
     BINDING,
-    /** 候选脚本发现与入口执行（listener 收集、timer 收集随执行发生）。 */
+    /** Discovers candidate scripts and runs their entry points, which also collects listeners and timers. */
     EXECUTION,
-    /** 候选挂起监听器的完整性/可挂载性预备（dispatch key 转换等 commit 期工作前移）。 */
+    /**
+     * Prepares the candidate's pending listeners for integrity and mountability; dispatch key
+     * conversion and similar commit-time work moves here from commit.
+     */
     EVENT_PLAN,
     /**
-     * 候选领域收集（票 39）：领域收集器（root 拥有的 {@code CandidateDomainCollector}）
-     * 把收集事件派发进候选挂起监听器，产出 inert 领域计划（如 Item/Block modification）
-     * 挂入候选联合边界；监听器/收集错误在此冒泡 → 候选失败。
+     * Collects domain plans for the candidate: the domain collectors the root owns
+     * ({@code CandidateDomainCollector}) dispatch their collection events into the candidate's pending
+     * listeners and produce inert domain plans (such as Item/Block modifications), which join the
+     * candidate. Listener and collection errors surface here, so the candidate fails.
      */
     DOMAIN_PLAN,
     /**
-     * 候选受管状态的联合预检（工单 10）：global/shared 顶层写集 + 外部候选计划
-     * （{@code CandidateStatePlan}，含 DOMAIN_PLAN 产出的领域计划）的联合冲突校验；
-     * 冲突在此失败（domain={@code global-write-conflict} 等），不丢其他 writer 的已提交写。
+     * Joint preflight of the candidate's managed state: checks the top-level global/shared write set
+     * together with external candidate plans ({@code CandidateStatePlan}, including the domain plans
+     * DOMAIN_PLAN produced) for conflicts. A conflict fails here (with
+     * domain={@code global-write-conflict} and so on) and does not drop writes other writers already
+     * committed.
      */
     STATE_PLAN,
-    /** 单一 commit 点：切换生产路由并释放旧 generation。 */
+    /** The single commit point: switches production routing and releases the old generation. */
     COMMIT,
-    /** STARTUP 非事务重载（reset+load，显式 restart/unsupported 边界，非候选路径）。 */
+    /** STARTUP non-transactional reload (reset+load): an explicit restart/unsupported case, not a candidate path. */
     STARTUP,
-    /** 单文件目标重载（沿用 active 环境，非候选路径）。 */
+    /** Reload of a single file target; reuses the active environment and is a non-candidate path. */
     FILE
 }

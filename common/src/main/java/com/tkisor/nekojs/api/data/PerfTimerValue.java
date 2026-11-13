@@ -5,13 +5,17 @@ import java.util.List;
 import java.util.Objects;
 
 /**
- * 标签计时器：由 {@code Performance.start(label)} 创建，支持多段 {@code mark}。
+ * A labelled timer created by {@code Performance.start(label)}. It records any number of
+ * {@code mark} points.
  *
- * <p>不可变值类型——{@code mark(label)} 返回附加一个标记点的新实例（链式）。
- * {@code elapsedMillis()} / {@code report()} 以当前 {@link System#nanoTime()} 实时计算，
- * 无需显式 {@code end()}；{@code end()} 返回最终报告并语义上关闭计时器（仍可继续 report）。
+ * <p>This is an immutable value type: {@code mark(label)} returns a new instance with one more
+ * mark point, so calls can be chained. {@code elapsedMillis()} and {@code report()} read the
+ * current {@link System#nanoTime()} on every call, so no explicit {@code end()} is needed.
+ * {@code end()} freezes the end time and semantically closes the timer; {@code report()} still
+ * works afterwards.
  *
- * <p>基于 {@link System#nanoTime()} 单调时钟，亚毫秒精度。
+ * <p>Times come from the monotonic {@link System#nanoTime()} clock and have sub-millisecond
+ * precision.
  */
 @ContractReceiver("PerfTimer")
 public final class PerfTimerValue {
@@ -38,7 +42,7 @@ public final class PerfTimerValue {
                 false);
     }
 
-    /** 记录一个中间标记点，返回新实例（链式）。 */
+    /** Records one intermediate mark point and returns a new instance, so calls can be chained. */
     public PerfTimerValue mark(String markLabel) {
         if (ended) {
             return this;
@@ -50,18 +54,19 @@ public final class PerfTimerValue {
         return new PerfTimerValue(this.label, this.startNano, this.endNano, next, false);
     }
 
-    /** 标记为结束，冻结当前时刻为基准，返回新实例。仍可继续调用 report。 */
+    /** Marks the timer as ended, freezes the current instant as the end time and returns a new
+     * instance. {@code report()} can still be called afterwards. */
     public PerfTimerValue end() {
         return ended ? this : new PerfTimerValue(this.label, this.startNano, System.nanoTime(), this.marks, true);
     }
 
-    /** 从开始到当前的耗时毫秒（若已 end 则到 end 调用时刻，否则到当前时刻）。 */
+    /** Milliseconds from the start to now, or to the {@code end()} call if the timer has ended. */
     public double elapsedMillis() {
         long until = ended ? endNano : System.nanoTime();
         return (until - startNano) / 1_000_000.0;
     }
 
-    /** 结构化报告。 */
+    /** Builds the structured report. */
     public PerfTimerReport report() {
         double total = elapsedMillis();
         var reportMarks = new java.util.ArrayList<MarkReport>(marks.size());
@@ -79,21 +84,22 @@ public final class PerfTimerValue {
     public List<Mark> marks() { return marks; }
     public boolean ended() { return ended; }
 
-    /** 原始标记点（label + nano 绝对时间戳）。 */
+    /** A raw mark point: its label plus the absolute {@code nano} timestamp. */
     public record Mark(String label, long nano) {
         public Mark {
             Objects.requireNonNull(label, "label");
         }
     }
 
-    /** {@link #report()} 的结构化结果。 */
+    /** The structured result returned by {@link #report()}. */
     public record PerfTimerReport(String label, double total, List<MarkReport> marks) {
         public PerfTimerReport {
             marks = List.copyOf(marks);
         }
     }
 
-    /** 单个标记点的报告项：{@code at}=自开始毫秒，{@code sincePrev}=距上一标记点毫秒。 */
+    /** One mark in the report: {@code at} is milliseconds since the start, {@code sincePrev} is
+     * milliseconds since the previous mark. */
     public record MarkReport(String label, double at, double sincePrev) {
         public MarkReport {
             Objects.requireNonNull(label, "label");

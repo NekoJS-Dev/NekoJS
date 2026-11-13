@@ -21,12 +21,15 @@ public interface NbtFacade {
     /** Returns the given value unchanged; lets scripts normalize an existing {@link NbtValue} reference. */
     NbtValue of(NbtValue value);
 
-    /** 创建空 compound 构建器（JS 侧 {@code NBT.compound} 调用，链式构建后转 NbtValue）。 */
+    /**
+     * Creates an empty compound builder. Scripts call it as {@code NBT.compound}, chain calls on the
+     * builder, then convert the result to an NbtValue.
+     */
     CompoundBuilder compound();
 
-    // 标量工厂：Java 方法名带 Value 后缀（byte/short/int/long/float/double 是 Java 关键字，
-    // 不能作方法名），用 @Remap 映射到 JS 侧短名。@Remap 同时驱动 Graal host access 与
-    // ContractReflector 符号 ID——单一真相源。
+    // Scalar factories: the Java methods carry a Value suffix because byte/short/int/long/float/double
+    // are Java keywords and cannot be method names, and @Remap maps them to the short JS names. @Remap
+    // is the single source of truth for both Graal host access and ContractReflector symbol ids.
     /** Creates a byte value; the number must be integral and within byte range. */
     @Remap("byte") NbtValue byteValue(Number value);
 
@@ -72,12 +75,12 @@ public interface NbtFacade {
     /** Writes the value as a gzip-compressed compound to the data directory; the root must be a compound. */
     void write(String path, NbtValue value);
 
-    /** 解析 SNBT 字符串为 NbtValue（顶层须为 compound 或 list）。 */
+    /** Parses an SNBT string into an NbtValue; the top level must be a compound or a list. */
     NbtValue parse(String snbt);
 
-    /** 把 NbtValue 递归转成普通 Java 对象（Map/List/Number/String）。 */
+    /** Recursively converts an NbtValue into plain Java objects (Map/List/Number/String). */
     Object toObject(NbtValue value);
 
-    /** 把普通 Java 对象（Map/List/Number/String/Boolean）递归转成 NbtValue。 */
+    /** Recursively converts plain Java objects (Map/List/Number/String/Boolean) into an NbtValue. */
     NbtValue fromObject(Object value);
 }

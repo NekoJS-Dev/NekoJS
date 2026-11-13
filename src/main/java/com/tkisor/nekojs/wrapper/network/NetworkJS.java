@@ -17,7 +17,7 @@ import net.neoforged.neoforge.client.network.ClientPacketDistributor;
 public class NetworkJS {
 
     /**
-     * 【客户端脚本专用】发给服务端
+     * Client scripts only: sends to the server.
      */
     public static void sendToServer(String channel, CompoundTag data) {
         NekoScriptPayload payload = new NekoScriptPayload(channel, data != null ? data : new CompoundTag());
@@ -33,14 +33,14 @@ public class NetworkJS {
     }
 
     /**
-     * 【服务端脚本专用】发给指定玩家
+     * Server scripts only: sends to the given player.
      */
     public static void sendToPlayer(ServerPlayer player, String channel, CompoundTag data) {
         PlayPacketDispatchers.get().sendToPlayer(player, new NekoScriptPayload(channel, data != null ? data : new CompoundTag()));
     }
 
     /**
-     * 【服务端脚本专用】发给所有人
+     * Server scripts only: sends to everyone.
      */
     public static void sendToAll(String channel, CompoundTag data) {
         PlayPacketDispatchers.get().sendToAllPlayers(new NekoScriptPayload(channel, data != null ? data : new CompoundTag()));

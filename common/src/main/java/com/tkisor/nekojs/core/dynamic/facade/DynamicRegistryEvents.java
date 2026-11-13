@@ -4,12 +4,13 @@ import com.tkisor.nekojs.api.event.EventBusJS;
 import com.tkisor.nekojs.api.event.EventGroup;
 
 /**
- * 服务器运行期动态注册的事件 facade（ticket 16，AC1/AC2）：与启动期
- * {@code RegistryEvents.register} 的生命周期和语义完全分离——本总线在
- * 「初次 server registry ready」与每次事务式 script/data reload 的候选阶段触发，
- * 脚本回调只提交 <b>inert 候选计划</b>，不在脚本线程即时执行 registry mutation。
+ * Event facade for dynamic registration at server runtime. Its lifetime and semantics are fully
+ * separate from the startup-time {@code RegistryEvents.register}: this bus fires when the server
+ * registry first becomes ready and during the candidate phase of every transactional script/data
+ * reload. Script callbacks only submit inert candidate plans; they never perform a registry
+ * mutation right away on the script thread.
  *
- * <h2>JS API（SERVER 脚本）</h2>
+ * <h2>JS API (SERVER scripts)</h2>
  * <pre>
  * DynamicRegistryEvents.dynamicRegistry(event => {
  *     event.item('mymod:ruby', b => { b.maxStackSize = 16; b.rarity = 'epic' })
@@ -18,23 +19,25 @@ import com.tkisor.nekojs.api.event.EventGroup;
  * })
  * </pre>
  *
- * <p><b>命名决策</b>（票面 AC2 的记录义务）：spec 08 该条目的实际措辞是
- * 「Dynamic Registry 保留。它使用服务器运行期动态注册事件 facade，工作名为
- * {@code ServerEvents.dynamicRegistry}」（08:61），相邻条目写明「精确事件名、payload、
- * Builder 方法全集和开放 registry 类型仍由后续 contract 冻结」（08:63）。实施采用独立组
- * {@code DynamicRegistryEvents}：ServerEvents 住在 NeoForge 专属树且 fabric 侧是
- * 另一份同 FQCN 文件，把运行期 facade 挂进去会把独立生命周期焊死在 loader 专属组上，
- * 也令 common 层无法承载/测试该面；独立组与启动期 {@code RegistryEvents}（同样独立
- * 组）对称表达「两个生命周期」。类型直达入口名保持票面冻结的
- * {@code event.item/soundEvent/mobEffect}。该决策进入本组 declaration/contract 派生
- * 与迁移表（baseline MIGRATION.md）。
+ * <p><b>Naming</b>: the spec keeps the dynamic registry and lets it use a server runtime dynamic
+ * registration event facade under the working name {@code ServerEvents.dynamicRegistry}, leaving
+ * the exact event name, payload, full Builder method set and open registry types to be frozen
+ * later. This implementation uses a separate group, {@code DynamicRegistryEvents}. ServerEvents
+ * lives in the NeoForge-only tree, and the fabric side is another file with the same FQCN, so
+ * attaching the runtime facade there would tie its separate lifetime to a loader-specific group
+ * and would keep the common layer from hosting or testing it. A separate group mirrors the
+ * startup {@code RegistryEvents}, which is also its own group, and expresses the two lifetimes.
+ * The typed entry points keep the frozen names {@code event.item/soundEvent/mobEffect}. This
+ * decision feeds the group's declaration/contract derivation and the migration table
+ * (baseline MIGRATION.md).
  */
 public final class DynamicRegistryEvents {
 
-    /** 组名（独立于 ServerEvents，见类注释命名决策）。 */
+    /** Group name. It is separate from ServerEvents; see the class comment for why. */
     public static final EventGroup GROUP = EventGroup.of("DynamicRegistryEvents");
 
-    /** 唯一收集总线（SERVER 脚本监听；载荷是 ProxyObject payload，成员目录冻结为三个类型直达入口）。 */
+    /** The only collection bus, listened to by SERVER scripts. The payload is a ProxyObject whose
+     *  member directory is frozen to the three typed entry points. */
     public static final EventBusJS<DynamicRegistryEventJS, Void> DYNAMIC_REGISTRY =
             GROUP.server("dynamicRegistry", DynamicRegistryEventJS.class);
 

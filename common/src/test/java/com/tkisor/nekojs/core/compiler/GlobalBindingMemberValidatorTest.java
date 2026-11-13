@@ -19,9 +19,10 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * 全局绑定成员 preflight（事件外场景）的聚焦测试：脚本任意位置对 schema 绑定
- * （Utils/Item/…含事件组）的成员访问拼写检查。生产 schema 由
- * {@code ScriptEnvironmentFactory} 注册（环境绑定 + managed 全局 + 事件组）。
+ * Focused tests for the global binding member preflight outside events: a spelling check of member
+ * access to schema bindings (Utils, Item, ... including event groups) anywhere in a script. The
+ * production schema is registered by {@code ScriptEnvironmentFactory}: environment bindings,
+ * managed globals and event groups.
  */
 class GlobalBindingMemberValidatorTest {
 
@@ -34,7 +35,7 @@ class GlobalBindingMemberValidatorTest {
         }
     }
 
-    /** 链式类型流用：of 返回 TestStackJS。 */
+    /** Used by the chained type flow: of returns TestStackJS. */
     public static class TestItemJS {
         public static TestStackJS of(String id) {
             return new TestStackJS();
@@ -67,7 +68,8 @@ class GlobalBindingMemberValidatorTest {
                 "Item", new ScriptBindingSchema.BindingMembers(
                         JavaMemberIndex.allMembersOf(TestItemJS.class), Set.of(TestItemJS.class)),
                  "ServerEvents", new ScriptBindingSchema.BindingMembers(Set.of("recipes", "started"))),
-        // 生产环境由 ScriptEnvironmentFactory 从运行中 Context 收割；测试给出最小内置集
+        // In production ScriptEnvironmentFactory collects these from the running Context; the test
+        // provides a minimal built-in set
                 Set.of("console", "Math", "JSON", "globalThis", "this", "arguments", "super"));
     }
 
@@ -304,7 +306,8 @@ class GlobalBindingMemberValidatorTest {
 
     @Test
     void typeofAndBareIdentifiersAreNotFlagged() {
-        // typeof 的操作数会被 ValParser 泄漏为独立语句（裸标识符），报了必误报
+        // ValParser leaks the operand of typeof as a separate statement (a bare identifier), so
+        // reporting it would always be a false positive
         validate(file("typeof"),
                 "if (typeof Java !== 'undefined') {\r\n  console.log('has java')\r\n}\r\n");
 
@@ -322,8 +325,9 @@ class GlobalBindingMemberValidatorTest {
     }
 
     /**
-     * 真实事故复现（test_entity_goal.js）：const 局部 + 负数实参 + if/模板串混排，
-     * 局部变量 entity 不得被报未知标识符。
+     * Reproduces a real failure (test_entity_goal.js): a const local, negative arguments and a mix
+     * of if statements and template strings, where the local variable entity must not be reported
+     * as an unknown identifier.
      */
     @Test
     void locallyDeclaredEntityWithNegativeArgsAndTemplateIsNotFlagged() {
@@ -345,7 +349,8 @@ class GlobalBindingMemberValidatorTest {
                 "locally declared entity must not be reported: " + reported);
     }
 
-    /** 真实事故复现（startup_scripts）：多行链式回调参数（builder/goals）不得被报未知标识符。 */
+    /** Reproduces a real failure (startup_scripts): multi-line chained callback parameters
+     * (builder, goals) must not be reported as unknown identifiers. */
     @Test
     void multilineChainedCallbackParamsAreNotFlagged() {
         validate(file("builder"),
@@ -373,7 +378,8 @@ class GlobalBindingMemberValidatorTest {
                 "chained callback params must not be reported: " + reported);
     }
 
-    /** 真实事故复现（client_scripts）：同文件 function 声明 + 后续调用不得被报未知标识符。 */
+    /** Reproduces a real failure (client_scripts): a function declared in the same file and called
+     * later must not be reported as an unknown identifier. */
     @Test
     void namedFunctionDeclarationAndCallAreNotFlagged() {
         validate(file("fn"),

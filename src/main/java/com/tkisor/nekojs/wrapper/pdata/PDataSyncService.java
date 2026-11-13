@@ -17,8 +17,8 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * 实体 {@code pdata} 的服务端→客户端同步服务：
- * 脏标记 + 每 tick 限量 flush（{@value #MAX_SYNCS_PER_TICK} 个），
+ * Server-to-client sync service for entity {@code pdata}: a dirty flag plus a rate-limited flush every tick
+ * ({@value #MAX_SYNCS_PER_TICK} entities).
  * <p>Entity ids are not reset within one server lifetime: removal sends an empty snapshot and
  * keeps a tombstone revision, so a delayed packet from the removed entity cannot resurrect its
  * mirror. The server revision ledger is cleared only when the server stops.
@@ -35,12 +35,12 @@ public final class PDataSyncService {
 
     private PDataSyncService() {}
 
-    /** 标记实体 pdata 已变更（服务端；下一个 server tick flush 时同步）。 */
+    /** Marks an entity's pdata as changed (server side; synced on the next server tick flush). */
     public static void markDirty(Entity entity) {
         if (!entity.level().isClientSide()) DIRTY_ENTITIES.add(entity);
     }
 
-    /** 立即同步该实体的 pdata（绕过脏标记队列；仅服务端）。 */
+    /** Syncs this entity's pdata immediately (bypassing the dirty queue; server side only). */
     public static void syncNow(Entity entity) {
         runOnServer(entity, () -> {
             DIRTY_ENTITIES.remove(entity);
@@ -79,7 +79,7 @@ public final class PDataSyncService {
         }
     }
 
-    /** 每 server tick 调用：清掉无效脏实体并按 {@value #MAX_SYNCS_PER_TICK} 上限发送。 */
+    /** Called every server tick: drops invalid dirty entities and sends at most {@value #MAX_SYNCS_PER_TICK}. */
     public static void flush(MinecraftServer server) {
         if (server != null && !server.isSameThread()) {
             server.execute(() -> flush(server));
@@ -98,9 +98,10 @@ public final class PDataSyncService {
     }
 
     /**
-     * entity 离开 level（卸载/移除）时由平台 listener 调用：递增 revision 发空 data 包，
-     * 触发跟踪客户端 {@link #acceptClientSync} 清除该 entity 的 mirror（避免 entity id 复用读到旧数据），
-     * 并清理该实体的 dirty 状态；revision tombstone 保留到服务器停止。
+     * Called by the platform listener when an entity leaves the level (unload/removal): bumps the revision and sends
+     * an empty data packet, so tracking clients clear their mirror through {@link #acceptClientSync} (a reused entity
+     * id must not read stale data); the entity's dirty state is cleared as well. The revision tombstone stays until
+     * the server stops.
      */
     public static void onEntityRemoved(Entity entity) {
         runOnServer(entity, () -> {
@@ -110,22 +111,22 @@ public final class PDataSyncService {
         });
     }
 
-    /** 客户端 mirror 读取：该实体最新同步到的 pdata（无数据时返回空 tag 的拷贝）。 */
+    /** Client mirror read: the latest synced pdata for this entity (a copy of an empty tag when there is none). */
     public static CompoundTag clientMirror(Entity entity) {
         return CLIENT_ENTITY_MIRROR.getOrDefault(entity.getId(), new CompoundTag()).copy();
     }
 
-    /** 按 entity id 读取 mirror（无 Entity 上下文的测试/诊断用；无数据返回空 tag）。 */
+    /** Reads the mirror by entity id (for tests/diagnostics without an Entity; an empty tag when there is no data). */
     public static CompoundTag clientMirrorById(int entityId) {
         return CLIENT_ENTITY_MIRROR.getOrDefault(entityId, new CompoundTag()).copy();
     }
 
-    /** 该 entity id 当前是否有 mirror 数据（测试/诊断用）。 */
+    /** Whether this entity id currently has mirror data (for tests/diagnostics). */
     public static boolean hasPendingClientData(int entityId) {
         return CLIENT_ENTITY_MIRROR.containsKey(entityId);
     }
 
-    /** 客户端收到同步包：按 revision 去重后更新/清除 mirror（空数据 = 清除）。 */
+    /** Client receives a sync packet: dedupes by revision, then updates or clears the mirror (empty data = clear). */
     public static void acceptClientSync(PDataSyncPacket packet) {
         int currentRevision = CLIENT_REVISIONS.getOrDefault(packet.entityId(), -1);
         if (packet.revision() < currentRevision) return;
@@ -146,7 +147,7 @@ public final class PDataSyncService {
         SERVER_REVISIONS.clear();
     }
 
-    /** 客户端断线/重连时清空全部 mirror 与 revision 状态。 */
+    /** Clears every mirror and revision state when the client disconnects or reconnects. */
     public static void clearClientMirrors() {
         CLIENT_ENTITY_MIRROR.clear();
         CLIENT_REVISIONS.clear();

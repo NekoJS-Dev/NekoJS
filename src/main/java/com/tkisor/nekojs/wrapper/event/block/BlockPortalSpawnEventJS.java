@@ -9,22 +9,26 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.portal.PortalShape;
 
 /**
- * 传送门生成事件（{@code BlockEvents.portalSpawn}）的**加载器中立**载荷。
+ * Loader-neutral payload for the portal spawn event ({@code BlockEvents.portalSpawn}).
  *
- * <p>成员名对齐 NeoForge 26.x {@code BlockEvent.PortalSpawnEvent}：
- * {@code event.level}（LevelAccessor）/ {@code event.pos} / {@code event.state} /
- * {@code event.portalSize}（NeoForge 的 getLevel/getPos/getState/getPortalSize，
- * {@link PortalShape} 为原版类，加载器无关）。按 {@code state.getBlock()}
- * 分发（与 NeoForge 侧 {@code dispatchByBlock} 一致，键为 {@code minecraft:nether_portal}）。
+ * <p>The member names follow NeoForge 26.x {@code BlockEvent.PortalSpawnEvent}:
+ * {@code event.level} (LevelAccessor) / {@code event.pos} / {@code event.state} /
+ * {@code event.portalSize} (NeoForge's getLevel/getPos/getState/getPortalSize, where
+ * {@link PortalShape} is a vanilla class and loader-independent). Dispatched by
+ * {@code state.getBlock()}, the same as {@code dispatchByBlock} on the NeoForge side, with the
+ * key {@code minecraft:nether_portal}.
  *
- * <p>可取消：监听器返回 {@code true} 时跳过传送门方块的生成（NeoForge
- * {@code PortalSpawnEvent} 的 ICancellableEvent 语义）。fabric 侧挂点：
- * {@code MixinPortalShape} 在 {@code PortalShape#createPortalBlocks} 入口投递并取消。
+ * <p>Cancellable: when a listener returns {@code true}, the portal blocks are not created (the
+ * ICancellableEvent semantics of NeoForge {@code PortalSpawnEvent}). On fabric,
+ * {@code MixinPortalShape} posts at the {@code PortalShape#createPortalBlocks} entry and
+ * cancels there.
  *
- * <p>fabric 覆盖范围说明：26.x 中 {@code PortalShape#createPortalBlocks} 全 jar 仅
- * {@code BaseFireBlock#onPlace}（玩家点燃黑曜石框架）一处调用（javap 实证）；
- * {@code PortalForcer#createPortal}（实体跨维时无传送门、程序化生成框架+传送门）
- * 绕开本类直接 {@code setBlock}，不在本事件覆盖范围——见接线清单。
+ * <p>fabric coverage: in 26.x the whole jar calls
+ * {@code PortalShape#createPortalBlocks} from one place only, {@code BaseFireBlock#onPlace}
+ * (a player lighting an obsidian frame, javap-verified). {@code PortalForcer#createPortal}
+ * (programmatic frame plus portal creation when an entity travels dimensions without a
+ * portal) calls {@code setBlock} directly and bypasses this class, so it is outside this
+ * event.
  */
 @Doc("Fired when a nether portal is about to be created (BlockEvents.portalSpawn).")
 @Doc("Return true to cancel the portal creation.")

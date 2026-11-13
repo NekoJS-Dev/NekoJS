@@ -9,15 +9,18 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
 
 /**
- * 玩家左键方块事件（{@code BlockEvents.leftClicked}）的加载器中立载荷。
+ * Loader-neutral payload for the player left-click block event
+ * ({@code BlockEvents.leftClicked}).
  *
- * <p>NeoForge 侧直传原生 {@code PlayerInteractEvent.LeftClickBlock}（成员同形）；
- * fabric 侧由 {@code FabricBlockEventBindings} 从 {@code AttackBlockCallback} 转换。
- * fabric 已知语义差异：fabric-api 的 AttackBlockCallback 只在<b>生存模式</b>触发
- *（creative 模式不触发——NeoForge 左侧全部模式都触发）。
+ * <p>NeoForge passes its native {@code PlayerInteractEvent.LeftClickBlock} straight through
+ * (same members); fabric converts {@code AttackBlockCallback} in
+ * {@code FabricBlockEventBindings}. Known fabric difference: the fabric-api
+ * AttackBlockCallback only fires in <b>survival mode</b> and never in creative mode, while
+ * NeoForge fires in all modes.
  *
- * <p>可取消：监听器返回 {@code true} 时，NeoForge 侧取消原生事件，fabric 侧回调返回
- * {@code SUCCESS}（跳过攻击处理）。仅服务端触发（绑定处过滤客户端交互）。
+ * <p>Cancellable: when a listener returns {@code true}, NeoForge cancels the native event and
+ * fabric returns {@code SUCCESS} from the callback, which skips the attack handling. Fires on
+ * the server only (the binding filters client interactions).
  */
 @Doc("Fired when a player left-clicks a block (BlockEvents.leftClicked).")
 @Doc("Return true to consume the attack interaction.")

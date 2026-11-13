@@ -20,20 +20,24 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * {@link EditorConfigContributor} 的文件实现：用 Gson JsonObject round-trip 读取既有配置，
- * 仅修改 probe 拥有的键（jsconfig 的 {@code compilerOptions.paths} 对应键、顶层 {@code include}、
- * {@code compilerOptions.typeRoots}、{@code compilerOptions.typeAcquisition}、
- * {@code compilerOptions} 的 JSX 运行时键（{@code jsx}/{@code jsxFactory}/{@code jsxFragmentFactory}/
- * {@code jsxImportSource}），pyrightconfig 的 {@code extraPaths}，以及 {@code .vscode/settings.json}
- * 中各 backend 通过 {@link #mergeVscodeSettings} 声明的贡献键），保留用户自定义键与未知键。
- * 文件不存在则按默认创建。数组型键（include/typeRoots）按「刷新 probe 管理条目 + 保留用户条目」
- * 合并（见 {@link #refreshManagedEntries}），不整体覆盖。
+ * File implementation of {@link EditorConfigContributor}: it reads the existing configuration
+ * through a Gson JsonObject round-trip and only changes keys probe owns, namely the keys under
+ * {@code compilerOptions.paths} of jsconfig, the top-level {@code include},
+ * {@code compilerOptions.typeRoots}, {@code compilerOptions.typeAcquisition}, the JSX runtime keys
+ * of {@code compilerOptions} ({@code jsx}/{@code jsxFactory}/{@code jsxFragmentFactory}/
+ * {@code jsxImportSource}), {@code extraPaths} of pyrightconfig, and the contribution keys each
+ * backend declares through {@link #mergeVscodeSettings} in {@code .vscode/settings.json}. User
+ * and unknown keys are kept. A missing file is created with the defaults. Array keys
+ * (include/typeRoots) merge as "refresh the entries probe manages, keep the user's entries"
+ * (see {@link #refreshManagedEntries}); they are never overwritten as a whole.
  *
- * <p>关键属性：**幂等且可重复**——每次 probe 都重新合并，保证 paths/include/typeRoots 始终指向
- * backend 真实的输出目录（修复既有 jsconfig 指向旧 {@code .neko_probe/@package} 而非
- * {@code .neko_probe/typescript/@package} 的 stale 问题）；JSX 运行时键同理始终校正到引擎配置
- * （{@link ClassFilter#INSTANCE} 的 {@code jsxAutomaticRuntime}）的当前值——用户翻转该开关后，
- * 既有 jsconfig 在下一次 probe 被纠正，避免 IDE 按旧模式做类型检查。
+ * <p>Key property: <b>idempotent and repeatable</b>. Every probe merges again, so paths, include
+ * and typeRoots always point at the backend's real output directories. This also repairs an
+ * existing jsconfig that points at the stale {@code .neko_probe/@package} instead of
+ * {@code .neko_probe/typescript/@package}. The JSX runtime keys are likewise corrected to the
+ * current value of the engine configuration ({@link ClassFilter#INSTANCE}
+ * {@code jsxAutomaticRuntime}): after the user flips that switch, the next probe fixes the
+ * existing jsconfig so the IDE does not type-check in the old mode.
  */
 public final class FileEditorConfigContributor implements EditorConfigContributor {
 
@@ -98,7 +102,8 @@ public final class FileEditorConfigContributor implements EditorConfigContributo
             JsonObject root = readJsonOrEmpty(jsconfigFile);
             JsonObject typeAcquisition = new JsonObject();
             typeAcquisition.addProperty("enable", enable);
-            // typeAcquisition 是 probe 拥有的对象：整体替换（语义同 include），其余键保留
+            // typeAcquisition is a probe-owned object: replaced as a whole (same semantics as
+            // include), other keys kept
             root.add("typeAcquisition", typeAcquisition);
             reconcileJsxRuntime(asObject(root, "compilerOptions"));
             writeJson(jsconfigFile, root);
@@ -115,7 +120,8 @@ public final class FileEditorConfigContributor implements EditorConfigContributo
             JsonObject root = readJsonOrEmpty(pyrightFile);
             boolean fresh = root.size() == 0;
             if (fresh) {
-                // fresh 文件附带你补全体验更友好的默认；既有文件不动用户的 typeCheckingMode
+                // A fresh file gets defaults that give a friendlier completion experience; an existing
+                // file keeps the user's typeCheckingMode untouched
                 root.addProperty("typeCheckingMode", "basic");
                 root.addProperty("reportMissingModuleSource", "none");
             }
@@ -139,8 +145,9 @@ public final class FileEditorConfigContributor implements EditorConfigContributo
     @Override
     public void mergeVscodePythonExtraPaths(Path settingsFile, List<String> extraPaths) {
         if (extraPaths == null || extraPaths.isEmpty()) return;
-        // 向后兼容入口：委托给通用注入机制。languageServer 仅在用户未显式选择时固定为 Pylance
-        // （"Default" 在部分环境下会退回 Jedi，而 Jedi 不读 pyrightconfig/extraPaths）。
+        // Backward-compatible entry point: delegates to the generic injection. languageServer is
+        // pinned to Pylance only while the user has not chosen explicitly ("Default" falls back
+        // to Jedi in some environments, and Jedi does not read pyrightconfig/extraPaths).
         mergeVscodeSettings(settingsFile, List.of(
                 new VscodeSetting("python.languageServer", "Pylance", VscodeSettingMerge.SET_IF_ABSENT),
                 new VscodeSetting("python.analysis.extraPaths", extraPaths, VscodeSettingMerge.EXTEND_STRING_ARRAY)));
@@ -218,7 +225,8 @@ public final class FileEditorConfigContributor implements EditorConfigContributo
         };
     }
 
-    /** 递归合并两个 JSON 对象：incoming 的叶子替换/新增，既有其它叶子（用户或其它 backend 的贡献）保留。 */
+    /** Recursively merges two JSON objects: leaves of incoming replace or are added, other
+     * existing leaves (from the user or other backends) are kept. */
     private static boolean mergeObjects(JsonObject target, JsonObject incoming) {
         boolean changed = false;
         for (var e : incoming.entrySet()) {
@@ -234,7 +242,8 @@ public final class FileEditorConfigContributor implements EditorConfigContributo
         return changed;
     }
 
-    /** 把 incoming 的字符串按字面值去重追加到 target；已有条目（含用户条目）不动。 */
+    /** Appends the strings of incoming to target, deduplicated by literal value; existing entries,
+     * including the user's, are left alone. */
     private static boolean appendUniqueStrings(JsonArray target, JsonArray incoming) {
         Set<String> existing = new LinkedHashSet<>();
         for (JsonElement el : target) {
@@ -261,7 +270,7 @@ public final class FileEditorConfigContributor implements EditorConfigContributo
                 for (String line : s.body().split("\n", -1)) body.add(line);
                 entry.add("body", body);
                 if (s.description() != null) entry.addProperty("description", s.description());
-                root.add(s.name(), entry); // probe 拥有的片段名替换，用户片段保留
+                root.add(s.name(), entry); // Snippet names owned by probe are replaced; user snippets are kept
             }
             writeJson(snippetsFile, root);
         } catch (Exception ex) {
@@ -270,17 +279,20 @@ public final class FileEditorConfigContributor implements EditorConfigContributo
         }
     }
 
-    // -------------------- 内部 --------------------
+    // -------------------- Internals --------------------
 
-    /** jsconfig include 的标准脚本文件 globs——probe 每次贡献（刷新），与 d.ts globs 一起由 {@link #isProbeManagedInclude} 识别。 */
+    /** Standard script file globs for jsconfig include. probe contributes (refreshes) them on
+     * every run, and {@link #isProbeManagedInclude} recognises them together with the d.ts globs. */
     private static final Set<String> SCRIPT_FILE_GLOBS = Set.of(
             "./**/*.js", "./**/*.mjs", "./**/*.cjs",
             "./**/*.ts", "./**/*.jsx", "./**/*.tsx");
 
     /**
-     * 刷新数组型 probe 键：丢弃旧的 probe 管理条目（含历史 stale 形态），写入本次贡献值，
-     * **用户自加的条目原样保留**（追加在 probe 条目之后，去重）。probe 条目与用户条目靠
-     * {@code managed} 谓词区分——识别不了的用户条目宁可保留（幂等重跑会去重）。
+     * Refreshes an array key probe owns: drops the old probe-managed entries (including the stale
+     * shapes written before), writes the current contribution, and keeps <b>entries the user added
+     * as they are</b>, appended after the probe entries and deduplicated. The {@code managed}
+     * predicate separates probe entries from user entries; an entry it cannot recognise is kept
+     * rather than dropped, and a repeated run deduplicates it.
      */
     private static List<String> refreshManagedEntries(List<String> existing, List<String> contributed,
                                                       java.util.function.Predicate<String> managed) {
@@ -292,17 +304,20 @@ public final class FileEditorConfigContributor implements EditorConfigContributo
         return out;
     }
 
-    /** include 中的 probe 管理条目：所有指向 {@code .neko_probe/} 的 glob（含修复前的 stale 路径形态）与标准脚本 globs。 */
+    /** probe-managed entry in include: every glob that points into {@code .neko_probe/}, including
+     * the stale path shapes written before, plus the standard script globs. */
     private static boolean isProbeManagedInclude(String entry) {
         return entry.contains(".neko_probe/") || SCRIPT_FILE_GLOBS.contains(entry);
     }
 
-    /** typeRoots 中的 probe 管理条目：{@code .neko_probe/} 输出目录与 probe 默认携带的 node_modules/@types。 */
+    /** probe-managed entry in typeRoots: output directories under {@code .neko_probe/} and the
+     * node_modules/@types that probe ships by default. */
     private static boolean isProbeManagedTypeRoot(String entry) {
         return entry.contains(".neko_probe/") || entry.endsWith("node_modules/@types");
     }
 
-    /** 读取 JSON 对象某键下的字符串数组；缺失/非数组返回空列表（用户的其它形态不强行解释）。 */
+    /** Reads the string array under one key of a JSON object; a missing key or a non-array value
+     * returns an empty list (other shapes the user writes are not reinterpreted). */
     private static List<String> existingStrings(JsonObject parent, String key) {
         JsonElement el = parent.get(key);
         if (el == null || !el.isJsonArray()) return new ArrayList<>();
@@ -314,11 +329,13 @@ public final class FileEditorConfigContributor implements EditorConfigContributo
     }
 
     /**
-     * 把 {@code compilerOptions} 的 JSX 运行时键校正到引擎配置（{@link ClassFilter#INSTANCE} 的
-     * {@code jsxAutomaticRuntime}）的当前值。这些键由引擎拥有（运行时按同一配置做 JSX 变换），
-     * 策略与 include/typeRoots 相同：每次合并整体替换为引擎期望值，避免用户翻转开关后
-     * jsconfig 与运行时编译行为不一致。取值直接来自 {@link JSConfigModel} 模板，
-     * 保证与 {@code WorkspaceGenerator} 新建的 jsconfig 永远写出一致的选项。
+     * Corrects the JSX runtime keys of {@code compilerOptions} to the current value of the engine
+     * configuration ({@code jsxAutomaticRuntime} of {@link ClassFilter#INSTANCE}). The engine owns
+     * these keys because it performs the JSX transform with the same setting. The strategy matches
+     * include/typeRoots: every merge replaces them with the values the engine expects, so a jsconfig
+     * stays consistent with runtime compilation after the user flips the switch. Values come from
+     * the {@link JSConfigModel} template, so the options always match what {@code WorkspaceGenerator}
+     * writes for a newly created jsconfig.
      */
     private static void reconcileJsxRuntime(JsonObject compilerOptions) {
         JSConfigModel template = new JSConfigModel();
@@ -351,7 +368,8 @@ public final class FileEditorConfigContributor implements EditorConfigContributo
             JsonElement el = JsonParser.parseReader(reader);
             return (el != null && el.isJsonObject()) ? el.getAsJsonObject() : new JsonObject();
         } catch (Exception e) {
-            // 损坏的配置文件：从空开始重建（不抛，避免一次手误的编辑永久阻断 probe）
+            // Corrupt configuration file: rebuild from empty instead of throwing, so one bad edit
+            // does not permanently block probe
             return new JsonObject();
         }
     }
@@ -362,17 +380,18 @@ public final class FileEditorConfigContributor implements EditorConfigContributo
     }
 
     /**
-     * 计算 {@code from} 到 {@code to} 的相对路径，以 POSIX 斜杠返回（用于 jsconfig/pyrightconfig 中的相对引用）。
-     * 两侧先统一到规范形式（存在→toRealPath，缺失→拼接形式）：Windows 上 8.3 短名
-     * （{@code RUNNER~1}）与 toRealPath 长名混用时，relativize 会产生爬到盘根再落回
-     * 绝对路径的垃圾结果。
+     * Computes the relative path from {@code from} to {@code to} and returns it with POSIX slashes
+     * (for relative references in jsconfig/pyrightconfig). Both sides are first brought to their
+     * canonical form (existing path: toRealPath; missing path: the joined form). On Windows, mixing
+     * an 8.3 short name ({@code RUNNER~1}) with the long toRealPath name otherwise makes
+     * relativize climb to the drive root and produce a garbage absolute path.
      */
     public static String relativePosix(Path from, Path to) {
         return NekoJSPaths.canonicalForm(from).relativize(NekoJSPaths.canonicalForm(to))
                 .toString().replace('\\', '/');
     }
 
-    /** 便捷：{@link NekoJSPaths#root()} 到指定目录的相对 POSIX 路径。 */
+    /** Convenience: the relative POSIX path from {@link NekoJSPaths#root()} to the given directory. */
     public static String relativeFromRoot(NekoJSPaths paths, Path to) {
         return relativePosix(paths.root(), to);
     }

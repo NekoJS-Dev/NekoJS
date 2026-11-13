@@ -8,7 +8,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * 栈追踪映射工具：将 GraalVM 原始栈帧路径映射为 source map 解析后的真实位置。
+ * Maps raw GraalVM stack frame paths to the real locations that source maps resolve to.
  */
 final class StackTraceMapper {
     private static final Pattern STACK_LOCATION = Pattern.compile("(\\()([^()\\s]+):(\\d+)(?::(\\d+))?(\\))");

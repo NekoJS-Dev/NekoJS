@@ -8,14 +8,14 @@ import com.tkisor.nekojs.api.surface.LoaderVersion;
 import java.util.Map;
 
 /**
- * Managed surface 测试共享 fixture（ticket 09 review：6 份逐字相同的 environment()/platform
- * 复制超过抽取阈值）。只放真正的共享形状；测试专属差异留在各测试类内。
+ * Shared fixture for managed-surface tests. Only the genuinely shared shapes live here;
+ * differences specific to one test stay in that test class.
  */
 final class ApiSurfaceTestSupport {
 
     private ApiSurfaceTestSupport() {}
 
-    /** SERVER / DEDICATED_SERVER / loaderId=test / mc=1.21.1 的测试环境键。 */
+    /** Test environment key: SERVER / DEDICATED_SERVER / loaderId=test / mc=1.21.1. */
     static EnvironmentKey serverEnvironment() {
         return new EnvironmentKey(
                 ScriptTypeId.SERVER,

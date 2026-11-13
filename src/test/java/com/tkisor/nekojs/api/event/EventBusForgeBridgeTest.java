@@ -1,4 +1,5 @@
-// TODO(fabric): fabric 侧还没有对应实现，整文件守卫等移植完成后去掉
+// Fabric has no equivalent implementation yet; this whole-file guard goes away once the port is
+// done.
 //? if neoforge {
 package com.tkisor.nekojs.api.event;
 
@@ -24,15 +25,20 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * EventBusForgeBridge smoke test：用 net.neoforged.bus 的 BusBuilder 构造独立事件总线，
- * 经 bridge 注册监听、post 测试事件，断言回调被调用。仅依赖 bus API（三版本稳定）。
+ * Smoke test for EventBusForgeBridge: builds a standalone event bus with net.neoforged.bus
+ * BusBuilder, registers listeners through the bridge, posts test events and asserts that the
+ * callbacks ran. It only depends on the bus API, which is stable across the three versions.
  *
- * <p>{@link EventBusJS} 构造时会通过 {@code EnumMap} 触发 {@code ScriptType} 枚举初始化，
- * 后者又调用 {@code Platform.getGameDir()}，故在纯 JUnit 下需先注入最小 {@link IPlatform} stub。
+ * <p>Constructing {@link EventBusJS} initializes the {@code ScriptType} enum through an
+ * {@code EnumMap}, and that initialization calls {@code Platform.getGameDir()}. Under plain JUnit
+ * a minimal {@link IPlatform} stub must therefore be injected first.
  */
 class EventBusForgeBridgeTest {
 
-    /** 最简事件子类：{@link Event} 为抽象类、构造器 protected，子类可直接继承。 */
+    /**
+     * Minimal event subclass: {@link Event} is abstract with a protected constructor, so a subclass
+     * inherits it directly.
+     */
     public static class TestEvent extends Event {}
     public static class CancellableTestEvent extends Event implements ICancellableEvent {}
 
@@ -41,7 +47,7 @@ class EventBusForgeBridgeTest {
         try {
             Platform.init(new StubPlatform());
         } catch (IllegalStateException alreadyInitialized) {
-            // 同 JVM 内其它测试已初始化平台时复用现有实例
+            // Reuse the instance another test in this JVM already initialized.
         }
     }
 

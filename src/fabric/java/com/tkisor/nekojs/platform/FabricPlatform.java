@@ -8,9 +8,10 @@ import net.fabricmc.api.EnvType;
 import net.fabricmc.loader.api.FabricLoader;
 
 /**
- * Fabric 侧 {@link IPlatform} 实现（fabric 侧脚本运行时移植的第一块）。
+ * Fabric-side {@link IPlatform} implementation.
  *
- * <p>与 NeoForge 侧的 {@code NeoForgePlatform} 一一对应，只是数据源换成 Fabric Loader：
+ * <p>It maps one to one onto {@code NeoForgePlatform} on the NeoForge side, with Fabric Loader as
+ * the data source:
  * <ul>
  *   <li>{@code FMLLoader.getCurrent().getDist()} → {@link FabricLoader#getEnvironmentType()}</li>
  *   <li>{@code FMLLoader#isProduction} → {@link FabricLoader#isDevelopmentEnvironment()}</li>
@@ -18,11 +19,11 @@ import net.fabricmc.loader.api.FabricLoader;
  *   <li>{@code FMLPaths.GAMEDIR} → {@link FabricLoader#getGameDir()}</li>
  * </ul>
  *
- * <p>capabilities 只声明 fabric 侧已经成立的位：TAGS / RESOURCE_PACKS /
- * NETWORK_CUSTOM_CHANNEL（脚本自定义通道已双向注册）。配方热重载、配方查看器等
- * 要等 fabric 侧对应实现落地后再点亮——`IPlatform` 的
- * 默认方法（nbtBinaryCodec / registryQueryService）保持未实现语义，脚本侧会拿到空结果
- * 而不是崩溃。
+ * <p>capabilities only declares the bits that already work on Fabric: TAGS / RESOURCE_PACKS /
+ * NETWORK_CUSTOM_CHANNEL (script custom channels are registered in both directions). Recipe hot
+ * reload and the recipe viewer stay dark until their Fabric implementations land. The
+ * {@code IPlatform} default methods (nbtBinaryCodec / registryQueryService) keep their
+ * not-implemented semantics, so scripts get empty results instead of a crash.
  */
 public final class FabricPlatform implements IPlatform {
     @Override

@@ -10,17 +10,19 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * 动态定义 builder 的脚本面（ticket 16，AC4）：把 {@link DynamicDefinitionBuilder} 包成
- * {@link ProxyObject}，属性写入与显式 setter <b>分发到同一个 fluent setter</b>
- * {@link Method}（{@link DynamicBuilderContract.Member#setter()}）。
+ * Script-facing wrapper around a dynamic definition builder: exposes the
+ * {@link DynamicDefinitionBuilder} as a {@link ProxyObject} so that property writes and explicit
+ * setter calls <b>dispatch to the same fluent setter</b> {@link Method}
+ * ({@link DynamicBuilderContract.Member#setter()}).
  *
- * <p>与票 15 {@code BuilderSurface} 同一 putMember seam 语义（宿主对象 property 写不会
- * 落 setter，ProxyObject 才是可靠转发点——spec 08 预授权），但服务于<b>独立的动态
- * Builder 路径</b>：不实现 {@code RegistryObjectBuilder}、不进入启动期 drain，包出的
- * builder 只进入 inert 候选计划。{@code b.maxStackSize = 16} 与 {@code b.maxStackSize(16)}
- * 因此共享同一条校验、规范化与 definition fingerprint 路径；Graal 天然 Bean 映射的
- * characterization 结论由票 15 的 parity fixture 固定，本类的行为由本票的
- * {@code DynamicBuilderSurfaceParityTest}（真实 GraalJS）固定。
+ * <p>It forwards through the same {@code putMember} point as the startup {@code BuilderSurface}:
+ * a property write on the host object never reaches the setter, and a {@link ProxyObject} is the
+ * reliable place to forward from. But it serves the <b>separate dynamic builder path</b>: it does
+ * not implement {@code RegistryObjectBuilder}, does not take part in the startup drain, and the
+ * builder it wraps only enters an inert candidate plan. {@code b.maxStackSize = 16} and
+ * {@code b.maxStackSize(16)} therefore share the same validation, normalization and definition
+ * fingerprint path. The Graal bean mapping this relies on is pinned by the parity fixture, and
+ * this class's behavior by {@code DynamicBuilderSurfaceParityTest}, which runs on real GraalJS.
  */
 public final class DynamicBuilderSurface implements ProxyObject {
 
@@ -37,22 +39,22 @@ public final class DynamicBuilderSurface implements ProxyObject {
         return (Class<? extends DynamicDefinitionBuilder>) builder.getClass();
     }
 
-    /** 包一个动态定义 builder。 */
+    /** Wraps a dynamic definition builder. */
     public static DynamicBuilderSurface of(DynamicDefinitionBuilder builder) {
         return new DynamicBuilderSurface(builder);
     }
 
-    /** 若 value 是被本面包裹的 builder，解出裸对象；否则原样返回。 */
+    /** Unwraps a builder wrapped by this class; returns any other value unchanged. */
     public static Object unwrap(Object value) {
         return value instanceof DynamicBuilderSurface surface ? surface.builder : value;
     }
 
-    /** 被包裹的裸 builder（计划/Adapter 侧用；脚本面不直接接触）。 */
+    /** The wrapped builder, for the plan and Adapter side; the script side never touches it. */
     public DynamicDefinitionBuilder target() {
         return builder;
     }
 
-    // ---- ProxyObject：成员目录 ----
+    // ---- ProxyObject: member directory ----
 
     @Override
     public Object getMember(String name) {
@@ -77,7 +79,7 @@ public final class DynamicBuilderSurface implements ProxyObject {
         return contract.memberNames().toArray();
     }
 
-    /** 属性写入：转发到与显式 setter 调用相同的 fluent setter 方法。 */
+    /** Writes a property: forwards to the same fluent setter an explicit setter call reaches. */
     @Override
     public void putMember(String name, Value value) {
         DynamicBuilderContract.Member member = contract.member(name);
@@ -105,7 +107,7 @@ public final class DynamicBuilderSurface implements ProxyObject {
         return builder.getClass().getSimpleName();
     }
 
-    // ---- 方法成员（含显式 fluent setter 形态与 0 参便利方法） ----
+    // ---- Method members: fluent setters and zero-argument convenience methods ----
 
     private final class MethodMember implements ProxyExecutable {
 
@@ -156,14 +158,13 @@ public final class DynamicBuilderSurface implements ProxyObject {
         }
     }
 
-    // ---- 值装配 ----
+    // ---- Value conversion ----
 
     /**
-     * JS 值 → setter/方法参数。错误信息带成员名与期望类型（错误面由契约派生）。
-     * Numeric members normalize through {@link ScriptNumberCoercion} (D6 policy):
-     * script numbers are doubles and {@code asInt/asLong/asFloat} lossy checks reject
-     * valid values like {@code fixedRange = 0.7} with a raw engine exception
-     * (2026-09-29 float-coercion hotfix).
+     * Converts a JS value to a setter or method argument. Error messages carry the member name and
+     * the expected type. Numeric members go through {@link ScriptNumberCoercion}: script numbers
+     * are doubles, and the lossy {@code asInt/asLong/asFloat} checks would reject valid values
+     * such as {@code fixedRange = 0.7} with a raw engine exception.
      */
     static Object coerce(Value value, Class<?> target, String what) {
         if (value.isNull()) {

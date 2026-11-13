@@ -6,7 +6,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
 import net.neoforged.neoforge.network.PacketDistributor;
 
-/** {@link PlayPacketDispatcher} 的 NeoForge 实现：直接转发到 {@link PacketDistributor}。 */
+/** NeoForge implementation of {@link PlayPacketDispatcher}: forwards straight to {@link PacketDistributor}. */
 final class NeoForgePlayPacketDispatcher implements PlayPacketDispatcher {
 
     @Override

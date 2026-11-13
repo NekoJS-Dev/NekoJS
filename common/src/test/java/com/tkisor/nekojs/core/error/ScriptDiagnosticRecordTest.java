@@ -41,9 +41,9 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Ticket 30 frozen diagnostic record contract: phase/owner classification for representative
- * failures, source-map projection back to the authored source with module identity and cache
- * revision, and the shared user-visible projections (summary DTO, open action payload).
+ * The frozen diagnostic record: phase and owner classification for representative failures,
+ * source-map projection back to the authored source with module identity and cache revision, and
+ * the shared user-visible projections (the summary DTO and the open action payload).
  */
 class ScriptDiagnosticRecordTest {
 
@@ -62,7 +62,7 @@ class ScriptDiagnosticRecordTest {
         tracker = new DefaultErrorTracker(paths, SandboxConfig.defaultConfig());
     }
 
-    // ---- source-map phase mapping (red-first assertion for ticket 30) ----
+    // ---- Source-map phase mapping ----
 
     @Test
     void mappedExecutionErrorKeepsOriginalSourceModuleIdentityAndCacheRevision() throws Exception {

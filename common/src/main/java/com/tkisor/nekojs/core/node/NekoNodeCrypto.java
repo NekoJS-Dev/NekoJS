@@ -10,10 +10,11 @@ import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 
 /**
- * node:crypto 宿主后端：randomUUID / randomBytes / createHash / createHmac / timingSafeEqual。
+ * Host backend for node:crypto: randomUUID / randomBytes / createHash / createHmac /
+ * timingSafeEqual.
  *
- * <p>只暴露无 I/O、无密钥落盘的纯计算原语——证书/密钥文件类 API（readFileSync 之外）
- * 与网络类 API 不属于脚本沙盒范围。
+ * <p>Only pure computation primitives are exposed, with no I/O and no key material written to disk;
+ * certificate and key file APIs, as well as network APIs, are outside the script sandbox.
  */
 public final class NekoNodeCrypto {
     private final SecureRandom random = new SecureRandom();
@@ -75,7 +76,10 @@ public final class NekoNodeCrypto {
         };
     }
 
-    /** hash 对象：update 链式累积，digest 输出（输出后复位，与 Node 一致）。 */
+    /**
+     * The hash object: update calls chain to accumulate input and digest returns the output, after
+     * which the state resets, matching Node.
+     */
     public static final class NekoNodeHash {
         private final MessageDigest digest;
 
@@ -108,7 +112,7 @@ public final class NekoNodeCrypto {
         }
     }
 
-    /** hmac 对象：构造时固化密钥，update/digest 语义同 hash。 */
+    /** The hmac object: the key is fixed at construction and update/digest behave like hash. */
     public static final class NekoNodeHmac {
         private final Mac mac;
 

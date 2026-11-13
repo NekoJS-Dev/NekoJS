@@ -14,10 +14,11 @@ import graal.graalvm.polyglot.Value;
 import java.io.IOException;
 
 /**
- * ESM 模块生命周期管理：负责 ESM 模块的加载、链接、命名空间捕获和 async descendant 标记。
+ * Manages the ESM module lifecycle, including loading, linking, namespace capturing,
+ * and marking asynchronous descendants.
  *
- * <p>从 {@link NekoScriptModuleLoaderHost} 提取，处理 ESM 特有的 record 创建、
- * 依赖链接、TLA 传播等逻辑。
+ * <p>Extracted from {@link NekoScriptModuleLoaderHost} to handle ESM-specific record
+ * creation, dependency linking, and TLA propagation.
  */
 import java.util.HashSet;
 import java.util.Set;
@@ -25,12 +26,12 @@ import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 
 /**
- * ESM 模块生命周期：record 创建/链接/求值、命名空间捕获（sync/async）、
- * async 后代标记和静态依赖图记录。
+ * ESM module lifecycle: record creation, linking, evaluation, namespace capture (sync/async),
+ * marking asynchronous descendants, and recording the static dependency graph.
  *
- * <p>从 {@link NekoScriptModuleLoaderHost} 的 ESM 相关方法下沉而来。
- * 构造器接收具体依赖（record cache / link cache / dependency graph / rewriter /
- * Context / revision supplier / prepare function），不注入完整 LoaderHost。
+ * <p>Extracted from {@link NekoScriptModuleLoaderHost}.
+ * The constructor accepts specific dependencies (record cache, link cache, dependency graph, rewriter,
+ * Context, revision supplier, prepare function) without injecting the full LoaderHost.
  */
 public final class EsmModuleLifecycle {
     private final NekoEsmModuleRecordCache esmRecordCache;

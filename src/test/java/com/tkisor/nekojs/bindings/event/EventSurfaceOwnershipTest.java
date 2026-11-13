@@ -1,4 +1,4 @@
-// TODO(fabric): fabric 侧还没有对应实现，整文件守卫等移植完成后去掉
+// TODO(fabric): the fabric side has no counterpart yet; drop this whole-file guard once the port lands
 //? if neoforge {
 package com.tkisor.nekojs.bindings.event;
 
@@ -35,31 +35,33 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * 票 14 AC6：真实插件注册面上的「无重复 bus / 无事件域复制」fixture。
+ * Pins the real plugin registration surface: no duplicated bus and no copied event domain.
  *
- * <p>以生产注册路径（{@link NekoJSCorePlugin#registerEvents} +
- * {@code registerClientEvents}）构造完整事件组集合，然后冻结：
+ * <p>Builds the full event group set through the production registration path
+ * ({@link NekoJSCorePlugin#registerEvents} plus {@code registerClientEvents}), then freezes it:
  * <ul>
- *   <li>每个已知事件域（recipe/loot/tags/capability/goal/render…）仍由其原有
- *       {@link EventGroup} 承载，组名集合无重复；</li>
- *   <li>每条 bus 只出现一次：跨组无重复 bus 实例（identity），catalog 派生的
- *       (group, name) 对无重复，条目数 = 各组总线数之和；</li>
- *   <li>三类声明面不复制事件域：{@code ScriptEvents} 组只承载声明入口
- *       （server/client 两条注册总线），{@code ProbeEvents} 组只承载 4 条 probe-only
- *       总线，{@code NativeEvents} 不是事件组（它是 STARTUP raw binding，
- *       见 {@code NativeEventsLegacyTierCharacterizationTest}）。</li>
+ *   <li>every known event domain (recipe/loot/tags/capability/goal/render...) is still carried by
+ *       its original {@link EventGroup}, and the group names have no duplicates;</li>
+ *   <li>each bus appears once: no bus instance (identity) repeats across groups, the
+ *       catalog-derived (group, name) pairs are unique, and the entry count equals the sum of
+ *       each group's bus count;</li>
+ *   <li>the three declaration surfaces do not copy event domains: the {@code ScriptEvents} group
+ *       carries only the declaration entries (the server and client registration buses), the
+ *       {@code ProbeEvents} group carries only the 4 probe-only buses, and {@code NativeEvents}
+ *       is not an event group (it is a STARTUP raw binding, see
+ *       {@code NativeEventsLegacyTierCharacterizationTest}).</li>
  * </ul>
  */
 class EventSurfaceOwnershipTest {
 
     private static Map<String, EventGroup> registeredGroups() {
-        // ticket 24: two production-order installs must precede the first family class-init
-        // (mirrors NekoJSMod's constructor order):
-        // 1) the cancellability predicate, otherwise the shared test JVM freezes every
-        //    cancellable family bus as non-cancellable;
-        // 2) a stub platform, otherwise KeyBindEvents' class-init reaches NekoJSMod's static
-        //    block and installs NeoForgePlatform, whose gameDir needs a real FML launch —
-        //    every later test that asks scriptsDir for a harness would NPE.
+        // Two production-order installs must happen before any family class-inits, mirroring the
+        // NekoJSMod constructor order:
+        // 1) the cancellability predicate, otherwise the shared test JVM freezes every cancellable
+        //    family bus as non-cancellable;
+        // 2) a stub platform, otherwise KeyBindEvents' class-init reaches NekoJSMod's static block
+        //    and installs NeoForgePlatform, whose gameDir needs a real FML launch, so every later
+        //    test that asks scriptsDir for a harness would NPE.
         EventBusJS.setExternalCancellabilityPredicate(
                 net.neoforged.bus.api.ICancellableEvent.class::isAssignableFrom);
         try {
@@ -88,8 +90,9 @@ class EventSurfaceOwnershipTest {
     void domainGroupsStayInTheirOriginalOwnersWithoutDuplication() {
         Map<String, EventGroup> groups = registeredGroups();
 
-        // 已知事件域的原有 owner。KeyBindEvents 是 >=26 客户端组（与
-        // NekoJSCorePlugin.registerClientEvents 的同源守卫一致），1.21.1 不注册。
+        // The original owner of each known event domain. KeyBindEvents is a client group for >=26,
+        // matching the guard in NekoJSCorePlugin.registerClientEvents, and is not registered on
+        // 1.21.1.
         Set<String> expected = new HashSet<>(Set.of(
                 "PlayerEvents", "ServerEvents", "BlockEvents", "ItemEvents", "EntityEvents",
                 "GoalEvents", "CommandEvents", "CapabilityEvents", "LevelEvents",
@@ -101,7 +104,8 @@ class EventSurfaceOwnershipTest {
                 "event domain ownership map changed: domains must stay in their original groups, "
                         + "not be copied into new surfaces");
 
-        // 域内事件没有消失（spot check：recipe 域仍在 ServerEvents，goal/capability 域非空）
+        // The domain events are still there: spot-check that the recipe domain stays in
+        // ServerEvents and that the goal/capability domains are not empty.
         assertTrue(groups.get("ServerEvents").viewBuses().containsKey("recipes"),
                 "the recipe domain still lives in ServerEvents.recipes");
         assertFalse(groups.get("GoalEvents").viewBuses().isEmpty(),
@@ -116,8 +120,10 @@ class EventSurfaceOwnershipTest {
     void eachBusAppearsExactlyOnceAcrossGroupsAndCatalog() {
         Map<String, EventGroup> groups = registeredGroups();
 
-        // 跨组 bus identity 唯一：同一条 EventBusJS 不得挂进两个组/两条目录（第二 bus / 复制）。
-        // 注：BusHolder.getBus(type) 对每个适用 side 返回同一实例，identity 按 holder 收集。
+        // Bus identity is unique across groups: one EventBusJS must not hang in two groups or two
+        // catalog entries (a second bus, or a copy).
+        // BusHolder.getBus(type) returns the same instance for every applicable side, so
+        // identities are collected per holder.
         Set<EventBusJS<?, ?>> busIdentities = new HashSet<>();
         int totalBuses = 0;
         for (EventGroup group : groups.values()) {
@@ -138,7 +144,8 @@ class EventSurfaceOwnershipTest {
         assertEquals(totalBuses, busIdentities.size(),
                 "every registered bus must expose a live instance (no empty holders)");
 
-        // catalog 派生：(group, name) 无重复，条目数 = 总线数
+        // Catalog derivation: the (group, name) pairs are unique and the entry count equals the
+        // total number of buses.
         List<EventCatalogEntry> events = NekoScriptCatalog.events(new StubRuntime(groups));
         assertEquals(totalBuses, events.size(),
                 "catalog must derive exactly one entry per bus");
@@ -153,20 +160,24 @@ class EventSurfaceOwnershipTest {
     void declarationSurfacesDoNotCopyEventDomains() {
         Map<String, EventGroup> groups = registeredGroups();
 
-        // ScriptEvents 组 = 声明入口面（server/client 注册总线），不承载任何游戏事件域
+        // The ScriptEvents group is the declaration entry surface (the server/client registration
+        // buses); it carries no game event domain.
         assertEquals(Set.of("server", "client"), groups.get("ScriptEvents").viewBuses().keySet(),
                 "ScriptEvents must stay the declaration entry surface (server/client registration buses only)");
 
-        // ProbeEvents 组 = probe 扩展面（4 条 probe-only 总线），不复制任何事件域
+        // The ProbeEvents group is the probe extension surface (4 probe-only buses); it copies no
+        // event domain.
         assertEquals(Set.of("modifyType", "assignType", "addGlobal", "snippets"),
                 groups.get("ProbeEvents").viewBuses().keySet(),
                 "ProbeEvents must stay probe-only; existing domains are not copied into it");
 
-        // NativeEvents 不是事件组（raw binding 面，不经 registerEvents）
+        // NativeEvents is not an event group: it is the raw binding face and does not go through
+        // registerEvents.
         assertFalse(groups.containsKey("NativeEvents"),
                 "NativeEvents must not become an event group (legacy/raw binding face)");
 
-        // 动态声明面在注册期就拒绝复制内置组名（可诊断冲突，AC3/AC6 交叉）
+        // The dynamic declaration surface rejects a copied built-in group name at registration
+        // time, so the conflict is diagnosable.
         List<String> conflicts = new ArrayList<>();
         for (String builtin : List.of("ServerEvents", "ProbeEvents")) {
             try {
@@ -174,7 +185,7 @@ class EventSurfaceOwnershipTest {
                         new StubRuntime(groups), ScriptType.SERVER, builtin, "anything");
                 conflicts.add(builtin);
             } catch (IllegalArgumentException expected) {
-                // 可诊断拒绝
+                // The built-in name is rejected with a diagnosable IllegalArgumentException.
             }
         }
         assertTrue(conflicts.isEmpty(),

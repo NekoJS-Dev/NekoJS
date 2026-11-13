@@ -22,10 +22,10 @@ class PlayerSpecTest {
 
     @Test
     void ambiguousMethodsExcludedFromSpec() {
-        // neko$addXp(int) 因语义歧义（NF=等级, CR=点数）从 spec 移除
+        // neko$addXp(int) is removed from the spec because its meaning is ambiguous: NF adds levels, CR adds points
         assertThrows(NoSuchMethodException.class,
             () -> PlayerSpec.class.getMethod("neko$addXp", int.class));
-        // isCreative / sendMessage 因原生零参碰撞，不进 spec
+        // isCreative and sendMessage do not enter the spec: they collide with native zero-argument methods
         assertThrows(NoSuchMethodException.class,
             () -> PlayerSpec.class.getMethod("neko$isCreative"));
         assertThrows(NoSuchMethodException.class,
@@ -39,7 +39,7 @@ class PlayerSpecTest {
             if (!method.getName().startsWith("neko$")) continue;
             assertTrue(method.isDefault(),
                 method.getName() + " should be default (sentinel)");
-            // 调用哨兵 default 体应抛 UnsupportedOperationException（或被反射包裹）
+            // Calling the sentinel default body must throw UnsupportedOperationException (or the reflection wrapper of it)
             Throwable root = null;
             try {
                 invokeDefault(method, instance);
@@ -53,7 +53,7 @@ class PlayerSpecTest {
     }
 
     private static void invokeDefault(java.lang.reflect.Method m, Object instance) throws Throwable {
-        // default 方法的反射调用：构造正确的参数数组
+        // Reflective call of a default method: build the argument array with the right types
         Object[] args = new Object[m.getParameterCount()];
         Class<?>[] params = m.getParameterTypes();
         for (int i = 0; i < params.length; i++) {

@@ -1,6 +1,6 @@
-// 26.x 共享实现（1.21.1 是 versions/1.21.1 下的成对文件）。本文件只依赖 net.minecraft.*，
-// 无 loader import，因此 26.x 的两个 loader 节点共用同一份 Adapter；fabric 节点当前不装配它
-// （改用显式 unavailable owner，票 22 AC9）。
+// 26.x shared implementation (1.21.1 has a paired file under versions/1.21.1). This file depends only on net.minecraft.*,
+// with no loader imports, so both 26.x loader nodes share the same Adapter; the fabric node does not wire it up yet
+// (it uses an explicit unavailable owner instead).
 //? if >=26 {
 package com.tkisor.nekojs.wrapper.event.server;
 

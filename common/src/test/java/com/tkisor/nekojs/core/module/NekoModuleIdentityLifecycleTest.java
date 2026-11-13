@@ -39,11 +39,12 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * 票据 11 AC3 + AC7：CJS require/module.exports 与 ESM import/export/link 的模块身份
- * 在重复加载、循环依赖、跨入口调用下保持既有语义；跨 import 的执行错误回到原始文件与模块身份。
+ * Module identity for CJS require/module.exports and ESM import/export/link keeps its behavior
+ * across repeated loads, circular dependencies and calls from another entry. An execution error
+ * raised across import points back to the original file and module identity.
  *
- * <p>经最高调用者 seam（{@link NekoScriptModuleLoaderHost#loadEntry} /
- * {@code requireFrom} / {@code nativeImport}）观察行为。
+ * <p>Behavior is observed through the public entry points
+ * {@link NekoScriptModuleLoaderHost#loadEntry}, {@code requireFrom} and {@code nativeImport}.
  */
 class NekoModuleIdentityLifecycleTest {
     @TempDir
@@ -67,7 +68,8 @@ class NekoModuleIdentityLifecycleTest {
                 new NekoCompilationPipeline(), compilers, SandboxConfig.defaultConfig()),
                 new SourceMapRegistry(paths.root()), new NekoEsmVirtualModuleRegistry(paths.root()),
                 NekoTrustContext.local());
-        // 生产级接线：虚拟 ESM 模块经 NekoJSFileSystem 由 guest import 解析（与 NekoSandboxFactory 一致）。
+        // Production wiring: guest imports resolve virtual ESM modules through NekoJSFileSystem, the same
+        // way NekoSandboxFactory does it.
         IOAccess ioAccess = IOAccess.newBuilder()
                 .fileSystem(new NekoJSFileSystem(paths.root(),
                         new SandboxPolicy(SandboxConfig.defaultConfig(), paths), paths, cache))
@@ -187,7 +189,8 @@ class NekoModuleIdentityLifecycleTest {
                         + "const b = require('./circ-b.cjs');\n"
                         + "module.exports = { bSeen: a.bSeen, aSeen: b.aSeen };\n");
 
-        // Node 循环语义：执行前先入缓存，循环方拿到部分 exports；此处不断言 StackOverflow。
+        // Node circular semantics: the module is put in the cache before it runs, so the module in the
+        // cycle sees partial exports. This does not assert a StackOverflow.
         Value exports = asValue(host.loadEntry("./server_scripts/src/circ-entry.cjs"));
 
         assertEquals(2, exports.getMember("bSeen").asInt());

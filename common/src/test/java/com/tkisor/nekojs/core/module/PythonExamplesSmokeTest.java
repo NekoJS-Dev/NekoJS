@@ -33,13 +33,14 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * 票据 13 AC9：随票交付的 .py 最小可运行示例冒烟。
+ * Smoke tests for the minimal runnable .py examples.
  *
- * <p>示例源文件在 {@code common/src/test/resources/nekojs/language-py-examples/}（交付物，
- * 内容同时内联于基线迁移材料）。测试把它们拷入隔离 gameDir 后经最高调用者 seam
- * （{@link NekoScriptModuleLoaderHost#loadEntry}）真实装载，断言文档承诺的输出与
- * language 身份 / source-map 行为一致。示例只使用已过 gate 的 Python 能力：
- * 缩进与注释、def/elif/f-string、兄弟 .py 模块 import、被剥离的 {@code from nekojs import *}。
+ * <p>The example sources live in {@code common/src/test/resources/nekojs/language-py-examples/}.
+ * Each test copies them into an isolated gameDir and loads them for real through
+ * {@link NekoScriptModuleLoaderHost#loadEntry}, asserting that the documented output matches the
+ * language identity and the source-map behavior. The examples use only Python features that work
+ * end to end: indentation and comments, def/elif/f-string, sibling .py module imports, and the
+ * stripped {@code from nekojs import *}.
  */
 class PythonExamplesSmokeTest {
 
@@ -112,7 +113,8 @@ class PythonExamplesSmokeTest {
         assertTrue(prepared.code().contains("function describe"), prepared.code());
         assertTrue(prepared.code().contains("./greet"), "the sibling import must stay a module import: " + prepared.code());
 
-        // 兄弟模块自己的产物保留问候语字面量，并被导出供 import 使用。
+        // The sibling module keeps the greeting literal in its own output and exports it for the import to
+        // use.
         NekoPreparedModule greet = cache.prepare(paths.serverScripts().resolve("examples/py/greet.py"));
         assertTrue(greet.code().contains("hello, "), greet.code());
         assertTrue(greet.code().contains("export { greet, TAG }") || greet.code().contains("export { TAG, greet }"),

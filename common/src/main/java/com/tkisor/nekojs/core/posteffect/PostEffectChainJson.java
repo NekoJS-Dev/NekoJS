@@ -120,8 +120,9 @@ public final class PostEffectChainJson {
     }
 
     /**
-     * Uniform block 形如 vanilla blur.json：{@code uniforms} 是 block 名到 uniform 条目列表
-     * 的映射（26.x {@code Map<String, List<UniformValue>>}），条目为 {name, type, value}。
+     * Uniform block shaped like vanilla blur.json: {@code uniforms} maps a block name to a list of
+     * uniform entries (26.x {@code Map<String, List<UniformValue>>}), and each entry is
+     * {name, type, value}.
      */
     private static JsonObject boxBlurPass(String input, String output, double dirX, double dirY, double radius) {
         JsonObject blurDir = new JsonObject();
@@ -160,7 +161,7 @@ public final class PostEffectChainJson {
         return input;
     }
 
-    /** {@code BlitConfig} block（vanilla invert.json 的第二通道）：恒等色调制。 */
+    /** The {@code BlitConfig} block, the second channel of vanilla invert.json: identity color modulation. */
     private static JsonObject blitUniforms() {
         JsonObject colorModulate = new JsonObject();
         colorModulate.addProperty("name", "ColorModulate");

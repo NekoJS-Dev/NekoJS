@@ -1,14 +1,16 @@
-// 1.21.1 实现，与版本树 src/ 下的同名 26.x 文件成对。内容等于那份文件在本节点求值后的形态。
-// 26.x 侧行为变更时须同步本文件。
+// 1.21.1 implementation, paired with the same-named 26.x file under src/ in the version tree.
+// Its content equals that file evaluated at this node. Keep this file in sync when the 26.x
+// side changes behavior.
 package com.tkisor.nekojs.wrapper.registry.gen;
 
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.npc.VillagerType;
 
 /**
- * 村民类型 builder：纯标识类型（无配置字段），身份由注册 id 决定；
- * 贴图由 {@code assets/<ns>/textures/entity/villager/<type>/...} 提供，
- * 生物群系→类型映射由 data map 配置（不在本 builder 职责内）。
+ * Builds a villager type. The type carries no configuration fields; its identity comes from the
+ * registration id. Textures live under
+ * {@code assets/<ns>/textures/entity/villager/<type>/...}, and the biome-to-type mapping comes
+ * from a data map, which this builder does not handle.
  */
 public class VillagerTypeBuilder extends RegistryObjectBuilder<VillagerType> {
 

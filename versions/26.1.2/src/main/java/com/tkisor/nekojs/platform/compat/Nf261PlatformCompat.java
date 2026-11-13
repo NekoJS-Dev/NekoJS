@@ -12,11 +12,12 @@ import net.neoforged.fml.loading.FMLEnvironment;
 import net.neoforged.neoforge.network.registration.PayloadRegistrar;
 
 /**
- * 26.1 侧 {@link McPlatformCompat.Impl}：dist 走 {@code FMLEnvironment.getDist()}、
- * OP 检查走 {@code Commands.LEVEL_GAMEMASTERS.check}、双向注册走 4 参 playBidirectional
- * （分别指定两端 handler）。票 21 平台接线：动态注册批事务 payload 在同一
- * RegisterPayloadHandlersEvent 注册（register-once 通道族，无第二通道）。
- * 注册：{@code META-INF/services/McPlatformCompat$Impl}。
+ * 26.1 implementation of {@link McPlatformCompat.Impl}: {@code FMLEnvironment.getDist()} gives the
+ * dist, {@code Commands.LEVEL_GAMEMASTERS.check} gives the OP check, and the 4-argument
+ * playBidirectional registers both directions with a separate handler for each side.
+ * Every payload, including the dynamic registration batch transaction, registers in the same
+ * RegisterPayloadHandlersEvent; no other registration channel exists.
+ * Registered through {@code META-INF/services/McPlatformCompat$Impl}.
  */
 public final class Nf261PlatformCompat implements McPlatformCompat.Impl {
 

@@ -22,32 +22,35 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 
 /**
- * 玩家事件面「mixin 面」的 fabric 桥 v1：容器开合（containerOpened/containerClosed +
- * 弃用别名）、合成/烧炼/损毁（crafted/smelted/destroyed，按物品 id dispatch）、
- * 进度（advancement）、实体交互（entityInteract，可取消）、维度切换（changedDimension）。
+ * Fabric bridge v1 for the mixin-driven player events: container open/close
+ * (containerOpened/containerClosed plus the deprecated aliases), crafting/smelting/destroying
+ * (crafted/smelted/destroyed, dispatched by item id), advancements, entity interaction
+ * (entityInteract, cancellable) and dimension change (changedDimension).
  *
- * <p>这 6 类事件 fabric-api 均无等价回调，全部由节点目录 fabric/mixin 内的 mixin
- * 钩子触发（见各 mixin 注释）；本类只提供静态 post 入口，无需 register() 接线。
- * 总线声明在节点孪生 {@link PlayerEvents}（同名组 "PlayerEvents" 与
- * {@code FabricServerEventBindings.PLAYER_EVENTS} 经 EventGroupRegistry 合并）。
+ * <p>fabric-api has no equivalent callback for any of these six, so mixins under the node's
+ * fabric/mixin directory fire them (see the comment on each mixin). This class only supplies
+ * static post entry points; it needs no register() wiring. The buses are declared in the node
+ * twin {@link PlayerEvents}, whose "PlayerEvents" group is merged with
+ * {@code FabricServerEventBindings.PLAYER_EVENTS} by EventGroupRegistry.
  */
 public final class FabricPlayerEventBindings {
 
     private FabricPlayerEventBindings() {}
 
-    /** ServerPlayerContainerMixin 钩子入口：打开/关闭菜单的调用点。 */
+    /** Hook entry for {@code ServerPlayerContainerMixin}: the call site that opens a menu. */
     public static void postContainerOpened(ServerPlayer player, AbstractContainerMenu menu) {
         PlayerEvents.CONTAINER_OPENED.post(new PlayerContainerEventJS(player, menu));
         PlayerEvents.INVENTORY_OPENED.post(new PlayerContainerEventJS(player, menu));
     }
 
-    /** ServerPlayerContainerMixin 钩子入口：{@code doCloseContainer}。 */
+    /** Hook entry for {@code ServerPlayerContainerMixin}: {@code doCloseContainer}. */
     public static void postContainerClosed(ServerPlayer player, AbstractContainerMenu menu) {
         PlayerEvents.CONTAINER_CLOSED.post(new PlayerContainerEventJS(player, menu));
         PlayerEvents.INVENTORY_CLOSED.post(new PlayerContainerEventJS(player, menu));
     }
 
-    /** CraftingResultSlotMixin 钩子入口：{@code ResultSlot#checkTakeAchievements}（合成取件）。 */
+    /** Hook entry for {@code CraftingResultSlotMixin}: {@code ResultSlot#checkTakeAchievements}
+     *  (taking a crafting result). */
     public static void postCrafted(Player player, ItemStack result, Container container) {
         if (player instanceof ServerPlayer serverPlayer) {
             PlayerEvents.CRAFTED.post(
@@ -55,7 +58,8 @@ public final class FabricPlayerEventBindings {
         }
     }
 
-    /** FurnaceResultSlotMixin 钩子入口：{@code FurnaceResultSlot#checkTakeAchievements}（烧炼取件）。 */
+    /** Hook entry for {@code FurnaceResultSlotMixin}: {@code FurnaceResultSlot#checkTakeAchievements}
+     *  (taking a smelting result). */
     public static void postSmelted(Player player, ItemStack result) {
         if (player instanceof ServerPlayer serverPlayer) {
             PlayerEvents.SMELTED.post(
@@ -63,40 +67,46 @@ public final class FabricPlayerEventBindings {
         }
     }
 
-    /** ItemStackDestroyMixin 钩子入口：{@code ItemStack#applyDamage} 的碎裂分支。 */
+    /** Hook entry for {@code ItemStackDestroyMixin}: the breaking branch of {@code ItemStack#applyDamage}. */
     public static void postDestroyed(ServerPlayer player, ItemStack stack) {
         PlayerEvents.DESTROYED.post(
                 new PlayerDestroyItemEventJS(player, stack), stack.getItem());
     }
 
-    /** PlayerAdvancementsMixin 钩子入口：{@code PlayerAdvancements} 完成进度的 display 段。 */
+    /** Hook entry for {@code PlayerAdvancementsMixin}: the display section where
+     *  {@code PlayerAdvancements} completes an advancement. */
     public static void postAdvancement(ServerPlayer player, AdvancementHolder advancement) {
         PlayerEvents.ADVANCEMENT.post(new PlayerAdvancementEventJS(player, advancement));
     }
 
     /**
-     * ServerEntityInteractMixin 钩子入口：{@code handleInteract} 的 interactOn 调用点。
-     * @return 监听器是否取消本次交互（true = 取消包处理）
+     * Hook entry for {@code ServerEntityInteractMixin}: the interactOn call site in
+     * {@code handleInteract}.
+     *
+     * @return whether a listener cancelled this interaction ({@code true} = cancel packet handling)
      */
     public static boolean postEntityInteract(ServerPlayer player, Entity target, InteractionHand hand) {
         return PlayerEvents.ENTITY_INTERACT.post(
                 new PlayerEntityInteractEventJS(player, target, hand));
     }
 
-    /** ServerPlayerDimensionMixin 钩子入口：{@code ServerPlayer#teleport(TeleportTransition)} 成功收尾。 */
+    /** Hook entry for {@code ServerPlayerDimensionMixin}: the successful end of
+     *  {@code ServerPlayer#teleport(TeleportTransition)}. */
     public static void postChangedDimension(ServerPlayer player,
                                             ResourceKey<Level> from, ResourceKey<Level> to) {
         PlayerEvents.CHANGED_DIMENSION.post(new PlayerChangedDimensionEventJS(player, from, to));
     }
 
     /**
-     * 物品栏监听器生命周期挂载（{@code PlayerEvents.inventoryChanged}）：
-     * 与 NeoForge 侧 {@code PlayerEventListener}（PlayerLoggedInEvent + PlayerEvent.Clone）
-     * 同位次——fabric-api 现成回调即可，零 mixin。{@code InventoryChangeListener.getOrCreate}
-     * 幂等（WeakHashMap 缓存），COPY_FROM 覆盖死亡重生/维度切换后新实体的重挂载。
+     * Attaches the inventory listener lifecycle for {@code PlayerEvents.inventoryChanged}. It sits in
+     * the same place as {@code PlayerEventListener} on NeoForge (PlayerLoggedInEvent and
+     * PlayerEvent.Clone) but uses fabric-api callbacks, so it needs no mixin.
+     * {@code InventoryChangeListener.getOrCreate} is idempotent (it caches in a WeakHashMap), and
+     * COPY_FROM re-attaches the listener to the new entity after death, respawn or a dimension
+     * change.
      *
-     * <p>由 {@code NekoJSFabricMod.onInitialize} 调用（server 环境仅：回调注册在
-     * dedicated/integrated server 均生效，事件本身只对 ServerPlayer 触发）。
+     * <p>{@code NekoJSFabricMod.onInitialize} calls it. The callbacks register on both dedicated and
+     * integrated servers, and the event itself only fires for ServerPlayer.
      */
     public static void registerLifecycle() {
         ServerPlayConnectionEvents.JOIN.register((handler, sender, server) ->

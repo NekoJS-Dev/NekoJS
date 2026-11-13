@@ -61,12 +61,11 @@ public final class UiColor {
     }
 
     /**
-     * Coerces a script color number to ARGB int bits for painter-style seams
-     * (defect D6): an integral value in the int32/uint32 range is read as ARGB
-     * bits. Script hex literals such as {@code 0xFFFFFF00} are unsigned values
-     * above {@code Integer.MAX_VALUE}; declaring the parameter as a Java
-     * {@code int} saturates them to {@code 0x7FFFFFFF} (translucent white) at the
-     * engine conversion boundary, so script-facing color parameters must accept
+     * Coerces a script color number to ARGB int bits for the painter path: an integral value
+     * in the int32/uint32 range is read as ARGB bits. Script hex literals such as
+     * {@code 0xFFFFFF00} are unsigned values above {@code Integer.MAX_VALUE}; declaring the
+     * parameter as a Java {@code int} saturates them to {@code 0x7FFFFFFF} (translucent
+     * white) during engine conversion, so script-facing color parameters must accept
      * {@link Number} and normalize through this method.
      *
      * @param value the script-supplied color number ({@code null} from JS {@code null}/{@code undefined})

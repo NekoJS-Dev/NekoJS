@@ -176,7 +176,7 @@ class ScriptPropertyParsingTest {
 
     private record Captured(String level, String message, Throwable cause) {}
 
-    /** Log4j is runtime-only in these tests, so capture its public appender boundary reflectively. */
+    /** Log4j is runtime-only in these tests, so the public appender is reached by reflection. */
     private static final class LogCapture implements AutoCloseable {
         private final List<Captured> events = new CopyOnWriteArrayList<>();
         private final Class<?> appenderType = Class.forName("org.apache.logging.log4j.core.Appender");

@@ -6,17 +6,19 @@ import com.tkisor.nekojs.api.event.EventGroup;
 import com.tkisor.nekojs.wrapper.network.NetworkDataEventJS;
 
 /**
- * 脚本侧网络事件：接收来自对端的 {@link com.tkisor.nekojs.network.NekoScriptPayload}。
+ * Script-side network events: receives a {@link com.tkisor.nekojs.network.NekoScriptPayload} from
+ * the other side.
  *
- * <p>按 {@code channel} 分发——只有注册了相同 channel 的监听器会被触发，避免跨 channel 串扰。
- * 监听器按 {@link com.tkisor.nekojs.api.ScriptType} 归属，{@code /nekojs reload} 时自动清理。
+ * <p>Dispatch is per {@code channel}: only listeners registered for the same channel fire, so
+ * channels do not see each other's packets. A listener belongs to one
+ * {@link com.tkisor.nekojs.api.ScriptType} and is cleaned up on {@code /nekojs reload}.
  *
  * <pre>{@code
- * // server_scripts：接收客户端发来的包
+ * // server_scripts: receive packets sent by a client
  * NetworkEvents.server("my_channel", event => {
  *   console.log(event.channel, event.data, event.player)
  * })
- * // client_scripts：接收服务端发来的包
+ * // client_scripts: receive packets sent by the server
  * NetworkEvents.client("my_channel", event => {
  *   console.log(event.channel, event.data)
  * })
@@ -25,7 +27,10 @@ import com.tkisor.nekojs.wrapper.network.NetworkDataEventJS;
 public interface NetworkEvents {
     EventGroup GROUP = EventGroup.of("NetworkEvents");
 
-    /** 按 channel 名分发：监听器注册时传入 channel，只有该 channel 的包到达时触发。 */
+    /**
+     * Dispatches by channel name: a listener passes its channel when registering and fires only when
+     * a packet for that channel arrives.
+     */
     DispatchKey<NetworkDataEventJS, String> CHANNEL_KEY = new DispatchKey<>() {
         @Override
         public Class<String> keyType() {
@@ -38,11 +43,11 @@ public interface NetworkEvents {
         }
     };
 
-    /** SERVER 端总线：客户端 → 服务端的包。脚本在 server_scripts 监听。 */
+    /** SERVER bus: packets from client to server. Scripts listen in server_scripts. */
     EventBusJS<NetworkDataEventJS, String> SERVER =
             GROUP.server("server", NetworkDataEventJS.class, CHANNEL_KEY);
 
-    /** CLIENT 端总线：服务端 → 客户端的包。脚本在 client_scripts 监听。 */
+    /** CLIENT bus: packets from server to client. Scripts listen in client_scripts. */
     EventBusJS<NetworkDataEventJS, String> CLIENT =
             GROUP.client("client", NetworkDataEventJS.class, CHANNEL_KEY);
 }

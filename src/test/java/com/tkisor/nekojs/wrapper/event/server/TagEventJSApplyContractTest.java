@@ -1,4 +1,5 @@
-// 26.x/1.21.1 共享测试树：本文件零版本守卫（TagEventJS 两侧同包同名，构造输入只用字符串）。
+// Shared 26.x/1.21.1 test tree: this file has no version guard (TagEventJS has the same package
+// and name on both sides, and the constructed inputs are strings only).
 //? if neoforge {
 package com.tkisor.nekojs.wrapper.event.server;
 
@@ -16,15 +17,15 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Ticket 23 AC8 external-behavior fixtures for {@code ServerEvents.tags} (dispatch key =
- * registry id): add/remove/replaceAll/removeAll are collected per event instance and applied
- * to the tag loader's source map in one {@code apply()} — the exact map the vanilla tag build
- * then consumes. Covers: modification, conflicts (add+remove of the same entry, replaceAll vs
- * later add), deferred deletion semantics of removeAll, and reload re-assertion (a new event
- * instance starts from the post-apply source state, per-load re-declaration).
+ * External-behavior fixtures for {@code ServerEvents.tags} (dispatch key = registry id):
+ * add/remove/replaceAll/removeAll are collected per event instance and applied to the tag
+ * loader's source map in a single {@code apply()}, the exact map the vanilla tag build then
+ * consumes. Covers: modification, conflicts (add and remove of the same entry, replaceAll
+ * versus a later add), the deferred deletion semantics of removeAll, and reload re-assertion
+ * (a new event instance starts from the post-apply source state, since each load re-declares).
  *
- * <p>Registry-light: entry construction and matching happen through the public TagEventJS
- * surface only; no registry is consulted.
+ * <p>Registry-light: entry construction and matching go through the public TagEventJS surface
+ * only; no registry is consulted.
  */
 class TagEventJSApplyContractTest {
 

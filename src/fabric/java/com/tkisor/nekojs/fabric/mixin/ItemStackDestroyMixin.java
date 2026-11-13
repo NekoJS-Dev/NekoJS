@@ -13,30 +13,34 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import java.util.function.Consumer;
 
 /**
- * 玩家物品损坏事件（{@code PlayerEvents.destroyed}，按物品 id dispatch）的 fabric 钩子。
+ * Fabric hook for the player item-destroyed event ({@code PlayerEvents.destroyed}, dispatched by
+ * item id).
  *
- * <p>26.1.2 平台事实：{@code ItemStack#applyDamage(int, ServerPlayer, Consumer)} 是
- * 碎裂的唯一判定点（setDamageValue → isBroken 分支 → shrink → onBroken.accept）。
- * NeoForge 26.1.2 的 onPlayerDestroyItem 各调用点（挖方块/攻击/物品使用/盾牌格挡/钓鱼竿）
- * 都经此底层，fabric 挂此一点全覆盖；非玩家实体（僵尸手中工具）按
- * {@code player == null} 过滤。
+ * <p>On 26.1.2 {@code ItemStack#applyDamage(int, ServerPlayer, Consumer)} is the single place
+ * that decides breaking: setDamageValue, then the isBroken branch, then shrink, then
+ * onBroken.accept. Every NeoForge 26.1.2 onPlayerDestroyItem call site (block breaking,
+ * attacking, item use, shield blocking, fishing rod) goes through it, so hooking this one point
+ * on fabric covers them all. Non-player entities such as a zombie's tool are filtered out by
+ * {@code player == null}.
  *
- * <p>注入形态（判据式，无 INVOKE 目标）：
+ * <p>The injection is condition based and has no INVOKE target:
  * <ul>
- *   <li>HEAD：快照进入时 {@code isBroken()}（此时 damage 尚未更新，
- *       {@code processDurabilityChange} 的削抵挡也不影响状态跃迁判据）。</li>
- *   <li>RETURN：对照快照——「进入未碎 && 结束时已碎」= 本次调用把物品耐久打穿，
- *       即碎裂事件（与 isBroken 分支语义等价；对"进入即碎"的复用物件与
- *       "未碎到碎"的跃迁都区分正确）。</li>
+ *   <li>HEAD records {@code isBroken()} as the instance is entered, before damage is updated;
+ *       the durability reduction in {@code processDurabilityChange} does not change this test.</li>
+ *   <li>RETURN compares against that snapshot: "not broken on entry and broken at the end" means
+ *       this call broke the item, so the destroyed event fires. This is equivalent to the
+ *       isBroken branch and tells a reused item that is already broken apart from one that
+ *       breaks during the call.</li>
  * </ul>
- * 为何不用 INVOKE（shrink/onItemPickup/finishUsingItem 被扫 0 target）：本批次 3 个
- * INVOKE 目标均匹配失败而 2 个成功（initMenu/interactOn），fail 特征未查明（默认
- * {@code defaultRequire=1} 下无法静默跳过），判据式在本仓库更稳。
+ * INVOKE was not used because scanning for shrink, onItemPickup and finishUsingItem found no
+ * targets, while initMenu and interactOn matched. The cause of those failures is unknown, and
+ * with {@code defaultRequire=1} a miss cannot be skipped silently, so the condition form is
+ * more reliable here.
  */
 @Mixin(ItemStack.class)
 public abstract class ItemStackDestroyMixin {
 
-    /** applyDamage 入口时的 isBroken() 快照（主线程、不重入，安全）。 */
+    /** Snapshot of {@code isBroken()} taken at the entry of applyDamage (main thread, no reentry, safe). */
     @Unique
     private boolean neko$brokenAtEntry;
 

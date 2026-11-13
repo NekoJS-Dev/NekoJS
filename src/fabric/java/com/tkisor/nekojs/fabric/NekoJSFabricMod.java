@@ -29,29 +29,34 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Fabric 入口：脚本运行时 bring-up。
+ * Fabric entry: brings up the script runtime.
  *
- * <p>装配序与 NeoForge 侧 {@code NekoJSMod} 一致：插件发现 → V2 bootstrap →
- * 引擎上下文 / 沙盒工厂 / 运行时根 → STARTUP 脚本加载 → 通用注册表收集+抽干。
- * 两处 loader 差异：插件发现走 {@link FabricPluginLoader}（内置清单 + entrypoint）；
- * 注册表无逐 pass 事件，改 {@link FabricRegistryAdapter} 单批直注。
+ * <p>The assembly order matches {@code NekoJSMod} on NeoForge: plugin discovery -> V2
+ * bootstrap -> engine context / sandbox factory / runtime root -> STARTUP script load ->
+ * shared registry collection and drain. Two loader differences: plugin discovery goes through
+ * {@link FabricPluginLoader} (built-in list plus entrypoint), and registries have no per-pass
+ * event, so {@link FabricRegistryAdapter} registers them directly in one batch.
  *
- * <p>尚未接（随后续批次，缺口全录见 {@code docs/fabric-port-status.md}）：JEI 配方查看器、
- * 工作区编辑器 GUI 与其网络包、Modification 重放、网络自定义通道。
- * 当前 fabric 脚本面 = 中性绑定 + 通用注册表 + 配方脚本（recipes/afterRecipes + 原料动作）
- * + GoalEvents + BlockEvents.broken + ServerEvents 生命周期/tick + PlayerEvents 进出服/chat
- * + EntityEvents joinLevel/death/damagePre/damagePost + ItemEvents.rightClicked
- * + ClientEvents tick（CLIENT 脚本）+ Level/Player/Server/MutableComponent 实体扩展
- * + 包分发与 ClientData/PData 网络通道 + ScriptEvents 自定义事件。
+ * <p>Not wired yet (later work; the full list of gaps is in
+ * {@code docs/fabric-port-status.md}): the JEI recipe viewer, the workspace editor GUI and its
+ * network packets, Modification replay, and custom network channels.
+ * The current fabric script surface is neutral bindings + the shared registry + recipe scripts
+ * (recipes/afterRecipes and ingredient actions) + GoalEvents + BlockEvents.broken + ServerEvents
+ * lifecycle/tick + PlayerEvents join/leave/chat + EntityEvents
+ * joinLevel/death/damagePre/damagePost + ItemEvents.rightClicked + ClientEvents tick (CLIENT
+ * scripts) + Level/Player/Server/MutableComponent entity extensions + packet distribution and
+ * the ClientData/PData network channels + ScriptEvents custom events.
  */
 public final class NekoJSFabricMod extends NekoJS implements ModInitializer {
 
     private static final Logger LOGGER = LoggerFactory.getLogger("NekoJS-Fabric");
 
     /**
-     * 本 entry 私有持有的运行时根（AC3/AC10：无公开 static root）。Fabric entrypoint 由
-     * loader 反射实例化无法构造注入，同包 composition 家族经 {@link #runtimeRootOrNull()}
-     * 这一 package-private seam 读取；root 仍只在本 entry 装配一次。
+     * The runtime root that this entry owns privately; there is no public static root. The
+     * fabric entrypoint is instantiated reflectively by the loader, so it cannot be injected
+     * through the constructor; the composition family in the same package reads the root
+     * through the package-private {@link #runtimeRootOrNull()}. The root is still assembled
+     * only once, in this entry.
      */
     private static volatile NekoRuntimeRoot runtimeRoot;
 
@@ -59,7 +64,7 @@ public final class NekoJSFabricMod extends NekoJS implements ModInitializer {
         return runtimeRoot;
     }
 
-    /** 客户端 tick 冲刷 CLIENT 侧 node timers（与 NeoForge 侧 NekoJSClient 同职责）。 */
+    /** Flushes CLIENT-side node timers on the client tick; same role as NekoJSClient on NeoForge. */
     public static void flushClientNodeTimers() {
         if (runtimeRoot != null) {
             runtimeRoot.flushReadyNodeTimers(com.tkisor.nekojs.api.ScriptType.CLIENT);
@@ -69,8 +74,9 @@ public final class NekoJSFabricMod extends NekoJS implements ModInitializer {
     static {
         Platform.init(new FabricPlatform());
         NekoIdCompat.init(new FabricIdCompat());
-        // probe/workspace 目录的平台数据源（注册表类型、host 扩展、snippets）——运行时
-        // 成员重映射是共享的，不装这个只缺 typings/文档面（见 docs/fabric-port-status.md）
+        // Platform data source for the probe/workspace catalog (registry types, host extensions,
+        // snippets). Runtime member remapping is shared; without this only typings and docs are
+        // missing (see docs/fabric-port-status.md).
         com.tkisor.nekojs.api.catalog.NekoScriptCatalog.setPlatformProvider(new FabricCatalogPlatformProvider());
     }
 
@@ -94,14 +100,14 @@ public final class NekoJSFabricMod extends NekoJS implements ModInitializer {
                 Platform.instance().getMcVersion(),
                 Platform.instance().isDevelopment(),
                 Platform.instance().isClient());
-        // 新一轮启动的注册 epoch：丢弃并诊断上一轮残留（ticket 15 AC2）
+        // Registration epoch for a new boot: discard and report anything left over from the previous one.
         FabricRegistryAdapter.beginBoot();
 
         FabricBlockEventBindings.register();
         FabricEntityEventBindings.register();
         FabricLevelEventBindings.register();
         FabricCommandEventBindings.register();
-        // inventoryChanged 的监听器挂载（fabric-api 生命周期回调，零 mixin）
+        // Attaches the inventoryChanged listener through a fabric-api lifecycle callback; no mixin needed.
         FabricPlayerEventBindings.registerLifecycle();
         FabricServerEventBindings.register(() -> {
             if (runtimeRoot != null) {
@@ -120,19 +126,23 @@ public final class NekoJSFabricMod extends NekoJS implements ModInitializer {
                 Identifier.fromNamespaceAndPath(NekoJS.MODID, "address"),
                 AddressArgument.class,
                 SingletonArgumentInfo.contextFree(AddressArgument::address));
-        // /nekojs 指令树（FabricNekoJSCommands，与共享树 NeoForge 版同名同语义的 fabric 子集）
+        // The /nekojs command tree: FabricNekoJSCommands, the fabric subset with the same names and
+        // behavior as the NeoForge version in the shared tree.
         FabricNekoJSCommands.registerCallback(NekoJSFabricMod::runtimeRootOrNull);
         initializeWorkspace();
         initializeScripts();
         FabricRegistryAdapter.onInitialize();
         com.tkisor.nekojs.bindings.event.CapabilityEvents.postAndApply();
-        // 全部注册/装载完成后收尾（NeoForge 侧在 FMLLoadComplete 的 RegistryEventAdapter.onLoadComplete
-        // 之后 fire；fabric 侧 FabricRegistryAdapter.onInitialize 即注册抽干完成，同位次）
+        // The final step once every registration and load is done. NeoForge fires this after
+        // RegistryEventAdapter.onLoadComplete on FMLLoadComplete; on fabric,
+        // FabricRegistryAdapter.onInitialize has already drained the registries, so this sits at the
+        // same point.
         NekoRuntimeAccess.get().fireAfterInit();
         LOGGER.info("NekoJS {} fabric bootstrap done (startup scripts loaded, registry drained).", NekoJS.MODID);
     }
 
-    /** 与 NeoForge 侧 {@code NekoJSMod#initializeWorkspace} 同序：建目录 → 生成默认脚本 → 补目录 → 工作区配置。 */
+    /** Same order as {@code NekoJSMod#initializeWorkspace} on NeoForge: create folders -> generate
+     * default scripts -> fill in missing folders -> workspace config. */
     private static void initializeWorkspace() {
         NekoJSPaths paths = NekoJSPaths.get();
         paths.initFolders();
@@ -141,11 +151,14 @@ public final class NekoJSFabricMod extends NekoJS implements ModInitializer {
         WorkspaceGenerator.setupWorkspace();
     }
 
-    /** 引擎装配：与 {@code NekoJSMod#initializeScripts} 同构（共享 {@code NekoRuntimeAssembly}），替换插件发现、去掉 neoforge 专属钩子。 */
+    /** Builds the engine: same structure as {@code NekoJSMod#initializeScripts} and the same shared
+     * {@code NekoRuntimeAssembly}, with a different plugin discovery and without the NeoForge-only
+     * hooks. */
     private void initializeScripts() {
         FabricPluginLoader.loadPlugins();
-        // 共享装配序列（与 NeoForge 侧同构）：loader 差异（FabricPluginLoader 发现、接线顺序
-        // setPluginRuntime → bindRuntime）留在本类；产物由本 entry 私有持有。
+        // The shared assembly sequence, same structure as on NeoForge. Loader differences stay in this
+        // class (FabricPluginLoader discovery, the setPluginRuntime -> bindRuntime wiring order), and
+        // the result is held privately by this entry.
         runtimeRoot = NekoRuntimeAssembly.assemble(
                 this.scriptEventBridge,
                 this.scriptProperties,
@@ -155,20 +168,22 @@ public final class NekoJSFabricMod extends NekoJS implements ModInitializer {
                     this.scriptEventsRegistrar.bindRuntime(pluginRuntime);
                 }).root();
         com.tkisor.nekojs.mixinjs.MixinPlatform.install(runtimeRoot);
-        // 票 39：Item/Block modification domain owner 注册进 root（与 NekoJSMod 同构）。
+        // Registers the Item/Block modification domain owner into the root, the same way NekoJSMod does.
         runtimeRoot.installAuthoringControlHost(new com.tkisor.nekojs.authoring.MinecraftAuthoringControlHost(
                 runtimeRoot, com.tkisor.nekojs.fabric.event.FabricServerEventBindings::currentServer,
                 Platform.instance().isClient()
                         ? com.tkisor.nekojs.authoring.AuthoringClientPlatform.create(runtimeRoot) : null));
         runtimeRoot.registerDomainCollector(new com.tkisor.nekojs.wrapper.event.server.ModificationDomainOwner());
-        // 票 22：Villager Trades 在 fabric 没有注册表 mutation 适配器，注册的是**显式 unavailable**
-        // owner（收集期仍走同一事件面与联合边界，preflight 以不可用原因整批拒绝——不是无错误 no-op）。
+        // Fabric has no registry mutation adapter for villager trades, so this registers an explicitly
+        // unavailable owner. Collection still goes through the same events, and preflight rejects the
+        // whole batch with the unavailable reason; it is not a silent no-op.
         com.tkisor.nekojs.wrapper.event.server.VillagerTradeUnavailableDomainOwner villagerTrades =
                 new com.tkisor.nekojs.wrapper.event.server.VillagerTradeUnavailableDomainOwner();
         runtimeRoot.registerDomainCollector(villagerTrades);
         com.tkisor.nekojs.core.villager.VillagerTradesFacade.install(villagerTrades.state());
-        // STARTUP 脚本加载后触发 goal 注册（镜像 NekoJSMod：脚本监听器此时才挂上；
-        // 注册面由节点孪生 GoalEvents 提供，消费端 FabricEntityEventBindings 已在跑）
+        // Fires goal registration after the STARTUP scripts load, mirroring NekoJSMod: the script
+        // listeners only exist by then. GoalEvents on the node side provides the registration API, and
+        // FabricEntityEventBindings already consumes it.
         com.tkisor.nekojs.bindings.event.GoalEvents.postRegister();
     }
 }

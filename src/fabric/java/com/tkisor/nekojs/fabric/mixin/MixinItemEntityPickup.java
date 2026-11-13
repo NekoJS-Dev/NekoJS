@@ -9,23 +9,28 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 /**
- * {@code ItemEvents.canPickUp / pickedUpPre / pickedUp} 的 fabric 挂点：
- * {@code ItemEntity#playerTouch(Player)}。
+ * Fabric hook for {@code ItemEvents.canPickUp}, {@code ItemEvents.pickedUpPre} and
+ * {@code ItemEvents.pickedUp}: {@code ItemEntity#playerTouch(Player)}.
  *
- * <p>javap 实证（minecraft-merged-deobf-26.1.2.jar）：
+ * <p>Checked with javap (minecraft-merged-deobf-26.1.2.jar):
  * <ul>
- *   <li>{@code public void playerTouch(net.minecraft.world.entity.player.Player)}——具体方法，HEAD 可注入；
- *       方法字节码首个分支是 {@code level().isClientSide() → return}（服务端守卫原生存在）。</li>
- *   <li>入口处可拿成员：{@code this}（ItemEntity，{@code getItem()} 取物品栈）、参数 {@code player}；
- *       拾取成功链 = {@code Inventory.add → Player.take → discard → awardStat → Player.onItemPickup(this)}，
- *       {@code onItemPickup} 是成功路径上唯一且最后的调用点（字节码 103-105，早退分支均不经过）。</li>
+ *   <li>{@code public void playerTouch(net.minecraft.world.entity.player.Player)} is a concrete
+ *       method, so HEAD can be injected. The first branch of the bytecode is
+ *       {@code level().isClientSide() -> return}, so the server guard is already there.</li>
+ *   <li>Members available at the entry: {@code this} (the ItemEntity, with {@code getItem()} for
+ *       the stack) and the {@code player} parameter. The success chain is
+ *       {@code Inventory.add -> Player.take -> discard -> awardStat -> Player.onItemPickup(this)};
+ *       {@code onItemPickup} is the only and last call site on that path (bytecode 103-105), and
+ *       no early-return branch passes through it.</li>
  * </ul>
  *
- * <p>Pre 在 HEAD 注入（可取消：监听器 return true → {@code ci.cancel()} 跳过整个拾取流程，
- * 对应 NeoForge {@code ItemEntityPickupEvent.Pre} 的取消；本类另在取消情形下保证
- * {@code onItemPickup} 调用点注入自然不经过，无重复）。Post 在 {@code onItemPickup}
- * 调用点（INVOKE）注入——该点已在拾取完成后（物品进背包、统计已加）。
- * 双方都以 {@code level().isClientSide()} 过滤客户端（SERVER 总线只收服务端实例）。
+ * <p>Pre is injected at HEAD and is cancellable: a listener returning true leads to
+ * {@code ci.cancel()}, which skips the whole pickup and matches cancelling
+ * {@code ItemEntityPickupEvent.Pre} on NeoForge. When the pickup is cancelled the
+ * {@code onItemPickup} injection is naturally not reached, so no post event fires twice. Post is
+ * injected at the {@code onItemPickup} INVOKE point, which is already after the pickup (the item
+ * is in the inventory and the statistic is counted). Both filter clients with
+ * {@code level().isClientSide()}, because the SERVER bus only receives server-side instances.
  */
 @Mixin(ItemEntity.class)
 public abstract class MixinItemEntityPickup {
@@ -40,11 +45,13 @@ public abstract class MixinItemEntityPickup {
         }
     }
 
-    // TAIL + isRemoved() 判据：成功链的确定性收尾是 playerTouch 内 discard()（javap 偏移 81，
-    // 早退分支均不经过）；TAIL 注入在 playerTouch 所有出口前执行，取消/失败路径实体仍在
-    // level（isRemoved()==false），成功路径已移除（==true）——Post 只在成功时投递。
-    // （INVOKE 点 onItemPickup 的 owner 是编译期引用类 Player 而声明在 LivingEntity，
-    // 该项 sponge 0.17.3 匹配扫 0，改用判据式 TAIL。）
+    // TAIL plus the isRemoved() test: the success chain always ends with discard() inside playerTouch
+    // (javap offset 81) and no early-return branch passes through it. The TAIL injection runs before
+    // every exit of playerTouch, so on the cancel and failure paths the entity is still in the level
+    // (isRemoved() == false) and on the success path it has been removed (== true), and Post is
+    // delivered only on success. (The onItemPickup INVOKE point has owner Player, the compile-time
+    // reference class, while the method is declared on LivingEntity, so sponge 0.17.3 found no match;
+    // this uses the condition-based TAIL instead.)
     @Inject(method = "playerTouch(Lnet/minecraft/world/entity/player/Player;)V", at = @At("TAIL"))
     private void nekojs$onPlayerTouchPost(Player player, CallbackInfo ci) {
         if (((ItemEntity) (Object) this).level().isClientSide()) {

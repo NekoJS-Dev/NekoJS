@@ -129,10 +129,10 @@ class RuntimeCommandLifecycleSourceTraceTest {
     }
 
     /**
-     * Ticket-20 smoke fixes F1/F3 mirrored across all three command twins: the trust address
-     * argument must use AddressArgument (unquoted host:port parses), and the bare /nekojs root
-     * must execute a usage fallback. Source-trace mirror covers the fabric twin, whose tree is
-     * not constructible in a null-fixture register test.
+     * The same command tree rules mirrored across all three command twins: the trust address
+     * argument must use AddressArgument (an unquoted host:port parses), and the bare /nekojs root
+     * must run a usage fallback. The source trace also covers the fabric twin, whose tree cannot be
+     * built in a null-fixture register test.
      */
     @Test
     void commandTwinsShareTrustAddressArgumentAndBareRootUsage() {

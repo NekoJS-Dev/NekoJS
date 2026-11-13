@@ -7,27 +7,29 @@ import com.tkisor.nekojs.wrapper.clientdata.ClientDataStore;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 /**
- * {@link ClientDataSyncPacket} 的客户端接收处理器：NeoForge 在网络线程收包，
- * 经 {@link IPayloadContext#enqueueWork} 切到主线程后解析 JSON 并写入
- * {@link ClientDataStore#SHARED}（{@code clientData} 绑定的底层存储）。
+ * Client-side handler for {@link ClientDataSyncPacket}. NeoForge receives the packet on the network
+ * thread; the handler switches to the main thread through {@link IPayloadContext#enqueueWork}, then
+ * parses the JSON and writes it into {@link ClientDataStore#SHARED}, the backing store of the
+ * {@code clientData} binding.
  *
- * <p>主线程切换与 {@link NetworkMessageHandler} 的脚本通道一致：后续消费方
- * （HUD/界面脚本）会在主线程读取，避免可见性问题。
+ * <p>The main-thread switch matches the script channel of {@link NetworkMessageHandler}: the
+ * consumers (HUD and screen scripts) read on the main thread, which avoids visibility problems.
  */
 public final class ClientDataMessageHandler {
 
     private ClientDataMessageHandler() {}
 
-    /** 服务端 → 客户端：解析 JSON 文本并覆盖写入对应 key。 */
+    /** Server to client: parses the JSON text and overwrites the entry for that key. */
     public static void handleOnClient(ClientDataSyncPacket payload, IPayloadContext context) {
         context.enqueueWork(() -> {
             try {
                 JsonElement json = JsonParser.parseString(payload.json());
                 ClientDataStore.SHARED.accept(payload.key(), json);
             } catch (IllegalArgumentException ignored) {
-                // key 非法（空/超长）——构造端已校验，坏包直接丢弃
+                // Invalid key (blank or too long). The builder already validates it, so a bad packet is dropped here.
             } catch (Exception e) {
-                // 非法 JSON 等：丢弃并打日志，不让坏包炸掉客户端网络线程
+                // Invalid JSON and the like: drop the packet and log it, so a bad packet cannot take down the
+                // client network thread.
                 com.tkisor.nekojs.NekoJS.LOGGER.warn(
                         "Discarding malformed client data sync for key '{}': {}", payload.key(), e.getMessage());
             }

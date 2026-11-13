@@ -4,18 +4,19 @@ import com.tkisor.nekojs.api.annotation.RemapByPrefix;
 import com.tkisor.nekojs.api.spec.PlatformAvailability;
 
 /**
- * Item 跨平台统一扩展规范。
+ * Cross-platform extension interface for Item.
  *
- * <p>各平台的 {@code ItemExtension} 必须 {@code extends ItemSpec}。
+ * <p>Each platform's {@code ItemExtension} must {@code extends ItemSpec}.
  *
- * <p>{@code getId()} 在 NF 是实例零参 vs 原生 static 一参（arity 不同，安全），
- * 在 CR 原生无实例 getId，故可进 spec。
+ * <p>{@code getId()} is safe to put in a spec: on NF the neko version is a no-arg instance method
+ * while the native one is a static method taking one argument (different arity), and CR has no
+ * instance {@code getId()} at all.
  */
 @RemapByPrefix("neko$")
 @PlatformAvailability(PlatformAvailability.Scope.ALL)
 public interface ItemSpec {
 
-    /** 物品注册 id（如 "minecraft:stone"）。 */
+    /** Item registry id (for example "minecraft:stone"). */
     default String neko$getId() {
         throw new UnsupportedOperationException("ItemSpec.neko$getId not implemented");
     }

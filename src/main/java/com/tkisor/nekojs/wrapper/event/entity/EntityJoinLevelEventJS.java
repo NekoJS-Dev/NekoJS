@@ -5,8 +5,9 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.Level;
 
 /**
- * 实体加入世界事件的中立 payload（fabric 桥首用；成员 {@code event.entity} /
- * {@code event.level}，与 NeoForge 原生 EntityJoinLevelEvent 的 getEntity/getLevel 同形）。
+ * Loader-neutral payload for the entity join level event (first used by the fabric bridge;
+ * members {@code event.entity} / {@code event.level}, the same shape as NeoForge native
+ * EntityJoinLevelEvent's getEntity/getLevel).
  */
 public class EntityJoinLevelEventJS {
 

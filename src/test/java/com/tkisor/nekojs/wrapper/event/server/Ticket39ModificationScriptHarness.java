@@ -27,22 +27,26 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 票 39 脚本路径 E2E harness（版本树测试树，五节点共享同一份代码；测试本身 registry-gated，
- * 仅在 vanilla 注册表可用的环境真跑）：真实 root + 真实 Graal 管线 +
- * <b>真实</b> {@link ModificationDomainOwner}（平台 Adapter），脚本经
- * {@code ItemEvents.modification} 事件面收集声明、commit 点应用到真实 Item/Block。
+ * End-to-end harness for the script path (version-tree test tree; all five nodes share this
+ * code and the tests run only where a vanilla registry is available): a real root, the real
+ * Graal pipeline and the <b>real</b> {@link ModificationDomainOwner} (platform Adapter).
+ * Scripts collect declarations through the {@code ItemEvents.modification} event surface, and
+ * the commit point applies them to real Item/Block instances.
  *
- * <p>与 common 层 {@code Ticket39DomainCollectionTest}（合成 Adapter）分工：本 harness
- * 覆盖「脚本事件 → 平台 Adapter 可观察结果」的贯穿面（AC13），common 那份覆盖 root 拥有的
- * 收集挂载点与联合边界机制。断言只走公开 seam（脚本、reload 成败、Item 组件读回、
- * {@code owner.lastDiagnostics()}）。
+ * <p>Division of labour with {@code Ticket39DomainCollectionTest} in the common layer, which
+ * uses a synthetic Adapter: this harness covers the whole path from a script event to an
+ * observable result in the platform Adapter, while the common test covers the collection
+ * attachment points the root owns and the collection mechanics. Assertions go through public
+ * seams only (scripts, reload success or failure, Item component read-back,
+ * {@code owner.lastDiagnostics()}).
  *
- * <p>平台桩与 gameDir 遵循测试树约定（{@code TestPlatformInit} +
- * {@code TestGameDirs.unique}），独立测试 root 不与他例互相污染。
+ * <p>The platform stub and gameDir follow the test tree convention ({@code TestPlatformInit}
+ * and {@code TestGameDirs.unique}); each test root is independent and does not leak into other
+ * cases.
  */
 final class Ticket39ModificationScriptHarness implements AutoCloseable {
 
-    /** 额外事件组（block 半边在 26.x 测试里传入 {@code BlockEvents.GROUP}）。 */
+    /** Extra event groups. The block half passes {@code BlockEvents.GROUP} in the 26.x tests. */
     private final Map<String, EventGroup> groups = new LinkedHashMap<>();
     private final Bridge bridge = new Bridge(groups);
     private final StubPluginRuntime pluginRuntime = new StubPluginRuntime(groups);
@@ -69,7 +73,7 @@ final class Ticket39ModificationScriptHarness implements AutoCloseable {
         root.createScriptManager(ScriptType.SERVER).discoverScripts();
     }
 
-    /** 平台桩与 gameDir（测试树约定：{@code TestGameDirs.unique} 按 PID 隔离，见票 17）。 */
+    /** Platform stub and gameDir. The test tree uses {@code TestGameDirs.unique}, isolated by PID. */
     static void ensurePlatformInitialized() {
         try {
             java.lang.reflect.Field instance = com.tkisor.nekojs.platform.Platform.class.getDeclaredField("INSTANCE");
@@ -94,19 +98,19 @@ final class Ticket39ModificationScriptHarness implements AutoCloseable {
         }
     }
 
-    /** 写一份 server 脚本（同名覆盖）。 */
+    /** Writes a server script, overwriting any file with the same name. */
     void writeServerScript(String name, String source) throws Exception {
         Path dir = ScriptTypeEnv.scriptsDir(ScriptType.SERVER);
         Files.createDirectories(dir);
         Files.writeString(dir.resolve(name), source);
     }
 
-    /** 初始 generation 的收集点（生产由 server about-to-start 触发）。 */
+    /** Collection point of the initial generation; production triggers it on server about-to-start. */
     void applyInitialPlan() {
         owner.applyInitialPlan(null);
     }
 
-    /** 清空 server 脚本目录（每例独立，避免跨例残留）。 */
+    /** Clears the server script directory so one case leaves nothing behind for the next. */
     static void clearServerScripts() throws Exception {
         Path dir = ScriptTypeEnv.scriptsDir(ScriptType.SERVER);
         Files.createDirectories(dir);
@@ -127,7 +131,7 @@ final class Ticket39ModificationScriptHarness implements AutoCloseable {
         }
     }
 
-    /** 脚本面事件组绑定（生产形状：{@code EventGroupJS} 包每个组）。 */
+    /** Script-side event group binding, shaped like production where {@code EventGroupJS} wraps each group. */
     private static final class Bridge implements ScriptEventBridge {
         private final Map<String, EventGroup> groups;
 
@@ -146,7 +150,7 @@ final class Ticket39ModificationScriptHarness implements AutoCloseable {
         }
     }
 
-    /** 插件运行时桩：只广告事件组与空绑定面。 */
+    /** Plugin runtime stub: it exposes the event groups and nothing to bind. */
     private static final class StubPluginRuntime implements IPluginRuntime {
         private final Map<String, EventGroup> groups;
 

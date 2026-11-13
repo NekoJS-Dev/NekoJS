@@ -7,15 +7,18 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.Level;
 
 /**
- * 玩家切换维度事件（{@code PlayerEvents.changedDimension}）的加载器中立载荷。
+ * Loader-neutral payload for the player changed dimension event
+ * ({@code PlayerEvents.changedDimension}).
  *
- * <p>成员对齐 NeoForge {@code PlayerEvent.PlayerChangedDimensionEvent} 的 getter 形态：
- * {@code event.player} / {@code event.from}（getFrom，旧维度）/{@code event.to}（getTo，
- * 新维度），类型为 {@code ResourceKey<Level>}（Level 的注册名）。
+ * <p>The members follow NeoForge {@code PlayerEvent.PlayerChangedDimensionEvent}:
+ * {@code event.player} / {@code event.from} (getFrom, the old dimension) / {@code event.to}
+ * (getTo, the new dimension), both typed {@code ResourceKey<Level>} (the level registration
+ * key).
  *
- * <p>26.1.2 平台事实：vanilla {@code ServerPlayer#changeDimension(...)} 已不存在，维度切换
- * 统一在 {@code ServerPlayer#teleport(TeleportTransition)} 内完成——NeoForge 侧
- * 26.1.2 的 PlayerChangedDimensionEvent 也改在该方法末尾触发；fabric 挂点与之对齐。
+ * <p>26.1.2 platform fact: vanilla {@code ServerPlayer#changeDimension(...)} no longer exists,
+ * and dimension changes now happen inside {@code ServerPlayer#teleport(TeleportTransition)}.
+ * NeoForge 26.1.2 also fires PlayerChangedDimensionEvent at the end of that method, and the
+ * fabric hook matches it.
  */
 @Doc("Fired when a player changes dimension (PlayerEvents.changedDimension).")
 @Doc("event.from / event.to are ResourceKey<Level> of the old and new dimensions.")

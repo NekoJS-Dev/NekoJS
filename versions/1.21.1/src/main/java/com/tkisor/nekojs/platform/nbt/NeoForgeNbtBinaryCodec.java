@@ -1,7 +1,7 @@
-// 1.21.1 实现，与版本树 src/ 下的同名 26.x 文件成对。内容等于那份文件在本节点求值后的形态。
-// 26.x 侧行为变更时须同步本文件。
-// guard-exempt(20): NBT 二进制编解码在两个时代差异密集。同一主题再出现在第三个文件时
-// 按 ADR-0008 抽 facade，届时本豁免可以撤掉
+// 1.21.1 implementation, paired with the same-named 26.x file under the version tree src/. Its
+// content is that file as evaluated at this node. Keep this file in sync when the 26.x side changes.
+// guard-exempt(20): NBT binary encoding and decoding differ densely between the two eras. When the
+// same topic shows up in a third file, extract a facade per ADR-0008 and drop this exemption.
 package com.tkisor.nekojs.platform.nbt;
 
 import com.tkisor.nekojs.api.data.NbtValue;

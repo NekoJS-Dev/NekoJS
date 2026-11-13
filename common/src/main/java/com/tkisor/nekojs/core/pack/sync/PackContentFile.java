@@ -3,8 +3,9 @@ package com.tkisor.nekojs.core.pack.sync;
 import java.util.Arrays;
 
 /**
- * 包内容文件（传输/哈希单位）：包内相对路径（{@code /} 分隔，{@code startup_scripts/...} 起）
- * 与原始字节。路径在 {@link ServerPackCache#persistPack 落盘} 时做路径穿越校验。
+ * One file of pack content, the unit of transfer and hashing: its path relative to the pack
+ * ({@code /}-separated, starting at {@code startup_scripts/...}) and its raw bytes. The path is
+ * checked for traversal when {@link ServerPackCache#persistPack} writes the pack to disk.
  */
 public record PackContentFile(String relativePath, byte[] bytes) {
 

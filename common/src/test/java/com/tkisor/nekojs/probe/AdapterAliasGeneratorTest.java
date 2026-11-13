@@ -15,15 +15,15 @@ import static com.tkisor.nekojs.api.AdapterInputShape.*;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * {@link AdapterAliasGenerator} 的注册表字面量形状渲染。
+ * Renders registry literal shapes in {@link AdapterAliasGenerator}.
  *
- * <p>重点是「原料位置要能补全」：裸 {@code string} 会把联合里的 id 字面量吞掉，
- * 所以 {@code #tag} / {@code @mod} / {@code /regex} 这类前缀语法必须走模板字面量类型
- * （{@link AdapterInputShape.TemplateValue}）而不是 {@code string}。
+ * <p>The point is that input positions must still complete: a bare {@code string} swallows the id
+ * literals of the union, so prefix syntax such as {@code #tag} / {@code @mod} / {@code /regex}
+ * has to use a template literal type ({@link AdapterInputShape.TemplateValue}), not {@code string}.
  */
 class AdapterAliasGeneratorTest {
 
-    /** 别名目标夹具：包路径决定别名声明落在哪个模块。 */
+    /** Fixture for the alias target: the package path decides which module holds the alias declaration. */
     static class AliasTarget {}
 
     private static AdapterAliasGenerator.AdapterAlias render(List<AdapterInputShape> shapes) {
@@ -86,8 +86,8 @@ class AdapterAliasGeneratorTest {
 
     @Test
     void namespaceRendersSharedNamespaceUnionAndPullsRegistryImport() {
-        // 命名空间联合与注册表字面量同住 @special/types，所以同样要触发 RegistryTypes import；
-        // 不按注册表分（一个命名空间能不能用与它出现在哪个注册表无关）
+        // The namespace union lives in @special/types next to the registry literals, so it also pulls the
+        // RegistryTypes import; it is not split per registry (a namespace works no matter which registry lists it)
         var alias = render(List.of(self(), namespace(), object(Slot.opt("mod", namespace()))));
         assertEquals("$AdapterAliasGeneratorTest$AliasTarget | RegistryTypes.Namespace"
                         + " | { mod?: RegistryTypes.Namespace }",
@@ -104,8 +104,8 @@ class AdapterAliasGeneratorTest {
 
     @Test
     void nestedSelfWidensToInputAliasWhileTopLevelStaysTheClass() {
-        // 嵌套位置（数组元素 / 槽位）运行时同样经适配器转换，所以必须放宽成 $Foo_；
-        // 顶层若也放宽会写成 $Foo_ = $Foo_ | ... 自引用成环
+        // Nested positions (array elements and slots) also go through the adapter at runtime, so they widen
+        // to $Foo_; widening the top level too would write $Foo_ = $Foo_ | ... and alias itself in a cycle
         var alias = render(List.of(self(), arrayOf(self()), object(
                 Slot.opt("any", arrayOf(self())),
                 Slot.opt("not", self()))));
@@ -118,7 +118,8 @@ class AdapterAliasGeneratorTest {
 
     @Test
     void nestedHostWidensToThatHostsInputAliasRegardlessOfAdapterOrder() {
-        // SizedIngredient 先于 Ingredient 注册时也要放宽：prepare 先登记全部别名名再渲染
+        // Widening also applies when SizedIngredient is registered before Ingredient: prepare records every
+        // alias name before rendering
         AdapterAliasGenerator generator = new AdapterAliasGenerator(new TypeAliasRegistry());
         AdapterCatalogEntry outer = new AdapterCatalogEntry(
                 AliasTarget.class,
@@ -133,6 +134,6 @@ class AdapterAliasGeneratorTest {
                 generator.getAlias(AliasTarget.class.getName()).union());
     }
 
-    /** 嵌套 host 夹具：自身也有适配器别名。 */
+    /** Fixture for a nested host: the type has an adapter alias of its own. */
     static class NestedTarget {}
 }

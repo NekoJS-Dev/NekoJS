@@ -8,11 +8,15 @@ import com.tkisor.nekojs.wrapper.clientdata.ClientDataStore;
 import java.util.Set;
 
 /**
- * {@code clientData} 绑定：客户端脚本只读访问服务端经 {@code ClientData.sync} 推送下来的
- * 键值数据（存于 {@link ClientDataStore#SHARED}，由平台网络层在收到同步包时写入）。
+ * The {@code clientData} binding: client scripts get read-only access to the key-value data
+ * that server scripts push with {@code ClientData.sync}. It lives in
+ * {@link ClientDataStore#SHARED}, which the platform network layer writes when a sync packet
+ * arrives.
  *
- * <p>值按 JSON 往返：服务端推 string/number/bool/object/array/null，这里取回的也是对应形态
- * （Map/List/装箱原始值）。同 key 重复推送后者覆盖；断线/切世界时存储清空。
+ * <p>Values round-trip through JSON: the server pushes string/number/bool/object/array/null,
+ * and reads return the matching shape (Map/List/boxed primitives). Pushing the
+ * same key again overwrites the earlier value; disconnecting or switching worlds clears the
+ * store.
  *
  * <pre>
  * // server_scripts
@@ -26,7 +30,8 @@ import java.util.Set;
 @Doc("Values round-trip JSON types only (string/number/bool/object/array/null); re-pushed keys overwrite.")
 public final class ClientDataJS {
 
-    /** 读取 key 对应值（Map/List/装箱原始值）；不存在或值为 null 时返回 {@code null}。 */
+    /** Returns the value stored under the key as a Map, List or boxed primitive; returns
+     * {@code null} when the key is absent or its value is null. */
     @Doc("Returns the value stored under the key, or null when missing (or when the value is JSON null).")
     @Param(name = "key", value = "data key the server pushed with ClientData.sync")
     @Return("the stored value converted from JSON; null when absent")
@@ -34,7 +39,7 @@ public final class ClientDataJS {
         return ClientDataStore.SHARED.get(key);
     }
 
-    /** 是否存在该 key（值为 null 时也为 true）。 */
+    /** Returns whether the key exists (also true when its value is null). */
     @Doc("Returns whether the key has been synced (true even when the stored value is JSON null).")
     @Param(name = "key", value = "data key to check")
     @Return("true when the key exists in the store")
@@ -42,14 +47,14 @@ public final class ClientDataJS {
         return ClientDataStore.SHARED.has(key);
     }
 
-    /** 当前全部 key 快照。 */
+    /** Returns a snapshot of all current keys. */
     @Doc("Returns a snapshot of all currently synced keys.")
     @Return("unordered set of keys; empty when nothing is synced")
     public Set<String> keys() {
         return ClientDataStore.SHARED.keys();
     }
 
-    /** 当前条目数。 */
+    /** Returns the current entry count. */
     @Doc("Returns how many keys are currently stored.")
     @Return("number of synced keys")
     public int size() {

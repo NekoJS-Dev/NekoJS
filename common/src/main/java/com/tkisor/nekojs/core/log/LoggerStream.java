@@ -11,12 +11,13 @@ import java.nio.charset.CodingErrorAction;
 import java.nio.charset.StandardCharsets;
 
 public class LoggerStream extends OutputStream {
-    /** 单行缓冲上限：脚本输出巨量无换行内容时强制分段落盘，防止内存无限膨胀。 */
+    /** Per-line buffer limit: output without newlines is forced into segments so memory cannot grow without bound. */
     private static final int MAX_LINE_BYTES = 64 * 1024;
 
     /**
-     * 单个流累计输出行数上限：console.log 死循环等场景会产生无限行日志，撑爆 per-type
-     * 日志文件与磁盘。超过上限后丢弃后续行并一次性告警；64KB 单行上限行为保持不变。
+     * Per-stream limit on total output lines. A console.log loop would otherwise produce
+     * endless lines and fill the per-type log file and the disk. Past the limit further lines are
+     * dropped with a single warning; the 64KB per-line limit still applies.
      */
     private static final int MAX_TOTAL_LINES = 100_000;
 
@@ -25,7 +26,7 @@ public class LoggerStream extends OutputStream {
     private final ByteArrayOutputStream buffer = new ByteArrayOutputStream();
     private int flushedLines;
     private boolean overflowWarned;
-    /** close 幂等标记：保证「冲刷一次」语义，重复 close 为 no-op。 */
+    /** Close idempotency flag: guarantees the buffer is flushed once, so a repeated close is a no-op. */
     private boolean closed;
 
     private static final String WARN_TAG = "[NekoJS_WARN] ";
@@ -64,7 +65,7 @@ public class LoggerStream extends OutputStream {
         append(b, segmentStart, off + len);
     }
 
-    /** 分段追加，保证缓冲不超过 {@link #MAX_LINE_BYTES}。 */
+    /** Appends in segments so the buffer never exceeds {@link #MAX_LINE_BYTES}. */
     private void append(byte[] b, int from, int to) {
         while (from < to) {
             int chunk = Math.min(MAX_LINE_BYTES - buffer.size(), to - from);
@@ -81,8 +82,9 @@ public class LoggerStream extends OutputStream {
         if (buffer.size() > 0) {
             String msg = decode(buffer.toByteArray());
 
-            // 行数上限：已输出行数达到上限后丢弃后续行（仅一次性告警），防止脚本日志死循环
-            // 无限写盘。每行在 flush 时即落盘，故「丢弃最旧」退化为实现为「丢弃后续新行」。
+            // Line limit: once the emitted line count reaches the limit, later lines are dropped (with a
+            // single warning) so a runaway script cannot fill the disk. Each line is on disk as soon as it is
+            // flushed, so dropping new lines is what "drop the oldest" comes down to here.
             if (flushedLines < MAX_TOTAL_LINES) {
                 emit(msg);
             } else if (!overflowWarned) {
@@ -111,15 +113,18 @@ public class LoggerStream extends OutputStream {
     }
 
     /**
-     * 关闭时冲刷缓冲中最后一行未换行内容（含 64KB 强制分段残留），避免丢日志。
+     * On close, flushes the last buffered line that has no trailing newline (including what a forced
+     * 64KB split left behind) so no log line is lost.
      *
-     * <p>背景：Graal 在 Context 关闭时只 detach 用户提供的 out/err 流、不会 flush/close
-     * （engine 级 close 才会对其调用 {@code close()}），脚本末尾未以换行结束的输出
-     * 会随行缓冲一起丢失。这里把 close 语义定义为「冲刷后关闭」，幂等（缓冲空时无操作）。
+     * <p>Graal only detaches the out/err streams the user supplied when the Context closes; it does not
+     * flush or close them, and only an engine-level close calls {@code close()}. Output at the end of a
+     * script that does not end with a newline would otherwise be lost with the line buffer. Close
+     * therefore means "flush, then close" and is idempotent (no-op on an empty buffer).
      *
-     * <p>closed 标记保证多次 close 只冲刷一次：销毁路径（ScriptManager.closeRuntimeResources
-     * 等）与 engine 级 close 都可能触达同一个实例，重复 close 必须是无害 no-op 而不是再次
-     * 冲刷（防止 close 之后偶发写入的残余字节被误当作完整行落盘）。
+     * <p>The closed flag makes repeated close flush only once. The destruction path (such as
+     * ScriptManager.closeRuntimeResources) and the engine-level close can both reach the same instance,
+     * and a repeated close must be a harmless no-op instead of flushing again: leftover bytes written
+     * after close must not be flushed as if they were a complete line.
      */
     @Override
     public void close() {

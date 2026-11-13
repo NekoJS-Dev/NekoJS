@@ -114,7 +114,8 @@ public final class KeyBindEvents {
 
     /** All bindings of this session, keyed by full id ({@code 'namespace:path'}). */
     private static final Map<String, Binding> BINDINGS = new ConcurrentHashMap<>();
-    // 解析/分类逻辑与状态在 KeyBindIds（裸 JUnit 可测）；本类静态初始化需要 FML 运行时
+    // Parsing and classification logic and state live in KeyBindIds, which plain JUnit can test; the
+    // static initializer of this class needs the FML runtime.
 
     /**
      * Non-null only while the {@link RegisterKeyMappingsEvent} dispatch is in progress: script

@@ -8,12 +8,14 @@ import java.security.MessageDigest;
 import java.util.Base64;
 
 /**
- * 包签名 payload 构造与 manifest 规范化（签名/验签共用）。
+ * Builds the pack signature payload and canonicalizes the manifest, shared by signing and
+ * verification.
  *
- * <p>签名 payload = 0x00 分隔的字节流：域分隔串 {@code nekojs-pack-signature-v1} +
- * syncId + 作用域枚举名 + <b>去掉 {@code signature} 键</b>的规范化 manifest JSON
- * （Gson 重新序列化，键序与原始格式差异被吸收）+ 按路径排序的文件流
- * （每项：相对路径 + 0x00 + 字节 + 0x00）。
+ * <p>The payload is a 0x00-separated byte stream: the domain string
+ * {@code nekojs-pack-signature-v1}, the syncId, the scope enum name, the canonical manifest JSON
+ * <b>without the {@code signature} key</b> (re-serialized by Gson, which absorbs differences in key
+ * order and original formatting) and the files in path order (each: relative path + 0x00 + bytes +
+ * 0x00).
  */
 final class PackSignaturePayload {
 
@@ -41,7 +43,10 @@ final class PackSignaturePayload {
         return digest.digest();
     }
 
-    /** 去掉 signature 键的规范化 manifest；解析失败时原样返回（验签会因签名不匹配而失败）。 */
+    /**
+     * Canonical manifest with the signature key removed. Returns the input unchanged when parsing fails;
+     * verification then fails on the signature mismatch.
+     */
     static String canonicalManifestWithoutSignature(String manifestJson) {
         try {
             JsonObject root = JsonParser.parseString(manifestJson).getAsJsonObject();
@@ -52,7 +57,10 @@ final class PackSignaturePayload {
         }
     }
 
-    /** base64 解码：先标准表、再 URL 表（兼容两种编码习惯）。非法输入返回 null。 */
+    /**
+     * Decodes base64, trying the standard alphabet and then the URL alphabet, since both encodings are
+     * used. Returns null for invalid input.
+     */
     static byte[] decodeBase64(String text) {
         if (text == null) return null;
         try {
@@ -70,7 +78,7 @@ final class PackSignaturePayload {
         return Base64.getEncoder().encodeToString(bytes);
     }
 
-    /** 公钥指纹：SHA-256 十六进制冒号分隔（信任库展示用）。 */
+    /** Public key fingerprint: SHA-256 as colon-separated hex, shown by the trust store. */
     static String fingerprint(byte[] publicKeyBytes) {
         byte[] digest = PackHasher.sha256().digest(publicKeyBytes);
         StringBuilder sb = new StringBuilder(digest.length * 3);

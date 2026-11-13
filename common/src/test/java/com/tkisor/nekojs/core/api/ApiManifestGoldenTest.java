@@ -22,12 +22,15 @@ import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * API 表面冻结基线（golden）：把当前契约反射产出的 core API 表面固化为
- * {@code src/test/resources/nekojs/golden/api-manifest-core.json}。
+ * Frozen API surface baseline (golden): the core API surface produced by reflecting the
+ * current contracts, stored in
+ * {@code src/test/resources/nekojs/golden/api-manifest-core.json}.
  *
- * <p>任何符号/签名/capability/module 变化都会让 golden 对比失败——这是「冻结」的机器可执行
- * 部分：变更必须显式走 `-Dnekojs.golden.regenerate=true` 再生成并经过破坏性变更评审
- * （治理细节见本地 ai_arch/API_VERSIONING.md，未入库），禁止静默改动 API 表面。
+ * <p>Any change to a symbol, signature, capability or module fails the golden comparison —
+ * this is the machine-checkable part of "frozen": a change must explicitly run with
+ * `-Dnekojs.golden.regenerate=true` to regenerate, and then pass breaking-change
+ * review (governance details live in the local, unversioned ai_arch/API_VERSIONING.md).
+ * Never change the API surface silently.
  */
 class ApiManifestGoldenTest {
 
@@ -39,9 +42,10 @@ class ApiManifestGoldenTest {
         ApiManifest manifest = buildManifest();
         String actual = ApiManifestJson.toJson(manifest) + "\n";
 
-        // Boolean.getBoolean（而非 != null）：:common:test 无条件把这个 system property 透传成
-        // 字符串 "false"（common/build.gradle），所以 != null 会让每次普通测试都改写基线再
-        // Assumptions.abort，冻结门禁整体空转。
+        // Boolean.getBoolean, not != null: :common:test always passes this system property
+        // through as the string "false" (common/build.gradle), so != null would rewrite the
+        // baseline on every ordinary test run and then Assumptions.abort, leaving the whole
+        // freeze gate a no-op.
         if (Boolean.getBoolean("nekojs.golden.regenerate")) {
             Files.createDirectories(GOLDEN_PATH.getParent());
             Files.writeString(GOLDEN_PATH, actual);
@@ -58,12 +62,12 @@ class ApiManifestGoldenTest {
     void manifestCarriesVersionAndPlatformMetadata() {
         ApiManifest manifest = buildManifest();
 
-        // api/spi/runtime 版本来自 api-runtime.properties（0.0.0 = 未门控）
+        // api/spi/runtime versions come from api-runtime.properties (0.0.0 = not gated)
         assertEquals(ApiRuntimeVersionReader.read().apiVersion().toString(), manifest.apiVersion());
         assertEquals("0.0.0", manifest.spiVersion());
         assertEquals(1, manifest.catalogSchemaVersion());
         assertEquals("test", manifest.platform().loader());
-        // 确定性排序
+        // deterministic ordering
         List<String> ids = manifest.symbols().stream().map(ApiManifest.ManifestSymbol::id).toList();
         assertEquals(ids.stream().sorted().toList(), ids, "symbols must be sorted deterministically");
     }
@@ -77,14 +81,16 @@ class ApiManifestGoldenTest {
         assertTrue(ids.contains("member:JsonIO.parse"), "JsonIO.parse must be frozen");
         assertTrue(ids.contains("member:Text.of"), "Text.of must be frozen");
         assertTrue(ids.contains("member:NBT.parse"), "NBT.parse must be frozen");
-        // 契约反射的符号总数基线（原 JSON 110 个，反射允许更完整）
+        // baseline for the total symbol count of the contract reflection (the original
+        // JSON had 110; reflection may be more complete)
         assertTrue(ids.size() >= 110, "frozen symbol count below baseline: " + ids.size());
     }
 
     /**
-     * 负向断言：冻结门禁必须真的能发现表面变化。少一个符号、多一个符号、或某个符号多一个
-     * 重载签名，序列化结果都必须与 golden 不同——否则 {@link #coreApiSurfaceMatchesFrozenGolden}
-     * 只是在比较两份恒等的字符串。
+     * Negative assertion: the freeze gate must really detect surface changes. Removing a
+     * symbol, adding a symbol, or adding an overload signature to a symbol must all change
+     * the serialized result away from the golden — otherwise
+     * {@link #coreApiSurfaceMatchesFrozenGolden} only compares two identical strings.
      */
     @Test
     void goldenRejectsRemovedAddedAndChangedSymbols() throws Exception {
@@ -110,7 +116,7 @@ class ApiManifestGoldenTest {
                 "adding an overload signature must change the manifest JSON");
     }
 
-    /** 再生成开关必须只在显式为 true 时打开：build.gradle 无条件透传字符串 "false"。 */
+    /** Regeneration may only turn on for an explicit true: build.gradle always passes the string "false". */
     @Test
     void regenerateSwitchIsOffForNonTrueValues() {
         assertFalse(Boolean.getBoolean("nekojs.golden.regenerate"),

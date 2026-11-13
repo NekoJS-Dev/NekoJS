@@ -6,19 +6,22 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 
 /**
- * 玩家丢弃物品事件（{@code ItemEvents.dropped}）的**加载器中立**载荷。
+ * Loader-neutral payload for the player item toss event ({@code ItemEvents.dropped}).
  *
- * <p>成员对齐 NeoForge 原生 {@code ItemTossEvent} 的可契约 getter（getPlayer / getItem）。
- * fabric 侧由 {@code FabricItemEventBindingsV2} + {@code MixinServerPlayerItemDrop} 从
- * {@code ServerPlayer#drop(ItemStack, boolean, boolean)} 入口转换（Q 丢弃与物品栏
- * 拖拽丢弃共走该入口；死亡掉落的 {@code drop} 调用按
- * {@code isDeadOrDying()} 过滤排除）。
+ * <p>The members follow the getters of NeoForge native {@code ItemTossEvent}
+ * (getPlayer / getItem). On fabric, {@code FabricItemEventBindingsV2} +
+ * {@code MixinServerPlayerItemDrop} convert the
+ * {@code ServerPlayer#drop(ItemStack, boolean, boolean)} entry; the Q-key drop and the
+ * inventory-drag drop both go through it, and the {@code drop} call of death drops is
+ * excluded by an {@code isDeadOrDying()} filter.
  *
- * <p><b>已知差异</b>：NeoForge 的 {@code ItemTossEvent} 可取消（取消后物品从世界消失、
- * 不再生成 ItemEntity，但仍从物品栏移除）；fabric 侧此总线为**通知型**（挂点在
- * ItemEntity 生成<b>之前</b>，取消只会静默吞掉物品而无法"保留在物品栏"，语义
- * 得不偿失），不支持返回 true 取消。NeoForge 侧的 {@code event.entity}
- * 是丢弃瞬间的 ItemEntity，fabric 侧不存在于事件对象中（payload 无该成员）。
+ * <p><b>Known difference</b>: NeoForge's {@code ItemTossEvent} is cancellable (cancelled, the
+ * item disappears from the world and no ItemEntity is created, but it is still removed from
+ * the inventory). On fabric this event is notification only: the hook runs <b>before</b> the
+ * ItemEntity exists, so a cancel would only swallow the item silently and could not keep it in
+ * the inventory. Returning {@code true} therefore does not cancel. NeoForge's
+ * {@code event.entity} is the ItemEntity at the moment of the toss; the fabric payload has no
+ * such member.
  */
 @Doc("Fired when a player tosses an item from their inventory (ItemEvents.dropped). Not cancellable on fabric.")
 @Doc("Members: player / item (ItemStack).")

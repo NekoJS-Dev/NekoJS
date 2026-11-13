@@ -17,7 +17,7 @@ public class NekoHostIdentifier {
     private static final Path HOST_CODE_FILE = FMLPaths.GAMEDIR.get().resolve("nekojs_host_code.dat");
 
     /**
-     * 获取硬件指纹并生成 SHA-256 主机码
+     * Builds a hardware fingerprint and turns it into a SHA-256 host code.
      */
     public static String generateHostCode() {
         StringBuilder hwInfo = new StringBuilder();
@@ -52,7 +52,7 @@ public class NekoHostIdentifier {
     }
 
     /**
-     * 标准 SHA-256 加密算法
+     * Hashes the input with SHA-256 and returns the lowercase hex digest.
      */
     private static String sha256(String input) {
         try {
@@ -67,13 +67,13 @@ public class NekoHostIdentifier {
             return hexString.toString();
         } catch (Exception e) {
             NekoJS.LOGGER.debug("SHA-256 generation failed", e);
-            // 极端情况兜底
+            // Fallback when SHA-256 itself is unavailable
             return String.valueOf(input.hashCode());
         }
     }
 
     /**
-     * 检查当前电脑是否已经阅读过警告
+     * Checks whether this machine has already accepted the warning.
      */
     public static boolean isHostAcknowledged() {
         try {
@@ -88,7 +88,7 @@ public class NekoHostIdentifier {
     }
 
     /**
-     * 保存当前电脑的主机码
+     * Saves the host code of this machine.
      */
     public static void saveHostCode() {
         try {

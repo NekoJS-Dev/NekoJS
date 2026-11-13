@@ -10,7 +10,10 @@ import net.minecraft.server.MinecraftServer;
  */
 @RemapByPrefix("neko$")
 public interface ServerExtension extends ServerSpec {
-    /** 返回挂载到该 server 的内存数据容器；首次访问时由 mixin lazy 创建并触发 {@code attachServerData}。 */
+    /**
+     * Returns the in-memory data container of this server. The first access creates it in the mixin
+     * and fires {@code attachServerData}.
+     */
     @Override
     AttachedData<MinecraftServer> neko$data();
 }

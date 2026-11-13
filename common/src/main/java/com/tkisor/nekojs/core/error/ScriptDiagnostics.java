@@ -11,13 +11,13 @@ import java.util.HashSet;
 import java.util.Set;
 
 /**
- * Phase/owner classification of a raw failure into the frozen diagnostic record vocabulary
- * (ticket 30). Classification walks the exception cause chain once and is deterministic for
- * the same input; it never reads mutable runtime state.
+ * Classifies a raw failure into the phase and owner vocabulary of the frozen diagnostic record.
+ * Classification walks the exception cause chain once and is deterministic for the same input; it
+ * never reads mutable runtime state.
  *
- * <p>Priority: staged {@link NekoModuleError} (the pipeline's own attribution) wins over
- * raw polyglot flags; {@link NekoEsmLinkException} and {@link NekoReloadException} are
- * recognized both bare and wrapped.
+ * <p>Priority: a staged {@link NekoModuleError} (the pipeline's own attribution) wins over raw
+ * polyglot flags; {@link NekoEsmLinkException} and {@link NekoReloadException} are recognized both
+ * bare and wrapped.
  */
 final class ScriptDiagnostics {
     /** Bound for the record's {@code message} text. */

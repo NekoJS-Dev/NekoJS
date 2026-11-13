@@ -15,11 +15,12 @@ import java.util.Objects;
 import java.util.Set;
 
 /**
- * 真实 VS Code 分派器。
+ * Real VS Code dispatcher.
  *
- * <p>Windows 只启动绝对路径的 {@code Code.exe}，绝不执行 {@code .cmd/.bat} shim。CLI 优先用
- * argv 携带 {@code --goto} 行号；每个 exe 尝试失败后先尝试下一个可信安装，再退回 OS 的
- * {@code vscode://file/...} 协议分派。协议分派只打开文件、不伪造行号。</p>
+ * <p>On Windows it only starts an absolute {@code Code.exe} and never runs a {@code .cmd/.bat}
+ * shim. The CLI receives the line number through the {@code --goto} argv entry. When
+ * every exe attempt fails, it falls back to the OS {@code vscode://file/...} protocol dispatch,
+ * which only opens the file and never fakes a line number.</p>
  */
 public final class VsCodeProcessOpener implements ErrorLocationOpener {
     private final Environment environment;
@@ -100,7 +101,7 @@ public final class VsCodeProcessOpener implements ErrorLocationOpener {
         }
         try {
             protocolFallback.dispatch(target.vscodeFileUri());
-            // URL 分派只请求打开文件；此路径不携带 --goto 的行列参数。
+            // URL dispatch only asks to open the file; this path carries no --goto line and column arguments.
             return OpenResult.accepted(false);
         } catch (IOException | RuntimeException | LinkageError e) {
             return OpenResult.failed("VS Code protocol dispatch failed: " + e.getClass().getSimpleName());
@@ -236,7 +237,8 @@ public final class VsCodeProcessOpener implements ErrorLocationOpener {
     private static final class ProcessLauncher implements Launcher {
         @Override
         public void launch(List<String> argv) throws IOException {
-            // 启动即返回：这个结果表示分派请求已接受，不声称 VS Code 窗口已经打开。
+            // Returns as soon as the process starts. This result means the dispatch request was accepted, not
+            // that a VS Code window has opened.
             new ProcessBuilder(argv)
                     .redirectOutput(ProcessBuilder.Redirect.DISCARD)
                     .redirectError(ProcessBuilder.Redirect.DISCARD)

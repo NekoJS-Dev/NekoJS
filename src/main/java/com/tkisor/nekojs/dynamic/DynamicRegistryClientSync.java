@@ -15,26 +15,25 @@ import net.neoforged.neoforge.network.handling.IPayloadContext;
 import java.util.function.Consumer;
 
 /**
- * Ticket 21 platform wiring (client node): holds this node's
- * {@link DynamicRegistryClientParticipant}, turns server S2C protocol messages (through
- * the ticket 17 receive discipline: network thread → {@code enqueueWork} → client main
- * thread) into local all-or-nothing activation, and answers with ACK /
- * ACTIVATION_REPORT (same payload type in the reverse direction).
+ * Client-side platform wiring: holds this node's {@link DynamicRegistryClientParticipant},
+ * turns server S2C protocol messages into a local all-or-nothing activation, and answers with
+ * ACK / ACTIVATION_REPORT (the same payload type in the reverse direction). Messages arrive
+ * on the network thread and are handed to the client main thread through {@code enqueueWork}
+ * before activation.
  *
  * <p><b>Registry value source</b>: the process-wide read-only projection
- * {@code RegistryAccess.fromRegistryOfRegistries(BuiltInRegistries.REGISTRY)} — surgery
- * still goes only through the {@link DynamicRegistries} freeze-bypassing path. If the
- * tag backing of a fire-resistant item is not bound yet at receipt time, activation
- * fails per contract and reports back (the server's catch-up STATE_SYNC repairs it; no
- * silent divergence).
+ * {@code RegistryAccess.fromRegistryOfRegistries(BuiltInRegistries.REGISTRY)}; changes still
+ * go only through the {@link DynamicRegistries} freeze-bypassing path. If the tag backing of
+ * a fire-resistant item is not bound yet at receipt time, activation fails and reports back
+ * (the server's catch-up STATE_SYNC repairs it; no silent divergence).
  *
  * <p><b>Gate</b>: with this client's {@code [dynamicRegistry]} disabled, PREPARE and
- * STATE_SYNC are rejected outright (ack-rejected; the whole batch aborts on the server)
- * — both ends must explicitly opt in.
+ * STATE_SYNC are rejected outright (ack-rejected; the whole batch aborts on the server).
+ * Both ends must explicitly opt in.
  *
- * <p>Client-only assembly ({@code NekoJSMod#registerClient} calls {@link #install()});
- * {@code ClientPlayerNetworkEvent} is a client-only event class, so a dedicated server
- * never loads this class.
+ * <p>Client-only assembly: {@code NekoJSMod#registerClient} calls {@link #install()}.
+ * {@code ClientPlayerNetworkEvent} is a client-only event class, so a dedicated server never
+ * loads this class.
  */
 public final class DynamicRegistryClientSync {
 

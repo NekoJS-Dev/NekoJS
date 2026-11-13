@@ -1,7 +1,7 @@
-// 26.x 实现，本文件不应再出现版本守卫。1.21.1 的实现是 versions/1.21.1/src 下的同名文件，
-// 改本文件行为时须同步它。
+// 26.x implementation. This file must not carry version guards again. The 1.21.1 implementation
+// is the file of the same name under versions/1.21.1/src; keep it in sync when you change this file.
 //? if neoforge {
-// TODO(fabric): fabric 侧还没有对应实现，整文件守卫等移植完成后去掉
+// TODO(fabric): there is no Fabric implementation yet; drop the whole-file guard once the port is done.
 package com.tkisor.nekojs.mixin;
 
 import com.llamalad7.mixinextras.sugar.Local;
@@ -24,10 +24,11 @@ import java.util.Map;
 public abstract class TagLoaderMixin {
 
     /**
-     * 26.x 的 {@link TagLoader} 不再持有注册表 key（只剩 elementLookup + directory），
-     * 由 {@code loadPendingTags}（静态方法，参数带 {@link Registry}）注入捕获，
-     * 供 {@code build} 阶段事件分发使用。客户端网络 tag 同步路径没有该字段，
-     * 因此 tag 事件只在服务端数据包加载阶段触发（客户端本来就不应修改 tag）。
+     * The 26.x {@link TagLoader} no longer holds the registry key (it keeps only elementLookup and
+     * directory). {@code loadPendingTags}, a static method whose parameters carry the {@link Registry},
+     * injects the key into a captured field for tag event dispatch in the {@code build} stage. The
+     * client network tag sync path has no such field, so tag events fire only while server data packs
+     * load; the client should not modify tags anyway.
      */
     @Unique
     private ResourceKey<?> nekojs$registryKey;

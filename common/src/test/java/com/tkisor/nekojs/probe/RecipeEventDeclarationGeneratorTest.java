@@ -23,14 +23,18 @@ import java.util.Map;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * 回归：recipes 声明的 import 必须按平台包路径生成且不重复。
- * 曾出现 schema field kind 硬编码 NeoForge 包（net.minecraft.world.item*）而 handler 反射
- * 路径用真实 FQN（1.12.2 为 net.minecraft.item*）——同一别名从两个模块重复 import，
- * TS 报 Duplicate identifier，整个 recipes 声明文件失效（event.recipes 补全消失）。
+ * Regression: imports in the recipes declaration must follow the platform package paths and must not
+ * repeat. A schema field kind once hardcoded NeoForge packages ({@code net.minecraft.world.item*})
+ * while the handler path used the real FQN ({@code net.minecraft.item*} on 1.12.2). The same alias was
+ * then imported from two modules, TS reported Duplicate identifier, the whole recipes declaration file
+ * became invalid and {@code event.recipes} completion disappeared.
  */
 class RecipeEventDeclarationGeneratorTest {
 
-    /** 桩平台：与 TestPlatformInit.TestIPlatform 行为一致，仅 recipeFieldKindPackage 按 legacy12 切换。 */
+    /**
+     * Stub platform: behaves like {@code TestPlatformInit.TestIPlatform}, but
+     * {@code recipeFieldKindPackage} switches on legacy12.
+     */
     private static final class StubPlatform implements IPlatform {
         private final boolean legacy12;
         StubPlatform(boolean legacy12) { this.legacy12 = legacy12; }
@@ -65,7 +69,10 @@ class RecipeEventDeclarationGeneratorTest {
         }
     }
 
-    /** schema kind 字段（走平台映射）+ handler 方法（真实 FQN）混合的命名空间，复刻真实输出形态。 */
+    /**
+     * A namespace mixing a schema kind field (mapped by the platform) with a handler method (real FQN),
+     * shaped like real output.
+     */
     private static RecipeNamespaceCatalogEntry mixedNamespace(String ns, String itemStackFqn) {
         RecipeFieldDefinition input = new RecipeFieldDefinition("input", "input", RecipeFieldKind.INGREDIENT,
                 false, false, null, RecipeFieldRoles.roleOfName("input"));
@@ -83,11 +90,12 @@ class RecipeEventDeclarationGeneratorTest {
 
     @Test
     void legacy12PlatformMapsSchemaKindsToItemPackages() {
-        setPlatform(true); // 1.12.2：Ingredient/ItemStack 在 net.minecraft.item[.crafting]
+        setPlatform(true); // 1.12.2: Ingredient and ItemStack live in net.minecraft.item[.crafting]
         String out = new RecipeEventDeclarationGenerator(new TypeAliasRegistry())
                 .generate(List.of(mixedNamespace("testmod", "net.minecraft.item.ItemStack")), ScriptType.SERVER);
 
-        // handler 真实 FQN（1.12.2）与 schema kind 走平台映射后同源：只 import 一次且来自正确包
+        // The handler FQN (1.12.2) and the schema kind mapped by the platform now resolve to the same source,
+        // so each is imported once and from the right package.
         assertEquals(1, out.lines().filter(l -> l.contains("from \"java:net/minecraft/item\"")).count(),
                 "ItemStack 只应 import 一次且来自 net.minecraft.item\n" + out);
         assertEquals(1, out.lines().filter(l -> l.contains("from \"java:net/minecraft/item/crafting\"")).count(),
@@ -97,7 +105,7 @@ class RecipeEventDeclarationGeneratorTest {
 
     @Test
     void defaultPlatformUsesNeoForgePackagePaths() {
-        setPlatform(false); // NeoForge 默认路径
+        setPlatform(false); // Default NeoForge paths
         String out = new RecipeEventDeclarationGenerator(new TypeAliasRegistry())
                 .generate(List.of(mixedNamespace("testmod", "net.minecraft.world.item.ItemStack")), ScriptType.SERVER);
 

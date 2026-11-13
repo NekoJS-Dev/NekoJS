@@ -32,10 +32,10 @@ import java.util.Set;
 
 /**
  * Retained host transaction and owner-thread bridge for the common JSX runtime. One adapter
- * belongs to exactly one CLIENT generation (ticket 42): it captures the creating script
- * Context, registers itself into that generation's {@link GenerationGlobals}, and validates
- * the generation epoch before every state-changing or guest-calling operation, so handles
- * from superseded generations fail explicitly instead of silently succeeding.
+ * belongs to exactly one CLIENT generation: it captures the creating script Context, registers
+ * itself into that generation's {@link GenerationGlobals}, and checks the generation epoch
+ * before every state-changing or guest-calling operation, so handles from superseded
+ * generations fail explicitly instead of silently succeeding.
  */
 public final class JsxHostAdapter implements GenerationGlobals.UiRoot, UiInspector {
     private static final Set<String> PRIMITIVES = Set.of(
@@ -241,9 +241,9 @@ public final class JsxHostAdapter implements GenerationGlobals.UiRoot, UiInspect
     }
 
     /**
-     * Real glyph measurement for the common runtime (ticket 44 hand-off): wraps the shared
-     * {@link TextLayouter} over this client's font, so the runtime never guesses widths.
-     * Wrap-enabled and truncation-off match the runtime's intrinsic-size contract.
+     * Real glyph measurement for the common runtime: wraps the shared {@link TextLayouter} over
+     * this client's font, so the runtime never guesses widths. Wrapping is enabled and
+     * truncation is off, which matches the intrinsic-size rule the runtime expects.
      */
     @ScriptOutput("import('java:java/util').$Map<string, unknown> & { readonly width: number; readonly height: number }")
     public Map<String, Object> measureText(String text, double fontSize, int maxWidth) {
@@ -308,11 +308,10 @@ public final class JsxHostAdapter implements GenerationGlobals.UiRoot, UiInspect
     }
 
     /**
-     * Ticket 45 inspector output: the retained runtime layout snapshot decorated with the
-     * host-only facts (focus, resource statuses, retained phase errors, capture metadata)
-     * through the same shared collection path the fake host tests use. Pixel capture
-     * itself is auxiliary and not wired here; the metadata names the viewport-derived
-     * origin it was synthesized from.
+     * Inspector output: the retained runtime layout snapshot decorated with the host-only facts
+     * (focus, resource statuses, retained phase errors, capture metadata) through the same
+     * shared collection path the fake host tests use. Pixel capture itself is auxiliary and not
+     * wired here; the metadata names the viewport-derived origin it was synthesized from.
      */
     @Override
     public InspectorSnapshot inspect() {
@@ -1014,9 +1013,9 @@ public final class JsxHostAdapter implements GenerationGlobals.UiRoot, UiInspect
     }
 
     /**
-     * Resolves one node's visual props through the shared {@link VisualStyleResolver} and
-     * routes every produced {@link UiDiagnostic} into the ticket-30 reporting seam. Static and
-     * Minecraft-free so the resolution contract is testable without a live client.
+     * Resolves one node's visual props through the shared {@link VisualStyleResolver} and reports
+     * every produced {@link UiDiagnostic} through {@link ScriptErrorReporter}. Static and free of
+     * Minecraft types, so the resolution rules are testable without a live client.
      */
     static VisualSpec resolveVisual(Map<String, Object> props, String nodeType, String nodeKey,
             String rootId, long generation, UiResourceResolver resources) {
@@ -1481,8 +1480,8 @@ public final class JsxHostAdapter implements GenerationGlobals.UiRoot, UiInspect
 
     private void runDeferredOpen() {
         long active = activeGeneration();
-        // A discarded candidate has already closed this root; observing would throw, and the
-        // drop below is the observable outcome the ticket requires.
+        // A discarded candidate has already closed this root, so observing it would throw; dropping the
+        // deferred open below is the intended outcome.
         if (lifecycle.state() == UiRootLifecycle.State.CANDIDATE) lifecycle.observeCommit(active);
         if (lifecycle.isProduction(active)) {
             showScreen();
@@ -1517,10 +1516,10 @@ public final class JsxHostAdapter implements GenerationGlobals.UiRoot, UiInspect
     }
 
     /**
-     * Generation-initiated close (ticket 42): invoked exactly once per root from
-     * {@link GenerationGlobals#close()} on the owner thread, whichever teardown path ends the
-     * generation — commit supersede, candidate discard, reset or manager close. Guest
-     * dependencies are released while its context is available; native cleanup is unconditional.
+     * Closes a mount when its generation ends. {@link GenerationGlobals#close()} calls this
+     * exactly once per root on the owner thread, whichever path ends the generation: commit
+     * supersede, candidate discard, reset or manager close. Guest dependencies are released
+     * while its context is still available; native cleanup always runs.
      */
     @Override
     public void closeForGeneration(String reason) {
@@ -1757,7 +1756,7 @@ public final class JsxHostAdapter implements GenerationGlobals.UiRoot, UiInspect
         };
     }
 
-    /** Converts one guest props object into plain Java values; package-visible for boundary tests. */
+    /** Converts one guest props object into plain Java values; package-visible so tests can call it. */
     static Map<String, Object> props(Object value) {
         if (value == null) return new LinkedHashMap<>();
         if (value instanceof Map<?, ?> map) {

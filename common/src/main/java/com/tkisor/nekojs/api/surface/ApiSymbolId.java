@@ -3,10 +3,10 @@ package com.tkisor.nekojs.api.surface;
 import java.util.Objects;
 
 /**
- * API 符号的稳定标识，形如 {@code kind:qualifiedName}。
+ * Stable identifier of an API symbol, in the form {@code kind:qualifiedName}.
  *
- * @param kind          符号类别（如 {@code global}、{@code member}）
- * @param qualifiedName 限定名（如 {@code ID.of}）
+ * @param kind          symbol kind (such as {@code global} or {@code member})
+ * @param qualifiedName qualified name (such as {@code ID.of})
  */
 public record ApiSymbolId(String kind, String qualifiedName) {
 
@@ -17,12 +17,12 @@ public record ApiSymbolId(String kind, String qualifiedName) {
         if (qualifiedName.isBlank()) throw new IllegalArgumentException("qualifiedName must not be blank");
     }
 
-    /** 返回 {@code "kind:qualifiedName"} 字符串。 */
+    /** Returns the {@code "kind:qualifiedName"} string. */
     public String value() {
         return kind + ":" + qualifiedName;
     }
 
-    /** 解析 {@code "kind:qualifiedName"} 字符串；无 {@code ':'} 分隔符时抛异常。 */
+    /** Parses a {@code "kind:qualifiedName"} string; throws when the {@code ':'} separator is missing. */
     public static ApiSymbolId parse(String raw) {
         Objects.requireNonNull(raw, "raw");
         if (raw.isBlank()) throw new IllegalArgumentException("symbol id must not be blank");
@@ -33,7 +33,7 @@ public record ApiSymbolId(String kind, String qualifiedName) {
         return new ApiSymbolId(kind, qualifiedName);
     }
 
-    /** 返回 {@code "kind:qualifiedName"} 字符串。 */
+    /** Returns the {@code "kind:qualifiedName"} string. */
     @Override
     public String toString() {
         return value();

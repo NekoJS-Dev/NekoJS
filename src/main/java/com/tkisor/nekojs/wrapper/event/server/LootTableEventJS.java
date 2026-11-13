@@ -28,29 +28,29 @@ import java.util.function.Consumer;
 import java.util.function.Predicate;
 
 /**
- * {@code ServerEvents.lootTables} 事件对象：loot table 的 JSON 层管理。
+ * Event object for {@code ServerEvents.lootTables}, managing loot tables at the JSON level.
  *
- * <p>服务器数据 reload 时（{@code AddServerReloadListenersEvent}，先于 loot 解析）
- * post；脚本在此声明修改，随后 reload 流程中 NeoForge 为每个非空 table 触发
- * {@link LootTableLoadEvent}，本类把 pending 修改应用到对应 table：
+ * <p>Posted during server data reload ({@code AddServerReloadListenersEvent}, before loot tables
+ * are parsed). Scripts declare changes here, and when NeoForge later fires
+ * {@link LootTableLoadEvent} for each non-empty table during the reload, pending edits are applied:
  * <ul>
- *   <li>{@code setJson / create}：解析后替换（id 可为原本不存在的）</li>
- *   <li>{@code remove}：替换为 {@link LootTable#EMPTY}（加载器对空表不缓存，等价删除）</li>
+ *   <li>{@code setJson} / {@code create}: parses the JSON and replaces the table (intended to allow new ids)</li>
+ *   <li>{@code remove}: replaces the table with {@link LootTable#EMPTY} (the loader drops empty tables, effectively deleting them)</li>
  * </ul>
- * pending 修改跨 reload 保留（每次 reload 脚本重新声明）；{@code getJson / getIds}
- * 读取最近一次 reload 加载后（含修改）的数据。
+ * Pending edits persist across reloads (scripts re-declare them on each reload); {@code getJson}
+ * and {@code getIds} read the tables from the most recent reload together with pending edits.
  */
 public class LootTableEventJS {
-    /** 待应用的替换（id → JSON）。 */
+    /** Pending table replacements by id. */
     private static final Map<Identifier, JsonObject> PENDING_SET = new ConcurrentHashMap<>();
-    /** 待删除的 id。 */
+    /** Table ids scheduled for removal. */
     private static final Set<Identifier> PENDING_REMOVE = ConcurrentHashMap.newKeySet();
-    /** 最近一次 reload 中应用修改后的 table，{@code getJson} 的序列化源。 */
+    /** Tables loaded during the most recent reload after modifications, used to serialize {@link #getJson}. */
     private static final Map<Identifier, LootTable> LOADED_TABLES = new ConcurrentHashMap<>();
-    /** 最近一次 reload 的 registry lookup（序列化 / 解析用）。 */
+    /** Registry lookup from the most recent reload, used for codec serialization and parsing. */
     private static volatile HolderLookup.Provider REGISTRIES;
 
-    /** 所有已知 loot table id（含脚本创建的）。 */
+    /** Returns all known loot table ids, including script-created entries. */
     public List<String> getIds() {
         LinkedHashSet<String> ids = new LinkedHashSet<>();
         LOADED_TABLES.keySet().forEach(id -> ids.add(id.toString()));
@@ -58,7 +58,7 @@ public class LootTableEventJS {
         return List.copyOf(ids);
     }
 
-    /** 指定 id 的当前 JSON（含脚本修改）；未知 id 返回 null。 */
+    /** Returns the current JSON for {@code id} (including pending script edits), or {@code null} if unknown. */
     public JsonElement getJson(String id) {
         Identifier location = parseId(id);
         JsonObject pending = PENDING_SET.get(location);
@@ -75,21 +75,23 @@ public class LootTableEventJS {
                 .getOrThrow();
     }
 
-    /** 覆盖指定 id 的 loot table（下次 reload 生效）。 */
+    /** Replaces the loot table for {@code id} on the next reload. */
     public void setJson(String id, Object json) {
         Identifier location = parseId(id);
         PENDING_SET.put(location, toJsonObject(json));
         PENDING_REMOVE.remove(location);
     }
 
-    /** 创建/覆盖 loot table（{@code setJson} 的别名，语义上允许不存在的 id）。 */
+    /** Creates or replaces a loot table (alias for {@link #setJson}, intended to allow non-existent ids). */
     public void create(String id, Object json) {
         setJson(id, json);
     }
 
     /**
-     * 便利修改：读取当前 JSON（含脚本先前修改）→ builder 回调 → 写回。
-     * 不存在的 id 从空对象开始（记得 {@code table.setType('minecraft:chest')}）。
+     * Reads the current JSON for {@code id} (including earlier script edits), passes a
+     * {@link LootTableJS} wrapper to {@code consumer}, and stores the result back. Non-existent
+     * ids start from an empty object (callers should set a type such as
+     * {@code table.setType('minecraft:chest')}).
      */
     public void modify(String id, Consumer<LootTableJS> consumer) {
         JsonElement current = getJson(id);
@@ -101,8 +103,8 @@ public class LootTableEventJS {
     }
 
     /**
-     * 批量修改方块战利品表：{@code blockId} 为方块 id、{@code '#tag'}（展开标签下所有方块）
-     * 或 {@code '*'}（所有已知方块表）。
+     * Modifies block loot tables matching {@code blockId}: a single block id, a {@code '#tag'}
+     * (expanded to all blocks in that tag), or {@code '*'} (all known block tables).
      */
     public void modifyBlockLoot(String blockId, Consumer<LootTableJS> consumer) {
         if (blockId.startsWith("#")) {
@@ -118,7 +120,7 @@ public class LootTableEventJS {
         }
     }
 
-    /** 批量修改方块战利品表：{@code filter} 接收方块 id（如 {@code 'mymod:ore'}）返回是否处理。 */
+    /** Modifies known block loot tables whose block id (such as {@code 'mymod:ore'}) matches {@code filter}. */
     public void modifyBlockLoot(Predicate<String> filter, Consumer<LootTableJS> consumer) {
         for (String tableId : knownTableIds("blocks/")) {
             if (filter.test(tableId.replace("/blocks/", ":"))) {
@@ -127,7 +129,7 @@ public class LootTableEventJS {
         }
     }
 
-    /** 批量修改实体战利品表：{@code entityId} 为实体 id 或 {@code '*'}（所有已知实体表）。 */
+    /** Modifies entity loot tables matching {@code entityId}: a single entity id or {@code '*'} for all known entity tables. */
     public void modifyEntityLoot(String entityId, Consumer<LootTableJS> consumer) {
         if ("*".equals(entityId)) {
             for (String tableId : knownTableIds("entities/")) {
@@ -138,7 +140,7 @@ public class LootTableEventJS {
         }
     }
 
-    /** 批量修改实体战利品表：{@code filter} 接收实体 id（如 {@code 'minecraft:zombie'}）返回是否处理。 */
+    /** Modifies known entity loot tables whose entity id (such as {@code 'minecraft:zombie'}) matches {@code filter}. */
     public void modifyEntityLoot(Predicate<String> filter, Consumer<LootTableJS> consumer) {
         for (String tableId : knownTableIds("entities/")) {
             if (filter.test(tableId.replace("/entities/", ":"))) {
@@ -168,7 +170,7 @@ public class LootTableEventJS {
         return id.getNamespace() + ":entities/" + id.getPath();
     }
 
-    /** 标签展开：该标签下所有方块对应的 {@code blocks/<path>} 表 id。 */
+    /** Expands a block tag to the {@code <namespace>:blocks/<path>} loot table ids of its blocks. */
     private static List<String> blockTableIdsForTag(String tag) {
         List<String> ids = new ArrayList<>();
         TagKey<Block> tagKey = TagKey.create(Registries.BLOCK, Identifier.parse(tag));
@@ -192,7 +194,7 @@ public class LootTableEventJS {
         return ids;
     }
 
-    /** 删除指定 loot table（下次 reload 生效，读取时得到空表）。 */
+    /** Schedules {@code id} for removal on the next reload, replacing it with an empty table. */
     public void remove(String id) {
         Identifier location = parseId(id);
         PENDING_REMOVE.add(location);
@@ -200,8 +202,8 @@ public class LootTableEventJS {
     }
 
     /**
-     * NeoForge 总线回调：每个非空 table 加载时应用 pending 修改并收集结果。
-     * 在 reload 流程的 loot 解析阶段触发，早于任何对 loot 的消费。
+     * NeoForge event handler that applies pending edits and records loaded tables as each
+     * non-empty loot table is parsed during reload, before any gameplay code consumes it.
      */
     public static void onLootTableLoad(LootTableLoadEvent event) {
         Identifier id = event.getName();

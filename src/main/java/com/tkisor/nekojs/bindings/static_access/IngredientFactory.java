@@ -8,11 +8,11 @@ import graal.graalvm.polyglot.Value;
 import net.minecraft.world.item.crafting.Ingredient;
 
 /**
- * 脚本静态绑定 {@code Ingredient}：物品配料工厂。
+ * Script static binding {@code Ingredient}: factory for item ingredients.
  */
 @Doc("Static binding 'Ingredient': factory helpers for item ingredients.")
 public class IngredientFactory {
-    /** 由多个物品值构造「或」关系的配料。 */
+    /** Builds an ingredient that matches any of the given item values. */
     @Doc("Builds an ingredient matching any of the given item-like values.")
     @Doc("Accepts item ids and selector strings: '#tag', '@mod', '*' (any item), and '/regex/'.")
     @Param(name = "values", value = "item ids, '#tag'/'@mod'/'*'/'/regex/' strings, items, stacks, or ingredients")
@@ -32,7 +32,7 @@ public class IngredientFactory {
         return value == null ? null : Value.asValue(value);
     }
 
-    /** 单物品配料。 */
+    /** An ingredient for a single item. */
     @Doc("Creates an ingredient matching a single item.")
     @Param(name = "id", value = "item id like 'minecraft:stick'")
     @Return("an IngredientJS matching only that item")
@@ -40,7 +40,7 @@ public class IngredientFactory {
         return new com.tkisor.nekojs.wrapper.item.IngredientJS(id);
     }
 
-    /** 物品标签配料（自动补 {@code '#'} 前缀）。 */
+    /** An item tag ingredient; the {@code '#'} prefix is added automatically when missing. */
     @Doc("Creates an ingredient matching an item tag.")
     @Param(name = "id", value = "tag id; a leading '#' is added automatically when missing")
     @Return("an IngredientJS matching all items in the tag")
@@ -48,7 +48,7 @@ public class IngredientFactory {
         return new com.tkisor.nekojs.wrapper.item.IngredientJS(id.startsWith("#") ? id : "#" + id);
     }
 
-    /** 多个配料取「或」。 */
+    /** Combines several ingredients with OR. */
     @Doc("Combines several ingredients into one that matches any of them.")
     @Param(name = "ingredients", value = "the ingredients to combine with OR")
     @Return("an IngredientJS matching any of the given ingredients")
@@ -60,14 +60,14 @@ public class IngredientFactory {
         return wrapper;
     }
 
-    /** 匹配所有已注册物品的真 wildcard（live AnyHolderSet）。 */
+    /** A true wildcard that matches every registered item (a live any-holder set). */
     @Doc("Creates a true wildcard ingredient matching every registered item.")
     @Return("an IngredientJS backed by a live any-holder set, so items registered later still match")
     public com.tkisor.nekojs.wrapper.item.IngredientJS all() {
         return new com.tkisor.nekojs.wrapper.item.IngredientJS(IngredientResolver.wildcard());
     }
 
-    /** 取反：返回匹配「除 ingredient 外所有物品」的 DifferenceIngredient。 */
+    /** Negates an ingredient: returns a DifferenceIngredient that matches every item except this one. */
     @Doc("Negates an ingredient: matches every item except the given one.")
     @Param(name = "ingredient", value = "the ingredient whose matches to exclude")
     @Return("an IngredientJS matching all items not matched by the given ingredient")

@@ -15,9 +15,11 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * NekoCommonBuiltinPlugin 吸收三份平台 NekoJSCorePlugin 逐字重复的纯 common 注册
- * （TS/JSX 语言插件、四个内置 ScriptProperty、NodeModuleTypeDocs 内置声明）。
- * 平台 core plugin 不再自带这些注册——本测试保证仅凭 common 插件即可就位。
+ * NekoCommonBuiltinPlugin holds the common-only registrations that the three platform
+ * NekoJSCorePlugins used to duplicate word for word: the TS/JSX language plugins, the four
+ * built-in ScriptProperties, and the NodeModuleTypeDocs built-in declarations. The platform core
+ * plugins no longer register them, and this test shows that the common plugin alone puts them
+ * in place.
  */
 class NekoCommonBuiltinPluginTest {
 

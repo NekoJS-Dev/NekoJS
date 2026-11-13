@@ -1,9 +1,10 @@
 package com.tkisor.nekojs.platform;
 
 /**
- * Fabric 侧 {@link IModInfo}：Fabric Loader 的 mod 元数据是不可变的，
- * 所以 {@link #setName(String)} 只改本地展示名（NeoForge 侧用反射改 FML 的 displayName，
- * fabric 无对应可写字段——这是刻意的行为差异，不做反射黑魔法）。
+ * Fabric-side {@link IModInfo}: Fabric Loader mod metadata is immutable, so
+ * {@link #setName(String)} only changes the local display name. The NeoForge side rewrites FML's
+ * displayName by reflection; Fabric has no writable field for it. That difference is intentional,
+ * and no reflection tricks are used.
  */
 public final class FabricModInfo implements IModInfo {
 

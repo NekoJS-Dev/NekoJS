@@ -21,25 +21,24 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Ticket 27 GUI/render resource lifecycle fixture (26.x version-tree test tree): world render
+ * Lifecycle fixture for GUI and render resources (26.x version-tree test tree): world render
  * registration and presentation, plus the {@code ClientEvents.screenRender}/
  * {@code ClientEvents.hud} listener surface, follow the same candidate generation lifecycle as
- * renderer registration — invisible to the production route while the candidate builds,
- * swapped exactly once at the commit point, and on candidate failure/cancellation the old
- * active keeps serving while the candidate resources are released <b>at failure time</b>
- * (ticket 26 covered the HUD registration boundary and only indirect failure-cleanup
- * evidence; this ticket adds the direct failure-moment assertion).
+ * renderer registration. They are invisible to the production route while the candidate builds,
+ * swapped exactly once at the commit point, and when a candidate fails or is cancelled the old
+ * active keeps serving while the candidate resources are released <b>at failure time</b>.
  *
  * <p>Assertions only use public behavior: the {@code List} probes of
  * {@link Ticket26ClientInputHudHarness#dispatchHud(String)} and this class'
  * {@link #dispatchWorldProbe()} (render-context probes returning the renderer ids actually
  * invoked this frame), the public {@code hasListeners()} surface of
  * {@link ClientEvents#SCREEN_RENDER}/{@link ClientEvents#HUD}, and the read-only
- * {@link ClientRenderRegistry#pendingCandidateRegistrations()} count; never private registry
- * snapshots, callback object identity, or unpublished platform collections.
+ * {@link ClientRenderRegistry#pendingCandidateRegistrations()} count. They never use private
+ * registry snapshots, callback object identity, or unpublished platform collections.
  *
- * <p>Reuses the ticket 26 harness (real root + real Graal pipeline + production-parity
- * {@code ClientRenderDomainOwner} assembly); this ticket does not build a second assembly.
+ * <p>Reuses {@link Ticket26ClientInputHudHarness} (real root, real Graal pipeline,
+ * production-parity {@code ClientRenderDomainOwner} assembly); this class builds no second
+ * assembly.
  */class Ticket27ClientGuiRenderLifecycleTest {
 
     private Ticket26ClientInputHudHarness harness;
@@ -217,8 +216,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
                 "the commit point swaps the world presentation in one step: the new renderer runs"
                         + " exactly once and the previous generation's renderer is gone");
 
-        // This generation declares nothing -> the empty batch joins the commit -> the previous
-         // world renderer retires (the same boundary as the HUD side).
+        // This generation declares nothing, so the empty batch joins the commit and the previous
+        // world renderer retires, the same way the HUD side does.
         harness.writeClientScript("world.js", "global.noWorldRender = true\n");
         harness.reloadClientScripts();
         assertTrue(dispatchWorldProbe().isEmpty(),
@@ -247,10 +246,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
             }
         });
 
-        // Reloading with the same listeners: while the candidate builds the production route
-         // still serves the old generation (the new listeners stay pending), after the commit
-         // the new generation takes over; the production listener surface neither duplicates nor
-         // loses a listener across the boundary.
+        // Reloading with the same listeners: while the candidate builds, the production route still
+        // serves the old generation and the new listeners stay pending. After the commit the new
+        // generation takes over, and the production listener surface neither duplicates nor loses
+        // a listener.
         harness.writeClientScript("listeners.js", listenerScript());
         harness.reloadClientScripts();
         assertEquals(List.of(true), screenDuringCandidate,

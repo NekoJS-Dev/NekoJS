@@ -19,7 +19,7 @@ class ItemStackSpecTest {
 
     @Test
     void ambiguousMethodsExcludedFromSpec() {
-        // 原版已经提供这些方法，Spec 不应制造同名 facade。
+        // Vanilla already provides these methods, so the spec must not create a facade with the same name.
         assertThrows(NoSuchMethodException.class,
             () -> ItemStackSpec.class.getMethod("neko$copy"));
         assertThrows(NoSuchMethodException.class,

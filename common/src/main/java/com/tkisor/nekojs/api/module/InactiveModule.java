@@ -3,11 +3,11 @@ package com.tkisor.nekojs.api.module;
 import java.util.Objects;
 
 /**
- * 未激活模块：模块描述符 + 未激活原因 + 详情。
+ * A module that was not activated: its descriptor, the reason and a detail message.
  *
- * @param descriptor 模块描述符，不能为 {@code null}
- * @param reason     未激活原因，不能为 {@code null}
- * @param detail     详情说明（可为 {@code null}）
+ * @param descriptor module descriptor, never {@code null}
+ * @param reason     reason it was not activated, never {@code null}
+ * @param detail     detail message, may be {@code null}
  */
 public record InactiveModule(
         ApiModuleDescriptor descriptor,

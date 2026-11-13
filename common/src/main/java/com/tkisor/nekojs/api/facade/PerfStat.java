@@ -1,13 +1,13 @@
 package com.tkisor.nekojs.api.facade;
 
 /**
- * {@link PerformanceFacade#bench} 返回的统计快照。所有时间为毫秒。
+ * Snapshot of the statistics {@link PerformanceFacade#bench} returns. All times are in milliseconds.
  *
- * @param runs   实际执行次数
- * @param total  总耗时毫秒
- * @param mean   平均单次耗时毫秒
- * @param min    最快单次毫秒
- * @param max    最慢单次毫秒
+ * @param runs  number of executions actually performed
+ * @param total total elapsed milliseconds
+ * @param mean  mean milliseconds per execution
+ * @param min   fastest single run in milliseconds
+ * @param max   slowest single run in milliseconds
  */
 public record PerfStat(int runs, double total, double mean, double min, double max) {
     /**

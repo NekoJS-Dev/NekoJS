@@ -3,11 +3,10 @@ package com.tkisor.nekojs.api.ui;
 import java.util.List;
 
 /**
- * Frozen one-frame measurement of one JSX UI root (ticket 45). A snapshot never holds
- * runtime state: every field is copied data, so a script or test can keep it while the
- * UI keeps changing. Fields come from the public host contract only — no Java object
- * identity, native widget, {@code GuiGraphics}, or reconciler internals cross this
- * boundary.
+ * Frozen one-frame measurement of one JSX UI root. A snapshot never holds runtime state:
+ * every field is copied data, so a script or test can keep it while the UI keeps
+ * changing. Fields come from the public host API only: no Java object identity, native
+ * widget, {@code GuiGraphics}, or reconciler internals are exposed.
  *
  * @param rootId      id of the measured UI root
  * @param source      which environment collected the frame, e.g. {@code fake-host}

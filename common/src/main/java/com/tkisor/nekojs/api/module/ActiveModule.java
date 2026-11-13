@@ -3,10 +3,10 @@ package com.tkisor.nekojs.api.module;
 import java.util.Objects;
 
 /**
- * 已激活模块：模块描述符 + 模块实现实例。
+ * An activated module: its descriptor plus the module implementation instance.
  *
- * @param descriptor     模块描述符，不能为 {@code null}
- * @param implementation 模块实现实例（可为 {@code null}）
+ * @param descriptor     module descriptor, never {@code null}
+ * @param implementation module implementation instance, may be {@code null}
  */
 public record ActiveModule(
         ApiModuleDescriptor descriptor,

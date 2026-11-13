@@ -22,37 +22,37 @@ import com.tkisor.nekojs.wrapper.LangGeneratorJS;
 import java.util.Set;
 
 /**
- * NekoJS 插件接口 —— 作者面的<b>唯一入口</b>（双形态模型，ADR-0010）。
+ * NekoJS plugin interface—the sole entry point for authors (dual-form model, ADR-0010).
  *
- * <p>每条通道的<b>事实源</b>是自包含扩展点（{@code core.plugin} 包的 {@code XxxPoint}：
- * MergePolicy / initializer / finisher / dependsOn 全在点文件内）；本接口的方法是各点的
- * <b>门面投影</b>——覆写基接口钩子（推荐、最简）与 implements {@code XxxPoint.Contributor}
- * （显式形态）由同一个点收集，效果完全等价。配对不变式由
- * {@code PluginHookPairingTest} 守护：<b>在本接口加方法必须配对一个 Point 或进入豁免清单</b>，
- * 防止接口无事实源膨胀。通道速查见 wiki「插件开发通道索引」。
+ * <p>The source of truth for each channel is a self-contained extension point ({@code XxxPoint} in the {@code core.plugin} package:
+ * MergePolicy / initializer / finisher / dependsOn are all within the point file). Methods in this interface are
+ * facade projections of these points—overriding base interface hooks (recommended, simplest) and implementing {@code XxxPoint.Contributor}
+ * (explicit form) are collected by the same point, with equivalent effects. Pairing invariants are guaranteed by
+ * {@code PluginHookPairingTest}: <b>Methods added to this interface must be paired with a Point or included in the exemption list</b>,
+ * to prevent interface bloating without a source of truth. See the "Plugin Development Channel Index" wiki for quick lookups.
  *
- * <p>平台层通过 {@code @RegisterNekoJSPlugin} 自动发现 {@code implements NekoJSPlugin} 的类。
- * 加载优先级由 {@code @RegisterNekoJSPlugin(priority=...)} 控制（数值大者先加载）；内置
- * CorePlugin 使用 {@link #CORE_PRIORITY} 保证基础设施（adapters/bindings）最先就位。
- * <b>同优先级插件的相对顺序为发现/扫描序，跨平台不稳定——不要依赖同优先级插件间的顺序</b>
- * （需要确定性覆盖时用各 registry 的显式 replace/override 语义，如
- * {@code ScriptCompilerRegistry.replaceLanguage}）。
+ * <p>The platform automatically discovers classes that {@code implements NekoJSPlugin} via {@code @RegisterNekoJSPlugin}.
+ * Load priority is controlled by {@code @RegisterNekoJSPlugin(priority=...)} (higher values load first); the built-in
+ * CorePlugin uses {@link #CORE_PRIORITY} to ensure infrastructure (adapters/bindings) is ready first.
+ * <b>Relative order of plugins with the same priority depends on discovery/scanning order and is unstable across platforms—do not rely on order among plugins of the same priority</b>
+ * (use explicit replace/override semantics of registries for deterministic overrides, e.g.,
+ * {@code ScriptCompilerRegistry.replaceLanguage}).
  *
- * <p>钩子分两族：
+ * <p>Hooks are divided into two categories:
  * <ul>
- *   <li><b>注册面（收集型）</b>——bootstrap 期把贡献攒进对应通道的注册表；同名冲突由各点的
- *       MergePolicy 裁决（如事件组 failFast）；</li>
- *   <li><b>回调面（直调型）</b>——事件发生时由平台直接触发（与 {@code registerApiSurface}
- *       同类，不做收集式扩展点），覆写即生效，无需任何注册。</li>
+ *   <li><b>Registration side (collection-based)</b>—contributions are collected into the corresponding channel registry during bootstrap; conflicts with the same name are resolved by the point's
+ *       MergePolicy (e.g., fail-fast for event groups).</li>
+ *   <li><b>Callback side (direct-call)</b>—triggered directly by the platform when an event occurs (similar to {@code registerApiSurface},
+ *       not a collection-based extension point); overrides take effect immediately without registration.</li>
  * </ul>
  *
- * <p>与脚本侧能力的关系（可并用，插件侧优先级更高或更低视扩展点而定）：
+ * <p>Relationship with script-side capabilities (can be used together; plugin priority may be higher or lower depending on the extension point):
  * <ul>
- *   <li>全局绑定 / 输入别名 → {@link #registerBinding} / {@link #registerAdapters}；</li>
- *   <li>配方命名空间（{@code event.recipes.<ns>.<type>(...)}）→ {@link #registerRecipeNamespaces}
- *       （Java handler）/ {@link #registerRecipeSchemas}（schema 定义）/ 脚本侧
- *       {@code event.registerSchema}（运行时注册，优先级最高）；</li>
- *   <li>probe 类型声明 → {@link #registerProbeBackends} / {@link #registerTypeDocs} /
+ *   <li>Global bindings / input aliases → {@link #registerBinding} / {@link #registerAdapters};</li>
+ *   <li>Recipe namespaces ({@code event.recipes.<ns>.<type>(...)}) → {@link #registerRecipeNamespaces}
+ *       (Java handler) / {@link #registerRecipeSchemas} (schema definition) / script-side
+ *       {@code event.registerSchema} (runtime registration, highest priority);</li>
+ *   <li>Probe type declarations → {@link #registerProbeBackends} / {@link #registerTypeDocs} /
  *       {@link #registerNodeTypeDocs}。</li>
  * </ul>
  */
@@ -61,86 +61,86 @@ public interface NekoJSPlugin {
     int CORE_PRIORITY = Integer.MAX_VALUE;
 
     // =====================================================================================
-    // 注册面（收集型钩子）—— bootstrap 期收集，冲突由各通道 Point 的 MergePolicy 裁决
+    // Registration side (collection-based hooks): collected during bootstrap; conflicts are resolved by each channel's Point MergePolicy.
     // =====================================================================================
 
-    // ---- 事件组 ----
+    // ---- Event Groups ----
 
-    /** 注册服务端事件组（{@code ServerEvents.*}/{@code PlayerEvents.*} 等）。同名组 failFast。 */
+    /** Registers server event groups (e.g., {@code ServerEvents.*}/{@code PlayerEvents.*}). Groups with the same name fail fast. */
     default void registerEvents(EventGroupRegistry registry) {
     }
 
-    /** 注册客户端事件组（仅客户端运行时可见，如 {@code ClientEvents.*}）。同名组 failFast。 */
+    /** Registers client event groups (visible only in client runtime, e.g., {@code ClientEvents.*}). Fail-fast on same-name groups. */
     default void registerClientEvents(EventGroupRegistry registry) {
     }
 
-    // ---- 全局绑定与参数转换 ----
+    // ---- Global Bindings and Parameter Conversion ----
 
     /**
-     * 注册全局绑定（脚本可直接引用的全局名，如 {@code Item}/{@code Ingredient}/{@code RecipeSchema}）。
-     * 绑定可以是 Java 类、实例或 {@code Binding.of(...)} 显式声明值类型（供 preflight 校验）。
+     * Registers global bindings (global names directly referenced by scripts, e.g., {@code Item}, {@code Ingredient}, {@code RecipeSchema}).
+     * Bindings can be Java classes, instances, or explicitly declared value types via {@code Binding.of(...)} (for preflight validation).
      */
     default void registerBinding(BindingRegistry registry) {
     }
 
     /**
-     * 注册 JS↔Java 类型适配器（{@code string → ItemStack} 等参数自动转换）。
-     * 适配器同时驱动 probe 的输入别名（{@code $ItemStack_}）生成。
+     * Registers JS↔Java type adapters (automatic parameter conversion, e.g., {@code string → ItemStack}).
+     * Adapters also drive the generation of input aliases for the probe (e.g., {@code $ItemStack_}).
      */
     default void registerAdapters(JSTypeAdapterRegistry registry) {
     }
 
-    // ---- 脚本语言与文件属性 ----
+    // ---- Script Languages and File Attributes ----
 
     /**
-     * 注册脚本编译器（语言插件）。编译器在脚本加载/热重载时被调用。
-     * 内置语言经 common 插件注册，与第三方走同一路径。
+     * Registers script compilers (language plugins). Compilers are invoked during script loading/hot-reloading.
+     * Built-in languages are registered via the common plugin and follow the same path as third-party ones.
      */
     default void registerScriptCompilers(ScriptCompilerRegistry registry) {
     }
 
-    /** 注册脚本属性（{@code AFTER}/{@code MODLOADED}/{@code DISABLE}/{@code PRIORITY} 等文件头属性）。 */
+    /** Registers script attributes (e.g., {@code AFTER}, {@code MODLOADED}, {@code DISABLE}, {@code PRIORITY} file header attributes). */
     default void registerScriptProperty(ScriptPropertyRegistry registry) {
     }
 
-    // ---- 类型声明与文档（probe / 补全）----
+    // ---- Type Declarations and Documentation (probe / completion) ----
 
-    /** 注册类型文档（为脚本侧类型补充说明/示例，进入 probe 输出与补全）。 */
+    /** Registers type documentation (supplements explanations/examples for script-side types, included in probe output and completion). */
     default void registerTypeDocs(TypeDocsRegister registry) {
     }
 
     /**
-     * 注册 node 模块的补全声明（{@code declare module 'node:xxx' {...}}）。
-     * 与 {@link #registerNodeModules} 配对：前者提供模块实现，本方法提供模块类型声明。
+     * Registers completion declarations for node modules (e.g., {@code declare module 'node:xxx' {...}}).
+     * Paired with {@link #registerNodeModules}: the former provides the module implementation, this method provides the module type declaration.
      */
     default void registerNodeTypeDocs(TypeDocsRegister registry) {
     }
 
     /**
-     * 注册插件自定义 JS 模块（CommonJS 风格），脚本可通过 {@code require('moduleId')} 加载。
-     * 补全声明需另行经 {@link #registerNodeTypeDocs} 注册 {@code declare module} 声明。
+     * Registers plugin-custom JS modules (CommonJS style), loadable via {@code require('moduleId')} in scripts.
+     * Completion declarations must be registered separately via {@link #registerNodeTypeDocs} with {@code declare module} declarations.
      */
     default void registerNodeModules(NodeModuleRegister registry) {
     }
 
     /**
-     * 注册 probe backend（按 {@code (languageId, name)} 二维登记）。同一
-     * {@code (语言, 名字)} 在 bootstrap 结束时报冲突；命令 {@code /nekojs probe [language] [name]}
-     * 可指定运行哪些 backend。
+     * Registers probe backends (registered by {@code (languageId, name)}). The same
+     * {@code (language, name)} pair conflicts at the end of bootstrap; the command {@code /nekojs probe [language] [name]}
+     * can be used to specify which backends to run.
      */
     default void registerProbeBackends(ProbeBackendRegistry registry) {
     }
 
-    /** 注册 API surface 贡献（脚本可见的 Java 类型/符号的表面元数据；直调型，非收集式扩展点）。 */
+    /** Registers API surface contributions (surface metadata for script-visible Java types/symbols; direct-call, not a collection-based extension point). */
     default void registerApiSurface(ApiContributionRegistry registry) {
     }
 
-    // ---- 配方 ----
+    // ---- Recipes ----
 
     /**
-     * 注册配方命名空间 Java handler——{@code event.recipes.<namespace>.<method>(...)} 的方法实现层。
-     * handler 的 public 方法即脚本可调用的配方方法（如 {@code shaped/shapeless/smelting}），
-     * 方法参数经已注册的 {@code JSTypeAdapter} 自动转换。
+     * Registers recipe namespace Java handlers—the method implementation layer for {@code event.recipes.<namespace>.<method>(...)}.
+     * Public handler methods are script-callable recipe methods (e.g., {@code shaped}, {@code shapeless}, {@code smelting}),
+     * with method arguments automatically converted via registered {@code JSTypeAdapter}s.
      * <pre>{@code
      * registry.register(new RecipeNamespaceEntry(
      *         "mytech",
@@ -152,27 +152,27 @@ public interface NekoJSPlugin {
     }
 
     /**
-     * 注册（或覆盖）配方类型 schema 定义——{@code event.recipes.<ns>.<type>(...)} 的字段与构造描述。
-     * 优先级（后者覆盖前者）：脚本侧 {@code event.registerSchema} &gt; data-driven &gt; 本方法（插件）
-     * &gt; 平台自动扫描。适用于修正自动扫描的字段误判、为无法自动扫描的类型提供精确 schema。
+     * Registers (or overrides) recipe type schema definitions—field and constructor descriptions for {@code event.recipes.<ns>.<type>(...)}.
+     * Priority (the latter overrides the former): script-side {@code event.registerSchema} > data-driven > this method (plugin)
+     * > platform auto-scanning. Useful for fixing field misidentifications during auto-scanning or providing precise schemas for types that cannot be auto-scanned.
      */
     default void registerRecipeSchemas(RecipeSchemaRegister registry) {
     }
 
     /**
-     * 注册配方生命周期钩子。默认实现注册 {@link #beforeRecipeLoading} 和 {@link #afterRecipes}，
-     * 插件按需覆盖这两个便捷方法即可。
+     * Registers recipe lifecycle hooks. Default implementation registers {@link #beforeRecipeLoading} and {@link #afterRecipes};
+     * plugins can override these convenient methods as needed.
      */
     default void registerRecipeLifecycleHooks(RecipeLifecycleRegister registry) {
         registry.beforeRecipeLoading(this::beforeRecipeLoading);
         registry.afterRecipes(this::afterRecipes);
     }
 
-    // ---- 生命周期注册（便捷默认实现）----
+    // ---- Lifecycle Registration (Convenient Default Implementation) ----
 
     /**
-     * 注册插件生命周期钩子。默认实现注册 {@link #init} / {@link #initStartup} / {@link #afterInit}
-     * 以及 {@link #beforeScriptsLoaded} / {@link #afterScriptsLoaded}，插件按需覆盖即可。
+     * Registers plugin lifecycle hooks. Default implementation registers {@link #init} / {@link #initStartup} / {@link #afterInit}
+     * and {@link #beforeScriptsLoaded} / {@link #afterScriptsLoaded}; plugins can override as needed.
      */
     default void registerLifecycleHooks(PluginLifecycleRegister registry) {
         registry.onInit(this::init);
@@ -183,96 +183,96 @@ public interface NekoJSPlugin {
     }
 
     // =====================================================================================
-    // 回调面（直调型钩子）—— 事件发生时由平台触发，覆写即生效，无需注册
+    // Callback side (direct-call hooks)—triggered by the platform when an event occurs, override to take effect immediately, no registration required
     // =====================================================================================
 
-    /** 最早触发：plugin runtime bootstrap 完成后、startup 脚本加载前。 */
+    /** Triggered earliest: after plugin runtime bootstrap, before startup script loading. */
     default void init() {
     }
 
-    /** startup 脚本加载完成后触发。 */
+    /** Triggered after startup script loading completes. */
     default void initStartup() {
     }
 
-    /** 所有 mod 初始化完成（对应 NeoForge FMLLoadCompleteEvent）后触发。 */
+    /** Triggered after all mod initialization completes (corresponds to NeoForge FMLLoadCompleteEvent). */
     default void afterInit() {
     }
 
-    /** 每次某个类型的脚本加载前触发（含首次加载与完整 reload，不含单文件热重载）。 */
+    /** Triggered before scripts of a certain type load (includes initial load and full reload, excludes single-file hot-reload). */
     default void beforeScriptsLoaded(ScriptType type) {
     }
 
-    /** 每次某个类型的脚本加载后触发（含首次加载与完整 reload，不含单文件热重载）。 */
+    /** Triggered after scripts of a certain type load (includes initial load and full reload, excludes single-file hot-reload). */
     default void afterScriptsLoaded(ScriptType type) {
     }
 
-    /** 配方加载前触发（datagen 与脚本配方解析开始前）。 */
+    /** Triggered before recipe loading (before datagen and script recipe parsing begin). */
     default void beforeRecipeLoading(RecipeLifecycleContext context) {
     }
 
-    /** 全部配方注册完成后触发。 */
+    /** Triggered after all recipe registration completes. */
     default void afterRecipes(RecipeLifecycleContext context) {
     }
 
     /**
-     * 向 {@code MinecraftServer} 挂载自定义内存数据。首次访问 {@code server.data} 时由平台层触发。
-     * 纯内存、不持久化；需要持久化请用 {@code pdata}。需要宿主时：{@code (MinecraftServer) data.getParent()}。
+     * Mounts custom memory data to {@code MinecraftServer}. Triggered by the platform on the first access to {@code server.data}.
+     * Purely in-memory, not persisted; use {@code pdata} for persistence. Use {@code (MinecraftServer) data.getParent()} when the host is needed.
      */
     default void attachServerData(AttachedData<?> data) {
     }
 
-    /** 向 {@code Level} 挂载自定义内存数据，首次访问 {@code level.data} 时触发。 */
+    /** Mounts custom memory data to {@code Level}. Triggered by the platform on the first access to {@code level.data}. */
     default void attachLevelData(AttachedData<?> data) {
     }
 
-    /** 向玩家挂载自定义内存数据（进入世界时由平台层触发；纯内存、不持久化）。 */
+    /** Mounts custom memory data to player (triggered by platform upon entering world; purely in-memory, not persisted). */
     default void attachPlayerData(AttachedData<?> data) {
     }
 
     /**
-     * 生成 datapack 数据（写入 {@code <gameDir>/nekojs/data}，随服务器资源 reload 生效）。
-     * 在 {@code ServerEvents.generateData} 脚本事件之前触发，与脚本共享同一 generator 实例。
+     * Generates datapack data (written to {@code <gameDir>/nekojs/data}, takes effect on server resource reload).
+     * Triggered before {@code ServerEvents.generateData} script events, sharing the same generator instance with scripts.
      */
     default void generateData(DataGeneratorJS generator) {
     }
 
     /**
-     * 生成资源包资产（写入 {@code <gameDir>/nekojs/assets}，随客户端资源 reload 生效）。
-     * 在 {@code ClientEvents.generateAssets} 脚本事件之前触发，与脚本共享同一 generator 实例。
+     * Generates resource pack assets (written to {@code <gameDir>/nekojs/assets}, takes effect on client resource reload).
+     * Triggered before {@code ClientEvents.generateAssets} script events, sharing the same generator instance with scripts.
      */
     default void generateAssets(DataGeneratorJS generator) {
     }
 
     /**
-     * 生成语言条目（按语言代码聚合，合并写入 {@code <gameDir>/nekojs/assets/lang/<lang>.json}）。
-     * 平台对 {@link #generatedLangs()} 与本方法调用的语言集合逐语言各触发一次。
+     * Generates language entries (aggregated by language code, merged and written to {@code <gameDir>/nekojs/assets/lang/<lang>.json}).
+     * The platform triggers this once per language, for the union of languages in {@link #generatedLangs()} and this method's call.
      */
     default void generateLang(LangGeneratorJS generator) {
     }
 
     /**
-     * 声明本插件需要 {@link #generateLang} 被调用的语言代码（如 {@code en_us}）。
+     * Declares language codes for which this plugin's {@link #generateLang} should be called (e.g., {@code en_us}).
      *
-     * <p>直调型钩子（回调面），与 {@code generateLang} 同类——覆写即生效，<b>不需要</b>配对扩展点，
-     * 也<b>不是</b>通用资源声明系统。
+     * <p>Direct-call hook (callback side), similar to {@code generateLang}—override to take effect, <b>no pairing</b> extension point required,
+     * and it is <b>not</b> a general-purpose resource declaration system.
      *
-     * <p>默认 {@code Set.of("en_us")}：即使没有任何脚本注册 {@code ClientEvents.lang} 监听器，
-     * 插件回调也不会被静默跳过。需要 en_us 之外的语言时必须显式声明；平台把本声明与脚本
-     * keyed listener 的语言取并集后逐语言触发。返回值必须是合法语言代码
-     * （{@code [A-Za-z0-9_]{1,64}}）；非法值在写入任何语言文件之前被拒绝。
+     * <p>Default {@code Set.of("en_us")}: even if no script registers a {@code ClientEvents.lang} listener,
+     * plugin callbacks will not be silently skipped. Explicit declaration is required for languages other than en_us; the platform unions
+     * this declaration with languages from script-keyed listeners and triggers for each.
+     * Return value must be a valid language code ({@code [A-Za-z0-9_]{1,64}}); invalid values are rejected before writing any language file.
      *
-     * <p><b>{@link #generateLang} 按并集逐语言触发</b>：某一轮一旦出现多个语言（含其它插件的
-     * 声明或脚本 listener 的语言），本插件的 {@code generateLang} 会对<b>每个</b>语言各调用一次。
-     * 只产出单一语言的插件必须在回调里按 {@link LangGeneratorJS#getLang()} 过滤，例如
-     * {@code if (!"ja_jp".equals(generator.getLang())) return;}；否则其条目会被写进所有语言文件。
+     * <p><b>{@link #generateLang} is triggered per language for the union</b>: once multiple languages appear in a round (including others' declarations
+     * or script listener languages), this plugin's {@code generateLang} will be called once for <b>each</b> language.
+     * Plugins producing only a single language must filter by {@link LangGeneratorJS#getLang()} in the callback, e.g.,
+     * {@code if (!"ja_jp".equals(generator.getLang())) return;}; otherwise, its entries will be written into all language files.
      */
     default Set<String> generatedLangs() {
         return Set.of("en_us");
     }
 
     /**
-     * jsconfig.json 写盘前修改其模型（paths/include/typeRoots 等）。每个 ScriptType（env）各触发一次，
-     * 对应 server/client/startup/test 脚本目录。
+     * Modifies the jsconfig.json model before writing to disk (e.g., paths/include/typeRoots). Triggered once per ScriptType (env),
+     * corresponding to server/client/startup/test script directories.
      */
     default void modifyWorkspaceConfig(JSConfigModel model, String env) {
     }

@@ -16,31 +16,34 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * 票 17 wire fixture：NekoScriptPayload 与本票触达的基础 play/configuration payload 的
- * id、codec、字段顺序与线格式以旧 wire bytes 的 golden 十六进制钉住（两 loader 共用
- * 同一 payload 类与 codec，本测试在全部节点编译运行）。
+ * Wire fixture for {@code NekoScriptPayload} and the basic play/configuration payloads covered
+ * here: golden hex from the old wire bytes pins their ids, codecs, field order and wire format.
+ * Both loaders share the same payload classes and codecs, so the test compiles and runs on every
+ * node.
  *
- * <p>golden 常量来自 eba89230 基线在 26.1.2 active 节点（直编共享树）的实测编码字节
- * （capture 输出归档见 baseline 证据目录），同时做等价解码对照：golden bytes 经本节点
- * codec 解码必须还原出相同 payload——「新旧 fixture 字节或等价解码对照一致」的两个方向
- * 都被钉住。修改任何 payload 的 id、字段顺序或 codec 写法都会使本测试变红——那是受管
- * 变更，须走 wire 迁移表与 fixture gate，不得顺手改 golden。
+ * <p>The golden constants are measured encode bytes from baseline eba89230 on the 26.1.2 active
+ * node (compiled directly against the shared tree). The test also decodes the golden bytes with
+ * this node's codec and requires the same payload back, so both the bytes and the equivalent
+ * round trip are pinned. Changing the id, the field order or the codec of any payload turns this
+ * test red. That is an intended change: it has to go through the wire migration table and the
+ * fixture gate, and no golden may be edited in passing.
  *
- * <p>字段顺序在 hex 中的可读投影（本依赖集五个节点的 StreamEncoder.encode 均为 buf 先、值后）：
+ * <p>How the field order reads in the hex (all five nodes of this dependency set encode the
+ * buffer first and the value after it in {@code StreamEncoder.encode}):
  * <ul>
- *   <li>script_payload：UTF8(channel) + NBT(data)；</li>
- *   <li>pdata_sync：varint(entityId) + varint(revision) + NBT(data)；</li>
- *   <li>client_data_sync：UTF8(key) + UTF8(json)；</li>
- *   <li>show_error_list：varint(数量) + [UTF8(id) UTF8(path) int(line) int(count)
- *       UTF8(message) UTF8(fullDetails)] + boolean(openIfMissing)；</li>
- *   <li>pack_hashes：varint(数量) + [UTF8(syncId) + UTF8(hash)]；</li>
- *   <li>pack_bundle：varint(包数) + [UTF8(syncId) UTF8(scope) byteArray(manifest)
- *       varint(文件数) + [UTF8(relPath) byteArray(bytes)]]。</li>
+ *   <li>script_payload: UTF8(channel) + NBT(data);</li>
+ *   <li>pdata_sync: varint(entityId) + varint(revision) + NBT(data);</li>
+ *   <li>client_data_sync: UTF8(key) + UTF8(json);</li>
+ *   <li>show_error_list: varint(count) + [UTF8(id) UTF8(path) int(line) int(count)
+ *       UTF8(message) UTF8(fullDetails)] + boolean(openIfMissing);</li>
+ *   <li>pack_hashes: varint(count) + [UTF8(syncId) + UTF8(hash)];</li>
+ *   <li>pack_bundle: varint(packs) + [UTF8(syncId) UTF8(scope) byteArray(manifest)
+ *       varint(files) + [UTF8(relPath) byteArray(bytes)]]</li>
  * </ul>
  */
 class PayloadWireFormatGoldenTest {
 
-    // ---- golden（eba89230 实测；样本：channel/my_channel、tag={mana:7,name:neko} 等，见各用例） ----
+    // ---- goldens (measured on eba89230; samples: channel/my_channel, tag={mana:7,name:neko}, etc., see each case) ----
 
     private static final String SCRIPT_PAYLOAD_ID = "nekojs:script_payload";
     private static final String SCRIPT_PAYLOAD_HEX =
@@ -66,7 +69,7 @@ class PayloadWireFormatGoldenTest {
     private static final String PACK_BUNDLE_HEX =
             "01067061636b5f6106474c4f42414c077b2276223a317d010c736372697074732f612e6a7303783d31";
 
-    // ---- 样本构造（与 capture 时相同） ----
+    // ---- Sample construction (the same as at capture time) ----
 
     private static CompoundTag sampleTag() {
         CompoundTag tag = new CompoundTag();
@@ -88,7 +91,8 @@ class PayloadWireFormatGoldenTest {
         return new PackBundlePayload(List.of(pack));
     }
 
-    // ---- 编解码 helper（decode 单参；encode 本依赖集五节点统一 buf 先、值后——26.1/26.2/1.21.1 实测同形） ----
+    // ---- Codec helpers (decode takes one argument; encode puts the buffer first and the value
+    // after it on all five nodes of this dependency set, measured the same on 26.1/26.2/1.21.1) ----
 
     private static String drainHex(ByteBuf buf) {
         byte[] bytes = new byte[buf.readableBytes()];
@@ -174,7 +178,7 @@ class PayloadWireFormatGoldenTest {
         }
     }
 
-    // ---- id 钉住 ----
+    // ---- Pinned ids ----
 
     @Test
     void payloadIdsStayOnLegacyWire() {
@@ -186,7 +190,7 @@ class PayloadWireFormatGoldenTest {
         assertEquals(PACK_BUNDLE_ID, PackBundlePayload.TYPE.id().toString());
     }
 
-    // ---- 编码面：golden hex 逐字节一致 ----
+    // ---- Encoding: byte-for-byte match with the golden hex ----
 
     @Test
     void scriptPayloadEncodesToGoldenWireBytes() {
@@ -222,7 +226,7 @@ class PayloadWireFormatGoldenTest {
         assertEquals(PACK_BUNDLE_HEX, encodePackBundleHex(sampleBundle()));
     }
 
-    // ---- 解码面：golden bytes 等价解码对照（等价 payload 还原） ----
+    // ---- Decode side: decode the golden bytes and compare the result with an equivalent payload ----
 
     @Test
     void goldenScriptPayloadBytesDecodeToEquivalentPayload() {

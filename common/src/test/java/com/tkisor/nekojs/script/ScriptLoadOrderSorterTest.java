@@ -15,8 +15,9 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * {@link ScriptLoadOrderSorter} 的单元测试：直接构造 {@link ScriptContainer}（无需 Graal Context），
- * 覆盖 after 拓扑排序、priority 主序、宽松引用解析与确定性回退。
+ * Unit tests for {@link ScriptLoadOrderSorter}: they build {@link ScriptContainer} instances directly,
+ * without a Graal Context, and cover after topological ordering, priority as the primary order,
+ * lenient reference resolution, and the deterministic fallback.
  */
 class ScriptLoadOrderSorterTest {
 
@@ -27,7 +28,7 @@ class ScriptLoadOrderSorterTest {
     static void init() {
         TestPlatformInit.ensureInitialized();
         var impl = new ScriptPropertyRegistry.Impl();
-        // 与 NekoJSCorePlugin 的注册顺序保持一致，保证 ordinal 语义相同
+        // Same registration order as NekoJSCorePlugin, so ordinals mean the same thing
         impl.register(ScriptProperty.AFTER);
         impl.register(ScriptProperty.MODLOADED);
         impl.register(ScriptProperty.DISABLE);
@@ -50,9 +51,10 @@ class ScriptLoadOrderSorterTest {
     }
 
     /**
-     * 包脚本（GLOBAL 布局 {@code <root>/packs/<id>/<type>_scripts/<rel>}）：ScriptId path 带
-     * {@code packs/<id>/} 前缀（与 {@link com.tkisor.nekojs.core.ScriptLocator#packContainer}
-     * 的拼法一致）。路径无需真实存在——sorter 只读 id/properties。
+     * Creates a pack script in the GLOBAL layout {@code <root>/packs/<id>/<type>_scripts/<rel>}. The
+     * {@code ScriptId} path carries the {@code packs/<id>/} prefix, spelled the same way as
+     * {@link com.tkisor.nekojs.core.ScriptLocator#packContainer}. The path does not have to exist:
+     * the sorter only reads the id and the properties.
      */
     private static ScriptContainer packScript(String packId, String rel, int priority, String... after) {
         Path packScriptsDir = com.tkisor.nekojs.core.fs.NekoJSPaths.get().root()
@@ -74,7 +76,8 @@ class ScriptLoadOrderSorterTest {
         return ScriptLoadOrderSorter.applyAfterOrder(scripts, ScriptContainer::shouldRun);
     }
 
-    /** 与生产 keyOf 同源：ScriptId path 去掉类型段（平铺 {@code foo.js}、包 {@code packs/<id>/foo.js}）。 */
+    /** Derives keys the same way the production keyOf does: the ScriptId path without its type
+     * segment (flat {@code foo.js}, pack {@code packs/<id>/foo.js}). */
     private static List<String> keys(List<ScriptContainer> scripts) {
         return scripts.stream().map(s -> {
             String path = s.id.path();
@@ -90,27 +93,28 @@ class ScriptLoadOrderSorterTest {
         return keys(batch);
     }
 
-    // ---- (a) after 在同 priority 内反转字典序 ----
+    // ---- (a) after reverses lexicographic order within the same priority ----
 
     @Test
     void afterReversesOrderWithinSamePriority() {
-        // 发现顺序（字典序）为 a.js → z.js；after: z.js 使 z.js 先于 a.js
+        // Discovery order (lexicographic) is a.js -> z.js; after: z.js makes z.js run before a.js
         assertIterableEquals(
                 List.of("z.js", "a.js"),
                 sortedKeys(script("a.js", 0, "z.js"), script("z.js", 0)));
     }
 
-    // ---- (b) priority 不同时 after 被忽略 ----
+    // ---- (b) after is ignored when priorities differ ----
 
     @Test
     void afterIgnoredWhenPrioritiesDiffer() {
-        // b.js priority 更高且声明 after: a.js，但跨 priority 不建边，b 仍先加载
+        // b.js has a higher priority and declares after: a.js, but no edge is built across priorities,
+        // so b.js still loads first
         assertIterableEquals(
                 List.of("b.js", "a.js"),
                 sortedKeys(script("a.js", 0), script("b.js", 10, "a.js")));
     }
 
-    // ---- (c) 未知引用回退且不报错 ----
+    // ---- (c) A missing reference falls back without throwing ----
 
     @Test
     void missingAfterReferenceFallsBackWithoutError() {
@@ -126,7 +130,7 @@ class ScriptLoadOrderSorterTest {
                 "warning should mention the unresolved reference: " + result.describe());
     }
 
-    // ---- (d) 循环不抛异常且顺序确定 ----
+    // ---- (d) A cycle throws nothing and keeps a deterministic order ----
 
     @Test
     void afterCycleDoesNotThrowAndKeepsStableOrder() {
@@ -140,7 +144,7 @@ class ScriptLoadOrderSorterTest {
         assertTrue(result.hasProblems());
         assertTrue(result.describe().contains("循环"), "warning should mention the cycle: " + result.describe());
 
-        // 确定性：重排另一批相同输入，结果一致
+        // Determinism: sorting an equivalent batch again gives the same result
         List<ScriptContainer> again = new ArrayList<>(List.of(
                 script("a.js", 0, "b.js"),
                 script("b.js", 0, "a.js")));
@@ -148,13 +152,14 @@ class ScriptLoadOrderSorterTest {
         assertIterableEquals(keys(batch), keys(again));
     }
 
-    // ---- 部分环：整组回退原始稳定顺序 ----
+    // ---- Partial cycle: the whole group falls back to the original stable order ----
 
     @Test
     void partialCycleRestoresWholeGroupToOriginalOrder() {
-        // 原始顺序 a b c d；a after b、b after a 成环；c after b 依赖环中成员。
-        // 文档承诺「循环依赖回退到原始稳定顺序」应作用于整组，而不是把环成员
-        // 追加到已排序节点之后（后者会把无关的 d 挤到最前，且破坏 after 语义）。
+        // Original order a b c d; a after b and b after a form a cycle; c after b depends on a member
+        // of the cycle. The documented promise that a cyclic dependency falls back to the original
+        // stable order applies to the whole group, not by appending the cycle members after the
+        // sorted nodes (that would push the unrelated d to the front and break the after semantics).
         List<ScriptContainer> batch = new ArrayList<>(List.of(
                 script("a.js", 0, "b.js"),
                 script("b.js", 0, "a.js"),
@@ -169,11 +174,11 @@ class ScriptLoadOrderSorterTest {
                 "warning should mention the cycle: " + result.describe());
     }
 
-    // ---- 引用解析的宽松处理 ----
+    // ---- Lenient reference resolution ----
 
     @Test
     void afterDotSlashResolvesRelativeToDeclaringDirectory() {
-        // ./init.js 相对 sub/main.js 所在目录 → sub/init.js
+        // ./init.js resolves against the directory of sub/main.js -> sub/init.js
         assertIterableEquals(
                 List.of("sub/init.js", "sub/main.js"),
                 sortedKeys(script("sub/main.js", 0, "./init.js"), script("sub/init.js", 0)));
@@ -181,7 +186,7 @@ class ScriptLoadOrderSorterTest {
 
     @Test
     void afterAcceptsNekojsAndTypePrefixes() {
-        // nekojs/server/b.js 与 server/b.js 都应解析为根目录下的 b.js
+        // Both nekojs/server/b.js and server/b.js resolve to b.js in the root directory
         assertIterableEquals(
                 List.of("b.js", "a.js"),
                 sortedKeys(script("a.js", 0, "nekojs/server/b.js"), script("b.js", 0)));
@@ -204,13 +209,13 @@ class ScriptLoadOrderSorterTest {
     void afterReferenceToDisabledScriptIsSilentlyIgnored() {
         ScriptContainer disabled = script("lib/init.js", 0);
         disabled.properties.put(ScriptProperty.DISABLE, true);
-        // 引用已知但目标不会执行 → 不建边、不告警
+        // The reference is known but the target will not run -> no edge, no warning
         assertIterableEquals(
                 List.of("main.js", "lib/init.js"),
                 sortedKeys(script("main.js", 0, "lib/init.js"), disabled));
     }
 
-    // ---- 稳定性 ----
+    // ---- Stability ----
 
     @Test
     void unrelatedScriptsKeepDiscoveryOrder() {
@@ -219,12 +224,12 @@ class ScriptLoadOrderSorterTest {
                 sortedKeys(script("a.js", 0), script("b.js", 0), script("c.js", 0)));
     }
 
-    // ---- 包脚本：key 从 ScriptId 派生，不再产生 ../packs/... ----
+    // ---- Pack scripts: the key comes from the ScriptId, so no ../packs/... prefix ----
 
     @Test
     void afterReferenceIntoPackScriptResolves() {
-        // 平铺脚本引用包内脚本：after: packs/mylib/init.js 必须命中包脚本的 key。
-        // 旧实现 keyOf 用 type.path.relativize → 包脚本 key 为 ../packs/... 被拒，引用恒未知。
+        // A flat script referencing a pack script: after: packs/mylib/init.js must hit the pack script's
+        // key.
         List<ScriptContainer> batch = new ArrayList<>(List.of(
                 script("main.js", 0, "packs/mylib/init.js"),
                 packScript("mylib", "init.js", 0)));
@@ -235,7 +240,7 @@ class ScriptLoadOrderSorterTest {
 
     @Test
     void dotSlashInsidePackResolvesRelativeToPackDirectory() {
-        // 包内 ./init.js 相对 packScriptsDir 下的声明脚本目录解析
+        // Inside a pack, ./init.js resolves against the declaring script's directory under packScriptsDir
         List<ScriptContainer> batch = new ArrayList<>(List.of(
                 packScript("mylib", "sub/main.js", 0, "./init.js"),
                 packScript("mylib", "sub/init.js", 0)));

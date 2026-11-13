@@ -19,16 +19,18 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * 票 29 AC2/AC4：plugin-only 语言声明的确定性语言集合。
+ * Deterministic language set for plugin-only language declarations.
  *
- * <p>覆盖 {@link PluginGenerationHooks#resolveGeneratedLangs} 四条语义：
- * 默认 {@code en_us} 使无脚本 listener 时插件回调不被静默跳过、插件声明与脚本 keyed
- * listener 语言的字典序并集、非法语言在写入任何文件之前整批拒绝、单个插件声明失败只
- * 作废它自己而不污染其他插件。
+ * <p>Covers four behaviors of {@link PluginGenerationHooks#resolveGeneratedLangs}: the default
+ * {@code en_us} keeps plugin callbacks from being silently skipped when no script listener exists,
+ * the sorted union of plugin declarations with the script keyed listener languages, whole-batch
+ * rejection of an invalid language before any file is written, and a single plugin's failed
+ * declaration invalidating only that plugin without touching the others.
  *
- * <p>插件清单的注入方式照 {@link PluginGenerationHooksTest} 的既有 test seam：反射备份并
- * 清空 {@link NekoJSBasePluginManager} 的私有静态 {@code ENTRIES}（生产代码里已注明
- * "non-final ONLY as a private test seam"），不新增也不改动生产 API。
+ * <p>Plugins are injected the same way as in {@link PluginGenerationHooksTest}: reflection backs up
+ * and clears the private static {@code ENTRIES} of {@link NekoJSBasePluginManager}; production code
+ * documents the field as non-final only so tests can swap it. No production API is added or
+ * changed.
  */
 class Ticket29GeneratedLangsTest {
 
@@ -72,8 +74,9 @@ class Ticket29GeneratedLangsTest {
     void defaultsToEnUsSoPluginCallbacksAreNotGatedByScriptListeners() {
         NekoJSBasePluginManager.registerClass(DefaultLangsPlugin.class);
 
-        // 脚本侧没有任何 ClientEvents.lang listener：旧实现下 registeredKeys() 为空，
-        // generateLang 插件回调因此从不触发。默认声明必须让 en_us 仍然在集合里。
+        // No script-side ClientEvents.lang listener exists here, so with no default declaration
+        // registeredKeys() is empty and the generateLang plugin callback never fires; the default
+        // must keep en_us in the set
         List<String> langs = PluginGenerationHooks.resolveGeneratedLangs(Set.of());
 
         assertTrue(langs.contains("en_us"),
@@ -89,7 +92,8 @@ class Ticket29GeneratedLangsTest {
 
         List<String> first = PluginGenerationHooks.resolveGeneratedLangs(
                 Set.of("sv_se", "en_us", "de_de"));
-        // 同样三个脚本键，换个传入顺序：结果必须逐元素相等（TreeSet 归一，不随输入顺序漂移）。
+        // The same three script keys in another input order: the result must be equal element by
+        // element (TreeSet normalizes it, so input order does not matter).
         List<String> second = PluginGenerationHooks.resolveGeneratedLangs(
                 Set.of("de_de", "en_us", "sv_se"));
 
@@ -141,7 +145,7 @@ class Ticket29GeneratedLangsTest {
         NekoJSBasePluginManager.registerClass(ThrowingLangsPlugin.class);
         NekoJSBasePluginManager.registerClass(TwoLangPlugin.class);
 
-        // 返回而非抛出本身就是第一条区分：整批失败会抛 IllegalStateException。
+        // Returning instead of throwing is the first difference: a whole-batch failure throws IllegalStateException.
         List<String> langs = PluginGenerationHooks.resolveGeneratedLangs(Set.of());
 
         assertEquals(List.of("fr_fr", "ja_jp"), langs,
@@ -163,14 +167,14 @@ class Ticket29GeneratedLangsTest {
                 "a null declaration must be reported as null: " + error.getMessage());
     }
 
-    /* ================= 桩插件（经 NekoJSBasePluginManager.registerClass 注入） ================= */
+    /* ================= Stub plugins (injected through NekoJSBasePluginManager.registerClass) ================= */
 
-    /** 不覆写 generatedLangs()：走 default 的 Set.of("en_us")。 */
+    /** Overrides no generatedLangs(): the default returns Set.of("en_us"). */
     @RegisterNekoJSPlugin(priority = 1000)
     public static class DefaultLangsPlugin implements NekoJSPlugin {
     }
 
-    /** 显式声明两种非英语言，用于证明声明面生效。 */
+    /** Declares two non-English languages explicitly, showing that the declarations take effect. */
     @RegisterNekoJSPlugin(priority = 1000)
     public static class TwoLangPlugin implements NekoJSPlugin {
         @Override
@@ -179,7 +183,7 @@ class Ticket29GeneratedLangsTest {
         }
     }
 
-    /** 声明含非法 code（含空格）。 */
+    /** Declares an invalid code that contains a space. */
     @RegisterNekoJSPlugin(priority = 1000)
     public static class InvalidLangPlugin implements NekoJSPlugin {
         @Override
@@ -188,7 +192,7 @@ class Ticket29GeneratedLangsTest {
         }
     }
 
-    /** 声明阶段抛异常：只有本插件的声明被作废。 */
+    /** Throws while declaring: only this plugin's declarations are dropped. */
     @RegisterNekoJSPlugin(priority = 1000)
     public static class ThrowingLangsPlugin implements NekoJSPlugin {
         @Override
@@ -197,7 +201,7 @@ class Ticket29GeneratedLangsTest {
         }
     }
 
-    /** 返回 null：按违规归因。 */
+    /** Returns null, which is attributed to this plugin as a violation. */
     @RegisterNekoJSPlugin(priority = 1000)
     public static class NullLangsPlugin implements NekoJSPlugin {
         @Override

@@ -1,4 +1,4 @@
-// TODO(fabric): fabric 侧还没有对应实现，整文件守卫等移植完成后去掉
+// fabric has no matching implementation yet; remove this whole-file guard once the port lands
 //? if neoforge {
 package com.tkisor.nekojs.platform;
 
@@ -23,23 +23,26 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * 护栏：mixin 目标静态解析——mixin 层此前零自动化验证。
+ * Guard: static resolution of mixin targets. The mixin layer had no automated verification before.
  *
- * <p>mixin 注入失败只在运行期爆（production 与 dev 的失败面还不同）。本测试解析每个 mixin
- * 类的 .class 字节（{@link ClassFileAnnotations}），逐条验证：
+ * <p>A broken mixin injection only fails at runtime, and production and dev fail differently. This
+ * test parses the .class bytes of every mixin class ({@link ClassFileAnnotations}) and checks:
  * <ol>
- *   <li>{@code @Mixin} 目标类在 classpath 上存在；</li>
- *   <li>所有注入注解（@Inject/@Redirect/@ModifyArg/@ModifyArgs/@ModifyVariable/@ModifyConstant）
- *       的 {@code method} 目标（含描述符时按描述符精确匹配）存在于目标类；</li>
- *   <li>{@code @At("INVOKE"/"FIELD")} 的 target 成员引用存在——At 目标拼错是 mixin 静默失败
- *       的最常见来源；</li>
- *   <li>{@code @Shadow}（字段/方法，含 aliases）与 {@code @Overwrite} 按名存在于目标类
- *       （描述符因泛型擦除只按名比对，避免误报）。</li>
+ *   <li>the {@code @Mixin} target class exists on the classpath;</li>
+ *   <li>the {@code method} target of every injection annotation
+ *       (@Inject/@Redirect/@ModifyArg/@ModifyArgs/@ModifyVariable/@ModifyConstant) exists on the
+ *       target class; when a descriptor is present it must match exactly;</li>
+ *   <li>the member referenced by {@code @At("INVOKE"/"FIELD")} exists — a mistyped At target is
+ *       the most common cause of silent mixin failure;</li>
+ *   <li>{@code @Shadow} (fields/methods, aliases included) and {@code @Overwrite} exist by name on
+ *       the target class (descriptors are compared by name only because generics are erased,
+ *       which avoids false reports).</li>
  * </ol>
  *
- * <p>必须走字节而不是反射：ModDev 的 test 环境会用 agent 在内存里改写 mixin 类（注解
- * 会被清空）；某些 mixin 实现的注解只有 CLASS retention，反射同样读不到。字节解析
- * 两条路都通。各平台从自己的 classpath 读同名配置。
+ * <p>Bytes, not reflection, are required: ModDev's test environment rewrites mixin classes in
+ * memory with an agent (their annotations are cleared), and some mixin implementations only keep
+ * CLASS retention annotations, which reflection cannot read either. Parsing bytes works for both.
+ * Each platform reads the same-named config from its own classpath.
  */
 class MixinTargetResolutionTest {
 
@@ -59,7 +62,7 @@ class MixinTargetResolutionTest {
 
     private static final Set<String> INVOKE_ATS = Set.of("INVOKE", "INVOKE_ASSIGN", "INVOKE_STRING");
 
-    /** 目标类字节缓存：多个 mixin/注入点会反复查同一个类。 */
+    /** Cache of target class bytes: several mixins and injection points look up the same class repeatedly. */
     private final Map<String, ClassFileAnnotations.ClassData> targetCache = new HashMap<>();
 
     @Test
@@ -97,7 +100,7 @@ class MixinTargetResolutionTest {
                         + String.join("\n  ", failures));
     }
 
-    // ==================== 单个 mixin 的验证 ====================
+    // ==================== Verifying a single mixin ====================
 
     private int verifyMixin(String internalName, ClassFileAnnotations.ClassData data, List<String> failures) {
         List<ClassFileAnnotations.AnnotationData> mixinAnnos = ofType(data.annotations(), MIXIN);
@@ -107,8 +110,8 @@ class MixinTargetResolutionTest {
         }
         ClassFileAnnotations.AnnotationData mixin = mixinAnnos.getFirst();
 
-        // @Mixin(value = {A.class}, targets = {"b.C"})：value 成员是 Class 字面量（'c' 标签，
-        // 解析出来带 L...; 包装），targets 是点分字符串——统一成内部名
+        // @Mixin(value = {A.class}, targets = {"b.C"}): the value member is a Class literal ('c' tag, parsed
+        // with L...; wrapping) and targets holds dotted strings. Normalize both to internal names.
         Set<String> targets = new HashSet<>();
         for (String v : mixin.memberStrings("value")) targets.add(normalizeInternalName(v));
         for (String v : mixin.memberStrings("targets")) targets.add(normalizeInternalName(v));
@@ -219,7 +222,8 @@ class MixinTargetResolutionTest {
                                           ClassFileAnnotations.MemberData method,
                                           List<ClassFileAnnotations.ClassData> targets,
                                           List<String> failures) {
-        // 无显式 value 时名字映射规则复杂（get/set/is 前缀剥离），宁可不查也不误报
+        // Without an explicit value the name mapping rules are complex (get/set/is prefix stripping),
+        // so skip the check rather than report a false miss
         if (value == null || value.isEmpty()) return 0;
         boolean found = anyTargetHasMethod(targets, value) || anyTargetHasField(targets, value);
         if (!found) {
@@ -228,7 +232,10 @@ class MixinTargetResolutionTest {
         return 1;
     }
 
-    /** At 成员引用：INVOKE → 方法（含描述符），FIELD → 字段。其它 shift 类型无成员。 */
+    /**
+     * At member reference: INVOKE means a method (descriptor included), FIELD means a field. Other
+     * shift types have no member.
+     */
     private String verifyAt(String context, String methodName, ClassFileAnnotations.AnnotationData at) {
         String target = at.memberString("target");
         String value = at.memberString("value");
@@ -251,7 +258,7 @@ class MixinTargetResolutionTest {
                     : context + ": @At INVOKE target not found: '" + target + "' on " + methodName;
         }
         if ("FIELD".equals(value)) {
-            // Lowner;name:type 或裸字段名
+            // Lowner;name:type or a bare field name
             String name = target;
             int colon = target.lastIndexOf(':');
             if (colon >= 0) name = target.substring(0, colon);
@@ -277,13 +284,13 @@ class MixinTargetResolutionTest {
         return null;
     }
 
-    // ==================== 目标查询 ====================
+    // ==================== Target lookup ====================
 
     private boolean memberExists(List<ClassFileAnnotations.ClassData> targets, MemberRef ref) {
         for (ClassFileAnnotations.ClassData target : targets) {
             for (ClassFileAnnotations.MemberData m : target.methods()) {
                 if (!m.name().equals(ref.name())) continue;
-                // 无描述符 / 描述符不完整 → 名字匹配即可；有完整描述符 → 精确匹配
+                // No descriptor or an incomplete one: a name match is enough. A complete descriptor must match exactly.
                 if (ref.descriptor() == null || !ref.descriptor().contains(")")) return true;
                 if (m.descriptor().equals(ref.descriptor())) return true;
             }
@@ -325,11 +332,11 @@ class MixinTargetResolutionTest {
         return cached;
     }
 
-    // ==================== 成员引用解析 ====================
+    // ==================== Member reference parsing ====================
 
     /**
-     * Mixin 成员引用：{@code Lowner;name(desc)ret} / {@code name(desc)ret} / {@code name}。
-     * 字段形式（{@code owner;name:type}）由 FIELD 分支单独处理。
+     * Mixin member reference: {@code Lowner;name(desc)ret} / {@code name(desc)ret} / {@code name}.
+     * The field form ({@code owner;name:type}) is handled by the FIELD branch.
      */
     record MemberRef(String owner, String name, String descriptor) {
         static MemberRef parse(String raw) {
@@ -350,7 +357,7 @@ class MixinTargetResolutionTest {
         }
     }
 
-    // ==================== 字节读取 ====================
+    // ==================== Byte reading ====================
 
     private static ClassFileAnnotations.ClassData readClass(String internalName) {
         InputStream in = MixinTargetResolutionTest.class.getClassLoader()

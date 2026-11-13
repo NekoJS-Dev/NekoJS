@@ -12,40 +12,45 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
 
 /**
- * 平台无关 builder 仓库（ADR-0004「先攒后建」的攒侧）：
- * 脚本收集期只收 {@link RegistryObjectBuilder} 与连带派生条目，对象创建推迟到
- * 平台 adapter 在各注册表 pass 的抽干期（以 Supplier 注册）。
+ * Platform-independent builder repository, the collecting side of "collect first, build later":
+ * while scripts are collected it only holds {@link RegistryObjectBuilder} instances and derived
+ * entries. Object creation is deferred to the platform adapter, which drains each registry's entries
+ * during that registry's pass by registering suppliers.
  *
- * <p>对象层冲突 fail-fast（ADR-0004 决策 5）：同注册表同 id 重复注册，
- * 不论主对象之间、主对象与派生条目之间还是派生条目之间，收集期即抛
- * {@link IllegalStateException}。
+ * <p>Object-level conflicts fail fast: a duplicate id in the same registry throws
+ * {@link IllegalStateException} during collection, whether the clash is between two main objects,
+ * between a main object and a derived entry, or between two derived entries.
  *
- * <p>ticket 15：主对象条目携带请求元信息（{@link Entry#typeName()} 命名/默认类型、
- * {@link Entry#origin()} 请求来源——糖方法 / 命名类型 / custom / 裸 supplier），
- * 供 Runtime 的 drain 观察结果（定义、注册表、节点、错误来源）与诊断使用。
+ * <p>A main entry carries request metadata: {@link Entry#typeName()} for the named or default type
+ * and {@link Entry#origin()} for where the request came from (sugar method, named type, custom or
+ * bare supplier). The Runtime drain and diagnostics use it to report the definition, registry,
+ * node and error source.
  */
 public final class RegistryRepository {
 
-    /** 连带派生条目：目标注册表 + 对象 id + 懒构建器 + 来源对象 id（诊断用）。 */
+    /** Derived entry: target registry, object id, lazy builder and the id of the source object, for
+     * diagnostics. */
     public record Additional(
             ResourceKey<? extends Registry<?>> registry,
             Identifier id,
             Supplier<?> supplier,
             Identifier source) {}
 
-    /** 主对象条目：builder + 请求元信息。 */
+    /** Main entry: the builder plus request metadata. */
     public record Entry(RegistryObjectBuilder<?> builder, String typeName, String origin) {}
 
     private final Map<ResourceKey<? extends Registry<?>>, LinkedHashMap<Identifier, Entry>> byRegistry =
             new LinkedHashMap<>();
     private final Map<ResourceKey<? extends Registry<?>>, List<Additional>> additionalByRegistry = new LinkedHashMap<>();
 
-    /** 收一条主对象 builder（保持收集序）。同注册表同 id 重复抛 {@link IllegalStateException}。 */
+    /** Adds one main builder, keeping collection order. A duplicate id in the same registry throws
+     * {@link IllegalStateException}. */
     public void add(ResourceKey<? extends Registry<?>> registry, RegistryObjectBuilder<?> builder) {
         add(registry, builder, defaultTypeName(builder), "direct");
     }
 
-    /** 收一条主对象 builder，携带类型名与请求来源（糖方法/命名类型/custom/裸 supplier）。 */
+    /** Adds one main builder together with its type name and request origin (sugar method, named type,
+     * custom or bare supplier). */
     public void add(
             ResourceKey<? extends Registry<?>> registry, RegistryObjectBuilder<?> builder, String typeName, String origin) {
         LinkedHashMap<Identifier, Entry> builders =
@@ -59,13 +64,15 @@ public final class RegistryRepository {
         builders.put(builder.id, new Entry(builder, typeName, origin));
     }
 
-    /** 抽干某注册表的全部主对象条目（移除并返回冻结快照，保持收集序；每 pass 只 drain 一次的攒侧保证）。 */
+    /** Drains all main entries of one registry: removes them and returns a frozen snapshot in collection
+     * order. This is the collecting-side guarantee that each pass drains once. */
     public List<Entry> drain(ResourceKey<? extends Registry<?>> registry) {
         LinkedHashMap<Identifier, Entry> builders = byRegistry.remove(registry);
         return builders == null ? List.of() : List.copyOf(builders.values());
     }
 
-    /** 收一条连带派生条目（builder 的 {@code handleAdditionalObjects} 回调投递）。冲突 fail-fast。 */
+    /** Adds one derived entry, delivered by a builder's {@code handleAdditionalObjects} callback. A
+     * conflict fails fast. */
     public void addAdditional(
             ResourceKey<? extends Registry<?>> registry, Identifier id, Supplier<?> supplier, Identifier source) {
         LinkedHashMap<Identifier, Entry> builders = byRegistry.get(registry);
@@ -81,27 +88,30 @@ public final class RegistryRepository {
         list.add(new Additional(registry, id, supplier, source));
     }
 
-    /** 抽干某注册表的全部连带派生条目（移除并返回冻结快照，保持投递序）。 */
+    /** Drains all derived entries of one registry: removes them and returns a frozen snapshot in delivery
+     * order. */
     public List<Additional> drainAdditional(ResourceKey<? extends Registry<?>> registry) {
         List<Additional> list = additionalByRegistry.remove(registry);
         return list == null ? List.of() : List.copyOf(list);
     }
 
-    /** 尚未被任何 pass 抽干的主对象（load-complete 诊断用：注册表名写错 / loader 未触发该 pass）。 */
+    /** Main objects no pass has drained yet, for the load-complete check: a misspelled registry name or a
+     * loader that never fires that pass. */
     public Map<ResourceKey<? extends Registry<?>>, List<Entry>> undrained() {
         Map<ResourceKey<? extends Registry<?>>, List<Entry>> copy = new LinkedHashMap<>();
         byRegistry.forEach((registry, builders) -> copy.put(registry, List.copyOf(builders.values())));
         return copy;
     }
 
-    /** 尚未投递的连带派生条目（load-complete 诊断用：目标注册表 pass 先于来源注册表）。 */
+    /** Derived entries not yet delivered, for the load-complete check: the target registry's pass ran
+     * before the source registry's. */
     public Map<ResourceKey<? extends Registry<?>>, List<Additional>> undeliveredAdditional() {
         Map<ResourceKey<? extends Registry<?>>, List<Additional>> copy = new LinkedHashMap<>();
         additionalByRegistry.forEach((registry, list) -> copy.put(registry, List.copyOf(list)));
         return copy;
     }
 
-    /** 主对象与派生条目是否都已清空。 */
+    /** Whether the main objects and the derived entries are both empty. */
     public boolean isEmpty() {
         return byRegistry.isEmpty() && additionalByRegistry.isEmpty();
     }

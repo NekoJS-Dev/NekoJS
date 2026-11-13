@@ -11,35 +11,40 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * 动态定义 builder 的公开成员契约（ticket 16，AC4/AC9）：以<b>反射</b>从 builder 类
- * 派生成员目录——同一份契约输入同时驱动脚本面 {@link DynamicBuilderSurface}
- * （runtime member：property 写入与显式 setter 调用转发到同一个 {@link Method}）、
- * definition fingerprint 的规范化读数、TS/Python declaration（经
- * {@link DynamicBuilderSurfaces} 派生的结构化条目），不手写第二份成员表。
+ * Public member contract of a dynamic definition builder. It derives the member directory from
+ * the builder class by <b>reflection</b>, and that single contract input drives the script-facing
+ * {@link DynamicBuilderSurface} (runtime members: a property write and an explicit setter call
+ * both forward to the same {@link Method}), the normalized readings of the definition
+ * fingerprint, and the TS/Python declarations (structured entries derived through
+ * {@link DynamicBuilderSurfaces}). There is no second hand-written member table.
  *
- * <p>分类规则与票 15 {@code RegistryBuilderContract} 同一约定（JavaBean 双形态，
- * 见 {@link DynamicDefinitionBuilder} 的命名决策）：
+ * <p>Members are classified under the same convention as {@code RegistryBuilderContract} (the two
+ * JavaBean forms, see the naming decision in {@link DynamicDefinitionBuilder}):
  * <ul>
- *   <li><b>可写属性</b>——{@code setXxx(T)} 与配套 {@code getXxx():T}（boolean 的
- *       {@code isXxx()}）同时存在。脚本端 {@code b.xxx = v}（ProxyObject putMember）
- *       与显式 {@code b.setXxx(v)}（方法成员）调用<b>同一个</b> setter
- *       {@link Method}，进入同一校验/规范化/指纹路径；</li>
- *   <li><b>只读属性</b>——有 getter 无 setter（动态 builder 当前没有，仍按规则分类）；</li>
- *   <li><b>方法</b>——其余 public 实例方法（含显式 setter 形态 {@code setXxx(v)} 本身）。</li>
+ *   <li><b>Writable property</b>: both {@code setXxx(T)} and the matching {@code getXxx():T}
+ *       (or {@code isXxx()} for boolean) exist. On the script side {@code b.xxx = v}
+ *       (ProxyObject putMember) and an explicit {@code b.setXxx(v)} (method member) call the same
+ *       setter {@link Method} and go through the same validation, normalization and fingerprint
+ *       path;</li>
+ *   <li><b>Read-only property</b>: a getter without a setter (none exist on the current dynamic
+ *       builders, but the rule still classifies them);</li>
+ *   <li><b>Method</b>: every other public instance method, including the explicit setter form
+ *       {@code setXxx(v)} itself.</li>
  * </ul>
- * {@code toString} 等 Object 方法与 static 成员不进脚本面；反射结果按类缓存
- * （builder 类不可变）。
+ * Object methods such as {@code toString} and static members stay out of the script surface. The
+ * reflection result is cached per class, since builder classes do not change.
  */
 public final class DynamicBuilderContract {
 
     private static final Map<Class<?>, DynamicBuilderContract> CACHE = new ConcurrentHashMap<>();
 
-    /** 成员种类：可写属性（setter 双形态）/ 只读属性 / 方法（含显式 setter）。 */
+    /** Member kind: writable property (both setter forms), read-only property, or method including
+     *  the explicit setter. */
     public enum MemberKind { WRITABLE_PROPERTY, READ_ONLY_PROPERTY, METHOD }
 
     /**
-     * 单个契约成员。可写属性的 {@code setter()} 是唯一的 setter {@link Method}——property
-     * 写入与显式调用共用（AC4 的结构保证）。
+     * One contract member. For a writable property, {@code setter()} is the only setter
+     * {@link Method}, shared by property writes and explicit calls.
      */
     public record Member(String name, MemberKind kind, Class<?> valueType, Method getter, Method setter,
             List<Method> overloads) {
@@ -48,12 +53,12 @@ public final class DynamicBuilderContract {
             this(name, kind, valueType, getter, setter, List.of());
         }
 
-        /** TS 声明类型（确定性映射；未知类型 any）。 */
+        /** TS declaration type. The mapping is deterministic and an unknown type becomes any. */
         public String tsType() {
             return tsTypeOf(valueType);
         }
 
-        /** Python 声明类型（与 TS 同一输入派生）。 */
+        /** Python declaration type, derived from the same input as the TS type. */
         public String pyType() {
             return pyTypeOf(valueType);
         }
@@ -96,13 +101,15 @@ public final class DynamicBuilderContract {
                         getter.getReturnType(), getter, null));
             }
         });
-        // 显式 setter 形态（b.setXxx(v)）作为方法成员保留——与属性写入同一 Method
+        // Keep the explicit setter form (b.setXxx(v)) as a method member; it is the same Method a
+        // property write uses
         setters.forEach((property, setter) -> methodOverloads
                 .computeIfAbsent(setter.getName(), key -> new ArrayList<>()).add(setter));
         rest.forEach((name, overloads) -> methodOverloads
                 .computeIfAbsent(name, key -> new ArrayList<>()).addAll(overloads));
         methodOverloads.forEach((name, overloads) -> {
-            // getMethods() 顺序不保证：重载列表按参数个数降序 + 签名串稳定排序（派生确定）
+            // getMethods() has no guaranteed order: sort each overload list by parameter count descending,
+            // then by signature string, so the derivation is deterministic
             List<Method> stable = overloads.stream()
                     .sorted(Comparator.comparingInt((Method m) -> -m.getParameterCount())
                             .thenComparing(Method::toGenericString))
@@ -115,27 +122,27 @@ public final class DynamicBuilderContract {
         this.members = sorted;
     }
 
-    /** 取（并缓存）某动态 builder 类的契约。 */
+    /** Returns the contract of a dynamic builder class, creating and caching it on first use. */
     public static DynamicBuilderContract of(Class<? extends DynamicDefinitionBuilder> builderType) {
         return CACHE.computeIfAbsent(builderType, key -> new DynamicBuilderContract((Class<?>) key));
     }
 
-    /** 全部成员（字典序）。 */
+    /** All members, sorted by name. */
     public List<Member> members() {
         return List.copyOf(members.values());
     }
 
-    /** 按名取成员；无则 null。 */
+    /** Returns the member with this name, or null when none is registered. */
     public Member member(String name) {
         return members.get(name);
     }
 
-    /** 成员名目录（诊断/补全）。 */
+    /** The names of all members, for diagnostics and completion. */
     public List<String> memberNames() {
         return List.copyOf(members.keySet());
     }
 
-    /** 可写属性名目录（putMember 错误信息用）。 */
+    /** The names of writable properties, used in {@code putMember} error messages. */
     public List<String> writableNames() {
         List<String> names = new ArrayList<>();
         members.values().forEach(member -> {
@@ -146,7 +153,7 @@ public final class DynamicBuilderContract {
         return names;
     }
 
-    /** 读一个属性成员的当前值（getter）。 */
+    /** Reads a property member's current value through its getter. */
     public Object readMember(Object builder, Member member) {
         try {
             if (member.getter() != null) {
@@ -160,9 +167,10 @@ public final class DynamicBuilderContract {
     }
 
     /**
-     * definition fingerprint 的规范化成员读数（AC5）：按字典序读出全部可写属性当前值
-     * （{@code name=value}）。两种写入方式经过同一 setter 后此处读数必然一致；全量可写
-     * 属性参与（不依赖部分字段或对象身份）。
+     * Returns the normalized readings of the definition fingerprint: the current value of every
+     * writable property as {@code name=value}, in lexicographic order. Both ways of writing a
+     * property pass the same setter, so the readings here always agree. Every writable property
+     * takes part, so the result depends neither on a subset of fields nor on object identity.
      */
     public List<String> normalizedPropertyReadings(Object builder) {
         List<String> readings = new ArrayList<>();
@@ -174,7 +182,7 @@ public final class DynamicBuilderContract {
         return readings;
     }
 
-    /** 单个属性值的规范化字串：null 显式区分 / Float 统一字串 / 其余 String.valueOf。 */
+    /** Canonical form of one value: {@code null} keeps its own literal; others use {@code String.valueOf}. */
     private static String canonicalValue(Object value) {
         if (value == null) {
             return "null";
@@ -182,7 +190,8 @@ public final class DynamicBuilderContract {
         return String.valueOf(value);
     }
 
-    /** 调用成员方法（surface 的方法形态与 putMember 共用；异常带成员名解包）。 */
+    /** Invokes a member method shared by the surface method form and {@code putMember};
+     * exceptions carry the member name. */
     public Object invoke(Object builder, Method method, Object... args) {
         try {
             return method.invoke(builder, args);
@@ -212,7 +221,7 @@ public final class DynamicBuilderContract {
         return Character.toLowerCase(rest.charAt(0)) + rest.substring(1);
     }
 
-    /** Java 类型 → TS 类型（declaration 与 runtime 成员同一映射）。 */
+    /** Maps a Java type to its TypeScript type; declarations and runtime members share this mapping. */
     public static String tsTypeOf(Class<?> type) {
         if (type == Float.class) {
             return "number | null";
@@ -230,7 +239,7 @@ public final class DynamicBuilderContract {
         return "any";
     }
 
-    /** Java 类型 → Python 类型（与 TS 同一输入，成员语义一致）。 */
+    /** Maps a Java type to its Python type from the same input as TS, so member semantics match. */
     public static String pyTypeOf(Class<?> type) {
         if (type == Float.class) {
             return "float | None";

@@ -115,7 +115,7 @@ public class IngredientJS implements NekoWrapper<Ingredient> {
     }
 
     public List<ItemStack> stacks() {
-        // items() 无等价非废弃 API（getValues().stream() 不含 custom ingredient 展开），保守保留
+        // items() has no equivalent non-deprecated API (getValues().stream() does not expand custom ingredients), so it is kept on purpose
 //? if >=26 {
         @SuppressWarnings("deprecation")
         List<ItemStack> result = unwrap().items().map(ItemStack::new).toList();

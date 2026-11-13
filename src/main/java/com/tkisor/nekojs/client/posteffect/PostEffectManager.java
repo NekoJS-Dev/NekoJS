@@ -1,8 +1,11 @@
-// TODO(fabric): fabric 侧还没有对应实现，整文件守卫等移植完成后去掉
+// Fabric has no equivalent implementation yet; remove the whole-file guard once the port is
+// done.
 //? if neoforge {
-// 26.x 实现，本文件不应再出现版本守卫。1.21.1 的实现是 versions/1.21.1/src 下的同名文件，
-// 改本文件行为时须同步它。
-// 脚本面的 @Doc/@Param 文案两侧本就不同，探针类型 golden 会校验，别照抄到孪生文件。
+// 26.x implementation, so this file must not contain version guards. The 1.21.1 implementation
+// is the same-named file under versions/1.21.1/src; changing this file's behavior means
+// updating that one too.
+// The @Doc/@Param text on the script side already differs between the two trees and the
+// probe-type golden checks it, so do not copy it into the twin file.
 package com.tkisor.nekojs.client.posteffect;
 
 import com.google.gson.JsonParseException;
@@ -30,15 +33,15 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Runtime client post-effect registry (feature 8b, client-side only; ported from Katton's
+ * Runtime registry for client post effects (client side only; ported from Katton's
  * {@code ClientPostEffectManager}).
  *
- * <p><b>Runtime binding face (ticket 28).</b> {@link #set}/{@link #clear}/{@link #toggle}/
- * {@link #current} back the {@code PostEffects} runtime binding and keep their previous
+ * <p><b>Runtime binding face.</b> {@link #set}/{@link #clear}/{@link #toggle}/
+ * {@link #current} back the {@code PostEffects} runtime binding and keep their existing
  * caller-visible behaviour (client-thread renderer mutation, resource-backed ids only).
  *
- * <p><b>Declaration face (ticket 28).</b> Definitions are no longer registered straight from
- * a script binding: {@code ClientEvents.postEffects} declarations are collected into an inert
+ * <p><b>Declaration face.</b> Scripts no longer register definitions through a binding:
+ * {@code ClientEvents.postEffects} declarations are collected into an inert
  * {@code PostEffectCandidatePlan} and only the commit point installs the active generation
  * through {@link #installGeneration}. A generation owns exactly the definitions it declared;
  * the previous generation's definitions and their cached chains are released when the new
@@ -71,7 +74,7 @@ public final class PostEffectManager {
                              Map<Identifier, String> vertexShaders) {
     }
 
-    // ---- declaration lifecycle (ClientEvents.postEffects；commit 点由 Adapter 调用) ----
+    // ---- Declaration lifecycle (ClientEvents.postEffects; the adapter calls in at the commit point) ----
 
     /**
      * Parses and validates a declaration payload without storing it (candidate preflight):
@@ -104,8 +107,9 @@ public final class PostEffectManager {
                                          Set<Identifier> retired) {
         Map<Identifier, Definition> previous = Map.copyOf(DEFINITIONS);
         Set<Identifier> removed = removedIds(previous, definitions, retired);
-        // 缓存键只有 (id, allowedTargets)，不含定义内容：同一 id 重新声明为不同链时必须一并
-        // 失效，否则 getPostChain 会命中旧链而 shader 源已来自新定义（半更新）。
+        // The cache key is only (id, allowedTargets), not the definition content: re-declaring the same
+        // id with a different chain must invalidate both, otherwise getPostChain hits the old
+        // chain while the shader source already comes from the new definition (half update).
         Set<Identifier> changed = redefinedIds(previous, definitions);
         for (Identifier id : removed) {
             DEFINITIONS.remove(id);

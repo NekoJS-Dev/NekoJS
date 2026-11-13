@@ -17,8 +17,8 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * BlockPosAdapter smoke test：仅用三版本 API 稳定的 {@link BlockPos}/{@link Vec3}
- * 与 GraalVM polyglot {@link Value}，不启动游戏。
+ * Smoke test for {@link BlockPosAdapter}: uses only {@link BlockPos}, {@link Vec3} and the GraalVM
+ * polyglot {@link Value}, all stable across the three versions, and starts no game.
  */
 class BlockPosAdapterTest {
 

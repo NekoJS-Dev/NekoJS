@@ -130,7 +130,7 @@ class SpecCoverageProcessorTest {
             }
             """;
 
-    // ==================== 方法覆盖校验（原有行为） ====================
+    // ==================== Method coverage checks ====================
 
     @Test
     void uncoveredNekoMethodFailsCompilation() throws Exception {
@@ -151,7 +151,7 @@ class SpecCoverageProcessorTest {
         assertEquals(List.of(), result.errors());
     }
 
-    // ==================== 平台范围强制（-Anekojs.platform） ====================
+    // ==================== Platform scope enforcement (-Anekojs.platform) ====================
 
     @Test
     void requiredSpecCoveredWithOptionCompiles() throws Exception {
@@ -231,7 +231,7 @@ class SpecCoverageProcessorTest {
                 () -> "expected invalid-option error, got: " + result.errors());
     }
 
-    // ==================== 无 spec 时的优雅降级 ====================
+    // ==================== Graceful fallback when there are no specs ====================
 
     @Test
     void noSpecsWithOptionWarnsAndSkips() throws Exception {
@@ -250,7 +250,7 @@ class SpecCoverageProcessorTest {
         assertEquals(List.of(), result.warnings());
     }
 
-    // ==================== 编译执行器 ====================
+    // ==================== Compilation runner ====================
 
     private record CompileResult(boolean success, List<String> errors, List<String> warnings) {}
 

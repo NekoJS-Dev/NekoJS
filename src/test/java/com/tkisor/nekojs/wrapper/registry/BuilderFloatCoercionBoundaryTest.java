@@ -10,22 +10,19 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Float-coercion defect regression for the startup registry-generation domain
- * (2026-09-29 hotfix, same class as the ticket 36 trial defect in the modification
- * domain): {@link BuilderSurface} feeds real builders such as {@link BlockBuilder}
- * whose {@code hardness}/{@code resistance} are {@code float} properties. A script
- * writing {@code b.hardness = 0.9} hit the same raw engine lossy-coercion failure
- * ({@code Value.asFloat()} refuses doubles that cannot round-trip through
- * {@code float}) because the surface's numeric coercion used the narrow
- * {@code asInt/asLong/asFloat} readers directly.
+ * Regression test for float coercion in the startup registry-generation path.
+ * {@link BuilderSurface} feeds real builders such as {@link BlockBuilder}, whose
+ * {@code hardness}/{@code resistance} are {@code float} properties. A script writing
+ * {@code b.hardness = 0.9} hit the engine's lossy-coercion failure ({@code Value.asFloat()}
+ * refuses doubles that cannot round-trip through {@code float}) because numeric coercion used
+ * the narrow {@code asInt/asLong/asFloat} readers directly.
  *
- * <p>The fix normalizes explicitly (D6 precedent): finite numbers narrow with Java
- * casting semantics, {@code int} members require integral in-range values, and
- * rejections are English {@link IllegalArgumentException}s with member context.
+ * <p>The fix normalizes explicitly: finite numbers narrow with Java casting semantics,
+ * {@code int} members require integral in-range values, and rejections are English
+ * {@link IllegalArgumentException}s that name the member in context.
  *
- * <p>Registry-free geometry (mirrors {@code BuilderSetterPropertyParityTest}): a real
- * GraalJS {@link Context} drives the production {@link BlockBuilder} through
- * {@link BuilderSurface}; no registry bootstrap is involved.
+ * <p>No registry is involved, as in {@code BuilderSetterPropertyParityTest}: a real GraalJS
+ * {@link Context} drives the production {@link BlockBuilder} through {@link BuilderSurface}.
  */
 class BuilderFloatCoercionBoundaryTest {
 

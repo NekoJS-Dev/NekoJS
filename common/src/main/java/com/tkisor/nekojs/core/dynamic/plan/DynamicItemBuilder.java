@@ -3,26 +3,27 @@ package com.tkisor.nekojs.core.dynamic.plan;
 import java.util.Set;
 
 /**
- * Item 动态定义 builder（ticket 16，类型直达入口 {@code event.item(id, cb)} 的
- * typed callback Builder）。与旧 {@code DynamicRegistryJS.ItemBuilder} 的配置形状
- * 保持一致（stack size / rarity / fire resistant / mode），但值在校验+规范化后进入
- * inert 计划，不在候选期创建任何 MC 对象（Rarity 等 MC 枚举由 Adapter 在合法应用点
- * 解析——本类只持有规范化的字符串值）。
+ * Builder for an Item dynamic definition; it is the typed callback builder behind the direct
+ * entry point {@code event.item(id, cb)}. Its configuration shape matches the
+ * {@code DynamicRegistryJS.ItemBuilder} one (stack size, rarity, fire resistant, mode), but values
+ * are validated and normalized and then enter an inert plan: the candidate phase creates no MC
+ * object. The Adapter resolves MC enums such as Rarity at the point where applying them is legal,
+ * and this class only holds normalized string values.
  */
 public final class DynamicItemBuilder extends DynamicDefinitionBuilder {
 
-    /** vanilla Item.Properties#stacksTo 的合法区间。 */
+    /** Valid range for vanilla Item.Properties#stacksTo. */
     public static final int MAX_STACK_SIZE_MIN = 1;
     public static final int MAX_STACK_SIZE_MAX = 99;
 
-    /** 与 vanilla Rarity 对应的封闭字符串集合（小写规范化后比较）。 */
+    /** Closed set of strings matching vanilla Rarity; compared after normalization to lower case. */
     public static final Set<String> RARITIES = Set.of("common", "uncommon", "rare", "epic");
 
     private int maxStackSize = 64;
     private String rarity = "common";
     private boolean fireResistant;
 
-    /** 最大堆叠（1..99，默认 64）；超界在写入点抛错（两种写入形态同一校验）。 */
+    /** Max stack size (1..99, default 64); an out-of-range value throws at the write site in both write paths. */
     public DynamicItemBuilder setMaxStackSize(int size) {
         if (size < MAX_STACK_SIZE_MIN || size > MAX_STACK_SIZE_MAX) {
             throw new IllegalArgumentException(
@@ -33,7 +34,7 @@ public final class DynamicItemBuilder extends DynamicDefinitionBuilder {
         return this;
     }
 
-    /** 稀有度：common（默认）/ uncommon / rare / epic；大小写不敏感，规范化为小写。 */
+    /** Rarity: common (default), uncommon, rare or epic. Case-insensitive; normalized to lower case. */
     public DynamicItemBuilder setRarity(String rarity) {
         String normalized = DynamicDefinitionType.normalizeToken(rarity, "rarity");
         if (!RARITIES.contains(normalized)) {
@@ -44,7 +45,7 @@ public final class DynamicItemBuilder extends DynamicDefinitionBuilder {
         return this;
     }
 
-    /** 是否防火（默认 false）。 */
+    /** Whether the item is fire resistant (default false). */
     public DynamicItemBuilder setFireResistant(boolean value) {
         this.fireResistant = value;
         return this;

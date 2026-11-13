@@ -21,40 +21,47 @@ import java.util.List;
 import java.util.function.LongSupplier;
 
 /**
- * 动态注册 facade 的 Runtime（ticket 16）：持有本域的 {@link DynamicRegistryPlanStore}，
- * 承担两条收集入口——
+ * Runtime of the dynamic registration facade. It holds this domain's
+ * {@link DynamicRegistryPlanStore} and serves two collection entry points:
  * <ul>
- *   <li><b>初次候选</b>（AC1 前半）：server registry ready 时由平台触发
- *       {@link #collectInitial(String)}——向 active 总线投递收集事件，成功 preflight
- *       才发布批次（失败只记录，不另起写入）；</li>
- *   <li><b>reload 候选收集</b>（AC1 后半）：实现 {@link CandidateDomainCollector}，
- *       由 reload 管线在候选期调用（EVENT_PLAN 后、STATE_PLAN 前），把候选监听器的
- *       声明收成 inert 计划挂入联合边界——commit 点联合发布，候选失败随整体丢弃。</li>
+ *   <li><b>Initial candidate</b>: when the server registry is ready the platform calls
+ *       {@link #collectInitial(String)}, which posts the collection event on the active bus and
+ *       publishes the batch only if preflight succeeds; a failure is only recorded and starts no
+ *       separate write.</li>
+ *   <li><b>Reload candidate collection</b>: it implements {@link CandidateDomainCollector} and the
+ *       reload pipeline calls it during the candidate phase (after EVENT_PLAN, before
+ *       STATE_PLAN). It collects the candidate listeners' declarations into an inert plan and
+ *       attaches that plan together with the other candidate plans; the commit point publishes
+ *       them as a unit, and a failed candidate is discarded with the rest.</li>
  * </ul>
  *
- * <p><b>本票只证明本地 inert 计划行为</b>（AC9）：发布的计划只更新 claim/stale/exposed
- * 账并产出 inert {@code DynamicAdapterRequest}——不激活多人同步、不执行 registry
- * mutation、不宣称动态热更新；公开激活由事务/同步 gate（票 21）裁决。生产实例由平台
- * Adapter 侧持有（NeoForge dynamic 包），测试/harness 自由构造隔离实例。
+ * <p>This class only implements local inert plan behavior. A published plan only updates the
+ * claim/stale/exposed ledger and produces an inert {@code DynamicAdapterRequest}. It does not
+ * activate multiplayer sync, does not perform a registry mutation and does not claim dynamic hot
+ * reload; public activation is decided by the transaction/sync gate. The production instance is
+ * held by the platform adapter (NeoForge dynamic package); tests and harnesses may construct
+ * isolated instances freely.
  *
- * <p><b>inert 的结构面（AC7）</b>：本类与整个 {@code com.tkisor.nekojs.core.dynamic.plan}
- * 包都住在 common——零 Minecraft/loader import（由 {@code :common:checkCommonIsolation}
- * 与 guardLint L1/L2 守护），因此「候选期修改 live registry」在本模块内不可表达：
- * 计划只持有不可变定义快照与 inert {@code DynamicAdapterRequest} 描述，没有 platform
- * 执行通道、不挂生产 callback、不提前发布对外 binding；候选失败时计划对象不再可达
- * （无临时资源需要释放），账本零写入，旧 active 定义继续服务。计划包的结构性验证见
- * {@code DynamicPlanInertnessTest}。
+ * <p><b>Why plans are inert</b>: this class and the whole
+ * {@code com.tkisor.nekojs.core.dynamic.plan} package live in common with zero Minecraft/loader
+ * imports (enforced by {@code :common:checkCommonIsolation} and guardLint L1/L2), so "modify the
+ * live registry during the candidate phase" cannot be written in this module. A plan only holds
+ * immutable definition snapshots and inert {@code DynamicAdapterRequest} descriptions: no platform
+ * execution channel, no production callback, no early publishing of external bindings. When a
+ * candidate fails the plan object becomes unreachable (no temporary resources need releasing),
+ * the ledger is not written, and the old active definitions keep serving. See
+ * {@code DynamicPlanInertnessTest} for structural checks on the plan package.
  *
- * <p><b>ticket 21 activation seam</b>: {@link #bindActivationEngine} optionally attaches
- * a batch-transaction engine; {@link #pumpActivation()} then hands every ledger-committed
- * batch to it (pull-based pending queue — the plan itself carries no hook). Unbound, this
- * runtime is exactly the ticket 16 inert-local-plan surface; production binding is not
- * wired yet (activation stays gated by the transaction/sync gates, see the ticket 21
- * baseline REPORT).
+ * <p><b>Activation engine</b>: {@link #bindActivationEngine} optionally attaches a
+ * batch-transaction engine, and {@link #pumpActivation()} then hands every ledger-committed batch
+ * to it through a pull-based pending queue; the plan itself carries no hook. Unbound, this runtime
+ * is exactly the inert local plan runtime. Production binding is not wired yet, because activation
+ * stays gated by the transaction/sync gates.
  */
 public final class DynamicRegistryFacadeRuntime implements CandidateDomainCollector, AutoCloseable {
 
-    /** 一轮收集的可观察结果（测试/诊断；不携带内部状态）。 */
+    /** Observable result of one collection round, for tests and diagnostics; it carries no internal
+     *  state. */
     public record CollectionOutcome(
             String trigger,
             long generation,
@@ -73,10 +80,12 @@ public final class DynamicRegistryFacadeRuntime implements CandidateDomainCollec
     }
 
     /**
-     * 一轮<b>候选期</b>收集的可观察记录（AC1「script/data reload 在候选阶段重新收集」的
-     * 直接观察点；与初次收集的 {@link CollectionOutcome} 分开——候选期只收集并挂入联合
-     * 边界，发布与否由 commit 点决定）。同样不携带内部状态、不持有计划引用：
-     * 失败候选的计划在此之后不可达（失败清理＝无临时资源残留）。
+     * Observable record of one <b>candidate-phase</b> collection. This is the direct observation
+     * point for re-collecting a script/data reload during the candidate phase. It is separate from
+     * the {@link CollectionOutcome} of the initial collection, because the candidate phase only
+     * collects and attaches a plan while the commit point decides whether it is published. It also
+     * carries no internal state and holds no plan reference, so a failed candidate's plan becomes
+     * unreachable afterwards and no temporary resources are left behind.
      */
     public record CandidateCollectionRecord(
             String note,
@@ -85,7 +94,8 @@ public final class DynamicRegistryFacadeRuntime implements CandidateDomainCollec
             boolean poisoned,
             String failureDetail) {
 
-        /** 本域未参与该候选（非 SERVER 类型 / 未使用且账本为空）。 */
+        /** This domain did not take part in the candidate: not a SERVER type, or unused with an empty
+         *  ledger. */
         static CandidateCollectionRecord skipped(String note) {
             return new CandidateCollectionRecord(note, -1L, 0, false, null);
         }
@@ -96,7 +106,7 @@ public final class DynamicRegistryFacadeRuntime implements CandidateDomainCollec
                     plan.collectionErrors().isEmpty() ? null : String.join("; ", plan.collectionErrors()));
         }
 
-        /** 本域是否在该候选期实际收集并挂入计划。 */
+        /** Whether this domain actually collected and attached a plan during that candidate phase. */
         public boolean participated() {
             return planGeneration >= 0L;
         }
@@ -107,28 +117,27 @@ public final class DynamicRegistryFacadeRuntime implements CandidateDomainCollec
     private volatile CandidateCollectionRecord lastCandidateCollection;
     private volatile DynamicRegistryTransactionCoordinator activationEngine;
     /**
-     * Plans begun by this runtime, waiting for their ledger commit to be observed by
-     * {@link #pumpActivation()} (pull-based staging: the plan itself carries no hook —
-     * the ticket 16 plan surface stays pure inert data with no execution channel).
-     * A failed/discarded candidate is dropped at the next pump; a plan is pure data
-     * and holds no resources, so the brief reference is not a cleanup concern.
+     * Plans begun by this runtime that are waiting for {@link #pumpActivation()} to observe their
+     * ledger commit. Staging is pull-based: the plan itself carries no hook, so the plan surface
+     * stays pure inert data with no execution channel. A failed or discarded candidate is dropped
+     * at the next pump, and a plan is pure data that holds no resources, so the brief reference is
+     * not a cleanup concern.
      */
     private final ArrayDeque<DynamicCandidateRegistryPlan> pendingCandidates = new ArrayDeque<>();
     /** Newest plan generation ever handed to the activation engine. */
     private long lastStagedPlanGeneration;
 
-    /** 本域计划账本（Registry Runtime 侧观察点）。 */
+    /** This domain's plan ledger, as observed from the Registry Runtime side. */
     public DynamicRegistryPlanStore store() {
         return store;
     }
 
     /**
-     * Binds the activation engine (ticket 21): with an engine bound, every committed
-     * declaration batch is also staged for the batch transaction
-     * (preflight → server prepare → client prepare/ack → controlled commit through
-     * the Adapter/Transport seams). Without one the runtime stays exactly the
-     * ticket 16 inert-local-plan surface. The platform assembly binds the production
-     * engine only when the dynamic registry configuration gate is enabled.
+     * Binds the activation engine. With an engine bound, every committed declaration batch is also
+     * staged for the batch transaction: preflight, server prepare, client prepare/ack, then a
+     * controlled commit through the adapter and transport. Without one the runtime stays exactly
+     * the inert local plan runtime. The platform assembly binds the production engine only when
+     * the dynamic registry configuration gate is enabled.
      */
     public synchronized void bindActivationEngine(
             DynamicRegistryAdapter adapter, DynamicSyncTransport transport,
@@ -158,12 +167,11 @@ public final class DynamicRegistryFacadeRuntime implements CandidateDomainCollec
     }
 
     /**
-     * Owner-thread activation pump (ticket 21): hands every ledger-committed batch to
-     * the bound engine and starts the next transaction when none is in flight.
-     * Pull-based by design — {@link #collectInitial} calls it after its own commit,
-     * and the production wiring (server tick / post-reload event, owner: network
-     * phase) calls it for reload-driven commits. Never runs inside a reload's joint
-     * commit boundary: staging is an enqueue, phases are event-driven.
+     * Owner-thread activation pump: hands every ledger-committed batch to the bound engine and
+     * starts the next transaction when none is in flight. It is pull-based by design.
+     * {@link #collectInitial} calls it after its own commit, and the production wiring (server
+     * tick / post-reload event, owner: network phase) calls it for reload-driven commits. It never
+     * runs inside a reload's commit, because staging only enqueues and the phases are event-driven.
      */
     public synchronized void pumpActivation() {
         DynamicRegistryTransactionCoordinator engine = activationEngine;
@@ -195,22 +203,26 @@ public final class DynamicRegistryFacadeRuntime implements CandidateDomainCollec
         return entries;
     }
 
-    /** 最近一轮收集的可观察结果（诊断/测试；不携带内部状态）。 */
+    /** Observable result of the latest collection round, for diagnostics and tests; it carries no
+     *  internal state. */
     public CollectionOutcome lastOutcome() {
         return lastOutcome;
     }
 
-    /** 最近一轮<b>候选期</b>收集的可观察记录（诊断/测试；无候选期收集时为 null）。 */
+    /** Observable record of the latest <b>candidate-phase</b> collection, for diagnostics and tests;
+     *  null when no candidate-phase collection has run. */
     public CandidateCollectionRecord lastCandidateCollection() {
         return lastCandidateCollection;
     }
 
-    // ---- 初次候选（server registry ready 触发） ----
+    // ---- Initial candidate, triggered when the server registry is ready ----
 
     /**
-     * 触发一次收集（active 总线投递）：监听器异常由总线捕获记录，收集失败经 payload
-     * 的毒化标记进入 preflight 拒绝；preflight 通过才 publish。失败只返回结果并记日志，
-     * <b>不另起写入</b>——旧 active 定义（若有）继续服务。
+     * Runs one collection by posting on the active bus. The bus catches and records listener
+     * exceptions; a collection failure reaches preflight through the payload's poison flag, and
+     * preflight then rejects the batch. The batch is published only when preflight passes. A
+     * failure only returns the outcome and logs it, so it starts no separate write, and the old
+     * active definitions, if any, keep serving.
      */
     public CollectionOutcome collectInitial(String trigger) {
         DynamicCandidateRegistryPlan plan = store.beginBatch();
@@ -241,41 +253,47 @@ public final class DynamicRegistryFacadeRuntime implements CandidateDomainCollec
         return lastOutcome;
     }
 
-    // ---- reload 候选收集（CandidateDomainCollector） ----
+    // ---- Reload candidate collection (CandidateDomainCollector) ----
 
     @Override
     public String domain() {
         return DynamicCandidateRegistryPlan.DOMAIN;
     }
 
-    /** SERVER-only 域：收集器只参与 SERVER 候选（CLIENT/STARTUP/TEST 不触碰账本）。 */
+    /** SERVER-only domain: the collector only takes part in SERVER candidates. CLIENT, STARTUP and
+     *  TEST candidates never touch the ledger. */
     @Override
     public ScriptType scriptType() {
         return ScriptType.SERVER;
     }
 
     /**
-     * 候选期收集（SERVER 域限定）：对候选挂起监听器中属于
-     * {@link DynamicRegistryEvents#DYNAMIC_REGISTRY} 的回调逐个执行（同 owner thread，
-     * 经 {@link Handle#execute} 的 scriptId 切换/回调深度标记/异常上抛——与生产分发同款）；
-     * 单监听器异常记为 collection error（毒化整批）后继续其余监听器（EventBus 语义），
-     * 整批在 STATE_PLAN 以精确 domain 拒绝。Error 按分发同款语义直抛（由 reload 管线按
-     * 收集器崩溃以 {@code domain-collect:<domain>} 归因），中断标志恢复。
+     * Collects during the candidate phase, SERVER domain only. It runs every pending listener
+     * callback of the candidate that belongs to
+     * {@link DynamicRegistryEvents#DYNAMIC_REGISTRY} one by one, on the same owner thread and
+     * through {@link Handle#execute} with its scriptId switch, callback depth marker and exception
+     * propagation, the same as production dispatch. An exception from one listener is recorded as
+     * a collection error that poisons the whole batch, and the remaining listeners still run as
+     * the EventBus requires; at STATE_PLAN the batch is rejected with the exact domain. Errors are
+     * rethrown with the same semantics as dispatch, where the reload pipeline attributes them to a
+     * collector crash as {@code domain-collect:<domain>}, and the interrupt flag is restored.
      *
-     * <p>空候选：候选没有任何本域监听器时，仅当账本已有 exposed 定义才挂入空计划
-     * （把不再声明的项标记 stale/retired）；账本为空时跳过——未使用本域的 reload 零参与。
+     * <p>Empty candidate: when the candidate has no listener for this domain, an empty plan is
+     * attached only if the ledger already holds exposed definitions, which marks the items that
+     * are no longer declared as stale/retired. If the ledger is empty the domain is skipped, so a
+     * reload that does not use it takes no part at all.
      */
     @Override
     public void collect(Handle handle) {
         if (handle.scriptType() != ScriptType.SERVER) {
             lastCandidateCollection = CandidateCollectionRecord.skipped("skipped-non-server");
-            return; // SERVER-only 域：绝不因其它类型 reload 触碰账本
+            return; // SERVER-only domain: never touch the ledger because of a reload of another type
         }
         List<com.tkisor.nekojs.api.event.EventBusJS.PendingListener> ofBus =
                 handle.listenersOf(DynamicRegistryEvents.DYNAMIC_REGISTRY);
         if (ofBus.isEmpty() && store.isEmpty()) {
             lastCandidateCollection = CandidateCollectionRecord.skipped("skipped-unused-domain");
-            return; // 本域从未被使用且候选未声明：不挂空计划
+            return; // This domain has never been used and the candidate declares nothing: attach no empty plan
         }
         DynamicCandidateRegistryPlan plan = store.beginBatch();
         pendingCandidates.add(plan);
@@ -284,11 +302,14 @@ public final class DynamicRegistryFacadeRuntime implements CandidateDomainCollec
             try {
                 handle.execute(pending, payload);
             } catch (Throwable e) {
-                // catch 形态与生产分发闭包同款（EventBusJS.register* 的 catch(Throwable)）：
-                // 中断标志恢复、Error 直抛给上层（reload 管线按收集器崩溃归因）、其余
-                // （guest PolyglotException 与领域数据错误）记为收集错误毒化整批后继续其余
-                // 监听器——一个坏声明不掩盖其余收集错误。kill 上报同生产路径（候选 Context
-                // 被资源上限终止时按候选失败记账，而不是当普通收集错误吞掉）。
+                // The catch shape matches the production dispatch closure (catch(Throwable) in
+                // EventBusJS.register*): restore the interrupt flag, rethrow Error to the caller
+                // (the reload pipeline attributes it to a collector crash), and record anything else
+                // (guest PolyglotException and domain data errors) as a collection error that poisons
+                // the batch before continuing with the remaining listeners, so one bad declaration
+                // does not hide the other collection errors. A kill is reported the same way as
+                // production: when a resource limit terminates the candidate Context, it counts as a
+                // candidate failure instead of being swallowed as an ordinary collection error.
                 if (e instanceof InterruptedException) {
                     Thread.currentThread().interrupt();
                 }

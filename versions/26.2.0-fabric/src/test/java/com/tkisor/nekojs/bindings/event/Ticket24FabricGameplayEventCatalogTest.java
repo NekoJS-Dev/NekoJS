@@ -1,6 +1,7 @@
-// fabric 节点本地 catalog 快照（票 24）：`//? if fabric` 守卫对 active 节点
-// （26.1.2 NeoForge，直编共享树磁盘）是惰性注释，会在错误平台上编译执行，所以放节点本地
-// test 树（FabricNetworkRegistrationOnceTest 的先例）。两 fabric 节点各一份同名同体测试。
+// Fabric node-local catalog snapshot. The `//? if fabric` guard is a lazy comment for the active
+// node (26.1.2 NeoForge, which compiles the shared tree from disk), so it would compile and run on
+// the wrong platform; the test therefore lives in the node-local test tree, following the
+// FabricNetworkRegistrationOnceTest precedent. Both fabric nodes carry one copy of the same test.
 package com.tkisor.nekojs.bindings.event;
 
 import com.tkisor.nekojs.api.ScriptType;
@@ -71,32 +72,38 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * 票 24 catalog-snapshot fixture（fabric 侧）：按<b>生产初始化次序</b>（先触发
- * {@code FabricBlockEventBindings}/{@code FabricBlockEventBindingsV2}/
- * {@code FabricLevelEventBindingsV2} 的类初始化——它们的总线字段把成员
- * {@code GROUP.add} 进共享组，早于插件引导冻结；再跑
- * {@link FabricCorePlugin#registerEvents} 的同名组合并）+ 真实 catalog 派生，冻结
- * fabric 节点上八个事件族的公开成员形状。
+ * Catalog snapshot fixture for the fabric side. It follows production initialization order: first
+ * it triggers class initialization of {@code FabricBlockEventBindings},
+ * {@code FabricBlockEventBindingsV2} and {@code FabricLevelEventBindingsV2}, whose bus fields add
+ * members with {@code GROUP.add} to the shared group before the plugin bootstrap freezes it; then
+ * it runs the same-name combination from {@link FabricCorePlugin#registerEvents} and derives the
+ * real catalog. That freezes the public member shape of the eight event families on the fabric
+ * node.
  *
- * <p><b>与票 33 基线的输入差异（有意记录，不是矛盾）</b>：{@code EventSurfaceDomainGateTest}
- * 只驱动 {@code registerEvents} 钩子，看不见上述 Adapter 类初始化追加的成员——其基线把
- * fabric {@code BlockEvents} 记为 {@code broken,modification}、{@code LevelEvents} 记为
- * 4 成员，而真实运行面还含 v1/v2 Adapter 的 10+5 个成员。本测试按真实运行面冻结；基线
- * 再生成归票 33/34 owner（本票不改只读基线文件）。
+ * <p>Input difference from the recorded baseline (intentional, not a contradiction):
+ * {@code EventSurfaceDomainGateTest} only drives the {@code registerEvents} hook, so it cannot see
+ * the members appended by the Adapter class initialization above. Its baseline records fabric
+ * {@code BlockEvents} as {@code broken,modification} and {@code LevelEvents} as 4 members, while
+ * the real runtime set also has the 10+5 members from the v1/v2 Adapters. This test freezes the
+ * real runtime set; regenerating the baseline is up to its owners, and this test does not change
+ * the read-only baseline file.
  *
- * <p><b>能力差异的显式记录</b>：CapabilityEvents 不在 fabric 注册面（NeoForge
- * {@code RegisterCapabilitiesEvent} 专属，票 33 基线 not-verified）——显式缺席，不是静默
- * no-op；可取消性来自孪生/Adapter 源码的显式 {@code EventBusJS.of(type, true, ...)}。
+ * <p>Capability difference, recorded explicitly: CapabilityEvents is not registered on fabric.
+ * {@code RegisterCapabilitiesEvent} is NeoForge-only and the baseline marks it not-verified, so it
+ * is absent on purpose rather than a silent no-op. Cancellability comes from the explicit
+ * {@code EventBusJS.of(type, true, ...)} in the twin/Adapter sources.
  */
 class Ticket24FabricGameplayEventCatalogTest {
 
-    /** 一条公开成员的期望形状：dispatchKey 为 {@code null} 表示非定向分发总线。 */
+    /** Expected shape of one public member: a {@code null} dispatchKey means a non-directed dispatch bus. */
     private record Expected(String name, Class<?> payload, ScriptType side, Class<?> dispatchKey, boolean cancellable) {}
 
     private static Map<String, EventGroup> registeredGroups() {
-        // 生产次序：mod entry 的各 register() 先让 Adapter 类初始化（成员 GROUP.add 进共享
-        // 组、早于冻结）；这里只触发类初始化本身，不挂 fabric-api 回调（catalog 面与回调
-        // 挂载无关，回调 source trace 见共享树 Ticket24GameplayEventPhaseTraceTest）
+        // Production order: the mod entry's register() calls first run the Adapter class initialization,
+        // whose members call GROUP.add into the shared group before it is frozen. Only the class
+        // initialization runs here; no fabric-api callbacks are attached, because the catalog does not
+        // depend on callback mounting. For the callback source trace see Ticket24GameplayEventPhaseTraceTest
+        // in the shared tree.
         for (String adapter : List.of(
                 "com.tkisor.nekojs.fabric.event.FabricBlockEventBindings",
                 "com.tkisor.nekojs.fabric.event.FabricBlockEventBindingsV2",

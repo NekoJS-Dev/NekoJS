@@ -1,13 +1,13 @@
 package com.tkisor.nekojs.api.ui;
 
 /**
- * Resolves controlled UI resource ids against the ticket 29 resource roots and the
- * platform resource manager. There is exactly one resource root policy: the NekoJS
- * disk pack plus the vanilla resource stack — no second root, no second event.
+ * Resolves controlled UI resource ids against the NekoJS disk pack and the platform
+ * resource manager. There is exactly one resource root policy: the pack plus the vanilla
+ * resource stack, with no second root and no second event.
  *
  * <p>Resolving never throws for a bad or missing resource; the status carries the
- * diagnostic. Icons are textures by id; item-stack icons go through the item
- * binding instead of this resolver.
+ * diagnostic. Icons are textures by id; item-stack icons go through the item binding
+ * instead of this resolver.
  */
 public interface UiResourceResolver {
     /**

@@ -17,36 +17,36 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 
 /**
- * 修改属性视图的脚本面（ticket 39 AC8，复用票 15 {@code BuilderSurface} 的
- * ProxyObject putMember → 同一 {@link Method} seam 手法）：把
- * {@code ItemModificationJS}/{@code BlockModificationJS} 包成 {@link ProxyObject}，
- * {@code item.maxStackSize = 16}（putMember）与 {@code item.setMaxStackSize(16)}
- * （成员方法，getMember 按访问器原名解析）分发到<b>同一个 Java setter</b>，进入同一校验、
- * 规范化、声明收集与 definition fingerprint 路径。
+ * {@link ProxyObject} adapter for modification property views ({@code ItemModificationJS} and
+ * {@code BlockModificationJS}), following the same member-dispatch pattern as {@code BuilderSurface}.
+ * Property assignments ({@code item.maxStackSize = 16} via {@code putMember}) and explicit setter
+ * calls ({@code item.setMaxStackSize(16)} via {@code getMember}) invoke the same Java setter
+ * {@link Method}, so both forms share validation, normalization, declaration recording, and plan
+ * fingerprinting.
  *
- * <p>成员目录同时收录「属性名」（{@code maxStackSize}：getter 读 / setter 写）与
- * 「访问器原名」（{@code setMaxStackSize} / {@code getMaxStackSize}）：后者是 GraalJS
- * 上显式 setter 调用形态的唯一入口——宿主对象的天然方法访问在这里不适用（见下）。
+ * <p>The member catalog registers both bean property names (such as {@code maxStackSize}) and
+ * original accessor names ({@code setMaxStackSize} / {@code getMaxStackSize}), because explicit
+ * method calls on a {@link ProxyObject} in GraalJS resolve through {@code getMember} rather than
+ * host-object reflection.
  *
- * <p>不依赖 Graal 对宿主对象的天然 Bean 映射——characterization
- * （{@code ModificationLegacyCharacterizationTest.hostPropertyWriteLegacyFactAndProxyObjectViewContract}
- * 的 registry-free 探针）实证普通宿主对象（私有字段 + public setter）的 property 写被静默
- * 丢弃（{@code assigned,read=undefined}），ProxyObject 的 putMember seam 才是可靠转发点
- * （spec 08 预授权回退路径，与 typed Builder 同款）。
+ * <p>This avoids relying on GraalJS host-object bean mapping, which silently drops property
+ * writes on plain host objects with private fields and public setters (verified in
+ * {@code ModificationLegacyCharacterizationTest.hostPropertyWriteLegacyFactAndProxyObjectViewContract}).
  *
- * <p>视图类自己<b>也</b>实现 {@link ProxyObject}（转发到本引擎）：脚本回调参数经
- * {@code Consumer} 实现直接落到裸视图实例上（不额外包一层），两种到达形态的
- * property 写/显式 setter 仍然命中同一 {@link Method} seam。
+ * <p>Each view class also implements {@link ProxyObject} directly and delegates to an instance of
+ * this class, so {@code Consumer} callbacks can receive the view instance without an extra wrapper
+ * while routing both property writes and setter calls to the same {@link Method}.
  *
- * <p>本类不携带 MC 类型（成员目录按视图类反射派生并缓存），26.x 与 1.21.1 共享编译。
- * 引擎生命周期接缝（{@code applyTo} 等包私有/内部方法）不进脚本面。
+ * <p>Free of Minecraft types (the member catalog is reflected from the view class and cached), so
+ * 26.x and 1.21.1 share this class. Package-private lifecycle methods such as {@code applyTo} are
+ * excluded from the public member catalog.
  */
 public final class ModificationViewSurface implements ProxyObject {
 
-    /** 成员目录（视图类不可变，按类缓存）。 */
+    /** Member catalog (view class immutable, cached by class). */
     private static final Map<Class<?>, MemberCatalog> CATALOGS = new ConcurrentHashMap<>();
 
-    /** {@link ProxyObject} 的接口方法名（视图自身实现的转发接缝，不进脚本成员目录）。 */
+    /** {@link ProxyObject} method names implemented on the view itself and excluded from script members. */
     private static final Set<String> PROXY_OBJECT_MEMBER_NAMES = proxyObjectMemberNames();
 
     private final Object view;
@@ -55,30 +55,30 @@ public final class ModificationViewSurface implements ProxyObject {
         this.view = view;
     }
 
-    /** 包一个修改属性视图。 */
+    /** Wraps a modification property view. */
     public static ModificationViewSurface of(Object view) {
         return new ModificationViewSurface(view);
     }
 
-    /** 若 value 是被本面包裹的视图，解出裸对象；否则原样返回。 */
+    /** Unwraps {@code value} to the underlying view if wrapped in {@code ModificationViewSurface}; otherwise returns it as-is. */
     public static Object unwrap(Object value) {
         return value instanceof ModificationViewSurface surface ? surface.view : value;
     }
 
-    // ---- ProxyObject：成员目录 ----
+    // ---- ProxyObject: member catalog ----
 
     @Override
     public Object getMember(String name) {
         MemberCatalog catalog = catalog();
         Method setter = catalog.setters.get(name);
         if (setter != null) {
-            // 可写属性：读面走配套 getter（视图的 pending-value 读语义）
+            // Writable property: read side follows companion getter (view's pending-value read semantics)
             Method getter = catalog.getters.get(name);
             if (getter != null) {
                 return readGetter(getter);
             }
-            // write-only 属性：读面显式报错，不把 setter 的函数对象当值返回
-            //（访问器原名形态 item.setMaxStackSize(...) 仍可从 methods 取到调用入口）
+            // Write-only property: reject reads instead of returning the setter function
+            // (explicit calls like item.setMaxStackSize(...) still resolve through catalog.methods)
             throw new IllegalArgumentException("'" + name + "' on " + viewTypeName()
                     + " is write-only; readable: " + catalog.getterNames());
         }
@@ -106,7 +106,7 @@ public final class ModificationViewSurface implements ProxyObject {
         return catalog().memberNames().toArray();
     }
 
-    /** 属性写入：转发到与显式 setter 相同的 setter 方法。 */
+    /** Routes property assignment to the same Java setter used by explicit setter calls. */
     @Override
     public void putMember(String name, Value value) {
         Method setter = catalog().setters.get(name);
@@ -127,7 +127,7 @@ public final class ModificationViewSurface implements ProxyObject {
         return false;
     }
 
-    // ---- 反射读写 ----
+    // ---- Reflective accessors ----
 
     private Object readGetter(Method getter) {
         try {
@@ -157,7 +157,7 @@ public final class ModificationViewSurface implements ProxyObject {
         return view.getClass().getSimpleName();
     }
 
-    /** 方法成员（显式 setter 形态等）：单一方法（修改视图无重载面）。 */
+    /** Callable member wrapper for explicit accessor calls; modification views do not overload setters. */
     private final class SetterMethod implements ProxyExecutable {
         private final Method method;
         private final String name;
@@ -189,11 +189,11 @@ public final class ModificationViewSurface implements ProxyObject {
     }
 
     /**
-     * 值装配：JS 值 → setter 参数。错误信息带成员名与期望类型（与 BuilderSurface 同款）。
-     * Numeric members normalize through {@link ScriptNumberCoercion} (D6 policy):
-     * script numbers are doubles and {@code asInt/asLong/asFloat} lossy checks reject
-     * valid values like {@code friction = 0.9} with a raw engine exception
-     * (2026-09-29 float-coercion hotfix).
+     * Coerces a JS value to the setter's parameter type, including the member name and expected
+     * type in error messages (matching {@code BuilderSurface}). Numeric parameters go through
+     * {@link ScriptNumberCoercion} because JS numbers are doubles and Graal's lossy
+     * {@code asInt}/{@code asLong}/{@code asFloat} checks reject valid values like
+     * {@code friction = 0.9} with a raw engine exception.
      */
     private static Object coerce(Value value, Class<?> target, String what) {
         if (Consumer.class.isAssignableFrom(target) && value.canExecute()) {
@@ -251,7 +251,7 @@ public final class ModificationViewSurface implements ProxyObject {
         }
     }
 
-    /** JS 函数 → Java Consumer：回调参数若为被包裹视图则解包。 */
+    /** Adapts a JS function to a Java {@link Consumer}, unwrapping wrapped view arguments. */
     private static Consumer<Object> consumerOf(Value function) {
         return argument -> function.execute(ModificationViewSurface.unwrap(argument));
     }
@@ -262,7 +262,7 @@ public final class ModificationViewSurface implements ProxyObject {
                 : new IllegalArgumentException("member '" + member + "' failed: " + cause, cause);
     }
 
-    /** {@link ProxyObject} 接口方法名集合（构造期过滤用）。 */
+    /** Method names declared on {@link ProxyObject}, filtered out when building a {@link MemberCatalog}. */
     private static Set<String> proxyObjectMemberNames() {
         Set<String> names = new LinkedHashSet<>();
         for (Method method : ProxyObject.class.getMethods()) {
@@ -271,7 +271,7 @@ public final class ModificationViewSurface implements ProxyObject {
         return Set.copyOf(names);
     }
 
-    /** 视图类的公开实例成员目录：setter/getter 配对 + 其余方法。 */
+    /** Public instance member catalog for a view class: paired getters/setters and callable methods. */
     private static final class MemberCatalog {
         final Map<String, Method> setters = new LinkedHashMap<>();
         final Map<String, Method> getters = new LinkedHashMap<>();
@@ -286,23 +286,23 @@ public final class ModificationViewSurface implements ProxyObject {
                 if (method.getDeclaringClass() == Object.class) {
                     continue;
                 }
-                // 视图类自己实现 ProxyObject（转发到本引擎）：接口方法不是脚本成员，
-                // 不过滤会把 getMember/putMember 之类漏进成员目录（getMemberKeys 还会
-                // 变成 "memberKeys" 只读属性）。按名字过滤即可——视图没有同名成员。
+                // View classes implement ProxyObject to delegate here; skip those interface
+                // methods so getMember/putMember do not leak into the script catalog (otherwise
+                // getMemberKeys would also become a read-only "memberKeys" property).
                 if (PROXY_OBJECT_MEMBER_NAMES.contains(method.getName())) {
                     continue;
                 }
                 String name = method.getName();
                 Class<?>[] params = method.getParameterTypes();
                 if (name.startsWith("set") && name.length() > 3 && params.length == 1) {
-                    // 属性名（putMember/getMember 属性形态） + 访问器原名（item.setX(v) 显式调用形态）
+                    // Register both the bean property name and the explicit setter method name
                     setters.put(property(name), method);
                     methods.put(name, method);
                 } else if ((name.startsWith("get") || name.startsWith("is")) && params.length == 0) {
                     getters.put(property(name), method);
                     methods.put(name, method);
                 } else {
-                    // 引擎接缝（包私有不进 getMethods；equals/hashCode/toString 已被 Object 过滤）
+                    // Other public instance methods (package-private methods are excluded by getMethods; Object methods are filtered above)
                     methods.put(name, method);
                 }
             }
@@ -315,7 +315,7 @@ public final class ModificationViewSurface implements ProxyObject {
             return Character.toLowerCase(accessorName.charAt(3)) + accessorName.substring(4);
         }
 
-        /** 成员目录（去重：同一访问器同时以属性名与访问器原名收录）。 */
+        /** Deduplicated member names (an accessor is registered under both its property name and method name). */
         List<String> memberNames() {
             Set<String> names = new LinkedHashSet<>();
             names.addAll(setters.keySet());

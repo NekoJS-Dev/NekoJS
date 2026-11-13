@@ -1,8 +1,11 @@
-// TODO(fabric): fabric 侧还没有对应实现，整文件守卫等移植完成后去掉
+// Fabric has no equivalent implementation yet; remove the whole-file guard once the port is
+// done.
 //? if neoforge {
-// 26.x 实现，本文件不应再出现版本守卫。1.21.1 的实现是 versions/1.21.1/src 下的同名文件，
-// 改本文件行为时须同步它。
-// 脚本面的 @Doc/@Param 文案两侧本就不同，探针类型 golden 会校验，别照抄到孪生文件。
+// 26.x implementation, so this file must not contain version guards. The 1.21.1 implementation
+// is the same-named file under versions/1.21.1/src; changing this file's behavior means
+// updating that one too.
+// The @Doc/@Param text on the script side already differs between the two trees and the
+// probe-type golden checks it, so do not copy it into the twin file.
 package com.tkisor.nekojs.client.posteffect;
 
 import com.tkisor.nekojs.NekoJS;
@@ -21,32 +24,32 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * Post-effect declaration lifecycle owner and client-side Adapter (ticket 28): a
- * root-authorized {@link CandidateDomainCollector} that separates the <b>declaration</b>
- * lifecycle from the runtime binding.
+ * Owns the post-effect declaration lifecycle on the client and acts as the client-side
+ * adapter: a root-authorized {@link CandidateDomainCollector} that keeps the
+ * <b>declaration</b> lifecycle separate from the runtime binding.
  *
  * <p><b>Collection (candidate, {@code ReloadPhase.DOMAIN_PLAN}).</b> {@link #collect}
  * dispatches {@code ClientEvents.postEffects} into the <b>candidate's</b> pending listeners,
  * collects {@code register}/{@code unregister} declarations into an inert
- * {@link PostEffectCandidatePlan} and joins it to the candidate's joint preflight/publish
- * boundary. Nothing here mounts a production listener, activates a post chain or touches the
- * current client frame (AC2).
+ * {@link PostEffectCandidatePlan} and hands that plan to the candidate's preflight and
+ * publish steps. Nothing here mounts a production listener, activates a post chain or
+ * touches the current client frame.
  *
  * <p><b>Commit (single point).</b> {@link PostEffectCandidatePlan#publish()} calls
- * {@link #apply} exactly once on the owner thread; here the whole new generation is
+ * {@link #apply} exactly once on the owner thread; there the whole new generation is
  * installed and the previous generation's definitions, listeners and cached chains are
  * released, so no old-generation callback survives and no double render or half update can
- * happen (AC3). A failed or interrupted candidate never reaches {@code apply} — the previous
- * active generation keeps serving (AC4).
+ * happen. A failed or interrupted candidate never reaches {@code apply}, and the previous
+ * active generation keeps serving.
  *
  * <p><b>Runtime binding parity.</b> {@code PostEffects.set/clear/toggle/current} keep their
- * previous caller-visible behaviour and are not replaced by this event (AC5).
+ * existing caller-visible behaviour and are not replaced by this event.
  *
- * <p><b>Generation/stale read face.</b> {@link #activeGeneration()} and
+ * <p><b>Generation and stale read face.</b> {@link #activeGeneration()} and
  * {@link #hasActiveDefinition} report which declaration generation owns a definition, so a
- * caller can tell a live definition from a stale/retired one. This Adapter lives in the
- * shared MC-facing tree (it touches client renderer/resource state), while the inert plan
- * stays in {@code common}.
+ * caller can tell a live definition from a stale or retired one. This adapter lives in the
+ * shared MC-facing tree because it touches client renderer and resource state, while the
+ * inert plan stays in {@code common}.
  */
 public final class PostEffectDomainOwner implements CandidateDomainCollector, PostEffectApplier {
 
@@ -61,7 +64,7 @@ public final class PostEffectDomainOwner implements CandidateDomainCollector, Po
     public PostEffectDomainOwner() {
     }
 
-    // ---- CandidateDomainCollector（DOMAIN_PLAN 阶段） ----
+    // ---- CandidateDomainCollector (DOMAIN_PLAN phase) ----
 
     @Override
     public String domain() {
@@ -76,27 +79,30 @@ public final class PostEffectDomainOwner implements CandidateDomainCollector, Po
 
     @Override
     public void collect(CandidateDomainCollector.Handle handle) {
-        // 批次 generation 是领域账本自己的序号（初始收集点与事务 commit 共用同一条递增线）：
-        // 领域计划在 commit 前不可见，用它当诊断/指纹标签而不是 ScriptManager 的 generation。
+        // The batch generation is the domain ledger's own counter: the initial collection point and
+        // the transactional commit share the same increasing sequence. The domain plan is not
+        // visible before commit, so it labels diagnostics and fingerprints instead of
+        // ScriptManager's generation.
         PostEffectCandidatePlan plan = PostEffectCandidatePlan.beginBatch(
                 this, activeGeneration + 1L, activeIds);
         try {
             handle.dispatch(ClientEvents.POST_EFFECTS, new PostEffectEventJS(plan));
         } finally {
-            // 即使某个监听器回调抛出（候选失败），计划也已冻结，失败的候选不再累积声明。
+            // Even if a listener callback throws and the candidate fails, the plan is already frozen and
+            // the failed candidate collects no further declarations.
             plan.finish();
         }
         handle.registerPlan(plan);
     }
 
-    // ---- 初始 generation（客户端脚本初次加载后的收集点） ----
+    // ---- Initial generation (collection point after the first client script load) ----
 
     /**
-     * Initial CLIENT generation collection point: the non-transactional
-     * {@code loadScripts()} path has no candidate/commit, so the declarations are dispatched
-     * to the <b>active</b> bus and applied in this owner after a passing preflight. A
-     * rejected batch ({@link Outcome#BLOCKED}) keeps the previous active generation and
-     * never half-applies. Unlike the candidate path it has no joint boundary to join, so the
+     * Collection point of the initial CLIENT generation: the non-transactional
+     * {@code loadScripts()} path has no candidate or commit step, so the declarations are
+     * dispatched to the <b>active</b> bus and applied in this owner after a passing preflight.
+     * A rejected batch ({@link Outcome#BLOCKED}) keeps the previous active generation and never
+     * half-applies. Unlike the candidate path, nothing is deferred to a later commit, so the
      * whole batch is validated here and installed in one step.
      */
     public void applyInitialPlan() {
@@ -125,7 +131,7 @@ public final class PostEffectDomainOwner implements CandidateDomainCollector, Po
         apply(plan.declarations());
     }
 
-    // ---- PostEffectApplier：联合预检 / commit 点应用 ----
+    // ---- PostEffectApplier: preflight and commit-time application ----
 
     @Override
     public String adapterId() {
@@ -198,7 +204,9 @@ public final class PostEffectDomainOwner implements CandidateDomainCollector, Po
                 }
                 installed.put(id, definition);
             }
-            // 旧 generation 未再声明的 id 也随新批次退役（声明移除语义），不只是本批显式 unregister 的。
+            // Ids the old generation declared but this batch no longer declares are retired with the new
+            // batch too (declaration removal semantics), not just the ones explicitly unregistered
+            // in this batch.
             for (String previous : activeIds) {
                 Identifier id = Identifier.tryParse(previous);
                 if (id != null && !installed.containsKey(id)) {
@@ -213,14 +221,15 @@ public final class PostEffectDomainOwner implements CandidateDomainCollector, Po
             lastDiagnostics = new Diagnostics(Outcome.APPLIED, "commit", generation,
                     installed.size(), retired.size(), List.copyOf(released), null);
         } catch (Throwable failure) {
-            // candidate 契约：preflight 通过后 apply 不得抛；真抛了如实记录，不宣称成功。
+            // Candidate contract: apply must not throw once preflight passes; if it does anyway, record
+            // that faithfully instead of claiming success.
             lastDiagnostics = new Diagnostics(Outcome.RECOVERY_FAILED, "commit", activeGeneration,
                     installed.size(), retired.size(), List.copyOf(released), String.valueOf(failure));
             throw failure;
         }
     }
 
-    // ---- 观察面（generation / stale 只读查询） ----
+    // ---- Observation face (generation and stale-state read-only queries) ----
 
     /** Active declaration generation number ({@code -1} before the first commit). */
     public long activeGeneration() {

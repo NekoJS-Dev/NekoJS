@@ -11,10 +11,11 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 /**
- * 服务端 UseItem 包处理钩子：{@code ItemEvents.rightClicked} 的 fabric 服务端入口。
- * fabric-api 的 UseItemCallback 是纯客户端事件，喂不了 SERVER 总线；NeoForge 的
- * RightClickItem 在服务端实例投递（EventBusForgeBridge 的 side filter），此处对齐。
- * 脚本取消（return true）时跳过原版使用处理。
+ * Hook for the serverbound UseItem packet: the Fabric server-side entry for
+ * {@code ItemEvents.rightClicked}. fabric-api's UseItemCallback is a client-only event and cannot
+ * feed the SERVER bus; NeoForge's RightClickItem is dispatched on the server instance (the side
+ * filter in EventBusForgeBridge), and this hook matches that. When a script cancels (returns
+ * {@code true}), vanilla use handling is skipped.
  */
 @Mixin(ServerGamePacketListenerImpl.class)
 public abstract class ServerGamePacketListenerMixin {

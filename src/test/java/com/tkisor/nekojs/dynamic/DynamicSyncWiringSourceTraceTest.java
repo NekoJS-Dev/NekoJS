@@ -16,23 +16,21 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Ticket 21 platform wiring source-trace fixture (ticket 17 trace style, plain file
- * reads): pins the wiring discipline so later changes cannot bend the dynamic registry
- * sync face —
+ * Source trace for the platform wiring (plain file reads): pins the wiring so later changes cannot
+ * bend the dynamic registry sync face.
  *
  * <ul>
- *   <li><b>register-once</b>: the common-phase registration of
+ *   <li><b>register once</b>: the common-phase registration of
  *       {@code DynamicRegistrySyncPacket} lives only in the two 26.x node compat impls
- *       (Nf261/Nf262PlatformCompat) — zero registration calls in the shared
- *       assembly/event/reload faces;</li>
+ *       (Nf261/Nf262PlatformCompat); the shared assembly, event and reload faces contain no
+ *       registration call;</li>
  *   <li><b>receive-side hop</b>: both handlers (DynamicRegistrySyncWire.handleOnServer /
- *       DynamicRegistryClientSync.handleOnClient) must {@code enqueueWork} onto the
- *       platform main thread before touching the coordinator/participant (both are
- *       owner-thread-only by contract);</li>
- *   <li><b>no second channel / no second model</b>: protocol messages are encoded by
- *       common's {@code DynamicSyncWireCodec} into a single JSON body on the existing
- *       payload — the dynamic package registers no custom channel and hand-rolls no
- *       second wire encoding.</li>
+ *       DynamicRegistryClientSync.handleOnClient) must {@code enqueueWork} onto the platform main
+ *       thread before touching the coordinator or participant, since both are owner-thread-only by
+ *       contract;</li>
+ *   <li><b>no second channel and no second model</b>: protocol messages are encoded by common's
+ *       {@code DynamicSyncWireCodec} into a single JSON body on the existing payload. The dynamic
+ *       package registers no custom channel and hand-rolls no second wire encoding.</li>
  * </ul>
  */
 class DynamicSyncWiringSourceTraceTest {

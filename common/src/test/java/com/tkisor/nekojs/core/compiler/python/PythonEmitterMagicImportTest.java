@@ -8,8 +8,9 @@ import java.nio.file.Path;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * 验证 {@code from nekojs import ...}（魔法 import）被转译器剥离：无 JS 输出、不报错，
- * 且 source map 不偏移；其他模块的 {@code from X import *} 仍照常拒绝。
+ * Verifies that the transpiler strips {@code from nekojs import ...} (the magic import): it
+ * produces no JS output, raises no error, and does not shift the source map.
+ * A {@code from X import *} from any other module is still rejected as usual.
  */
 class PythonEmitterMagicImportTest {
 
@@ -34,7 +35,8 @@ class PythonEmitterMagicImportTest {
 
     @Test
     void magicImport_isLineNeutral() throws Exception {
-        // 剥离后，带魔法 import 的脚本的 JS 行数应与不带时一致（import 不产生任何行）
+        // After stripping, a script with the magic import has the same JS line count as one without it, because the
+        // import produces no lines.
         String withMagic = compile("from nekojs import *\nx = 1\n");
         String noMagic = compile("x = 1\n");
         assertEquals(countLines(noMagic), countLines(withMagic),

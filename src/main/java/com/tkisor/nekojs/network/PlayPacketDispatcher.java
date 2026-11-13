@@ -5,21 +5,23 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
 
 /**
- * play 阶段服务器→客户端发送面的中立通道：由各平台在初始化时装配一次
- * （NeoForge = {@code PacketDistributor}，fabric = {@code ServerPlayNetworking} + {@code PlayerLookup}），
- * 版本树里的业务代码（{@code ClientDataSyncJS} / {@code PDataSyncService} 等）只依赖本接口。
+ * Neutral channel for server-to-client sends during the play phase. Each platform installs it once
+ * at init (NeoForge = {@code PacketDistributor}, fabric = {@code ServerPlayNetworking} +
+ * {@code PlayerLookup}), and the business code in the version tree ({@code ClientDataSyncJS} /
+ * {@code PDataSyncService} and others) depends only on this interface.
  *
- * <p>发送失败不应打断脚本执行：未装配（专用服务器早期 / 单元测试）或没有可达目标时静默丢弃，
- * 不抛异常。装配与取用见 {@link PlayPacketDispatchers}。
+ * <p>A failed send must not interrupt script execution: when nothing is installed (early dedicated
+ * server / unit tests) or no target is reachable, the send is dropped silently and no exception is
+ * thrown. See {@link PlayPacketDispatchers} for installation and lookup.
  */
 public interface PlayPacketDispatcher {
 
-    /** 发给单个玩家。 */
+    /** Sends to a single player. */
     void sendToPlayer(ServerPlayer player, CustomPacketPayload payload);
 
-    /** 发给全部在线玩家。 */
+    /** Sends to every online player. */
     void sendToAllPlayers(CustomPacketPayload payload);
 
-    /** 发给跟踪该实体的玩家（实体自身是玩家时也包含它）。 */
+    /** Sends to the players tracking the entity; when the entity is a player, it is included too. */
     void sendToPlayersTrackingEntityAndSelf(Entity entity, CustomPacketPayload payload);
 }

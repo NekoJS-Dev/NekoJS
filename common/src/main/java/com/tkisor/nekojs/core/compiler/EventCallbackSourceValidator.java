@@ -42,8 +42,9 @@ public final class EventCallbackSourceValidator {
         try {
             ast = parsed.ast();
         } catch (Throwable e) {
-            // ValParser 是简化解析器：脚本含其不支持的语法时无法静态检查。
-            // 不静默——至少记一条日志，让用户知道该文件没有获得 preflight 保护。
+            // ValParser is a simplified parser: static checking is not possible if the script
+            // contains unsupported syntax. Do not silent—log at least one warning so the user
+            // knows this file is not protected by preflight.
             com.tkisor.nekojs.NekoJS.LOGGER.warn(
                     "Event preflight skipped for {}: source not parseable by ValParser ({}: {})",
                     file, e.getClass().getSimpleName(), e.getMessage());
@@ -70,7 +71,7 @@ public final class EventCallbackSourceValidator {
         // Previously only Block.stmts, ArrowFunc.body, and CallExpr.args were visited,
         // which missed callbacks nested inside function declarations, nested member
         // accesses, computed keys, variable initializers, and call callees. ValNode's
-        // sealed hierarchy only exposes these node types (no if/for/while/try — the
+        // sealed hierarchy only exposes these node types (no if/for/while/try—the
         // simplified ValParser does not model them), so we exhaustively visit every
         // child the hierarchy actually defines.
         if (node instanceof ValNode.Block b) {
@@ -93,13 +94,16 @@ public final class EventCallbackSourceValidator {
     }
 
     /**
-     * 事件回调成员检查：反射 schema 与平台反射**并集**。
+     * Checks the members an event callback uses, taking the union of the reflected schema and
+     * platform reflection.
      *
-     * <p>反射字段（{@code ManagedCallbackSchemaRegistry}，由 {@code EventContractReflector}
-     * 从运行时 {@code EventGroup} 派生）是跨平台承诺的 payload 视图：即使某平台事件类
-     * 反射缺该成员也放行。平台反射集合（{@code EventSchemaRegistry} →
-     * {@link JavaMemberIndex}）兜底覆盖事件类全部可见成员（方法名 + getter 属性名 + 字段名），
-     * 保证 {@code e.getServer()} 等方法形式不误报。
+     * <p>Reflected fields ({@link ManagedCallbackSchemaRegistry}, derived from the runtime
+     * {@code EventGroup} by {@code EventContractReflector}) are the payload views every platform
+     * promises, so they are allowed even when a specific platform event class fails to reflect
+     * the member. Platform reflection collections ({@code EventSchemaRegistry} →
+     * {@link JavaMemberIndex}) cover every visible member of the event class (method names, getter
+     * property names and field names), so method forms such as {@code e.getServer()} are not
+     * reported as errors.
      *
      * <p>Bindings can also accept callbacks, such as builder configuration methods. Their input
      * types are derived from the functional interface's abstract method, including generic
@@ -181,9 +185,10 @@ public final class EventCallbackSourceValidator {
         return joiner.toString();
     }
 
-    // ==================== 词法环境：const 别名与常量字符串 ====================
+    // ==================== Lexical environment: const aliases and constant strings ====================
 
-    /** 块级词法绑定：仅 const 且初始化可直接求值（payload 别名 / 字符串字面量 / 变量转发）。 */
+    /** Block-scoped lexical binding: only const bindings whose initializer can be evaluated directly
+     *  (payload alias, string literal, or forwarding another variable). */
     private sealed interface Binding permits Binding.Alias, Binding.ConstantString, Binding.Unknown {
         record Alias(String target) implements Binding {}
         record ConstantString(String value) implements Binding {}
@@ -228,7 +233,8 @@ public final class EventCallbackSourceValidator {
         return new Binding.Unknown();
     }
 
-    /** 解析 computed key：字符串字面量或 const 字符串变量；无法静态确定返回 null。 */
+    /** Resolves a computed key to a string literal or a const string variable. Returns null when
+     *  the key cannot be determined statically. */
     private static String resolveStringKey(ValNode key, Env env) {
         if (key instanceof ValNode.StringLiteral literal) {
             return literal.value();
@@ -242,24 +248,28 @@ public final class EventCallbackSourceValidator {
         return null;
     }
 
-    // ==================== 表达式类型流 ====================
+    // ==================== Expression type flow ====================
 
-    /** 表达式解析结果：已知 Java 类型集合（空 = 无具体类型，但不误报）、API 成员名集合、或未知。 */
+    /** Result of resolving an expression: a set of known Java types (empty means no concrete type,
+     *  and nothing is reported), a set of API member names, or unknown. */
     private sealed interface ResolvedValue permits ResolvedValue.JavaTypes, ResolvedValue.ApiMembers, ResolvedValue.WideApiMembers, ResolvedValue.Unknown {
         record JavaTypes(Set<Class<?>> classes) implements ResolvedValue {}
         record ApiMembers(Set<String> memberNames) implements ResolvedValue {}
-        /** 根成员并集（契约字段 + 反射成员）：成员名检查，类型不深入。 */
+        /** Union of root members (contract fields plus reflected members). Checked by member name only;
+         *  types are not resolved further. */
         record WideApiMembers(Set<String> memberNames) implements ResolvedValue {}
         record Unknown() implements ResolvedValue {}
     }
 
-    /** 校验上下文：契约 schema + 平台事件类 + 非事件回调的形参类型 + 报告通道。 */
+    /** Check context: the contract schema, the platform event class, parameter types of non-event
+     *  callbacks, and the report sink. */
     private static final class TypeContext {
         final ManagedCallbackSchemaRegistry.CallbackSchema managed;
         final Class<?> eventClass;
         final String group;
         final String displayName;
-        /** 非事件回调形参名 → 签名推导的类型集合（事件路径恒为空表）。 */
+        /** Non-event callback parameter name -> types derived from its signature. Always an empty map
+         *  on the event path. */
         final Map<String, Set<Class<?>>> callbackParamTypes;
         final Path file;
         final String source;
@@ -306,10 +316,12 @@ public final class EventCallbackSourceValidator {
         }
     }
 
-    /** 解析表达式并返回其类型流；同时报告其中未知成员的访问。 */
+    /** Resolves an expression and returns its type flow, reporting any unknown member access found
+     *  in it. */
     private static ResolvedValue resolveExpr(ValNode node, String param, Env env, TypeContext context) {
         if (node instanceof ValNode.Identifier id) {
-            // 非事件回调的形参（签名推导）：优先于事件根类型——两条路径不会同时出现
+            // Parameter of a non-event callback (derived from the signature). Checked before the event root
+            // type; the two paths never occur together
             Set<Class<?>> typed = context.callbackParamTypes.get(id.name());
             if (typed != null && !typed.isEmpty()) {
                 return new ResolvedValue.JavaTypes(typed);
@@ -340,7 +352,7 @@ public final class EventCallbackSourceValidator {
         if (node instanceof ValNode.ComputedMemberAccess computed) {
             String key = resolveStringKey(computed.key(), env);
             if (key == null) {
-                // 运行时动态 key：无法静态证明，不报错不误报
+                // Dynamic key at runtime: nothing can be proven statically, so nothing is reported
                 return new ResolvedValue.Unknown();
             }
             ResolvedValue obj = resolveExpr(computed.object(), param, env, context);
@@ -357,7 +369,7 @@ public final class EventCallbackSourceValidator {
             if (call.callee() instanceof ValNode.ComputedMemberAccess computed) {
                 String key = resolveStringKey(computed.key(), env);
                 if (key == null) {
-                    // 运行时动态 key：无法静态证明，不报错不误报
+                    // Dynamic key at runtime: nothing can be proven statically, so nothing is reported
                     return new ResolvedValue.Unknown();
                 }
                 ResolvedValue obj = resolveExpr(computed.object(), param, env, context);
@@ -382,10 +394,13 @@ public final class EventCallbackSourceValidator {
     }
 
     private static ResolvedValue rootValue(TypeContext context) {
-        // ProxyObject payload（如 RegistryEventJS 的 registry_types 糖方法）成员是动态的：
-        // 反射只能看到接口管道方法、契约反射器据此派生的成员表同样残缺，按静态成员表检查
-        // 必然把每个糖方法都误报成 "not in RegistryEventJS"。动态成员静态不可知就整体退回
-        // Unknown（「不知道就别报」）；运行期 getMember 抛错自带成员目录，提示质量不降。
+        // Members of a ProxyObject payload are dynamic, for example the registry_types sugar methods of
+        // RegistryEventJS. Reflection only sees the interface methods, and the member table the
+        // contract reflector derives from it is just as incomplete, so checking against the static
+        // table would report every sugar method as "not in RegistryEventJS". Unknown is returned for
+        // the whole value when dynamic members cannot be known statically (when in doubt, do not
+        // report); a runtime getMember failure carries its own member catalog, so message quality
+        // does not drop.
         if (context.eventClass != null
                 && graal.graalvm.polyglot.proxy.ProxyObject.class.isAssignableFrom(context.eventClass)) {
             return new ResolvedValue.Unknown();
@@ -398,9 +413,10 @@ public final class EventCallbackSourceValidator {
         if (context.managed != null) {
             apiMembers.addAll(context.managed.memberNames());
         }
-        // 两个来源都空 = 该回调形参类型完全未知：必须返回 Unknown。空集 WideApiMembers 对任何
-        // 成员都会「不包含」成立，等于把回调里的每次成员访问都判成错报（这正是
-        // DynamicRegistry builder 回调误报的根因之一）。
+        // Both sources empty means the callback parameter type is completely unknown, so Unknown must be
+        // returned. An empty WideApiMembers set contains no member at all, so it would turn every
+        // member access in the callback into an error report; that is one of the root causes of the
+        // false reports on DynamicRegistry builder callbacks.
         if (classes.isEmpty() && apiMembers.isEmpty()) {
             return new ResolvedValue.Unknown();
         }
@@ -410,8 +426,9 @@ public final class EventCallbackSourceValidator {
         if (classes.isEmpty()) {
             return new ResolvedValue.ApiMembers(apiMembers);
         }
-        // 并集：契约字段 + 反射成员。契约字段作为 API 成员放行，反射成员由 Java 类检查。
-        // 两者都出现时用"宽集合"检查（根成员检查的既有语义）。
+        // Union of contract fields and reflected members. Contract fields pass as API members, and
+        // reflected members are checked by Java class. When both are present the check uses the wide
+        // set, matching how root members are checked.
         Set<String> wide = new LinkedHashSet<>(apiMembers);
         for (Class<?> c : classes) {
             wide.addAll(JavaMemberIndex.propertyMembersOf(c));
@@ -464,7 +481,7 @@ public final class EventCallbackSourceValidator {
                 }
                 return new ResolvedValue.Unknown();
             }
-            // API 符号类型无更深类型信息：不深入链式
+            // An API symbol type carries no deeper type information, so chained access is not resolved
             return new ResolvedValue.Unknown();
         }
         if (obj instanceof ResolvedValue.WideApiMembers wide) {
@@ -478,7 +495,8 @@ public final class EventCallbackSourceValidator {
                 }
                 return new ResolvedValue.Unknown();
             }
-            // 契约字段类型信息在 fieldTypes 中；此处 root 并集场景保守返回 unknown
+            // Contract field types live in fieldTypes; the root union path has that detail, so it returns
+            // unknown
             return new ResolvedValue.Unknown();
         }
         return new ResolvedValue.Unknown();

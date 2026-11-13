@@ -30,23 +30,27 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * 工单 33（W9）declaration 覆盖 gate —— Fabric {@code common-api-processor} 延期后的
- * 非 processor 替代门禁之三：同一规范契约派生出的 TS 声明与 runtime 成员逐项对齐。
+ * Declaration coverage gate, the non-processor replacement for the deferred Fabric
+ * {@code common-api-processor}: it checks that the TS declarations derived from one contract line
+ * up item by item with the runtime members.
  *
- * <p><b>owner</b>：Managed Surface/Probe owner（declaration fixture）；build convention owner
- * 负责接线。<b>输入</b>：{@link CoreManagedApiBootstrap#buildContract} 从运行时反射得到的
- * {@code NormativeApiContract}（规范源）+ {@link ManagedApiDeclarationGenerator} 的产物。
- * <b>逐项输出</b>：每个 owner 的 member 集合、每个 global、每个 type 符号的声明存在性，
- * 与只读基线 {@code /nekojs/platform-gates/declaration-parity.txt} 对比；并落
- * {@code build/nekojs-gates/declaration-parity.json}。
- * <b>失败诊断</b>：逐条给出 {@code missing-member} / {@code extra-member} /
- * {@code missing-type} / {@code owner-missing} / {@code type-fallback}，
- * 带 owner、member/type 名与缺失方向。
+ * <p><b>Owner</b>: Managed Surface/Probe owner (the declaration fixture); the build convention
+ * owner wires it in. <b>Input</b>: the {@code NormativeApiContract} that
+ * {@link CoreManagedApiBootstrap#buildContract} reflects from the runtime (the normative source)
+ * plus the output of {@link ManagedApiDeclarationGenerator}. <b>Output per item</b>: the member
+ * set of each owner, each global, and whether each type symbol is declared, compared with the
+ * read-only baseline {@code /nekojs/platform-gates/declaration-parity.txt}; the report is written
+ * to {@code build/nekojs-gates/declaration-parity.json}. <b>Failure diagnosis</b>: one entry per
+ * gap using {@code missing-member} / {@code extra-member} / {@code missing-type} /
+ * {@code owner-missing} / {@code type-fallback}, with the owner, the member or type name and the
+ * direction of the gap.
  *
- * <p><b>为什么这是独立 gate 而不是复用 ticket 09 的派生测试</b>：09 的
- * {@code ManagedSurfaceDerivationDeterminismTest} 证明"重复生成稳定 + 成员集合相等"，
- * 但它不登记逐项基线，也没有把 {@code type:} 符号（对未识别类型会 fallback 成
- * {@code unknown}）纳入失败诊断。本 gate 补齐这两点，并明确 processor 延期的输入/输出/owner。
+ * <p>This is a separate gate rather than a reuse of
+ * {@code ManagedSurfaceDerivationDeterminismTest} because that test proves repeated generation is
+ * stable and the member sets are equal, but it records no item-by-item baseline and does not
+ * report a {@code type:} symbol (which falls back to {@code unknown} for an unrecognized type) as
+ * a failure. This gate adds both, and states the input, output and owner of the deferred
+ * processor.
  */
 class ManagedDeclarationCoverageGateTest {
 
@@ -89,7 +93,7 @@ class ManagedDeclarationCoverageGateTest {
                 }
                 case "global" -> contractGlobals.add(id.qualifiedName());
                 case "type" -> contractTypes.add(id.qualifiedName());
-                default -> { /* 其它 kind 不在 declaration parity 输入内 */ }
+                default -> { /* Any other kind is not part of the declaration parity input */ }
             }
         }
 
@@ -129,12 +133,14 @@ class ManagedDeclarationCoverageGateTest {
                         + " :: 声明渲染了契约没有的 const " + global);
             }
         }
-        // 票 33 review F6：`kind="type"` 的 ApiSymbolId 目前**没有任何生产者**（实际构造的 kind
-        // 只有 global/member/event/adapter/hostExt/java，grep 实证），所以"契约 type → 声明 interface"
-        // 的断言是不可达的——那正是 AC3 要消灭的"把没证据写成覆盖"。这里改为把契约 type 集合
-        // 作为**事实**逐项输出（当前为空集），一旦将来真出现 type-kind 符号，下面的
-        // type-symbol-observed 会立刻把它暴露出来，而不是靠一条永远为真的断言装作已覆盖。
-        // 契约携带但渲染器无法识别类型的符号：声明里只能是 unknown —— 显式记录，不静默通过。
+        // No producer currently creates an ApiSymbolId with kind="type"; the kinds actually built
+        // are global/member/event/adapter/hostExt/java (verified with grep). So an assertion that
+        // "contract type -> declared interface" can never run, and it would claim coverage with no
+        // evidence. The contract type set is reported as a fact instead, item by item (today it is
+        // empty); if a type-kind symbol ever appears, the check below lists it as a typed gap
+        // rather than passing on an assertion that is always true.
+        // A symbol whose type the generator cannot render becomes unknown in the declaration. It
+        // is recorded explicitly, not passed over.
         for (ApiSymbol symbol : symbols) {
             for (String fallback : unknownFallbackTypes(symbol)) {
                 gaps.add("type-fallback owner=" + ownerOf(symbol) + " type=" + fallback
@@ -156,8 +162,8 @@ class ManagedDeclarationCoverageGateTest {
         rows.put("signatures", String.valueOf(symbols.stream().mapToInt(s -> s.signatures().size()).sum()));
         emitReport(rows, gaps);
 
-        // 先报可定位的缺口，再比对基线：真正的回归应得到 missing-member/type-fallback 这类
-        // 指名诊断，而不是只看到"基线漂移"（AC8）。
+        // Report locatable gaps before comparing the baseline, so a real regression surfaces as a
+        // named diagnostic such as missing-member or type-fallback, not just "baseline drifted".
         assertTrue(gaps.isEmpty(), "declaration gate 失败（owner=Managed Surface/Probe owner；"
                 + "逐项输出见 " + REPORT_DIR + "/declaration-parity.json）:\n" + String.join("\n", gaps));
 
@@ -167,9 +173,9 @@ class ManagedDeclarationCoverageGateTest {
     }
 
     /**
-     * 票 33 review F6 的反向检查：`type-symbol-observed` 必须真的会被触发。
-     * 用一个合成的 type-kind 契约符号跑同一段分类逻辑，断言它产出可定位缺口
-     * （而不是像原 missing-type 那样永远不可达）。
+     * Reverse check for `type-symbol-observed`: the gap must actually fire. A synthetic type-kind
+     * contract symbol goes through the same classification, and the test asserts that it produces
+     * a locatable gap of its own.
      */
     @Test
     void typeKindSymbolProducesObservableGap() {
@@ -184,8 +190,9 @@ class ManagedDeclarationCoverageGateTest {
     }
 
     /**
-     * 票 33 review F6：`kind="type"` 目前没有生产者，因此正向输入必然为空集；
-     * 这条断言把这个**事实**钉住——断言空集本身（而不是一条永远为真的 missing-type）。
+     * `kind="type"` has no producer, so the positive input must be the empty set. This test pins
+     * that fact by asserting the empty set itself, rather than relying on an always-true
+     * missing-type check.
      */
     @Test
     void contractCarriesNoTypeKindSymbolsToday() {
@@ -202,11 +209,12 @@ class ManagedDeclarationCoverageGateTest {
     }
 
     /**
-     * 票 33 review F6：契约里出现 {@code kind="type"} 符号时的可定位缺口。
+     * Locatable gap for a {@code kind="type"} symbol in the contract.
      *
-     * <p>当前契约没有 type-kind 生产者，所以正常输入返回空列表；`typeKindSymbolProducesObservableGap`
-     * 用合成符号证明这条诊断**真的可达**（原 `missing-type` 断言两侧都由同一集合驱动、
-     * 永远为真，属于 AC3 要消灭的假覆盖）。
+     * <p>No producer emits type-kind symbols today, so normal input returns an empty list.
+     * `typeKindSymbolProducesObservableGap` feeds a synthetic symbol and proves the diagnostic is
+     * reachable. A `missing-type` check would compare the same set on both sides and always pass,
+     * which is why this gate reports the gap instead.
      */
     static List<String> typeKindGaps(List<ApiSymbol> symbols) {
         List<String> gaps = new ArrayList<>();
@@ -221,7 +229,7 @@ class ManagedDeclarationCoverageGateTest {
         return gaps;
     }
 
-    // ---- 渲染产物读取 ----
+    // ---- Reading the rendered declaration ----
 
     private static Set<String> interfaceOwners(String ts) {
         Set<String> names = new TreeSet<>();
@@ -246,7 +254,7 @@ class ManagedDeclarationCoverageGateTest {
                 .matcher(body).find();
     }
 
-    // ---- 类型降级检测 ----
+    // ---- Detecting type fallback ----
 
     private static String ownerOf(ApiSymbol symbol) {
         String qualified = symbol.id().qualifiedName();
@@ -255,7 +263,8 @@ class ManagedDeclarationCoverageGateTest {
                 ? qualified.substring(0, separator) : "<" + symbol.id().kind() + ">";
     }
 
-    /** 契约里引用了、但渲染器会降级为 unknown 的类型（当前渲染器未覆盖的 SYMBOL/TYPE_VARIABLE）。 */
+    /** Types the contract references but the generator falls back to unknown (SYMBOL or
+     *  TYPE_VARIABLE the current generator does not cover). */
     private static Set<String> unknownFallbackTypes(ApiSymbol symbol) {
         Set<String> found = new TreeSet<>();
         for (ApiSignature signature : symbol.signatures()) {
@@ -281,7 +290,7 @@ class ManagedDeclarationCoverageGateTest {
         }
     }
 
-    // ---- 逐项输出落盘 ----
+    // ---- Writing the report ----
 
     private static void emitReport(Map<String, String> rows, List<String> gaps) throws IOException {
         Files.createDirectories(REPORT_DIR);
@@ -304,9 +313,10 @@ class ManagedDeclarationCoverageGateTest {
         Files.writeString(REPORT_DIR.resolve("declaration-parity.json"), json.toString());
     }
 
-    // ---- 只读基线 ----
+    // ---- Read-only baseline ----
 
-    /** 无需平台副作用的最小平台实现（同 ManagedSurfaceDerivationDeterminismTest.EmptyPlatform）。 */
+    /** Minimal platform implementation with no side effects (same as
+     *  ManagedSurfaceDerivationDeterminismTest.EmptyPlatform). */
     private static final class EmptyPlatform implements com.tkisor.nekojs.platform.IPlatform {
         @Override public boolean isClient() { return false; }
         @Override public boolean isDevelopment() { return true; }

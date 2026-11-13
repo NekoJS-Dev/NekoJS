@@ -25,29 +25,28 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Ticket 24 per-family caller-to-result bus-level behavior fixture (NeoForge side): verifies
+ * Per-family caller-to-result behavior on <b>real family buses</b> (NeoForge side): verifies
  * registration, payload pass-through, priority ordering, cancellation short-circuit,
- * exactly-once delivery across repeated subscriptions, and the reload cleanup entry on
- * <b>real family buses</b> ({@code LevelEvents.LOADED}, {@code PlayerEvents.CHAT},
- * {@code CommandEvents.COMMAND}, {@code EntityEvents.DEATH}, {@code BlockEvents.BROKEN},
- * {@code ItemEvents.MODIFICATION}, {@code GoalEvents.REGISTER},
- * {@code CapabilityEvents.REGISTER}) — i.e. the dispatch semantics script listeners rely on
- * hold on the family buses (bus-agnostic concurrency stress lives in common's
- * {@code EventBusJSExternalBehaviorStressTest}, not repeated here).
+ * exactly-once delivery across repeated subscriptions, and the reload cleanup entry for
+ * {@code LevelEvents.LOADED}, {@code PlayerEvents.CHAT}, {@code CommandEvents.COMMAND},
+ * {@code EntityEvents.DEATH}, {@code BlockEvents.BROKEN}, {@code ItemEvents.MODIFICATION},
+ * {@code GoalEvents.REGISTER} and {@code CapabilityEvents.REGISTER}. In other words, the
+ * dispatch semantics script listeners rely on hold on the family buses. Bus-agnostic concurrency
+ * stress lives in common's {@code EventBusJSExternalBehaviorStressTest} and is not repeated
+ * here.
  *
- * <p>Listeners go through the Java-side {@code bus().listen(priority, ...)} — the very same
- * underlying registration surface {@code EventBusForgeBridge.CancellableListener/Listener}
- * uses to deliver the script buses; a headless JVM cannot construct real MC event instances
- * (Level/ServerPlayer etc.), so posts use synthetic payloads shaped like the family's own
- * (the underlying post does not validate the event type, payloads reach listeners
- * <b>verbatim</b> — payload pass-through semantics are testable). The platform native
- * event → payload conversion lives in {@code EventBusForgeBridge}, whose side filter and
- * cancellation write-back are already covered by {@code EventBusForgeBridgeSideFilterTest};
- * the source trace of real platform callbacks is in
+ * <p>Listeners go through the Java-side {@code bus().listen(priority, ...)}, the same
+ * registration surface {@code EventBusForgeBridge.CancellableListener/Listener} uses to deliver
+ * the script buses. A headless JVM cannot construct real MC event instances (Level/ServerPlayer
+ * etc.), so posts use synthetic payloads shaped like the family's own. The underlying post does
+ * not validate the event type, so payloads reach listeners <b>verbatim</b> and payload
+ * pass-through is testable. The platform native event to payload conversion lives in
+ * {@code EventBusForgeBridge}, whose side filter and cancellation write-back are already covered
+ * by {@code EventBusForgeBridgeSideFilterTest}; the source trace of real platform callbacks is in
  * {@code Ticket24GameplayEventPhaseTraceTest}.
  *
- * <p>Static groups are shared across cases: each case cleans up after itself (token
- * unregister + {@code clearTokens}) and does not pollute other tests in the same JVM.
+ * <p>The static groups are shared across cases: each case cleans up after itself (token
+ * unregister plus {@code clearTokens}) and does not pollute other tests in the same JVM.
  */
 class Ticket24GameplayFamilyBusBehaviorTest {
 

@@ -16,18 +16,18 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
 
 /**
- * 内置扩展点 {@code nekojs:registry_types}（ADR-0004 决策 4）：
- * 按注册表分组的命名 builder 类型 + 每注册表一个 default 类型。
+ * Built-in extension point {@code nekojs:registry_types}: named builder types grouped by registry,
+ * plus one default type per registry.
  *
- * <p><b>V2 依赖语义用例②</b>：本点 {@code dependsOn(nekojs:registry_infos)}（时序），
- * initializer 里读取其产物（数据依赖免声明）供类型登记校验。
- *
- * <p>类型层冲突 merge = {@link MergePolicy#overrideWarn}（内置类型可被第三方覆盖 + warn，
- * addon 生态惯例）；脚本糖方法（{@code event.item(id, cb)}）由 default 类型自动派生。
+ * <p>This point {@code dependsOn(nekojs:registry_infos)} for <b>ordering</b>, and its initializer
+ * reads that output; data dependencies need no declaration. The types are then checked at
+ * registration. Type-level conflicts merge with {@link MergePolicy#overrideWarn}, so a third party
+ * may override a built-in type and gets a warning, matching how addons usually work. Script sugar
+ * methods such as {@code event.item(id, cb)} are derived from the default type.
  */
 public final class RegistryTypesPoint {
 
-    /** 扩展点 id。 */
+    /** Extension point id. */
     public static final String ID = "nekojs:registry_types";
 
     private static final Logger LOGGER = LoggerFactory.getLogger("nekojs.bootstrap");
@@ -36,31 +36,35 @@ public final class RegistryTypesPoint {
     private RegistryTypesPoint() {
     }
 
-    /** 贡献面：实现本接口的插件登记命名类型与 default 类型。 */
+    /** Contribution side: plugins that implement it register named types and default types. */
     public interface Contributor extends NekoJSPlugin {
 
-        /** 默认空实现。 */
+        /** Default no-op. */
         default void registerRegistryTypes(RegistryTypesCollector collector) {
         }
     }
 
-    /** 收集期累积器：{@code (registry, name) → 工厂} 分组表 + default 表。 */
+    /** Collector used while collecting: a map from {@code (registry, name)} to a factory, grouped by
+     * registry, plus a default table. */
     public static final class RegistryTypesCollector {
         final Map<ResourceKey<? extends Registry<?>>, Map<String, Function<Identifier, ?>>> byRegistry = new LinkedHashMap<>();
         final Map<ResourceKey<? extends Registry<?>>, String> defaults = new LinkedHashMap<>();
-        /** (registry, name) → builder 类（声明/契约派生用；未提供的类型无派生声明）。 */
+        /** Maps a registry and type name to the builder class, used to derive declarations and contracts;
+         * a type registered without a class gets no derived declaration. */
         final Map<ResourceKey<? extends Registry<?>>, Map<String, Class<? extends RegistryObjectBuilder<?>>>> builderClasses = new LinkedHashMap<>();
 
-        /** 登记一个命名类型（同 (registry, name) 后到覆盖 + warn，overrideWarn）。 */
+        /** Registers one named type; a later registration for the same (registry, name) overrides the
+         * earlier one and logs a warning (overrideWarn). */
         public <B extends RegistryObjectBuilder<?>> void registerType(
                 ResourceKey<? extends Registry<?>> registry, String name, Function<Identifier, B> factory) {
             registerType(registry, name, null, factory);
         }
 
         /**
-         * 登记一个命名类型并声明 builder 类（ticket 15）：builder 类是 typed Builder 公开
-         * 成员 / 校验 / 声明派生的契约反射输入（AC7/AC9）——runtime member、fingerprint、
-         * TS/Python declaration 与 golden 都从它派生，不手写第二份成员表。
+         * Registers one named type and declares its builder class. That class is the reflection input
+         * for the members, validation and declarations of the typed builder: runtime members,
+         * fingerprints, TS/Python declarations and golden files all derive from it, so there is no
+         * second member table written by hand.
          */
         public <B extends RegistryObjectBuilder<?>> void registerType(
                 ResourceKey<? extends Registry<?>> registry, String name,
@@ -81,13 +85,13 @@ public final class RegistryTypesPoint {
             }
         }
 
-        /** 设定注册表的 default 类型名（脚本糖方法免名直达）。 */
+        /** Sets the registry's default type name, which the script sugar method uses without naming a type. */
         public void setDefault(ResourceKey<? extends Registry<?>> registry, String name) {
             defaults.put(registry, name);
         }
     }
 
-    /** 产物：不可变类型表 + default 表。 */
+    /** Output: the immutable type table plus the default table. */
     record RegistryTypes(
             Map<ResourceKey<? extends Registry<?>>, Map<String, Function<Identifier, ?>>> byRegistry,
             Map<ResourceKey<? extends Registry<?>>, String> defaults,
@@ -98,26 +102,29 @@ public final class RegistryTypesPoint {
             builderClasses = java.util.Collections.unmodifiableMap(new LinkedHashMap<>(builderClasses));
         }
 
-        /** 取某注册表的命名类型工厂（无则 null）。 */
+        /** Returns the named type factory of a registry, or null when it has none. */
         @SuppressWarnings("unchecked")
         public Function<Identifier, RegistryObjectBuilder<?>> type(ResourceKey<? extends Registry<?>> registry, String name) {
             return (Function<Identifier, RegistryObjectBuilder<?>>) byRegistry.getOrDefault(registry, Map.of()).get(name);
         }
 
-        /** 取某注册表的 default 类型工厂（未设 default 则 null）。 */
+        /** Returns the default type factory of a registry, or null when no default is set. */
         @SuppressWarnings("unchecked")
         public Function<Identifier, RegistryObjectBuilder<?>> defaultType(ResourceKey<? extends Registry<?>> registry) {
             String name = defaults.get(registry);
             return name == null ? null : type(registry, name);
         }
 
-        /** 某注册表下全部已登记类型名（错误提示 / 目录用）。 */
+        /** Names of every type registered under one registry. Used for error messages and for listings. */
         public java.util.Set<String> typeNames(ResourceKey<? extends Registry<?>> registry) {
             Map<String, Function<Identifier, ?>> names = byRegistry.get(registry);
             return names == null ? java.util.Set.of() : java.util.Collections.unmodifiableSet(names.keySet());
         }
 
-        /** 按类型名反查归属注册表（可能多个：{@code event.custom} 的全局名解析用）。 */
+        /**
+         * Looks up the registries that own a type name. More than one registry can own it;
+         * {@code event.custom} uses this to resolve global names.
+         */
         public java.util.List<ResourceKey<? extends Registry<?>>> registriesOf(String typeName) {
             return byRegistry.entrySet().stream()
                     .filter(entry -> entry.getValue().containsKey(typeName))
@@ -125,20 +132,23 @@ public final class RegistryTypesPoint {
                     .toList();
         }
 
-        /** 某注册表下已声明 builder 类的 (类型名 → builder 类) 只读视图（契约/声明派生输入）。 */
+        /**
+         * Read-only view of the (type name -> builder class) pairs declared for one registry. It is input
+         * for deriving builder contracts and declarations.
+         */
         public Map<String, Class<? extends RegistryObjectBuilder<?>>> builderClassesOf(
                 ResourceKey<? extends Registry<?>> registry) {
             return java.util.Collections.unmodifiableMap(builderClasses.getOrDefault(registry, Map.of()));
         }
     }
 
-    /** 扩展点定义（由 NekoRegistryPointsPlugin 注册）。 */
+    /** The extension point definition, registered by NekoRegistryPointsPlugin. */
     public static final NekoPluginExtensionPoint<Contributor, RegistryTypesCollector, RegistryTypes> POINT =
             NekoPluginExtensionPoint.<Contributor, RegistryTypesCollector, RegistryTypes>builder(ID, Contributor.class)
                     .merge(POLICY)
                     .dependsOn(RegistryInfosPoint.POINT)
                     .initializer(context -> {
-                        // 数据依赖（ADR-0002 ②）：registry_infos 产物已就绪（dependsOn 拓扑保证）
+                        // Data dependency: the registry_infos output is already in place, as the dependsOn order guarantees.
                         context.result(RegistryInfosPoint.POINT);
                         return new RegistryTypesCollector();
                     })

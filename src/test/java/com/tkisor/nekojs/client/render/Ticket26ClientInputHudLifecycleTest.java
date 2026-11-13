@@ -21,17 +21,22 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * 票 26 AC4 贯穿 fixture（26.x 版本树测试树）：{@code ClientEvents.hudRender(...)} 注册的
- * 常驻渲染器走候选 generation 生命周期 —— 候选期对生产路由不可见、commit 点整批换装
- * 恰好一次、候选失败/取消时旧 active 渲染器继续服务。
+ * End-to-end fixture (26.x version-tree test tree) for {@code ClientEvents.hudRender(...)}: a
+ * renderer registered there follows the candidate generation lifecycle. While the candidate
+ * builds it is invisible to the production route; at the commit point the whole batch is swapped
+ * in exactly once; when the candidate fails or is cancelled, the previous active renderer keeps
+ * serving.
  *
- * <p>断言只走公开行为：{@link Ticket26ClientInputHudHarness#dispatchHud(String)} 返回
- * 「本帧真正被调用的渲染器 id」（渲染上下文探针），以及 {@code KeyBindEvents.PRESSED}
- * 的按键定向集合；不断言私有注册表快照或回调对象身份。
+ * <p>Assertions use only public behavior: the renderer ids that actually ran this frame, as
+ * returned by {@link Ticket26ClientInputHudHarness#dispatchHud(String)} (a render-context probe),
+ * and the key-targeted set on {@code KeyBindEvents.PRESSED}. They never assert private registry
+ * snapshots or callback object identity.
  *
- * <p>候选失败由<b>同批的 peer 领域计划</b>在 STATE_PLAN 联合预检抛出制造（与
- * {@code PostEffectDeclarationLifecycleTest#aCandidatePreflightThatPassesDoesNotPublishAnObservation}
- * 同款），不为了造失败去改生产代码；peer 收集器同时充当「候选期生产路由长什么样」的观察点。
+ * <p>A failing candidate is produced by a <b>peer domain plan in the same batch</b> throwing
+ * during the STATE_PLAN preflight (the same shape as
+ * {@code PostEffectDeclarationLifecycleTest#aCandidatePreflightThatPassesDoesNotPublishAnObservation}),
+ * so no production code is changed just to force a failure. The peer collector doubles as the
+ * observation point for what the production route looks like while the candidate builds.
  */
 class Ticket26ClientInputHudLifecycleTest {
 
@@ -102,11 +107,14 @@ class Ticket26ClientInputHudLifecycleTest {
     }
 
     /**
-     * peer 收集器：在 DOMAIN_PLAN 阶段记录「此刻生产路由长什么样」，并可选择让整批候选
-     * 在 STATE_PLAN 预检失败一次（{@code rejectOnce}）。观察走只读公开面。
+     * Peer collector: records what the production route looks like at the DOMAIN_PLAN stage and
+     * can optionally make the whole candidate batch fail the STATE_PLAN preflight once
+     * ({@code rejectOnce}). It observes through the read-only public surface.
      *
-     * <p>拒绝刻意只发生一次：收集器按注册序在每一轮候选都被调用，若每次都拒绝，
-     * 「下一轮能正常提交」的恢复路径就不可测（那是测试自己制造的持续故障，不是候选语义）。
+     * <p>The rejection deliberately happens only once. The collector runs in registration order on
+     * every candidate round, so rejecting every time would make the "the next round commits
+     * normally" recovery path untestable; that would be a permanent fault created by the test, not
+     * candidate semantics.
      */
     private List<List<String>> observeDuringCandidate(boolean rejectOnce) {
         List<List<String>> seen = new ArrayList<>();
@@ -160,7 +168,8 @@ class Ticket26ClientInputHudLifecycleTest {
         harness.loadClientScripts();
         assertEquals(List.of("first"), Ticket26ClientInputHudHarness.dispatchHud("normal"));
 
-        // 同批：渲染器已进候选批次（inert），peer 领域计划在 STATE_PLAN 联合预检拒绝 → 整批失败。
+        // Same batch: the renderer is already in the candidate batch (inert) and the peer domain plan
+        // rejects during the STATE_PLAN preflight, so the whole batch fails.
         observeDuringCandidate(true);
         harness.writeClientScript("hud.js", hudScript("second"));
         NekoReloadException failure = assertThrows(NekoReloadException.class, harness::reloadClientScripts);
@@ -172,7 +181,8 @@ class Ticket26ClientInputHudLifecycleTest {
         assertTrue(Ticket26ClientInputHudHarness.hasHud("normal"),
                 "the previous generation's renderer is still installed, so the frame keeps drawing it");
 
-        // 候选资源随失败丢弃：下一轮正常 reload 仍能提交（无挂起批次泄漏）。
+        // Candidate resources are discarded with the failure: the next normal reload still commits, and
+        // no pending batch leaks.
         harness.writeClientScript("hud.js", hudScript("third"));
         harness.reloadClientScripts();
         assertEquals(List.of("third"), Ticket26ClientInputHudHarness.dispatchHud("normal"),
@@ -181,8 +191,9 @@ class Ticket26ClientInputHudLifecycleTest {
 
     @Test
     void aGenerationThatRegistersNothingRetiresThePreviousRenderers() throws Exception {
-        // 注册入口是「调用即注册」：新 generation 没有脚本再注册时批次为空，commit 点换装后
-        // 旧渲染器退役，而不是作为陈旧残留继续每帧回调。
+        // Registration happens on call: when no script in the new generation registers a renderer, the
+        // batch is empty, so the swap at the commit point retires the old renderers instead of
+        // leaving them as stale leftovers that keep getting called every frame.
         harness.writeClientScript("hud.js", hudScript("first"));
         harness.loadClientScripts();
         assertEquals(List.of("first"), Ticket26ClientInputHudHarness.dispatchHud("normal"));
@@ -190,10 +201,9 @@ class Ticket26ClientInputHudLifecycleTest {
         harness.writeClientScript("hud.js", "global.noHud = true\n");
         harness.reloadClientScripts();
 
-        // 空批次也参与 commit（ClientRenderDomainOwner 无条件注册计划），因此生产表真的被
-        // 换成空表：两个口径必须一致——dispatch 不再调用任何渲染器，hasHud 也不再认为该层
-        // 有存活渲染器。修复前这里会「dispatch 空 / hasHud true」（旧条目靠已关闭 Context 的
-        // 吞错伪装成空 dispatch），那条断言是假绿，本用例把它变成真断言。
+        // An empty batch joins the commit too (ClientRenderDomainOwner registers its plan unconditionally),
+        // so the production table really does become empty. Both views must agree: dispatch calls no
+        // renderer and hasHud reports no live renderer for that layer.
         assertTrue(Ticket26ClientInputHudHarness.dispatchHud("normal").isEmpty(),
                 "an empty committed batch retires the previous generation's renderer");
         assertTrue(!Ticket26ClientInputHudHarness.hasHud("normal"),
@@ -202,9 +212,11 @@ class Ticket26ClientInputHudLifecycleTest {
 
     @Test
     void keyBindListenersFollowTheSameCandidateBoundaryWithoutDuplication() throws Exception {
-        // KeyBindEvents 的绑定注册语义（同 id 幂等、跨 reload 存活）本票不改；这里钉住的是
-        // 它们的事件监听面与渲染器走同一条候选边界：候选期不挂生产总线，commit 后恰好一条，
-        // 再 reload 仍是一条（不重复注册）。
+        // KeyBindEvents keeps its binding registration semantics (idempotent per id, survives reload);
+        // what this pins is that their listener surface follows the same candidate path as
+        // renderers: nothing attaches to the production bus while the candidate builds, exactly
+        // one listener after the commit, and still one after another reload (no duplicate
+        // registration).
         harness.writeClientScript("keys.js", """
                 KeyBindEvents.pressed('ticket26:key_a', event => { global.pressedId = event.id })
                 KeyBindEvents.register('ticket26:key_a', 'key.keyboard.g')

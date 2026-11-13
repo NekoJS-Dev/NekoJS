@@ -1,13 +1,18 @@
-// 旧路径 characterization → 重构后确定性重放断言（ticket 39 AC6/AC7）。
-// 重构前的旧事实（直接修改路径，2026-09-17 在旧代码上实测）：
-//   1) 同重放内同目标多声明 = 后一声明整体替换前一声明（restore-before-modify 每次回基线）；
-//   2) block 重放前整体恢复快照，item 只在再次 modify 时恢复 → item 声明消失后修改 stale；
-//   3) GraalJS 宿主对象 property 写静默无效（探针结果 assigned,read=undefined,pending=null，
-//      不落 setter——javadoc 示例形态在旧路径从未生效；现行复现见本文件探针用例）。
-// 重构后（candidate plan + Adapter）：(1) 声明顺序 + 整体替换语义在计划层与端到端两层固定
-//（本文件 + common 层 Ticket39DomainCollectionTest）；(2) item/block 统一为「先恢复基线再应用
-// 完整新计划」（AC7，迁移表记录行为变化）；(3) property 写经 ModificationViewSurface 到达同一
-// setter（ModificationSetterPropertyParityTest，含生产投递形态）。
+// Characterization of the old path, now replayed deterministically against the refactor.
+// Facts measured on the old code (the direct modification path):
+//   1) Within one replay, several declarations for the same target: the later declaration
+//      replaces the earlier one entirely (restore-before-modify returns to the baseline each time).
+//   2) Block replays restore the whole snapshot first; item restores only on the next modify,
+//      so an item whose declaration disappeared kept a stale modification.
+//   3) A GraalJS property write on a plain host object was silently dropped (probe result
+//      assigned,read=undefined,pending=null, never reaching the setter, so the javadoc example
+//      never worked on the old path; the probe test in this file reproduces it today).
+// After the refactor (candidate plan + Adapter): (1) declaration order and whole-replacement
+// semantics are pinned both at the plan layer and end to end (this file plus the common-layer
+// Ticket39DomainCollectionTest); (2) item and block both restore the baseline first and then
+// apply the complete new plan, a behavior change recorded in the migration table; (3) property
+// writes reach the same setter through ModificationViewSurface
+// (ModificationSetterPropertyParityTest, including the production delivery form).
 package com.tkisor.nekojs.wrapper.event.server;
 
 import com.tkisor.nekojs.core.modification.ModificationApplier;
@@ -30,12 +35,16 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * AC6 fixture：重构后按旧可观察顺序确定性重放——同目标多声明的整体替换语义逐字保留
- * （不引入同 key 拒绝，也不新增未裁定的合并政策）；AC7：item 声明移除不再 stale。
+ * Replays the old observable order deterministically after the refactor: several declarations
+ * for the same target keep the whole-replacement semantics verbatim (same-key declarations are
+ * not rejected and no undecided merge policy is added). Item declarations that are removed no
+ * longer stay stale.
  *
- * <p>registry-free 部分（计划层，本机实测五节点真跑）：声明顺序保留 + 按声明序应用 + 后声明整体
- * 替换（视图产出的声明只含显式设置属性，Adapter 契约「先恢复基线、再按声明顺序应用」）；
- * registry-gated 部分（端到端，vanilla 注册表）：真实 Item 组件上的同一语义。
+ * <p>registry-free part (plan layer, run on five nodes): declaration order is preserved,
+ * declarations are applied in declaration order, and a later declaration replaces an earlier
+ * one entirely (the view emits only explicitly set properties, and the Adapter rule is
+ * "restore the baseline first, then apply in declaration order"). The registry-gated part
+ * (end to end, vanilla registries) checks the same semantics on real Item components.
  */
 class ModificationLegacyCharacterizationTest {
 
@@ -54,7 +63,7 @@ class ModificationLegacyCharacterizationTest {
         }
     }
 
-    /** 收集一份计划并经 Adapter 预检 + 应用。 */
+    /** Collects one plan and runs it through the Adapter's preflight and apply. */
     private ModificationCandidatePlan collect(java.util.function.Consumer<ItemModificationEventJS> collector) {
         ModificationCandidatePlan plan = new ModificationCandidatePlan(owner);
         ItemModificationEventJS event = new ItemModificationEventJS(plan);
@@ -67,8 +76,10 @@ class ModificationLegacyCharacterizationTest {
     @Test
     void sameTargetMultipleDeclarationsLastOneEntirelyReplacesEarlierOnes() {
         requireItemsRegistry();
-        // 旧事实 1 的确定性重放：第一声明 maxStackSize+rarity，第二声明只写 maxStackSize
-        // → 结果 = 基线 + 第二声明（rarity 不残留；整体替换，不是按属性合并）。
+        // Deterministic replay of fact 1: the first declaration sets maxStackSize and rarity, the
+        // second sets only maxStackSize, so the result is the baseline plus the second declaration
+        // (rarity does not survive; the declaration replaces the earlier one, it does not merge
+        // per property).
         collect(event -> {
             event.modify("minecraft:diamond", item -> {
                 item.setMaxStackSize(16);
@@ -89,8 +100,9 @@ class ModificationLegacyCharacterizationTest {
         collect(event -> event.modify("minecraft:diamond", item -> item.setMaxStackSize(16)));
         assertEquals(16, Items.DIAMOND.components().getOrDefault(DataComponents.MAX_STACK_SIZE, 1));
 
-        // 声明消失后的重放：空计划应用 = 恢复基线（旧 item 路径保持 stale——AC7 有意闭合，
-        // 行为变化记录于迁移表；block 半边旧路径本就恢复，语义统一）。
+        // Replay after the declaration disappears: applying an empty plan restores the baseline. The
+        // old item path stayed stale; that is closed now, the behavior change is recorded in the
+        // migration table, and the old block path already restored, so both sides now behave the same.
         collect(event -> {});
 
         assertEquals(64, Items.DIAMOND.components().getOrDefault(DataComponents.MAX_STACK_SIZE, 1),
@@ -99,17 +111,22 @@ class ModificationLegacyCharacterizationTest {
                 "诊断区分 restored（不把静默 stale 当成功）");
     }
 
-    // ============ registry-free：计划层固定 AC6（本机实测五节点真跑） ============
+    // ============ registry-free: plan layer, declaration order and whole replacement ============
 
     /**
-     * 同目标多声明在<b>计划层</b>的确定性重放：声明按注册序保留（不引入同 key 拒绝）、
-     * Adapter 按声明序收到全部声明、且「视图声明只含显式设置属性 + Adapter 先回基线再按序
-     * 应用」的契约组合产生旧可观察结果——后一声明整体替换前一声明（前声明的其它属性不残留）。
+     * Deterministic replay of several declarations for the same target at the <b>plan layer</b>:
+     * declarations are kept in registration order (same-key declarations are not rejected), the
+     * Adapter receives all of them in declaration order, and "the view declaration holds only
+     * explicitly set properties" combined with "the Adapter restores the baseline first, then
+     * applies in declaration order" produces the old observable result: a later declaration
+     * replaces an earlier one entirely, so the earlier declaration's other properties do not
+     * survive.
      *
-     * <p>这里用真实 {@link ItemModificationJS}（Java setter 形态，不需要 Graal）产出声明，
-     * 目标存储与「恢复基线 → 按声明序应用」契约由最小 {@link ModificationApplier} 承载；
-     * 真实 Item 组件上的同一语义由上面的 registry-gated 用例与 common 层
-     * {@code Ticket39DomainCollectionTest} 覆盖。
+     * <p>Declarations come from a real {@link ItemModificationJS} (Java setters, no Graal
+     * needed). The target storage and the "restore baseline, then apply in declaration order"
+     * rule live in a minimal {@link ModificationApplier}; the same semantics on real Item
+     * components are covered by the registry-gated test above and the common-layer
+     * {@code Ticket39DomainCollectionTest}.
      */
     @Test
     void sameTargetDeclarationsKeepOrderAndLastOneWholeReplacesEarlierAtPlanLayer() {
@@ -141,11 +158,13 @@ class ModificationLegacyCharacterizationTest {
     }
 
     /**
-     * 旧事实 3 的 registry-free 探针（AC8 的 characterization 前提）：
+     * Registry-free probe of the old fact 3, the characterization premise:
      * <ol>
-     *   <li><b>普通宿主对象</b>（私有字段 + public setter，无 ProxyObject）的 property 写在
-     *       GraalJS 上被静默丢弃——重构前视图就是这个形态，javadoc 示例因此从未生效；</li>
-     *   <li>改造后的视图实现 ProxyObject，同一写法经 putMember seam 落到同一 setter。</li>
+     *   <li>A <b>plain host object</b> (private field plus a public setter, no ProxyObject) has
+     *       its property write silently dropped by GraalJS. The view looked like this before the
+     *       refactor, which is why the javadoc example never worked;</li>
+     *   <li>The reworked view implements ProxyObject, so the same write lands on the same setter
+     *       through the putMember hook.</li>
      * </ol>
      */
     @Test
@@ -165,7 +184,8 @@ class ModificationLegacyCharacterizationTest {
                     "旧事实：普通宿主对象的 property 写不得到达 setter（outcome=" + outcome + "）");
         }
 
-        // 现行契约：视图自己实现 ProxyObject，裸视图上的同一写法到达同一 setter
+        // Current behavior: the view implements ProxyObject itself, so the same write on a bare view
+        // reaches the same setter
         ItemModificationJS view = new ItemModificationJS();
         try (Context context = Context.newBuilder("js").allowAllAccess(true).build()) {
             context.getBindings("js").putMember("item", view);
@@ -176,7 +196,7 @@ class ModificationLegacyCharacterizationTest {
         assertEquals("epic", view.getRarity());
     }
 
-    /** 普通宿主对象替身（旧路径视图形态：私有字段 + public setter，无 ProxyObject）。 */
+    /** A stand-in plain host object: private field plus a public setter, no ProxyObject. */
     public static final class PlainHostView {
         private Integer maxStackSize;
 
@@ -190,8 +210,10 @@ class ModificationLegacyCharacterizationTest {
     }
 
     /**
-     * 最小 Adapter：在内存目标上执行 {@code ModificationApplier} 契约——先恢复基线，
-     * 再按声明顺序应用（每条声明是「只含显式属性」的完整集合，同目标后声明整体替换）。
+     * Minimal Adapter: implements {@code ModificationApplier} on an in-memory target. It
+     * restores the baseline first, then applies the declarations in order; each declaration is
+     * a complete set holding only explicitly set properties, so a later declaration for the
+     * same target replaces the earlier one entirely.
      */
     private static final class RecordingApplier implements ModificationApplier {
         private final Map<String, Object> baseline;
@@ -210,19 +232,21 @@ class ModificationLegacyCharacterizationTest {
 
         @Override
         public void preflight(List<ModificationDeclaration> declarations) {
-            // 计划层 fixture：不解析目标（注册表解析归 Adapter 的真实实现）
+            // Plan-layer fixture: it does not resolve targets (registry resolution belongs to the real Adapter)
         }
 
         @Override
         public void apply(List<ModificationDeclaration> declarations) {
             target.clear();
-            target.putAll(baseline); // (1) 恢复 NekoJS 持有基线
+            target.putAll(baseline); // (1) Restore the baseline NekoJS holds
             for (ModificationDeclaration declaration : declarations) {
                 applied.add(declaration);
                 appliedScriptIds.add(declaration.scriptId());
-                // (2) 每条声明从基线独立求值后整表写入 live 目标——与真实
-                // ModificationDomainOwner#applyItem 同构（builder = addAll(base) + 声明属性 → 整表写回），
-                // 因此同目标后声明整体覆盖前声明，前声明的其它属性不残留。
+                // (2) Evaluate each declaration independently from the baseline and write the whole map to the
+                // live target, the same shape as the real ModificationDomainOwner#applyItem
+                // (builder = addAll(base) + declared properties, then write the whole map back). So a
+                // later declaration for the same target covers the earlier one entirely and the earlier
+                // declaration's other properties do not survive.
                 Map<String, Object> evaluated = new LinkedHashMap<>(baseline);
                 evaluated.putAll(declaration.properties());
                 target.clear();

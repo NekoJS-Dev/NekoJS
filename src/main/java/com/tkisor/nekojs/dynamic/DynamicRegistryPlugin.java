@@ -1,4 +1,4 @@
-// TODO(fabric): fabric 侧还没有对应实现，整文件守卫等移植完成后去掉
+// TODO(fabric): there is no Fabric implementation yet; remove this whole-file guard once the port is done
 //? if neoforge {
 //? if >=26 {
 package com.tkisor.nekojs.dynamic;
@@ -12,13 +12,11 @@ import com.tkisor.nekojs.core.plugin.EventsPoint;
 import com.tkisor.nekojs.core.plugin.TypeDocsPoint;
 
 /**
- * Registers the runtime dynamic-registry event facade
- * ({@link DynamicRegistryEvents#GROUP}: inert candidate plans, typed callback
- * builders — a lifecycle separate from startup {@code RegistryEvents}) plus the derived
- * dynamic-builder declaration entries. The facade's candidate domain collector
- * is registered into the runtime root by the platform assembly
- * ({@code NekoJSMod}, same seam as ticket 39's modification owner) rather than
- * by this plugin — the root does not exist yet during plugin bootstrap.
+ * Registers the runtime dynamic-registry event facade ({@link DynamicRegistryEvents#GROUP}:
+ * inert candidate plans and typed callback builders, a lifecycle separate from startup
+ * {@code RegistryEvents}) plus the derived dynamic-builder declaration entries. The platform
+ * assembly ({@code NekoJSMod}) registers the facade's candidate domain collector into the
+ * runtime root, not this plugin, because the root does not exist yet during plugin bootstrap.
  */
 @RegisterNekoJSPlugin
 public final class DynamicRegistryPlugin implements NekoJSPlugin,

@@ -1,5 +1,5 @@
-// 26.x 实现，本文件不应再出现版本守卫。1.21.1 的实现是 versions/1.21.1/src 下的同名文件，
-// 改本文件行为时须同步它。
+// 26.x implementation; no version guard should appear in this file. The 1.21.1 implementation is the
+// file of the same name under versions/1.21.1/src, so behavior changes here must be mirrored there.
 //? if neoforge {
 package com.tkisor.nekojs.client;
 
@@ -48,17 +48,18 @@ public class NekoJSClient {
         ClientEvents.bindModBus(modEventBus);
     }
 
-    /// 某些事件需要极早期的时机，如RegisterKeyMappingsEvent
+    /// Some events need a very early point in time, such as RegisterKeyMappingsEvent
     private static void onClientSetup(FMLConstructModEvent event, NekoRuntimeRoot root) {
         event.enqueueWork(() -> {
             NekoJS.LOGGER.debug("Client environment ready, loading CLIENT scripts...");
             root.load(ScriptType.CLIENT);
             com.tkisor.nekojs.script.ScriptTypeEnv.logger(ScriptType.CLIENT).debug("Early script injection...");
-            // 票 28：CLIENT 声明的初始 generation 收集点（脚本经 ClientEvents.postEffects
-            // 声明 register/unregister）。初始 load 是非事务路径（没有候选/commit），这里
-            // 对 active 总线收集一次，domain owner preflight 通过才安装完整 generation；
-            // 不通过则整批拒绝、保持上一次 active 声明。后续 F3+T 资源 reload 走事务
-            // reload 的 DOMAIN_PLAN 阶段（同一 owner，collect）。
+            // Collection point for the initial generation declared by CLIENT scripts (scripts declare
+            // register/unregister through ClientEvents.postEffects). The initial load is not a transactional
+            // path, so there is no candidate and no commit: collect once against the active bus and install
+            // the full generation only after the domain owner preflight passes. If it fails, the whole batch
+            // is rejected and the previous active declarations stay. Later F3+T resource reloads go through
+            // the DOMAIN_PLAN phase of the transactional reload, with the same owner and collect call.
             com.tkisor.nekojs.client.posteffect.PostEffectDomainOwner postEffects = postEffectDomain(root);
             if (postEffects != null) {
                 postEffects.applyInitialPlan();
@@ -66,7 +67,10 @@ public class NekoJSClient {
         });
     }
 
-    /** 后处理声明域 owner（root 授权的 domain collector；未注册返回 null，收集点跳过）。 */
+    /**
+     * Returns the post-effect declaration domain owner (a domain collector authorized by root), or
+     * {@code null} when none is registered, in which case the collection point is skipped.
+     */
     private static com.tkisor.nekojs.client.posteffect.PostEffectDomainOwner postEffectDomain(NekoRuntimeRoot root) {
         var collector = root == null ? null : root.domainCollector(com.tkisor.nekojs.client.posteffect.PostEffectDomainOwner.DOMAIN);
         return collector instanceof com.tkisor.nekojs.client.posteffect.PostEffectDomainOwner owner ? owner : null;
@@ -98,7 +102,8 @@ public class NekoJSClient {
     private static void onLevelUnload(LevelEvent.Unload event) {
         if (event.getLevel().isClientSide()) {
             PDataSyncService.clearClientMirrors();
-            // ClientData 键值存储随断线/切世界一并清空（服务端重连后会重新推送）
+            // The ClientData key-value store is cleared together with the disconnect or world switch;
+            // the server pushes it again after a reconnect
             ClientDataStore.SHARED.clear();
         }
     }
@@ -111,8 +116,9 @@ public class NekoJSClient {
             try {
                 root.reload(ScriptType.CLIENT);
             } catch (Exception e) {
-                // 旧环境的监听器已被 reload 清空、新环境没建起来时，玩家不会有任何提示——
-                // 必须 error 级日志 + 错误面板（rt/ 条目），不再只打 DEBUG
+                // When the reload has already cleared the old environment's listeners and the new one failed to come up,
+                // the player gets no hint at all, so log at error level and record the error panel entry (rt/),
+                // instead of only a DEBUG line
                 NekoJS.LOGGER.error("CLIENT script reload (F3+T) failed", e);
                 root.errorTracker().recordCallbackError(ScriptType.CLIENT, "client_reload", e);
             }
@@ -121,8 +127,9 @@ public class NekoJSClient {
     }
 
     /**
-     * 客户端生成事件：脚本把 asset JSON 写入 {@code <gameDir>/nekojs/assets}（磁盘 resource
-     * pack，懒读保证 reload 时序正确）。先聚合 lang 再生成 assets，与 KubeJS 流程一致。
+     * Client generation event: scripts write asset JSON into {@code <gameDir>/nekojs/assets}, a resource
+     * pack on disk that is read lazily so reload ordering stays correct. Languages are aggregated before
+     * assets are generated, the same order KubeJS uses.
      */
     private static void postClientGeneration(NekoRuntimeRoot root) {
         try {
@@ -131,14 +138,18 @@ public class NekoJSClient {
             com.tkisor.nekojs.resource.NekoJSPackLoader.prepareItemAssets(net.minecraft.server.packs.PackType.CLIENT_RESOURCES);
             PluginGenerationHooks.fireGenerateAssets(generator);
             ClientEvents.GENERATE_ASSETS.post(generator, "after_mods");
-            // 脚本模型文件已落盘后，为声明过 renderType 且未自写模型的方块补默认模型
-            // （26.x 模型驱动：translucent 需要 force_translucent 贴图引用）
+            // After the script model files are on disk, fill in default models for blocks that declared a renderType
+            // and wrote no model themselves (26.x is model-driven: translucent needs a force_translucent texture
+            // reference)
             BlockModelGenerator.generateDefaultModels(generator);
-            // 请求过 spawnEgg() 的实体：补默认蛋模型（26.x 无运行时染色，纹理数据驱动）
+            // Entities that requested spawnEgg(): fill in a default egg model
+            // (26.x has no runtime tinting; the texture is data-driven)
             BlockModelGenerator.generateSpawnEggModels(generator);
-            // 本轮语言集合 = 插件 generatedLangs() 声明 ∪ 脚本 keyed listener 语言，字典序确定；
-            // 先整体校验再逐语言生成，任一非法语言代码在写入任何 lang 文件之前整批拒绝，
-            // 因此不会产生部分语言文件（非 en_us 的插件语言必须显式声明，见 generatedLangs()）。
+            // The language set for this round is the union of the plugin's generatedLangs() declarations and the
+            // script keyed listener languages, in lexicographic order. All codes are validated before any
+            // language is generated, so one invalid language code rejects the whole batch before any lang
+            // file is written and no partial language files appear (plugin languages other than en_us must
+            // be declared explicitly; see generatedLangs()).
             var langs = PluginGenerationHooks.resolveGeneratedLangs(ClientEvents.LANG.registeredKeys());
             for (String lang : langs) {
                 LangGeneratorJS langGenerator = new LangGeneratorJS(lang);
@@ -147,7 +158,8 @@ public class NekoJSClient {
                 langGenerator.writeTo(assets, lang);
             }
         } catch (Exception e) {
-            // 资产生成失败 = 客户端脚本产物不完整（模型/lang 缺失），同样进错误面板
+            // A failed asset generation leaves the client script output incomplete (missing models and
+            // lang), so it also goes to the error panel
             NekoJS.LOGGER.error("Client asset generation failed", e);
             root.errorTracker().recordCallbackError(ScriptType.CLIENT, "generate_assets", e);
         }

@@ -14,31 +14,30 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Ticket 23 phase-ordering and single-pipeline trace (pure file reads, runs on every node).
+ * Traces the recipe data phase order and the single pipeline (pure file reads, runs on every node).
  *
  * <p>Pins three platform wiring facts that a bare JVM cannot exercise against a real
  * {@code RecipeManager}:
  * <ol>
- *   <li><b>AC3</b> — in both {@code RecipeManagerMixin} twins (26.x shared tree and 1.21.1
- *       node tree), {@code afterRecipes} (script event + plugin lifecycle hook) fires only
- *       AFTER the fully parsed recipe batch is committed through the existing lifecycle
- *       (single reference swap of the recipe map); {@code recipes} fires before it.</li>
- *   <li><b>AC4</b> — both {@code ServerEventListener} twins run plugin {@code generateData}
- *       and script {@code ServerEvents.generateData} through the ONE shared batch path
- *       ({@code PluginGenerationHooks.runGenerateData}); no listener constructs a
- *       {@code DataGeneratorJS} against the active root or fires the plugin hook itself.
- *       Relative order inside the reload listener: {@code lootTables} posted first, then the
- *       generateData batch.</li>
- *   <li><b>AC9</b> — the recipe viewer ({@code RecipeViewerEvents}) surface is registered
- *       ONLY by the JEI-gated plugin ({@code clientOnly + requiredMods="jei"}), so nodes or
- *       environments without JEI never expose a viewer event that would silently never fire;
- *       the only poster of the viewer buses is the JEI plugin, which lives behind a
- *       NeoForge whole-file guard (fabric compiles none of it).</li>
+ *   <li>In both {@code RecipeManagerMixin} twins (the 26.x shared tree and the 1.21.1 node tree),
+ *       {@code afterRecipes} (script event and plugin lifecycle hook) fires only AFTER the fully parsed
+ *       recipe batch is committed through the existing lifecycle, a single reference swap of the recipe
+ *       map; {@code recipes} fires before it.</li>
+ *   <li>Both {@code ServerEventListener} twins run plugin {@code generateData} and script
+ *       {@code ServerEvents.generateData} through the one shared batch path
+ *       ({@code PluginGenerationHooks.runGenerateData}). No listener builds a {@code DataGeneratorJS}
+ *       against the active root or fires the plugin hook itself. Relative order inside the reload
+ *       listener: {@code lootTables} is posted first, then the generateData batch.</li>
+ *   <li>The recipe viewer events ({@code RecipeViewerEvents}) are registered only by the JEI-gated
+ *       plugin ({@code clientOnly + requiredMods="jei"}), so a node or environment without JEI never
+ *       exposes a viewer event that would silently never fire. The JEI plugin is the only poster of the
+ *       viewer buses, and it sits behind a NeoForge whole-file guard, so fabric compiles none of
+ *       it.</li>
  * </ol>
  *
- * <p>Also pins the fabric capability gaps explicitly (not as silent no-ops): the fabric
- * {@code ServerEvents} twin declares no {@code generateData} bus, and the fabric raw root has
- * no recipe-viewer wiring.
+ * <p>Also pins the fabric gaps explicitly rather than as silent no-ops: the fabric
+ * {@code ServerEvents} twin declares no {@code generateData} bus, and the fabric raw root has no
+ * recipe-viewer wiring.
  */
 class Ticket23RecipeDataPhaseTraceTest {
 
@@ -83,7 +82,7 @@ class Ticket23RecipeDataPhaseTraceTest {
         return count;
     }
 
-    // -------------------------------------------------- AC3: afterRecipes ordering
+    // -------------------------------------------------- afterRecipes ordering
 
     @Test
     void afterRecipesFiresOnlyAfterTheParsedBatchIsCommitted_26x() {
@@ -128,7 +127,7 @@ class Ticket23RecipeDataPhaseTraceTest {
         }
     }
 
-    // ------------------------------------------- AC4: one generateData pipeline
+    // ------------------------------------------- one generateData pipeline
 
     @Test
     void generateDataRunsThroughTheSingleBatchPipeline_26x() {
@@ -165,7 +164,7 @@ class Ticket23RecipeDataPhaseTraceTest {
         }
     }
 
-    // ----------------------------------- AC9: recipe viewer conditional capability
+    // ---------------------------- recipe viewer registered only behind the JEI gate
 
     @Test
     void viewerSurfaceIsRegisteredOnlyThroughTheJeiGatedPlugin() {

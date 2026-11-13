@@ -11,8 +11,8 @@ import com.tkisor.nekojs.api.event.ScriptEventRegistry;
 import com.tkisor.nekojs.api.plugin.IPluginRuntime;
 
 /**
- * {@code ScriptEvents} 的注册实现（平台无关）：在 STARTUP 脚本里声明命名的自定义事件组，
- * 供 server/client 脚本按组监听与触发。
+ * Registration side of {@code ScriptEvents}, platform independent: a STARTUP script declares
+ * named custom event groups, and server/client scripts listen to and fire them by group.
  *
  * <pre>
  * // startup_scripts
@@ -22,8 +22,9 @@ import com.tkisor.nekojs.api.plugin.IPluginRuntime;
  * MyEvents.bossKilled.post({ boss: 'ender_dragon' })
  * </pre>
  *
- * <p>事件载荷是脚本自己传入的值，不绑定平台原生事件——"按类名挂原生事件"是加载器专属能力，
- * 由 {@code NativeEvents} 承担（NeoForge 面）。
+ * <p>The payload is whatever value the script passes in. These events are not tied to native
+ * platform events; attaching a native event by class name is a loader-specific feature handled
+ * by {@code NativeEvents} (the NeoForge side).
  */
 @Doc("Static binding 'ScriptEvents': declares named custom event groups in a STARTUP script.")
 @Doc("Server/client scripts listen with group.name(callback) and fire with group.name.post(payload).")
@@ -31,7 +32,7 @@ public class ScriptEventsJS implements ScriptEventRegistrar {
 
     private IPluginRuntime pluginRuntime;
 
-    /** 绑定插件运行时（平台初始化时调用，脚本不直接使用）。 */
+    /** Binds the plugin runtime; called during platform init, scripts never call it directly. */
     public void bindRuntime(IPluginRuntime pluginRuntime) {
         if (pluginRuntime == null) {
             throw new IllegalArgumentException("pluginRuntime == null");

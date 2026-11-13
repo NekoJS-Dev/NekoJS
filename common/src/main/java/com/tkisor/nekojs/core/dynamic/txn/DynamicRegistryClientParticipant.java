@@ -9,31 +9,26 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Client-side endpoint of the Dynamic Registry batch transaction (ticket 21, AC4):
- * holds this node's view of the activated state (its own
- * {@link DynamicRegistryPlanStore} ledger plus an activation watermark) and turns
+ * Client side of the Dynamic Registry batch transaction. Holds this node's view of the activated
+ * state (its own {@link DynamicRegistryPlanStore} ledger plus an activation watermark) and turns
  * server messages into local, all-or-nothing activation through a local
  * {@link DynamicRegistryAdapter}.
  *
- * <p><b>Sync-incomplete nodes never activate a new generation</b>: a COMMIT whose
- * generation has no prior accepted PREPARE of the same generation is rejected with a
- * defined outcome; a duplicate COMMIT and a COMMIT for an already-activated
- * generation are recorded no-ops (the new generation executes exactly once); an
- * ABORT discards the staged prepare. Disconnect discards any staged prepare while
- * the ledger and watermark survive (registry entries are never unregistered
- * mid-session — ticket 16's no-physical-delete rule), so a rejoin is caught up by a
- * server STATE_SYNC of the already-activated state.
+ * <p><b>A node whose sync is incomplete never activates a new generation</b>: a COMMIT whose
+ * generation has no prior accepted PREPARE of the same generation is rejected with a defined
+ * outcome; a duplicate COMMIT and a COMMIT for an already-activated generation are recorded
+ * no-ops (a new generation executes exactly once); an ABORT discards the staged prepare.
+ * Disconnect discards any staged prepare while the ledger and watermark survive (registry
+ * entries are never unregistered mid-session), so a rejoin is caught up by a server STATE_SYNC
+ * of the already-activated state.
  *
- * <p>Local validation applies the same first-version conflict rule as the server:
- * a target definition whose key is already present locally with a different
- * fingerprint rejects the whole message (no silent overwrite by an unimplemented
- * replace/update).
+ * <p>Local validation applies the same first-version conflict rule as the server: when a target
+ * definition has a key already present locally with a different fingerprint, the whole message
+ * is rejected, so an unimplemented replace/update cannot overwrite silently.
  *
- * <p><b>Thread contract</b>: every public method must be called on this node's
- * transaction owner thread (the client main thread in production). A production
- * receive path that starts on a network thread must hop to the owner thread before
- * calling in, per ticket 17's receive-side discipline — this class is not
- * thread-safe by design.
+ * <p><b>Threading</b>: every public method must be called on this node's transaction owner thread
+ * (the client main thread in production). A receive path that starts on a network thread must hop
+ * to the owner thread before calling in; this class is not thread-safe by design.
  */
 public final class DynamicRegistryClientParticipant {
 
@@ -98,7 +93,7 @@ public final class DynamicRegistryClientParticipant {
                     "generation " + message.generation() + " executes once; repeat commit recorded");
         }
         if (staged == null || staged.generation() != message.generation()) {
-            // Sync incomplete for this generation: never activate (AC4).
+            // Sync is incomplete for this generation, so never activate.
             return notActivated(message.generation(), "commit-without-matching-prepare");
         }
         try {

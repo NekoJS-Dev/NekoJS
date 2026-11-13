@@ -38,8 +38,8 @@ public final class TypeScriptProbeBackend implements ProbeBackend {
     private final AdapterAliasGenerator adapterAliasGenerator = new AdapterAliasGenerator(aliasRegistry);
     private final FunctionalInterfaceAliasGenerator functionalInterfaceAliasGenerator =
             new FunctionalInterfaceAliasGenerator(aliasRegistry);
-    // IR 唯一渲染路径（Phase 2.7）：所有类声明与 import 均由 TypeReflector → IR → renderer 产出，
-    // 旧的 ClassDeclGenerator 直接反射渲染已删除
+    // IR unique rendering path (Phase 2.7): all class declarations and imports are produced by TypeReflector → IR → renderer,
+    // old ClassDeclGenerator direct reflection rendering has been removed
     private final TypeScriptClassRenderer tsClassRenderer = new TypeScriptClassRenderer(aliasRegistry);
     private final IndexFileGenerator indexFileGenerator = new IndexFileGenerator(tsClassRenderer,
             adapterAliasGenerator, functionalInterfaceAliasGenerator);
@@ -51,13 +51,13 @@ public final class TypeScriptProbeBackend implements ProbeBackend {
     /** Render-time degradations (e.g. omitted functional aliases) surfaced through GenerateResult warnings. */
     private final Set<String> renderWarnings = new LinkedHashSet<>();
 
-    // RecipeEventJS.recipes getter 覆盖的单一数据源：唯一渲染路径（IR renderer）从这里取字面量
+    // RecipeEventJS.recipes getter override single data source: the unique rendering path (IR renderer) takes literals from here
     private static final String RECIPE_EVENT_RECIPES_GETTER = "recipes";
     private static final String RECIPE_EVENT_RECIPES_RETURN_TYPE = "DocumentedRecipes";
     private static final String RECIPE_EVENT_RECIPES_IMPORT =
             "import { DocumentedRecipes } from \"@side-only/server/events/recipes\";";
 
-    /** 内建 getter 覆盖只应用一次（实例是注册表单例，render 每轮调用）。 */
+    /** Built-in getter override applied only once (instance is a registry singleton, render called every round). */
     private volatile boolean builtinOverridesApplied;
     private boolean generatingAuthoringIndex;
     private com.google.gson.JsonObject pendingAuthoringSnapshot;
@@ -73,8 +73,8 @@ public final class TypeScriptProbeBackend implements ProbeBackend {
     }
 
     /**
-     * TS backend 永远需要共享 IR：IR 是唯一渲染源（Phase 2.7 起），收集到的类由
-     * {@link ProbeCoordinator} 统一反射为 IR，本 backend 仅补齐 TS 专属的适配器目标类/宿主类型。
+     * TS backend always needs shared IR: IR is the only rendering source (since Phase 2.7); collected classes are
+     * uniformly reflected into IR by {@link ProbeCoordinator}, this backend only complements TS-specific adapter target classes/host types.
      */
     @Override
     public boolean requiresIr() {
@@ -107,8 +107,8 @@ public final class TypeScriptProbeBackend implements ProbeBackend {
     }
 
     /**
-     * 渲染全部 TS 产物到内存（相对输出目录路径 → 内容）。落盘与原子提交由接口默认
-     * {@code generate} 经 {@link ProbeOutputCommitter} 统一负责，本方法不触碰磁盘。
+     * Renders all TS artifacts to memory (relative output directory path → content). Writing to disk and atomic commit are defaultly
+     * handled by {@code generate} via {@link ProbeOutputCommitter}; this method does not touch the disk.
      */
     @Override
     public Map<String, String> render(ProbeContext ctx) {
@@ -142,7 +142,7 @@ public final class TypeScriptProbeBackend implements ProbeBackend {
                     .capture(profile.isEmpty() ? "unresolved" : profile, snapshot).toJson());
         }
         try {
-            // 1. 种子类来自共享收集（ProbeCoordinator 的 BFS 结果）
+            // 1. Seed classes from shared collection (ProbeCoordinator BFS results)
             Set<String> classesToGenerate = new LinkedHashSet<>();
             for (Class<?> c : ctx.collectedClasses()) {
                 classesToGenerate.add(c.getName());
@@ -221,7 +221,7 @@ public final class TypeScriptProbeBackend implements ProbeBackend {
 
             NekoJS.LOGGER.info("Probe [typescript]: {} classes to generate", classesToGenerate.size());
 
-            // 2. 构建包树
+            // 2. Build package tree
             PackageTree tree = new PackageTree();
             for (String fqn : classesToGenerate) {
                 if (indexFileGenerator.hasDeclaration(fqn) || hiddenFqns.contains(fqn)) tree.addClass(fqn);
@@ -235,7 +235,7 @@ public final class TypeScriptProbeBackend implements ProbeBackend {
             try {
                 authored.validateGeneratedImports(indexFileGenerator);
 
-                // 4. 渲染 @package Java 类型声明（并行渲染，产物进内存，复用同一线程池）
+                // 4. Render @package Java type declarations (parallel rendering, artifacts into memory, reuse same thread pool)
                 renderPackageDeclarations(tree, files, pool);
             } finally {
                 if (provided == null) {
@@ -243,34 +243,34 @@ public final class TypeScriptProbeBackend implements ProbeBackend {
                 }
             }
 
-            // 4. 渲染事件声明
+            // 4. Render event declarations
             renderEventDeclarations(snapshot, files);
 
-            // 5. 渲染 recipe 事件声明（event.recipes.<namespace>.<type>(...)）
+            // 5. Render recipe event declarations (event.recipes.<namespace>.<type>(...))
             renderRecipeEventDeclarations(snapshot, files);
 
-            // 6. 渲染绑定声明
+            // 6. Render binding declarations
             renderBindingDeclarations(snapshot, files);
             files.put("@mixin/index.d.ts", MixinDeclarationDeclarations.render(ctx.collectedClasses(), renderWarnings));
 
-            // 6. 渲染 @side-only/{side}/index.d.ts（重新导出 events 和 bindings）
+            // 6. Render @side-only/{side}/index.d.ts (re-export events and bindings)
             renderSideRootIndexes(files);
 
-            // 7. 渲染 @special 注册表字面量类型
+            // 7. Render @special registry literal types
             renderSpecialTypes(snapshot, files);
 
-            // 8. 渲染 @manual 手动声明（node:xxx 模块、helper 类型、插件模块）
+            // 8. Render @manual manual declarations (node:xxx modules, helper types, plugin modules)
             renderManualDeclarations(snapshot, files);
             String referenceTypes = manualReferences.render(aliasRegistry);
             if (!referenceTypes.isEmpty()) files.put("@manual/references.d.ts", referenceTypes);
 
-            // 9. 渲染 managed declarations
+            // 9. Render managed declarations
             renderManagedDeclarations(snapshot, files);
 
-            // 9b. 渲染 typed Builder 契约声明（ticket 15：与 Python 后端同一结构化契约输入）
+            // 9b. Render the typed Builder declarations, from the same structured input as the Python backend.
             renderRegistryBuilderSurfaces(snapshot, files);
 
-            // 10. 渲染 probe.add_global 全局声明（@manual/globals.d.ts，已被 jsconfig include 覆盖）
+            // 10. Render probe.add_global global declarations (@manual/globals.d.ts, covered by jsconfig include)
             renderGlobalsDeclarations(ctx.overrides().globals(), files);
             if (generatingAuthoringIndex) {
                 var authoringDeclarations = indexFileGenerator.takeAuthoringDeclarations();
@@ -282,16 +282,16 @@ public final class TypeScriptProbeBackend implements ProbeBackend {
 
             return files;
         } finally {
-            // 清理生成过程中积累的缓存，释放内存
+            // Clear caches accumulated during generation to release memory
             indexFileGenerator.clearCaches();
         }
     }
 
     /**
-     * 内建 getter 覆盖：RecipeEventJS.recipes getter 由 RecipeEventDeclarationGenerator 提供，
-     * 让它返回 DocumentedRecipes（来自 @side-only/server/events/recipes）。显式在首次 render
-     * 前应用（替代旧实例初始化块——静态副作用隐藏且难以测试）；wrapper 类不在 common
-     * classpath（单元测试）时静默跳过。
+     * Built-in getter override: RecipeEventJS.recipes getter provided by RecipeEventDeclarationGenerator,
+     * makes it return DocumentedRecipes (from @side-only/server/events/recipes). Explicitly applied
+     * before first render (replaces old instance initialization block—static side effects are hidden and hard to test);
+     * wrapper class silently skipped when not on common classpath (unit tests).
      */
     private void applyBuiltinGetterOverrides() {
         if (builtinOverridesApplied) return;
@@ -308,12 +308,12 @@ public final class TypeScriptProbeBackend implements ProbeBackend {
                     RECIPE_EVENT_RECIPES_IMPORT
             );
         } catch (ClassNotFoundException e) {
-            // RecipeEventJS 在 common 模块：缺失说明类路径异常，覆盖不生效会悄悄给出错误的
-            // event.recipes 类型
+            // RecipeEventJS in common module: missing indicates classpath exception; override not taking effect will silently provide wrong
+            // event.recipes type
             com.tkisor.nekojs.core.error.Diagnostics.report(
                     "probe-typescript",
                     com.tkisor.nekojs.core.error.Diagnostics.Severity.WARN,
-                    "RecipeEventJS 不在类路径上，event.recipes 的类型覆盖未生效（补全形状可能不准确）", e);
+                    "RecipeEventJS not on classpath, event.recipes type override not effective (completion shape may be inaccurate)", e);
         }
     }
 
@@ -368,8 +368,8 @@ public final class TypeScriptProbeBackend implements ProbeBackend {
     }
 
     /**
-     * 渲染 {@code probe.add_global} 收集的全局声明到 {@code @manual/globals.d.ts}。
-     * {@code @manual} 目录下的 .d.ts 已被各脚本目录的 jsconfig include 覆盖，故全局 declare const 生效。
+     * Renders global declarations collected by {@code probe.add_global} to {@code @manual/globals.d.ts}.
+     * .d.ts files in {@code @manual} are included by jsconfig in each script directory, so global declare const takes effect.
      */
     private void renderGlobalsDeclarations(List<GlobalDecl> globals, Map<String, String> files) {
         if (globals == null || globals.isEmpty()) return;
@@ -384,16 +384,16 @@ public final class TypeScriptProbeBackend implements ProbeBackend {
     }
 
     // ------------------------------------------------------------------
-    //  编辑器配置注入（Phase 4）
+    //  Editor config injection (Phase 4)
     // ------------------------------------------------------------------
 
     /**
-     * 把 {@code java:*}、{@code @side-only/<env>}、{@code @special/*} 路径别名合并进每个脚本目录的
-     * jsconfig.json（以及 {@code .neko_probe/jsconfig.json}），指向本 backend 真实的输出目录
-     * （{@code .neko_probe/typescript/...}）。幂等合并：probe 拥有的键替换为最新值，用户自定义键保留。
+     * Merges path aliases like {@code java:*}, {@code @side-only/<env>}, {@code @special/*} into each script directory's
+     * jsconfig.json (and {@code .neko_probe/jsconfig.json}), pointing to the backend's real output directory
+     * ({@code .neko_probe/typescript/...}). Idempotent merge: probe-owned keys are replaced with the latest values, user-defined keys are retained.
      *
-     * <p>修复既有 stale：WorkspaceGenerator 预写的 paths 指向 {@code .neko_probe/@package}（Phase 1 前），
-     * 而产物实际在 {@code .neko_probe/typescript/@package}；本合并把 probe 拥有的键校正到正确位置。
+     * <p>Fix existing stale: paths pre-written by WorkspaceGenerator pointed to {@code .neko_probe/@package} (before Phase 1),
+     * whereas artifacts are actually in {@code .neko_probe/typescript/@package}; this merge corrects probe-owned keys to the right location.
      */
     @Override
     public void contributeEditorConfig(EditorConfigContributor contributor, ProbeContext ctx) {
@@ -425,9 +425,9 @@ public final class TypeScriptProbeBackend implements ProbeBackend {
         aliases.put("@special/*", List.of(rel + "/@special/*"));
         c.mergeJsConfigPaths(scriptDir.resolve("jsconfig.json"), aliases);
 
-        // include：脚本文件 globs（jsconfig 项目必须包含脚本自身，否则 IDE 无补全——
-        // 旧实现整体替换为 d.ts-only 导致 JS 文件不在项目内）+ probe 声明 globs。
-        // mergeJsConfigIncludes 每次 probe 整体替换（幂等），这里必须带上脚本 globs。
+        // include: script file globs (jsconfig projects must include scripts themselves, otherwise IDE has no completion—
+        // old implementation entirely replaced with d.ts-only, causing JS files to not be in the project) + probe declaration globs.
+        // mergeJsConfigIncludes is replaced entirely per probe (idempotent), script globs must be included here.
         List<String> includes = new ArrayList<>(List.of(
                 "./**/*.js", "./**/*.mjs", "./**/*.cjs",
                 "./**/*.ts", "./**/*.jsx", "./**/*.tsx"));
@@ -454,7 +454,7 @@ public final class TypeScriptProbeBackend implements ProbeBackend {
     }
 
     private static void contributeProbeDirJsconfig(EditorConfigContributor c, Path probeDir, Path tsOut) {
-        // 未设置 baseUrl 时 paths 映射值必须是相对路径（./ 前缀）——TS 4.1+ 相对 tsconfig 位置解析
+        // When baseUrl is not set, paths mapping values must be relative (./ prefix)—TS 4.1+ relative to tsconfig location
         String rel = "./" + FileEditorConfigContributor.relativePosix(probeDir, tsOut); // "./typescript"
         Map<String, List<String>> aliases = new LinkedHashMap<>();
         aliases.put("java:*", List.of(rel + "/@package/*"));
@@ -489,20 +489,20 @@ public final class TypeScriptProbeBackend implements ProbeBackend {
             Files.deleteIfExists(file);
         } catch (IOException e) {
             com.tkisor.nekojs.core.error.Diagnostics.report("probe-editor-config", com.tkisor.nekojs.core.error.Diagnostics.Severity.WARN,
-                    "删除 probe 管理的编辑器文件失败（" + file + "）：reset 可能不完整", e);
+                    "Failed to delete probe-managed editor files (" + file + "): reset may be incomplete", e);
         }
     }
 
     private void renderPackageDeclarations(PackageTree tree, Map<String, String> files, ExecutorService pool) {
         List<PackageTree.Node> nodes = tree.traversePackages();
 
-        // 收集所有类的简单名（用于同名冲突检测）
+        // Collect simple names of all classes (for name conflict detection)
         Set<String> allClassNames = new LinkedHashSet<>();
         for (PackageTree.Node node : nodes) {
             allClassNames.addAll(node.classes);
         }
 
-        // 并行渲染各包 index.d.ts 内容（复用 render() 的共享线程池），主线程按序收进内存产物表
+        // Parallel render index.d.ts content for each package (reuse shared thread pool from render()), main thread collects into memory artifacts table in order
         List<PackageTree.Node> nodeList = new ArrayList<>(nodes);
         CompletionService<Map.Entry<String, String>> completion =
                 new ExecutorCompletionService<>(pool);
@@ -518,7 +518,7 @@ public final class TypeScriptProbeBackend implements ProbeBackend {
             taskCount++;
         }
 
-        // 渲染失败计为硬失败——若吞掉，默认 generate 会照残缺结果同步并报告成功，输出静默缺文件
+        // Rendering failure is treated as a hard failure—if swallowed, the default generate would sync and report success on the incomplete result, silently missing files
         int failedTasks = 0;
         for (int i = 0; i < taskCount; i++) {
             try {
@@ -536,7 +536,7 @@ public final class TypeScriptProbeBackend implements ProbeBackend {
             throw new IllegalStateException("Package generation failed for " + failedTasks + " of " + taskCount + " packages");
         }
 
-        // 根 index.d.ts
+        // Root index.d.ts
         List<String> topPackages = new ArrayList<>();
         for (PackageTree.Node child : tree.getRoot().children.values()) {
             topPackages.add(child.name);
@@ -559,7 +559,7 @@ public final class TypeScriptProbeBackend implements ProbeBackend {
         List<RecipeNamespaceCatalogEntry> namespaces = snapshot.recipeNamespaces();
         if (!RecipeEventDeclarationGenerator.hasDeclarations(namespaces, ScriptType.SERVER)) return;
 
-        // 只为 server 脚本生成 recipe 声明
+        // Generate recipe declarations only for server scripts
         files.put("@side-only/server/events/recipes/index.d.ts",
                 recipeEventGenerator.generate(namespaces, ScriptType.SERVER));
     }
@@ -600,15 +600,15 @@ public final class TypeScriptProbeBackend implements ProbeBackend {
                 continue;
             }
 
-            // 参考 ProbeJS: @side-only/server/bindings/index.d.ts（无 GlobalBindings 子目录）
+            // See ProbeJS: @side-only/server/bindings/index.d.ts (no GlobalBindings subdirectory)
             files.put("@side-only/" + type.name + "/bindings/index.d.ts", mixinImport + "import './api-modules';\n" + bindingGenerator.generate(bindings, type));
         }
     }
 
     /**
-     * 为每个 side 生成根 index.d.ts，重新导出 events 和 bindings。
-     * 参考 ProbeJS: @side-only/server/index.d.ts。side 的 events/bindings 是否存在
-     * 从已有产物键推导（等价旧实现的目录存在性检查）。
+     * Generates root index.d.ts for each side, re-exporting events and bindings.
+     * See ProbeJS: @side-only/server/index.d.ts. Side events/bindings existence
+     * is inferred from existing artifact keys (equivalent to old implementation's directory existence check).
      */
     private void renderSideRootIndexes(Map<String, String> files) {
         Set<String> sides = new TreeSet<>();
@@ -646,13 +646,13 @@ public final class TypeScriptProbeBackend implements ProbeBackend {
 
         for (RegistryTypeCatalogEntry registry : registries) {
             appendLiteralUnion(sb, registry.typeName(), registry.entries());
-            // 标签联合总是发：脚本里 "#minecraft:planks" 这类写法依赖它，未采集标签的平台
-            // （如 1.12.2 无标签系统）回退成 string，避免模板类型退化成 never 而误报
+            // Tag union is always emitted: syntax like "#minecraft:planks" in scripts depends on it; platforms without collected tags
+            // (e.g., 1.12.2 without tag system) fallback to string, avoiding template type degradation to never, which causes false positives
             appendLiteralUnion(sb, registry.typeName() + "Tag", registry.tagEntries());
         }
-        // 命名空间联合：供 "@mod" 这类前缀写法补全。mod 表与注册表命名空间取并集——mod 表覆盖
-        // 「装了但没往这个注册表注册东西」的 mod，条目 id 前缀覆盖脚本/数据包自造的命名空间。
-        // 与具体注册表无关，所以只发一份
+        // Namespace union: for prefix completion like "@mod". Mod list and registry namespaces are unioned—mod list overrides
+        // mods that are "installed but registered nothing to this registry"; entry id prefixes override namespaces created by scripts/datapacks.
+        // Independent of specific registries, so emit only once
         appendLiteralUnion(sb, "Namespace", namespacesOf(modIds, registries));
 
         sb.append("    }\n");
@@ -664,10 +664,10 @@ public final class TypeScriptProbeBackend implements ProbeBackend {
     }
 
     /**
-     * mod id 与注册表条目 id 命名空间的并集（{@code "minecraft:stone"} → {@code "minecraft"}）。
+     * Union of mod IDs and registry entry ID namespaces (e.g., {@code "minecraft:stone"} → {@code "minecraft"}).
      *
-     * <p>无 {@code ':'} 的条目按原样计入（1.12.2 少数注册表 id 不带命名空间）；TreeSet 保证
-     * 跨 JVM 确定序。
+     * <p>Entries without {@code ':'} are counted as-is (a few registry IDs in 1.12.2 lack namespaces); TreeSet guarantees
+     * deterministic order across JVMs.
      */
     private static List<String> namespacesOf(List<String> modIds, List<RegistryTypeCatalogEntry> registries) {
         Set<String> namespaces = new TreeSet<>(modIds);
@@ -682,7 +682,7 @@ public final class TypeScriptProbeBackend implements ProbeBackend {
         return List.copyOf(namespaces);
     }
 
-    /** {@code type Name = "a" | "b";}；条目为空时回退 {@code type Name = string;}。 */
+    /** {@code type Name = "a" | "b";}; fallback to {@code type Name = string;} when entries are empty. */
     private static void appendLiteralUnion(StringBuilder sb, String typeName, List<String> entries) {
         if (entries.isEmpty()) {
             sb.append("        type ").append(typeName).append(" = string;\n");
@@ -692,7 +692,7 @@ public final class TypeScriptProbeBackend implements ProbeBackend {
         for (int i = 0; i < entries.size(); i++) {
             if (i > 0) sb.append(" | ");
             if (i > 0 && i % 8 == 0) sb.append("\n            ");
-            // 先转义反斜杠再转义引号：旧实现只转义引号，内嵌反斜杠会截断字符串字面量
+            // Escape backslash before quotes: old implementation only escaped quotes, nested backslashes would truncate string literals
             String entry = entries.get(i).replace("\\", "\\\\").replace("\"", "\\\"");
             sb.append("\"").append(entry).append("\"");
         }
@@ -700,13 +700,14 @@ public final class TypeScriptProbeBackend implements ProbeBackend {
     }
 
     /**
-     * typed Builder 契约声明（ticket 15，AC9）：{@code @registry-builders/index.d.ts}。
-     * 输入是 {@link com.tkisor.nekojs.api.catalog.RegistryBuilderSurfaceEntry}——由版本树
-     * 对 builder 类的契约反射派生；Python 后端从<b>同一</b>条目列表渲染
-     * {@code nekojs/_registry_builders/__init__.pyi}，成员语义两侧一致。
+     * Typed Builder declarations for {@code @registry-builders/index.d.ts}. The input is
+     * {@link com.tkisor.nekojs.api.catalog.RegistryBuilderSurfaceEntry}, derived by contract reflection
+     * over the builder classes in the version tree. The Python backend renders
+     * {@code nekojs/_registry_builders/__init__.pyi} from the <b>same</b> entry list, so members mean
+     * the same thing on both sides.
      *
-     * <p>Event dependencies use only explicitly associated entries from the same facts;
-     * the complete legacy file remains available without merging unrelated globals into default events.
+     * <p>Event dependencies use only the explicitly associated entries from the same facts. The complete
+     * legacy file remains available without merging unrelated globals into the default events.
      */
     private void renderRegistryBuilderSurfaces(NekoScriptCatalogSnapshot snapshot, Map<String, String> files) {
         var entries = snapshot.registryBuilderSurfaces();
@@ -758,7 +759,7 @@ public final class TypeScriptProbeBackend implements ProbeBackend {
     // -----------------------------------------------------------------------
 
     /**
-     * Java 包层级树：从类全限定名构建树结构，用于生成 package 目录。
+     * Java package hierarchy tree: built from class fully qualified names to generate package directories.
      */
     static final class PackageTree {
         private final Node root = new Node("", null);

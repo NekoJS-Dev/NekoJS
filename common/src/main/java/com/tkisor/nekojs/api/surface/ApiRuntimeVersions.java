@@ -3,13 +3,14 @@ package com.tkisor.nekojs.api.surface;
 import java.util.Objects;
 
 /**
- * API 运行时版本快照：NekoJS 版本、API/SPI/运行时契约版本与 catalog schema 版本。
+ * Snapshot of the API runtime versions: the NekoJS version, the API, SPI and runtime contract
+ * versions, and the catalog schema version.
  *
- * @param nekojsVersion          NekoJS 版本字符串，不能为 {@code null}
- * @param apiVersion             API 版本，不能为 {@code null}
- * @param spiVersion             SPI 版本，不能为 {@code null}
- * @param runtimeContractVersion 运行时契约版本，不能为 {@code null}
- * @param catalogSchemaVersion   catalog schema 版本（须为正数）
+ * @param nekojsVersion          NekoJS version string, must not be {@code null}
+ * @param apiVersion             API version, must not be {@code null}
+ * @param spiVersion             SPI version, must not be {@code null}
+ * @param runtimeContractVersion runtime contract version, must not be {@code null}
+ * @param catalogSchemaVersion   catalog schema version (must be positive)
  */
 public record ApiRuntimeVersions(
         String nekojsVersion,

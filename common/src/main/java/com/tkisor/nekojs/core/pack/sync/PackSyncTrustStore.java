@@ -13,23 +13,27 @@ import java.nio.file.StandardCopyOption;
 import java.time.Instant;
 
 /**
- * 多人包分发的客户端信任存储：{@code nekojs/config/trusted-servers.json}。
+ * Client-side trust store for multi-player pack distribution:
+ * {@code nekojs/config/trusted-servers.json}.
  *
  * <pre>{@code
  * {
- *   "trustedServers": { "<sha256(地址)>": { "serverAddress": "...", "trustedAt": "..." } },
+ *   "trustedServers": { "<sha256(address)>": { "serverAddress": "...", "trustedAt": "..." } },
  *   "trustedKeys":    { "<keyId>": { "publicKey": "...", "fingerprint": "...",
  *                                    "serverAddress": "...", "trustedAt": "..." } }
  * }
  * }</pre>
  *
- * <p>bucket = 服务器地址（trim + 小写）的 sha256 十六进制。{@code /nekojs trust <address>}
- * 写入 trustedServers；v1 语义：信任服务器即信任其当前签名密钥——首次受信执行时把包内
- * 签名公钥 pinning 进 trustedKeys，此后同 keyId 换钥会被 {@link PackSignatureVerifier}
- * 拒绝（常量时间字节比较）。
+ * <p>bucket is the sha256 hex of the server address after trim and lowercasing.
+ * {@code /nekojs trust <address>} writes trustedServers. v1 semantics: trusting a server means
+ * trusting its current signing key. The first trusted run pins the signing public key from the
+ * pack into trustedKeys; from then on the same keyId coming with a different key is rejected by
+ * {@link PackSignatureVerifier} (constant-time byte comparison).
  *
- * <p>实例可注入文件路径（测试用）；静态 {@link #get()} 跟随 {@link NekoJSPaths}。
- * 读失败（损坏 JSON 等）WARN 并按空存储处理；写失败 WARN 不抛（信任操作不允许炸掉网络线程）。
+ * <p>An instance can be given a file path (for tests); the static {@link #get()} follows
+ * {@link NekoJSPaths}. A read failure (corrupt JSON and the like) logs a WARN and is treated as
+ * an empty store; a write failure logs a WARN and does not throw, because a trust operation must
+ * not kill the network thread.
  */
 public final class PackSyncTrustStore {
 
@@ -57,12 +61,14 @@ public final class PackSyncTrustStore {
         return store;
     }
 
-    /** 测试用：重置默认实例（下次 get() 按当前 NekoJSPaths 重建）。 */
+    /** For tests: resets the default instance. The next get() rebuilds it from the current
+     * NekoJSPaths. */
     static synchronized void resetForTest() {
         instance = null;
     }
 
-    /** 服务器地址 → bucket（sha256 十六进制）。地址 trim + 小写后哈希。 */
+    /** Maps a server address to its bucket (sha256 hex). The address is trimmed and lowercased before
+     * hashing. */
     public static String bucketFor(String serverAddress) {
         String normalized = serverAddress == null ? "" : serverAddress.trim().toLowerCase();
         return PackHasher.toHex(PackHasher.sha256().digest(normalized.getBytes(StandardCharsets.UTF_8)));
@@ -72,7 +78,7 @@ public final class PackSyncTrustStore {
         return readServers().has(bucket);
     }
 
-    /** 信任服务器地址（写入 bucket → {serverAddress, trustedAt}）。 */
+    /** Trusts a server address: writes bucket → {serverAddress, trustedAt}. */
     public synchronized void trustServer(String serverAddress) {
         String address = serverAddress.trim();
         JsonObject root = readRoot();
@@ -88,7 +94,8 @@ public final class PackSyncTrustStore {
         writeRoot(root);
     }
 
-    /** 按 keyId 查询 pinning 的签名公钥（base64 文本）；未 pinning 返回 null。 */
+    /** Returns the pinned signing public key (base64 text) for a keyId, or null when the key is not
+     * pinned. */
     public synchronized String trustedPublicKey(String keyId) {
         JsonObject keys = readKeys();
         JsonElement entry = keys.get(keyId);
@@ -99,7 +106,7 @@ public final class PackSyncTrustStore {
             : null;
     }
 
-    /** pinning 签名公钥（{publicKey, fingerprint, serverAddress, trustedAt}）。 */
+    /** Pins a signing public key: {publicKey, fingerprint, serverAddress, trustedAt}. */
     public synchronized void trustPublicKey(String keyId, String publicKey, String fingerprint, String serverAddress) {
         JsonObject root = readRoot();
         JsonObject keys = root.getAsJsonObject("trustedKeys");

@@ -29,12 +29,11 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Ticket 44 hand-off smoke scenarios, executable without a live client: the paint-side
- * consumers (measureText via {@link TextLayouter}, visual resolution via
- * {@code JsxHostAdapter.resolveVisual}) run against a fake {@link FontAdapter} with golden
- * assertions. Real-client execution of the same scenarios on NeoForge 26.2 is NOT RUN in
- * this environment (no Minecraft client); this suite pins the contract the client run
- * would exercise.
+ * Paint-side smoke scenarios that run without a live client: the consumers (measureText through
+ * {@link TextLayouter}, visual resolution through {@code JsxHostAdapter.resolveVisual}) run against
+ * a fake {@link FontAdapter} with golden assertions. The same scenarios on a real NeoForge 26.2
+ * client are NOT RUN here (there is no Minecraft client); this suite pins what that run would
+ * check.
  */
 class Ticket44HandoffSmokeTest {
 
@@ -106,8 +105,8 @@ class Ticket44HandoffSmokeTest {
         assertEquals(15, at18.ascent(), "round(10 * 1.5)");
     }
 
-    // (c) image resource present resolves silently; missing reaches the seam as NEKO-6004
-    // with root/node/generation stamped
+    // (c) a present image resource resolves silently; a missing one reaches the diagnostics path as
+    // NEKO-6004 with root, node and generation stamped.
     @Test
     void missingImageResourceReachesDiagnosticsSeam(@TempDir Path packRoot) throws IOException {
         Path texture = packRoot.resolve("assets/mymod/textures/gui/panel.png");
@@ -173,9 +172,9 @@ class Ticket44HandoffSmokeTest {
         assertTrue(seam.getFirst().contains(UiErrorCodes.INVALID_RESOURCE_SIZE), seam.getFirst());
     }
 
-    // (f) script-path visual props: guest objects materialize at the adapter boundary, so
-    // opacity/icon/crop set from a script resolve into the spec fields (the whitelist and
-    // the fake-host proof cover the TS side; this pins the host boundary + resolver side)
+    // (f) visual props from a script: guest objects materialize when the adapter converts them, so
+    // opacity, icon and crop set in a script land in the spec fields. The whitelist and the
+    // fake-host proof cover the TS side; this pins the host conversion and the resolver.
     @Test
     void scriptPathVisualPropsReachResolverSpecFields() {
         try (Context context = Context.create("js")) {
@@ -190,7 +189,7 @@ class Ticket44HandoffSmokeTest {
             assertEquals(new VisualSpec.CropRect(1, 2, 8, 9), spec.crop());
             assertTrue(seam.isEmpty(), "valid script props report nothing: " + seam);
 
-            // the array crop shape from the TS type materializes through the same boundary
+            // the array form of crop from the TS type converts the same way
             Value arrayCrop = context.eval("js", "({ crop: [1, 2, 8, 9] })");
             VisualSpec arraySpec = JsxHostAdapter.resolveVisual(
                     JsxHostAdapter.props(arrayCrop), "image", "hero", "ui-script", 3, null);

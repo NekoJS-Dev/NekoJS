@@ -6,10 +6,13 @@ import java.net.URI;
 import java.util.Objects;
 
 /**
- * 已完成校验的 API 契约，把契约内容与其来源、完整性/兼容性哈希绑定在一起。
+ * A verified API contract: the contract content bound to its source and to its integrity and
+ * compatibility hashes.
  *
- * <p>不可变；通过 {@link #create(ApiContractIdentity, NormativeApiContract, URI, String, String, String)}
- * 构造。完整性哈希用于校验契约资源未被篡改，兼容性哈希用于契约版本比对。
+ * <p>Immutable; build one through
+ * {@link #create(ApiContractIdentity, NormativeApiContract, URI, String, String, String)}. The
+ * integrity hash checks that the contract resource was not tampered with, and the compatibility
+ * hash is used when comparing contract versions.
  */
 public final class VerifiedApiContract {
 
@@ -31,39 +34,39 @@ public final class VerifiedApiContract {
         this.compatibilitySha256 = Objects.requireNonNull(compatibilitySha256, "compatibilitySha256");
     }
 
-    /** 构造一个已验证契约；全部参数不能为 {@code null}。 */
+    /** Creates a verified contract. No argument may be {@code null}. */
     public static VerifiedApiContract create(ApiContractIdentity identity, NormativeApiContract contract,
                                              URI codeSource, String resourceName,
                                              String integritySha256, String compatibilitySha256) {
         return new VerifiedApiContract(identity, contract, codeSource, resourceName, integritySha256, compatibilitySha256);
     }
 
-    /** 返回契约身份。 */
+    /** Returns the contract identity. */
     public ApiContractIdentity identity() {
         return identity;
     }
 
-    /** 返回契约内容。 */
+    /** Returns the contract content. */
     public NormativeApiContract contract() {
         return contract;
     }
 
-    /** 返回契约资源来源 URI。 */
+    /** Returns the URI the contract resource came from. */
     public URI codeSource() {
         return codeSource;
     }
 
-    /** 返回契约资源名。 */
+    /** Returns the contract resource name. */
     public String resourceName() {
         return resourceName;
     }
 
-    /** 返回契约资源的 SHA-256 完整性哈希。 */
+    /** Returns the SHA-256 integrity hash of the contract resource. */
     public String integritySha256() {
         return integritySha256;
     }
 
-    /** 返回契约的 SHA-256 兼容性哈希。 */
+    /** Returns the SHA-256 compatibility hash of the contract. */
     public String compatibilitySha256() {
         return compatibilitySha256;
     }

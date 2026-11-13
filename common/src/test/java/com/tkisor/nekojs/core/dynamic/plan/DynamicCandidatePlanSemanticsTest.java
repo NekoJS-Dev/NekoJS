@@ -16,12 +16,13 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * 票 16 候选计划语义（AC5/AC6/AC7/AC8）：fingerprint 重复 reload 稳定、同 key 定义变化
- * 整批冲突失败且旧 active 继续服务、失败/取消不发布、stale/retired 不物理删除、
- * claim/stale/mode 可观察、Adapter 请求 generation-scoped 且 inert。
+ * Candidate plan semantics: fingerprints stay stable across repeated reloads, a changed definition
+ * for the same key fails the whole batch while the old active definitions keep serving, a failed or
+ * cancelled batch publishes nothing, stale and retired entries are not physically deleted,
+ * claim/stale/mode are observable, and adapter requests are generation-scoped and inert.
  *
- * <p>全部断言走公开观察面（{@link DynamicRegistryPlanStore} 的查询与
- * {@link DynamicCandidateRegistryPlan} 的结果），不断言私有字段。
+ * <p>Every assertion goes through public observation: the queries of {@link DynamicRegistryPlanStore}
+ * and the results of {@link DynamicCandidateRegistryPlan}. No private fields are asserted.
  */
 class DynamicCandidatePlanSemanticsTest {
 
@@ -37,7 +38,7 @@ class DynamicCandidatePlanSemanticsTest {
         return DynamicDefinition.of(DynamicDefinitionType.SOUND_EVENT, id, new DynamicSoundEventBuilder());
     }
 
-    /** 经事件 payload 同款入口（plan.add）收集一条 item 定义。 */
+    /** Collects one item definition through the same entry the event payload uses, {@code plan.add}. */
     private static void declare(DynamicCandidateRegistryPlan plan, String id, int stackSize, String rarity) {
         DynamicItemBuilder builder = new DynamicItemBuilder().setMaxStackSize(stackSize);
         if (rarity != null) {
@@ -58,7 +59,8 @@ class DynamicCandidatePlanSemanticsTest {
         assertTrue(first.isPublished(), "成功 commit 才发布计划");
         assertEquals(1, store.committedGeneration(), "store 记录已发布 generation");
 
-        // 重复 reload：全新 builder 实例、相同声明 → 同 fingerprint → 不冲突、重 claim
+        // Repeated reload with fresh builder instances and the same declarations: same fingerprints, so no
+        // conflict and the claims are renewed.
         DynamicCandidateRegistryPlan second = store.beginBatch();
         declare(second, "mymod:ruby", 16, "epic");
         assertEquals(firstDefinition.fingerprint(), second.definitions().get(0).fingerprint(),
@@ -77,12 +79,12 @@ class DynamicCandidatePlanSemanticsTest {
         DynamicRegistryPlanStore store = new DynamicRegistryPlanStore();
         DynamicCandidateRegistryPlan active = store.beginBatch();
         declare(active, "mymod:ruby", 16, "epic");
-        declare(active, "mymod:boom", 1, null); // 另一条无关定义，验证「整批」失败
+        declare(active, "mymod:boom", 1, null); // An unrelated definition, to show that the whole batch fails.
         active.preflight();
         active.publish();
         String oldFingerprint = store.exposedEntry("minecraft:item|mymod:ruby").definition().fingerprint();
 
-        // 变更定义（maxStackSize 16 → 32）：preflight 必须以整批冲突失败
+        // Changed definition (maxStackSize 16 to 32): preflight must fail the whole batch with a conflict.
         DynamicCandidateRegistryPlan changed = store.beginBatch();
         declare(changed, "mymod:ruby", 32, "epic");
         declare(changed, "mymod:boom", 1, null);
@@ -91,7 +93,8 @@ class DynamicCandidatePlanSemanticsTest {
         assertTrue(conflict.getMessage().contains("minecraft:item|mymod:ruby"), conflict.getMessage());
         assertTrue(conflict.getMessage().contains("the whole batch fails"), conflict.getMessage());
 
-        // 旧 active 继续服务：exposed 指纹不动、claim 不动、批次未发布
+        // The old active definitions keep serving: the exposed fingerprints stay, claims stay, the batch is not
+        // published.
         assertEquals(oldFingerprint, store.exposedEntry("minecraft:item|mymod:ruby").definition().fingerprint(),
                 "旧 active 定义继续服务（账本未被触碰）");
         assertEquals(1, store.committedGeneration(), "失败批次没有发布");
@@ -112,7 +115,8 @@ class DynamicCandidatePlanSemanticsTest {
         assertTrue(error.getMessage().contains("Duplicate declaration of 'minecraft:item|mymod:dup'"), error.getMessage());
         assertEquals(1, plan.definitions().size(), "冲突的第二条不进入批次");
 
-        // 同 fingerprint 的重复声明是幂等去重（同批两个脚本声明同一配置）
+        // A repeated declaration with the same fingerprint deduplicates idempotently, as when two scripts in one
+        // batch declare the same configuration.
         DynamicDefinition idempotent = plan.add(DynamicDefinitionType.ITEM, "mymod:dup",
                 new DynamicItemBuilder().setMaxStackSize(16), "other.js", "event.item");
         assertSame(plan.definitions().get(0), idempotent, "同 fingerprint 重复声明返回既有条目");
@@ -149,7 +153,8 @@ class DynamicCandidatePlanSemanticsTest {
         first.preflight();
         first.publish();
 
-        // 下一轮只声明 ruby：boom 变 stale/retired，但账目与 fingerprint 保留（不物理删除）
+        // The next round declares only ruby: boom becomes stale/retired, but its ledger entry and fingerprint are
+        // kept, so nothing is physically deleted.
         DynamicCandidateRegistryPlan second = store.beginBatch();
         declare(second, "mymod:ruby", 16, null);
         second.preflight();
@@ -162,8 +167,9 @@ class DynamicCandidatePlanSemanticsTest {
         assertEquals(boom.fingerprint(), exposedBoom.definition().fingerprint(),
                 "普通 reload 不物理删除：exposed 指纹保留");
 
-        // 对 stale/retired 项的定义变化（replace 尝试）：同样整批冲突——fingerprint 账保留使
-        // 「已暴露 key 的定义变化」永远冲突，不因 stale 而放开 replace（第一版无 remove/replace）
+        // A changed definition for a stale or retired entry (a replace attempt) also fails the whole batch. Because
+        // the fingerprint ledger is kept, changing the definition of an exposed key always conflicts; being
+        // stale does not open replace up. This version has no remove or replace.
         DynamicCandidateRegistryPlan replaceAttempt = store.beginBatch();
         replaceAttempt.add(DynamicDefinitionType.SOUND_EVENT, "mymod:boom",
                 new DynamicSoundEventBuilder().setFixedRange(64f), "server_scripts/packs/test/main.js",
@@ -176,7 +182,7 @@ class DynamicCandidatePlanSemanticsTest {
                         + replaceConflict.getMessage());
         assertFalse(replaceAttempt.isPublished(), "冲突批次不发布");
 
-        // stale 项重新声明：同 fingerprint → 重 claim（stale 清除）
+        // Redeclaring a stale entry with the same fingerprint renews the claim, which clears stale.
         DynamicCandidateRegistryPlan reclaim = store.beginBatch();
         reclaim.add(DynamicDefinitionType.SOUND_EVENT, "mymod:boom", new DynamicSoundEventBuilder(),
                 "server_scripts/packs/test/main.js", "event.soundEvent");
@@ -203,7 +209,8 @@ class DynamicCandidatePlanSemanticsTest {
         }
         assertNotEquals(0, plan.generation(), "generation 随批次递增");
 
-        // preflight 失败的批次：请求对象存在但 store 永远收不到（无发布路径）
+        // A batch whose preflight fails: the request object exists but the store never receives it, because there
+        // is no publish path.
         DynamicCandidateRegistryPlan failing = store.beginBatch();
         declare(failing, "mymod:conflict", 16, null);
         DynamicCandidateRegistryPlan committed = store.beginBatch();
@@ -231,7 +238,8 @@ class DynamicCandidatePlanSemanticsTest {
 
     @Test
     void fingerprintCoversEveryBuilderInputTypeAndId() {
-        // AC5 全规范化：三个类型的全部可写属性 + mode（约定连带声明）+ 类型 + id 都参与指纹
+        // Full normalization: every writable property of all three types, plus mode (declared along with the
+        // convention), type and id all take part in the fingerprint.
         DynamicDefinition soundDefault = DynamicDefinition.of(DynamicDefinitionType.SOUND_EVENT,
                 "mymod:boom", new DynamicSoundEventBuilder());
         DynamicDefinition soundRanged = DynamicDefinition.of(DynamicDefinitionType.SOUND_EVENT,
@@ -252,13 +260,14 @@ class DynamicCandidatePlanSemanticsTest {
                         "mymod:touch", new DynamicMobEffectBuilder().setMode("reloadable")).fingerprint(),
                 "约定连带声明（mode）变化可识别");
 
-        // 类型与 id 参与指纹/key：同 id 不同类型不碰撞
+        // Type and id take part in the fingerprint and key, so the same id under different types does not collide.
         DynamicDefinition sameIdItem = DynamicDefinition.of(DynamicDefinitionType.ITEM, "mymod:touch",
                 new DynamicItemBuilder());
         assertNotEquals(effect.fingerprint(), sameIdItem.fingerprint(), "类型参与指纹");
         assertNotEquals(effect.key(), sameIdItem.key(), "key 含目标注册表维度");
 
-        // 读数是全量可写属性（不抽部分字段），字典序、规范化默认值
+        // The readings cover every writable property rather than a subset, sorted by name, with normalized
+        // defaults.
         assertEquals(DynamicBuilderContract.of(DynamicMobEffectBuilder.class).writableNames().size(),
                 effect.readings().size(), "全量可写属性参与读数");
         assertEquals(List.of("category=neutral", "color=16777215", "mode=world"), effect.readings());
@@ -269,11 +278,11 @@ class DynamicCandidatePlanSemanticsTest {
     void idNormalizationFollowsVanillaIdentifierSemantics() {
         DynamicRegistryPlanStore store = new DynamicRegistryPlanStore();
         DynamicCandidateRegistryPlan plan = store.beginBatch();
-        // 无命名空间 → minecraft:；首尾空白剥除
+        // No namespace means minecraft:, and leading and trailing whitespace is stripped.
         DynamicDefinition bare = plan.add(DynamicDefinitionType.ITEM, "  ruby  ",
                 new DynamicItemBuilder(), "t.js", "event.item");
         assertEquals("minecraft:ruby", bare.id());
-        // trim 后非小写/非法字符拒绝
+        // After trimming, non-lowercase names and invalid characters are rejected.
         assertThrows(IllegalArgumentException.class,
                 () -> plan.add(DynamicDefinitionType.ITEM, "MyMod:Ruby", new DynamicItemBuilder(), "t.js", "e"));
         assertThrows(IllegalArgumentException.class,

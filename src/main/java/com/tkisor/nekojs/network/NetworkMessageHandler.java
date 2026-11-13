@@ -11,26 +11,32 @@ import com.tkisor.nekojs.wrapper.event.server.ModificationSyncWire;
 //?}
 
 /**
- * {@link NekoScriptPayload} 的接收投递：按 channel 投给脚本监听器
- * （{@link NetworkEvents#SERVER} / {@link NetworkEvents#CLIENT}）。
+ * Receives {@link NekoScriptPayload} and delivers it to the script listeners for its channel
+ * ({@link NetworkEvents#SERVER} / {@link NetworkEvents#CLIENT}).
  *
- * <p>主线程切换由各加载器的接收端负责（脚本回调里常访问 level/entity/player 等
- * Minecraft 对象，这些对象只能在主线程读写）：NeoForge 走
- * {@code IPayloadContext#enqueueWork}（见下方 loader 守卫内的包装方法），
- * fabric 走 {@code server().execute()} / {@code client().execute()}（见
- * FabricPlayNetwork 的 receiver）。
+ * <p>Switching to the main thread is up to each loader's receiver, because script callbacks often
+ * touch Minecraft objects such as level/entity/player, which may only be read and written on the
+ * main thread: NeoForge uses {@code IPayloadContext#enqueueWork} (see the wrapper methods inside
+ * the loader guards below), fabric uses {@code server().execute()} / {@code client().execute()}
+ * (see the receiver in FabricPlayNetwork).
  */
 public final class NetworkMessageHandler {
 
     private NetworkMessageHandler() {}
 
-    /** 中立投递核心：客户端 → 服务端的包投给 SERVER 监听器（调用方须已在服务端主线程）。 */
+    /**
+     * Neutral delivery: a client to server packet goes to the SERVER listeners. The caller must already
+     * be on the server main thread.
+     */
     public static void postServerEvent(NekoScriptPayload payload, ServerPlayer sender) {
         NetworkDataEventJS event = new NetworkDataEventJS(payload.channel(), payload.data(), sender);
         NetworkEvents.SERVER.post(event, payload.channel());
     }
 
-    /** 中立投递核心：服务端 → 客户端的包投给 CLIENT 监听器（调用方须已在客户端主线程）。 */
+    /**
+     * Neutral delivery: a server to client packet goes to the CLIENT listeners. The caller must already
+     * be on the client main thread.
+     */
     public static void postClientEvent(NekoScriptPayload payload) {
 //? if >=26 {
         if (ModificationSyncWire.CHANNEL.equals(payload.channel())) {
@@ -43,7 +49,8 @@ public final class NetworkMessageHandler {
     }
 
 //? if neoforge {
-    // NeoForge 接收端：网络线程收包 → enqueueWork 切主线程 → 中立投递
+// NeoForge receiver: the network thread receives the packet, enqueueWork switches to the main
+// thread, then neutral delivery
     public static void handleScriptPayloadOnServer(NekoScriptPayload payload, IPayloadContext context) {
         context.enqueueWork(() -> {
             ServerPlayer sender = context.player() instanceof ServerPlayer sp ? sp : null;
@@ -51,7 +58,8 @@ public final class NetworkMessageHandler {
         });
     }
 
-    // NeoForge 接收端：网络线程收包 → enqueueWork 切主线程 → 中立投递
+    // NeoForge receiver: the network thread receives the packet, enqueueWork switches to the main
+    // thread, then neutral delivery
     public static void handleScriptPayloadOnClient(NekoScriptPayload payload, IPayloadContext context) {
         context.enqueueWork(() -> postClientEvent(payload));
     }

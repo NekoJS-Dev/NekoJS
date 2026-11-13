@@ -12,22 +12,25 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 /**
- * {@code EntityEvents.finalizeSpawn} 的 fabric 挂点：{@code Mob#finalizeSpawn} 的 TAIL。
+ * Fabric hook for {@code EntityEvents.finalizeSpawn}: the TAIL of {@code Mob#finalizeSpawn}.
  *
- * <p>javap 实证（minecraft-merged-deobf-26.1.2.jar）：
+ * <p>Checked with javap (minecraft-merged-deobf-26.1.2.jar):
  * <ul>
  *   <li>{@code public net.minecraft.world.entity.SpawnGroupData finalizeSpawn(
  *       net.minecraft.world.level.ServerLevelAccessor, net.minecraft.world.DifficultyInstance,
  *       net.minecraft.world.entity.EntitySpawnReason, net.minecraft.world.entity.SpawnGroupData)}
- *       ——26.x 签名（<b>无</b> 1.21.x 的 {@code CompoundTag} 参数；{@code SpawnGroupData}
- *       原样传入/返回），public 具体方法（Mob 抽象类但方法有体），TAIL 合法。</li>
- *   <li>覆盖面：{@code NaturalSpawner} 两处调用点（字节码 441 自然生成 NATURAL、
- *       502 区块生成 CHUNK_GENERATION）与刷怪笼/事件生成同入口；子类覆写
- *       {@code finalizeSpawn} 且不调 {@code super} 时本挂点不触发。</li>
- *   <li><b>为何不可取消/不可改写</b>：{@code NaturalSpawner} 两处调用点均<b>不检查
- *       返回值</b>（441 之后直接 {@code addFreshEntityWithPassengers}；502 同样）——
- *       即使 RETURN 注入改返回 null 也阻止不了生成；fabric 无 NeoForge 那种 patch
- *       生成链的机构，故此总线为通知型。</li>
+ *       has the 26.x signature with <b>no</b> 1.21.x {@code CompoundTag} parameter
+ *       ({@code SpawnGroupData} is passed in and returned unchanged). It is a public concrete
+ *       method on the abstract Mob class, so TAIL is valid.</li>
+ *   <li>Coverage: both {@code NaturalSpawner} call sites (bytecode 441 for natural spawning
+ *       NATURAL, 502 for CHUNK_GENERATION), plus spawners and event spawning, use the same entry.
+ *       A subclass that overrides {@code finalizeSpawn} without calling {@code super} does not
+ *       trigger this hook.</li>
+ *   <li><b>Why it cannot cancel or change the result</b>: neither {@code NaturalSpawner} call site
+ *       <b>checks the return value</b> (441 goes straight on to
+ *       {@code addFreshEntityWithPassengers}, and 502 does the same), so even a RETURN injection
+ *       that returned null would not prevent the spawn. Fabric has no mechanism like the NeoForge
+ *       patch of the spawn chain, so this bus only notifies.</li>
  * </ul>
  */
 @Mixin(Mob.class)

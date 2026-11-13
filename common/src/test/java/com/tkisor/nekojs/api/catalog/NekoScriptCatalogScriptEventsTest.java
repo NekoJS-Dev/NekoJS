@@ -27,9 +27,10 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * ScriptEvents 动态注册的事件组必须进 {@link NekoScriptCatalog} 事件目录：
- * probe 的声明生成（.d.ts/.pyi）与 payload 反射 BFS 种子都来自 catalog，
- * 缺了动态条目则脚本注册的自定义事件组对 IDE 完全不可见。
+ * Event groups registered dynamically through ScriptEvents must appear in the
+ * {@link NekoScriptCatalog} event catalog: both the probe declaration generation ({@code .d.ts} /
+ * {@code .pyi}) and the payload reflection BFS seeds come from the catalog, so without the dynamic
+ * entries the custom event groups a script registers are invisible to the IDE.
  */
 class NekoScriptCatalogScriptEventsTest {
 
@@ -38,7 +39,8 @@ class NekoScriptCatalogScriptEventsTest {
         TestPlatformInit.ensureInitialized();
     }
 
-    // ScriptEventRegistry 是静态全局：测试前后清理，避免污染同 JVM 其他测试的目录视图
+    // ScriptEventRegistry is a static global: clear it before and after each test so it does not
+    // pollute the catalog view of other tests in the same JVM
     @BeforeEach
     void clearBefore() {
         clearAllDefinitions();

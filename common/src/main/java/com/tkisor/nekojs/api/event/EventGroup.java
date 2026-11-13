@@ -11,13 +11,14 @@ import java.util.Map;
 import java.util.Objects;
 
 /**
- * 具名事件组（如 {@code ServerEvents}）：一组按名注册、暴露给脚本的 {@link EventBusJS}。
- * 引导（bootstrap）阶段注册完毕后应 {@link #freeze()} 冻结，此后禁止再增删总线。
+ * A named event group such as {@code ServerEvents}: a set of {@link EventBusJS} instances registered by
+ * name and exposed to scripts. Call {@link #freeze()} after bootstrap registration; once frozen, no bus
+ * can be added or removed.
  *
  * @author ZZZank
  */
 public class EventGroup {
-    /** 创建一个具名空事件组；组名不可为 {@code null}。 */
+    /** Creates a named empty event group; group name cannot be {@code null}. */
     public static EventGroup of(String name) {
         return new EventGroup(name);
     }
@@ -29,8 +30,8 @@ public class EventGroup {
 
     private EventGroup(String name) {
         this.name = Objects.requireNonNull(name);
-        // LinkedHashMap：保持注册顺序，viewBuses()/probe 目录迭代确定（HashMap 的
-        // String key 迭代序依赖 hashCode 内部布局，跨 JDK/运行脆弱）
+        // LinkedHashMap: Maintains registration order, viewBuses()/probe directory iteration deterministic (HashMap's
+        // String key iteration order depends on internal hashCode layout, fragile across JDK/runs)
         this.buses = new LinkedHashMap<>();
     }
 
@@ -51,52 +52,52 @@ public class EventGroup {
         if (frozen) throw new IllegalStateException("EventGroup '" + name + "' is frozen after bootstrap");
     }
 
-    /** 组名（如 {@code "ServerEvents"}）。 */
+    /** Group name (e.g., {@code "ServerEvents"}). */
     public String name() {
         return name;
     }
 
-    /** 冻结本组；冻结后 {@link #add} 与 {@link #merge} 将抛 {@link IllegalStateException}。 */
+    /** Freezes this group; after freezing, {@link #add} and {@link #merge} will throw {@link IllegalStateException}. */
     public void freeze() {
         frozen = true;
     }
 
-    /** 组内总线的只读视图（总线名 → {@link BusHolder}），按注册顺序迭代。 */
+    /** Read-only view of the buses in this group (bus name → {@link BusHolder}), iterating in registration order. */
     public Map<String, BusHolder> viewBuses() {
         return Collections.unmodifiableMap(buses);
     }
 
-    /** 按总线名获取 holder；不存在时返回 {@code null}。 */
+    /** Returns the holder for the given bus name; returns {@code null} if it does not exist. */
     public BusHolder getBusHolder(String busName) {
         return this.buses.get(busName);
     }
 
-    /** 注册 SERVER 脚本可监听的事件总线（不可取消、不分发）。 */
+    /** Registers an event bus that can be listened to by SERVER scripts (cannot be cancelled, no dispatch). */
     public <E> EventBusJS<E, Void> server(String name, Class<E> type) {
         return add(name, ScriptType.SERVER, EventBusJS.of(type));
     }
 
-    /** 注册 CLIENT 脚本可监听的事件总线（不可取消、不分发）。 */
+    /** Registers a bus for CLIENT scripts. It is not cancellable and has no dispatch key. */
     public <E> EventBusJS<E, Void> client(String name, Class<E> type) {
         return add(name, ScriptType.CLIENT, EventBusJS.of(type));
     }
 
-    /** 注册 STARTUP 脚本可监听的事件总线（不可取消、不分发）。 */
+    /** Registers a bus for STARTUP scripts. It is not cancellable and has no dispatch key. */
     public <E> EventBusJS<E, Void> startup(String name, Class<E> type) {
         return add(name, ScriptType.STARTUP, EventBusJS.of(type));
     }
 
-    /** 注册 SERVER 脚本可监听、按 {@code dispatchKey} 定向分发的事件总线。 */
+    /** Registers a bus for SERVER scripts that dispatches each event by {@code dispatchKey}. */
     public <E, K> EventBusJS<E, K> server(String name, Class<E> type, DispatchKey<E, K> dispatchKey) {
         return add(name, ScriptType.SERVER, EventBusJS.of(type, EventBusJS.eventCancellability(type), dispatchKey));
     }
 
-    /** 注册 CLIENT 脚本可监听、按 {@code dispatchKey} 定向分发的事件总线。 */
+    /** Registers a bus for CLIENT scripts that dispatches each event by {@code dispatchKey}. */
     public <E, K> EventBusJS<E, K> client(String name, Class<E> type, DispatchKey<E, K> dispatchKey) {
         return add(name, ScriptType.CLIENT, EventBusJS.of(type, EventBusJS.eventCancellability(type), dispatchKey));
     }
 
-    /** 注册 STARTUP 脚本可监听、按 {@code dispatchKey} 定向分发的事件总线。 */
+    /** Registers a bus for STARTUP scripts that dispatches each event by {@code dispatchKey}. */
     public <E, K> EventBusJS<E, K> startup(String name, Class<E> type, DispatchKey<E, K> dispatchKey) {
         return add(name, ScriptType.STARTUP, EventBusJS.of(type, EventBusJS.eventCancellability(type), dispatchKey));
     }
@@ -144,9 +145,11 @@ public class EventGroup {
     }
 
     /**
-     * 注册总线：绑定 {@code scriptType} 与组/事件名元数据后收入本组，返回该总线。
-     * 组已冻结抛 {@link IllegalStateException}；总线名重复抛 {@link IllegalArgumentException}；
-     * 任一参数为 {@code null} 抛 {@link NullPointerException}。
+     * Adds a bus to this group with its {@code scriptType} and name, and returns it.
+     *
+     * @throws {@link IllegalStateException} when the group is frozen
+     * @throws {@link IllegalArgumentException} when a bus with this name is already registered
+     * @throws {@link NullPointerException} when any argument is {@code null}
      */
     public <BUS extends EventBusJS<?, ?>> BUS add(String name, ScriptType scriptType, BUS bus) {
         if (frozen) {
@@ -166,8 +169,9 @@ public class EventGroup {
     }
 
     /**
-     * 合并另一个同名事件组的所有总线到本组（受 {@link #add} 的冻结/重名约束）。
-     * 组名不同时仅记录告警并跳过，不复制任何总线。
+     * Copies every bus from another group with the same name into this group. Each bus goes through
+     * {@link #add}, so the frozen and duplicate-name rules still apply. When the names differ this method
+     * logs a warning and copies no bus.
      */
     public void merge(EventGroup other) {
         if (!this.name.equals(other.name)) {
@@ -191,10 +195,10 @@ public class EventGroup {
     }
 
     /**
-     * 清理本组内可应用于指定 {@link ScriptType} 的所有总线下、该类型已注册的全部 JS 监听器
-     * （脚本 reload 清理用）。
+     * Removes every JS listener of the given {@link ScriptType} from every bus in this group that
+     * applies to that type. Script reload uses this for cleanup.
      */
-    // 清理指定类型的监听器，用于reload scripts，但由于新的eventbus还未熟悉，也许后续会需要调整
+    // Removes listeners of the given type. Script reload uses this; the event bus API may still change.
     public void clearListeners(ScriptType type) {
         for (var entry : buses.entrySet()) {
             var registered = entry.getValue();
@@ -205,7 +209,10 @@ public class EventGroup {
         }
     }
 
-    /** 清理本组内可应用于指定 {@link ScriptType} 的所有总线下、由指定 {@code scriptId} 注册的 JS 监听器。 */
+    /**
+     * Removes the JS listeners that {@code scriptId} registered from every bus in this group that
+     * applies to the given {@link ScriptType}.
+     */
     public void clearListeners(ScriptType type, String scriptId) {
         for (var entry : buses.entrySet()) {
             var registered = entry.getValue();
@@ -216,7 +223,11 @@ public class EventGroup {
         }
     }
 
-    /** 按 scriptId 前缀清理本组监听器（脚本包整体卸载用，见 {@link EventBusJS#clearTokensByPrefix}）。 */
+    /**
+     * Removes the listeners whose script id starts with {@code scriptIdPrefix} from every bus in this
+     * group that applies to the given {@link ScriptType}. Used when a whole script pack is unloaded; see
+     * {@link EventBusJS#clearTokensByPrefix}.
+     */
     public void clearListenersByPrefix(ScriptType type, String scriptIdPrefix) {
         for (var entry : buses.entrySet()) {
             var registered = entry.getValue();
@@ -286,10 +297,13 @@ public class EventGroup {
         return bus.preparePendingListeners(type, pending);
     }
 
-    /** 组内单个总线的持有句柄：携带总线绑定的 {@link ScriptType}，并可按目标脚本环境取用总线。 */
+    /**
+     * Handle for one bus in the group. It carries the bus's {@link ScriptType} and hands the bus out
+     * for a target {@link ScriptType}.
+     */
     public interface BusHolder extends WithScriptType {
 
-        /** 总线可应用于 {@code targetEnv} 时返回该总线，否则返回 {@code null}。 */
+        /** Returns the bus when it applies to {@code targetEnv}, otherwise {@code null}. */
         EventBusJS<?, ?> getBus(ScriptType targetEnv);
     }
 

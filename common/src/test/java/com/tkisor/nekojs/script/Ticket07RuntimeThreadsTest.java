@@ -67,14 +67,14 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  */
 class Ticket07RuntimeThreadsTest {
 
-    /** 监听器事件 payload。 */
+    /** Listener event payload. */
     public static final class TestEvent {}
 
     /**
-     * 脚本可见的测试记录器：入口计数、监听器/timer 命中、close 抢占的自旋条件
-     * （宿主调用即 Graal 安全点，close 的 interrupt 在此打断候选求值）。
-     * 对 manager 的 lifecycle 调用全部经 Recorder 的 Java 方法中转——ScriptManager
-     * 本身不作为 guest 可见绑定暴露（与生产面一致）。
+     * Script-visible test recorder: entry counts, listener and timer hits, and the spin condition used
+     * when close preempts evaluation (a host call is a Graal safepoint, so close's interrupt breaks
+     * candidate evaluation there). All lifecycle calls on the manager go through Java methods on this
+     * recorder; ScriptManager itself is not exposed as a guest-visible binding, matching production.
      */
     public static final class Recorder {
         final AtomicInteger executions = new AtomicInteger();
@@ -82,7 +82,7 @@ class Ticket07RuntimeThreadsTest {
         final AtomicInteger timerHits = new AtomicInteger();
         final CountDownLatch firstSpin = new CountDownLatch(1);
         volatile String lastValue;
-        /** 由 harness 回填：回调内请求/查询 close 状态用。 */
+        /** Filled in by the harness: callbacks use it to request or query close state. */
         volatile ScriptManager manager;
 
         public void record(String value) {
@@ -125,27 +125,30 @@ class Ticket07RuntimeThreadsTest {
             return System.nanoTime() - spinStartedNanos < TimeUnit.SECONDS.toNanos(10);
         }
 
-        /** 捕获求值所在的真实 Context（kill 上报回归测试需要旧 generation Context 引用）。 */
+        /** Captures the real Context that evaluation runs in. The kill report regression test needs the
+         * old-generation Context reference. */
         volatile Context capturedContext;
 
         public void rememberContext(Value anyGuestValue) {
             this.capturedContext = anyGuestValue.getContext();
         }
 
-        /** 自旋条件：close 已被请求（close 发起前置 false，脚本自然退出循环）。 */
+        /** Spin condition: close has been requested. It stays false before close is issued, so the script
+         * leaves the loop on its own. */
         public boolean closeRequested() {
             ScriptManager current = manager;
             return current != null && current.isCloseRequested();
         }
 
-        /** 回调内请求 reload（AC2 观察点）：返回判决文本并记录。 */
+        /** Requests a reload from inside a callback and records the decision text. */
         public void requestReloadFromCallback() {
             ScriptManager current = manager;
             String decision = String.valueOf(current == null ? null : current.requestReload());
             record("reload-decision:" + decision);
         }
 
-        /** 回调内抛出式 reload（AC2 观察点）：拒绝以结构化失败呈现，记录 domain。 */
+        /** Runs a throwing reload from inside a callback. The rejection surfaces as a structured failure, and
+         * its domain is recorded. */
         public void reloadThrowingFromCallback() {
             try {
                 manager.reloadScripts();
@@ -156,7 +159,7 @@ class Ticket07RuntimeThreadsTest {
         }
     }
 
-    /** 提供真实事件总线（Ticket07Events.ping）的 bridge：AC2/AC5/AC6 用真实分发观察。 */
+    /** Bridge that provides the real event bus (Ticket07Events.ping), so tests observe real dispatch. */
     static final class Ticket07EventBridge implements ScriptEventBridge {
         final EventGroup group = EventGroup.of("Ticket07Events");
         final EventBusJS<TestEvent, Void> pingBus;
@@ -233,7 +236,8 @@ class Ticket07RuntimeThreadsTest {
         }
     }
 
-    /** 测试 harness：真实 bridge（Ticket07Events）+ Recorder 绑定 + 独立 Engine 的 manager。 */
+    /** Test harness: a manager with the real bridge (Ticket07Events), Recorder bound in, and its own
+     * Engine. */
     private static final class Harness implements AutoCloseable {
         final Engine engine = Engine.newBuilder().build();
         final Ticket07EventBridge bridge = new Ticket07EventBridge();
@@ -343,7 +347,7 @@ class Ticket07RuntimeThreadsTest {
         return SandboxConfig.defaultConfig();
     }
 
-    // ---- AC1：并发 reload 单一序列、每轮恰好一个 candidate ----
+    // ---- Concurrent reloads form a single sequence, with exactly one candidate per round ----
 
     @Test
     void concurrentReloadsAreSerializedWithSingleCandidate() throws Exception {
@@ -385,13 +389,14 @@ class Ticket07RuntimeThreadsTest {
         }
     }
 
-    // ---- AC2：回调内 reload 明确拒绝，不递归、不同步等待自身 ----
+    // ---- A reload inside a callback is rejected explicitly: no recursion, no waiting on itself ----
 
     @Test
     void reloadInsideManagedCallbackIsRejectedNotRecursive() throws Exception {
         try (Harness h = new Harness(ScriptType.SERVER, quietConfig())) {
-            // 监听器体内直接请求 reload：EventBusJS 分发点已做回调深度标记，
-            // 同线程 lifecycle 请求必须得到明确拒绝而不是递归开启第二个 candidate。
+            // Requests a reload directly from a listener body. The EventBusJS dispatch point tracks callback depth,
+            // so a lifecycle request on the same thread must be rejected explicitly instead of starting a
+            // second candidate recursively.
             h.writeScript("entry.js", """
                     Ticket07Events.ping(() => {
                         TestRecorder.hit();
@@ -408,14 +413,16 @@ class Ticket07RuntimeThreadsTest {
                     "callback-internal reload must be explicitly rejected (observable result)");
             assertEquals(base, h.manager.generationId(), "rejected reload must not create a candidate");
 
-            // 抛出式入口同样以结构化失败呈现拒绝（可观察 domain），而不是死锁或递归
+            // The throwing entry point also surfaces the rejection as a structured failure with an observable
+            // domain, instead of deadlocking or recursing
             h.writeScript("entry2.js", """
                     Ticket07Events.ping(() => {
                         TestRecorder.hit();
                         TestRecorder.reloadThrowingFromCallback();
                     });
                     """);
-            // entry2 在候选执行时才注册新监听器；先 reload 使其生效（监听器提交后激活）
+            // entry2 registers its new listener only when the candidate runs; reload first so it takes effect
+            // (listeners become active once the candidate commits)
             h.manager.reloadScripts();
             h.bridge.postPing();
             assertTrue(h.recorder.value() != null && h.recorder.value().startsWith("threw:"),
@@ -424,13 +431,13 @@ class Ticket07RuntimeThreadsTest {
                     "rejection domain must be observable: " + h.recorder.value());
             assertEquals(base + 1, h.manager.generationId(), "only the outer explicit reload commits");
 
-            // 回调外同一线程恢复正常（排队/直接执行均可）
+            // Outside a callback the same thread works normally again; queued or immediate execution both count
             assertEquals(ScriptLifecycleGate.Decision.EXECUTED, h.manager.requestReload());
             assertEquals(base + 2, h.manager.generationId());
         }
     }
 
-    // ---- AC4/AC7：非 owner（guest-created）线程走显式调度入口 ----
+    // ---- Non-owner (guest-created) threads go through the explicit scheduling entry ----
 
     @Test
     void nonOwnerThreadLifecycleIsQueuedThroughExplicitEntry() throws Exception {
@@ -445,7 +452,8 @@ class Ticket07RuntimeThreadsTest {
                 return thread;
             });
             try {
-                // guest 线程经显式调度入口进入：与 owner 的 lifecycle 单一序列排队执行
+                // A guest thread enters through the explicit scheduling entry, so it queues on the same lifecycle
+                // sequence as the owner
                 Future<Long> scheduled = pool.submit(() -> h.manager.scheduleOnOwner(() -> {
                     h.manager.reloadScripts();
                     return h.manager.generationId();
@@ -453,8 +461,9 @@ class Ticket07RuntimeThreadsTest {
                 assertEquals(base + 1, scheduled.get(60, TimeUnit.SECONDS).longValue(),
                         "scheduled reload must serialize onto the owner queue and commit");
 
-                // 非 owner 线程直接调用公开 lifecycle 同样在实例锁 monitor 队列排队
-                // （不旁路、不并发触碰 Context）：排队成功的外部可观察结果。
+                // A non-owner thread calling the public lifecycle method directly also queues on the instance lock
+                // monitor. It does not bypass the queue or touch the Context concurrently; running queued is
+                // the observable result.
                 Future<?> direct = pool.submit(() -> {
                     h.manager.reloadScripts();
                     return null;
@@ -468,16 +477,19 @@ class Ticket07RuntimeThreadsTest {
         }
     }
 
-    /** AC7 guest 面：高级 Java/线程能力不被收紧（guest JS 自己创建 Java 线程），managed lifecycle 只走显式入口。 */
+    /** Guest-facing side: advanced Java and thread capabilities are not tightened (guest JS creates Java
+     * threads itself), and managed lifecycle only goes through the explicit entry. */
     @Test
     void guestThreadAdvancedCapabilitiesAreNotTightened() throws Exception {
-        // allowThreads 开启：guest 线程能力保持既有语义，本票只约束 managed lifecycle 入口
+        // allowThreads is on, so guest thread capabilities keep their current behavior; only the managed
+        // lifecycle entry is restricted
         SandboxConfig config = new SandboxConfig(true, false, false, false, true, true, false, true);
         try (Harness h = new Harness(ScriptType.SERVER, config)) {
-            // guest JS 侧真实创建 Java 线程：allowCreateThread 的既有能力面（ClassFilter 的
-            // THREAD_GROUP 白名单 + Java.type + start/join/currentThread interop）。平台事实：
-            // Context 是单线程的，guest 建的线程不能重入 Context 执行 JS 闭包——这在票 07
-            // 之前就不支持，不是本票收紧；本断言锁定的是线程创建/操控能力本身。
+            // Guest JS really creates a Java thread here: the existing surface of allowCreateThread (the
+            // ClassFilter THREAD_GROUP whitelist plus Java.type and start/join/currentThread interop).
+            // Platform fact: a Context is single-threaded, so a thread created by guest code cannot
+            // re-enter the Context to run a JS closure. That was never supported and is not restricted
+            // here; this assertion pins thread creation and control themselves.
             h.writeScript("entry.js", """
                     const Thread = Java.type('java.lang.Thread');
                     const guest = new Thread();
@@ -492,7 +504,8 @@ class Ticket07RuntimeThreadsTest {
                     "guest JS must be able to create/start/join a Java thread and read back its state"
                         + " (actual: " + h.recorder.value() + ")");
 
-            // 非 owner 宿主线程经显式入口访问 managed lifecycle（guest 不触碰 Context 旁路）
+            // A non-owner host thread reaches managed lifecycle through the explicit entry; guest code never
+            // touches the Context on a bypass path
             h.writeScript("entry.js", "TestRecorder.record('reloaded-from-guest-scheduler');\n");
             final ScriptLifecycleGate.Decision[] decision = new ScriptLifecycleGate.Decision[1];
             Thread schedulingGuest = new Thread(() -> {
@@ -513,7 +526,8 @@ class Ticket07RuntimeThreadsTest {
         }
     }
 
-    /** AC6 反向防线：旧 generation 残留闭包的 kill 上报不得把健康 active 误标隔离失败。 */
+    /** Reverse guard: a kill report from a stale closure of the old generation must not mark a healthy
+     * active generation as an isolated failure. */
     @Test
     void staleKillReportForOldGenerationContextDoesNotIsolateHealthyActive() throws Exception {
         try (Harness h = new Harness(ScriptType.SERVER, quietConfig())) {
@@ -539,7 +553,8 @@ class Ticket07RuntimeThreadsTest {
             assertEquals(generation + 1, h.manager.generationId());
             assertFalse(h.manager.isActiveFailed(), "healthy reload must not be isolated");
 
-            // commit 清扫与总线激活之间被并发 dispatch 的旧 generation 残留闭包上报 kill：
+            // A stale closure of the old generation, dispatched concurrently between the commit sweep and the bus
+            // activation, reports a kill:
             h.manager.markContextKilled(oldContext);
             assertFalse(h.manager.isActiveFailed(),
                     "stale kill report for an old-generation context must not isolate the healthy active");
@@ -548,13 +563,15 @@ class Ticket07RuntimeThreadsTest {
             h.bridge.postPing();
             assertEquals(hits + 1, h.recorder.hits(), "active listener must keep receiving events");
 
-            // 对照：真正的 active kill 仍进入隔离失败（AC6 主路径不受此修复影响）
+            // Control case: a real active kill still enters isolated failure; the main path is unaffected by
+            // this fix
             h.manager.markContextKilled(newContext);
             assertTrue(h.manager.isActiveFailed(), "a real active kill must still enter isolated failure");
         }
     }
 
-    // ---- AC3：close 抢占在途 candidate（中断路径）+ 幂等 + 关闭后拒绝 ----
+    // ---- close preempts an in-flight candidate (interrupt path), is idempotent, and rejects lifecycle
+    // calls after it finishes ----
 
     @Test
     void closePreemptsInFlightCandidateViaInterrupt() throws Exception {
@@ -577,7 +594,8 @@ class Ticket07RuntimeThreadsTest {
                         return e;
                     }
                 });
-                // close 优先：请求标志 → 中断在途候选 → 实例锁上等 owner 退出 → teardown
+                // close takes priority: set the request flag, interrupt the in-flight candidate, wait on the instance
+                // lock for the owner to exit, then tear down
                 assertTrue(h.recorder.firstSpin.await(30, TimeUnit.SECONDS),
                         "candidate evaluation must begin before close tests in-flight interruption");
                 assertTimeoutPreemptively(Duration.ofSeconds(30), h.manager::close,
@@ -598,7 +616,8 @@ class Ticket07RuntimeThreadsTest {
                 assertEquals(base, h.manager.generationId(), "preempted candidate must not commit");
                 assertEquals("v1", h.recorder.value(), "active scripts must be untouched by preemption");
 
-                // 幂等：重复 close 不抛；已关闭后新 lifecycle 明确拒绝
+                // Idempotent: a repeated close does not throw, and once closed, new lifecycle calls are rejected
+                // explicitly
                 assertTimeoutPreemptively(Duration.ofSeconds(10), h.manager::close);
                 NekoReloadException rejected = assertThrows(NekoReloadException.class, h.manager::reloadScripts);
                 assertTrue(rejected.report().domain().contains("REJECTED_CLOSED"),
@@ -610,14 +629,17 @@ class Ticket07RuntimeThreadsTest {
         }
     }
 
-    // ---- AC3：close 抢占在途 candidate（取消点收敛 + 未开始脚本不再启动 + 永不 commit）----
+    // ---- close preempts an in-flight candidate: cancellation converges, scripts that have not started
+    // stay unstarted, and the candidate never commits ----
 
     /**
-     * 候选脚本自旋到 close 请求后自然退出：抢占经由取消点呈现——可能是中断
-     * （phase=EXECUTION/candidate 求值被打断）、脚本间检查（phase=EXECUTION/后续脚本
-     * 不再启动）或 commit 前检查（phase=COMMIT/候选执行完但被丢弃），三者不可在线程
-     * 竞态下区分，但外部可观察结果收敛：domain=close-preempted、generation 不变、
-     * 未开始的候选脚本（second.js）绝不执行、候选永不 commit。
+     * The candidate script spins until close is requested and then exits on its own. Preemption shows up
+     * at whichever cancellation point fires: an interrupt (phase=EXECUTION, candidate evaluation is
+     * interrupted), the check between scripts (phase=EXECUTION, later scripts are not started), or the
+     * check before commit (phase=COMMIT, the candidate finished but is discarded). A thread race cannot
+     * tell the three apart, but the observable outcome is the same: domain=close-preempted, the
+     * generation is unchanged, the candidate script that has not started (second.js) never runs, and the
+     * candidate never commits.
      */
     @Test
     void closePreemptsRemainingCandidateScriptsAndNeverCommits() throws Exception {
@@ -626,8 +648,8 @@ class Ticket07RuntimeThreadsTest {
             h.loadAndRun();
             long base = h.manager.generationId();
 
-            // gate 自旋到 close 请求即退出；second 排在其后（字母序），一旦取消点生效
-            // 就不应再启动
+            // gate spins until close is requested, then exits. second sorts after it by name and must not start
+            // once a cancellation point takes effect
             h.writeScript("gate.js", "while (!TestRecorder.closeRequested() && TestRecorder.keepSpinning()) {}\nTestRecorder.record('gate-passed');\n");
             h.writeScript("second.js", "TestRecorder.record('second-ran');\n");
             ExecutorService pool = Executors.newSingleThreadExecutor();
@@ -663,7 +685,8 @@ class Ticket07RuntimeThreadsTest {
         }
     }
 
-    /** AC3「close 优先于尚未开始的 reload」：close 请求后新 lifecycle 被明确拒绝。 */
+    /** close takes priority over a reload that has not started: after close is requested, new lifecycle
+     * calls are rejected. */
     @Test
     void closeIsPrioritizedOverNotStartedReload() throws Exception {
         try (Harness h = new Harness(ScriptType.SERVER, quietConfig())) {
@@ -672,7 +695,7 @@ class Ticket07RuntimeThreadsTest {
             h.manager.close();
             assertTrue(h.manager.isCloseRequested());
             assertTrue(h.manager.isClosed());
-            // 尚未开始的 reload/load 在门处拒绝（排队也不会执行）
+            // reload/load that has not started is rejected at the gate, so queueing it will not run it either
             NekoReloadException reloadRejected = assertThrows(NekoReloadException.class, h.manager::reloadScripts);
             assertTrue(reloadRejected.report().domain().contains("REJECTED_CLOSED"));
             NekoReloadException loadRejected = assertThrows(NekoReloadException.class, h.manager::loadScripts);
@@ -709,8 +732,8 @@ class Ticket07RuntimeThreadsTest {
                     """);
             h.loadAndRun();
             h.bridge.postPing();
-            // setTimeout(0) 的 ready 入队由调度线程异步完成：轮询 flush 直到命中
-            // （上限 1s，避免调度唤醒延迟造成的不确定）
+            // The scheduling thread enqueues the ready callback of setTimeout(0) asynchronously, so poll flush until
+            // it lands (capped at 1s, so a delayed scheduler wakeup cannot make the result flaky)
             for (int i = 0; i < 200 && h.recorder.timerHits() == 0; i++) {
                 h.manager.flushReadyNodeTimers();
                 Thread.sleep(5);
@@ -734,14 +757,16 @@ class Ticket07RuntimeThreadsTest {
             assertEquals(base, h.manager.generationId(), "failed candidate must retain the active generation");
             assertFalse(h.manager.isActiveFailed(), "candidate kill must not poison the active");
 
-            // active 的事件、timer、state 全部不变：监听器继续命中、旧 state 仍可读
+            // Everything on the active generation stays unchanged: listeners keep firing, timers do not change, and
+            // the old state is still readable
             h.bridge.postPing();
             assertEquals(hitsBefore + 1, h.recorder.hits(), "active listener must keep receiving events");
             h.manager.flushReadyNodeTimers();
             assertEquals(timerHitsBefore, h.recorder.timerHits(), "no new active timers may appear from the candidate");
             assertEquals("v1", h.recorder.value(), "active script state must be untouched");
 
-            // 显式 reload 是恢复入口：修好脚本后一次成功 reload 即新 candidate 提交
+            // An explicit reload is the recovery entry: once the script is fixed, one successful reload commits a
+            // new candidate
             Files.deleteIfExists(scriptsDir(ScriptType.SERVER).resolve("loop.js"));
             h.writeScript("entry.js", """
                     Ticket07Events.ping(() => TestRecorder.hit());
@@ -773,20 +798,23 @@ class Ticket07RuntimeThreadsTest {
             h.cancelDuring(h.manager::loadScripts);
             long failedGeneration = h.manager.generationId();
 
-            // 隔离失败可观察：标记置位；timer flush / 事件分发都不重建、不清除
+            // Isolated failure is observable: the flag is set, and neither timer flush nor event dispatch rebuilds
+            // or clears it
             assertTrue(h.manager.isActiveFailed(), "killed active must enter isolated failure");
             h.manager.flushReadyNodeTimers();
             assertEquals(failedGeneration, h.manager.generationId(),
                     "timer flush must not rebuild: no second active without explicit reload");
             assertTrue(h.manager.isActiveFailed(), "timer flush must not clear the isolated failure");
 
-            // 停止向被杀 Context 分发：监听器闭包指向死环境，post 一次不再执行
+            // Dispatch to the killed Context stops: the listener closure points at a dead environment, so one post
+            // no longer runs it
             h.bridge.postPing();
             assertEquals(0, h.recorder.hits(), "dispatch must stop reaching the killed active context");
             assertEquals(failedGeneration, h.manager.generationId(),
                     "event dispatch must not rebuild: no second active");
 
-            // 显式 reload 是唯一恢复入口：修好脚本后 reload 提交新 generation 并恢复分发
+            // An explicit reload is the only recovery entry: after the script is fixed, a reload commits a new
+            // generation and dispatch resumes
             Files.deleteIfExists(scriptsDir(ScriptType.SERVER).resolve("loop.js"));
             h.writeScript("entry.js", """
                     Ticket07Events.ping(() => TestRecorder.hit());
@@ -801,11 +829,13 @@ class Ticket07RuntimeThreadsTest {
         }
     }
 
-    // ---- AC7：SERVER 与 CLIENT owner 独立（各自 owner 线程并发 reload 不互相干扰）----
+    // ---- The SERVER and CLIENT owners are independent: concurrent reloads on their own owner threads do
+    // not disturb each other ----
 
     @Test
     void serverAndClientOwnersReloadIndependently() throws Exception {
-        // SERVER/CLIENT 各用独立 Engine（Graal 要求共享 Engine 的 Context 使用同一 HostAccess）
+        // SERVER and CLIENT each use their own Engine, because Graal requires Contexts that share an Engine to
+        // use the same HostAccess
         try (Harness server = new Harness(ScriptType.SERVER, quietConfig());
              Harness client = new Harness(ScriptType.CLIENT, quietConfig())) {
             server.writeScript("entry.js", "TestRecorder.record('server');\n");
@@ -837,13 +867,13 @@ class Ticket07RuntimeThreadsTest {
         }
     }
 
-    // ---- AC9：SERVER/CLIENT/STARTUP/TEST 四类 owner 入口复用既有 root 生命周期入口 ----
+    // ---- The SERVER, CLIENT, STARTUP and TEST owner entries all reuse the existing root lifecycle entry ----
 
     @Test
     void fourOwnerEntriesReuseRootLifecycleGate() throws Exception {
-        // 票 05 的 NekoRuntimeRoot 是唯一 runtime owner：四类 owner 的 load/reload/test
-        // 全部经 root 生命周期入口进入票 07 的同一调度门；root close 后四类 manager 的
-        // lifecycle 全部进入拒绝（没有第二 manager 或旁路面）。
+        // NekoRuntimeRoot is the only runtime owner: load/reload/test for all four owners goes through the root
+        // lifecycle entry into the same scheduling gate. After root close, lifecycle calls on all four
+        // managers are rejected; there is no second manager or bypass path.
         Engine engine = Engine.newBuilder().build();
         NekoJSPaths paths = NekoJSPaths.get();
         SandboxConfig config = quietConfig();
@@ -866,7 +896,8 @@ class Ticket07RuntimeThreadsTest {
             ScriptManager serverManager = root.scriptManagerOf(ScriptType.SERVER);
             ScriptManager testManager = root.scriptManagerOf(ScriptType.TEST);
 
-            // 四类 owner 入口全部经 root 生命周期入口执行（空脚本目录 = 空转成功）
+            // All four owner entries run through the root lifecycle entry; an empty script directory still counts as
+            // success
             assertTrue(root.reload(ScriptType.SERVER).success(), "SERVER reload through root entry");
             assertTrue(root.reload(ScriptType.CLIENT).success(), "CLIENT reload through root entry");
             NekoRuntimeRoot.ReloadResult startup = root.reload(ScriptType.STARTUP);
@@ -874,7 +905,8 @@ class Ticket07RuntimeThreadsTest {
                     "STARTUP reload through root entry keeps its explicit non-transactional boundary");
             assertNotNull(root.runTests(), "TEST run through root entry");
 
-            // root close 后：同一调度门上的 lifecycle 全部拒绝（不出现第二恢复面）
+            // After root close, every lifecycle call on the same scheduling gate is rejected; no second recovery
+            // path appears
             root.closeSilently();
             NekoReloadException rejected = assertThrows(NekoReloadException.class, serverManager::reloadScripts);
             assertTrue(rejected.report().domain().contains("REJECTED_CLOSED"),

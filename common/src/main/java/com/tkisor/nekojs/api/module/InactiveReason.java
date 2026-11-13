@@ -1,17 +1,17 @@
 package com.tkisor.nekojs.api.module;
 
 /**
- * 模块未激活的原因。
+ * Why a module was not activated.
  */
 public enum InactiveReason {
-    /** 作用域不匹配。 */
+    /** The module's scope does not match. */
     SCOPE_MISMATCH,
-    /** 所需能力不可用。 */
+    /** A required capability is not available. */
     CAPABILITY_UNAVAILABLE,
-    /** 缺少模块依赖。 */
+    /** A module dependency is missing. */
     MISSING_MODULE_DEPENDENCY,
-    /** 依赖的模块未激活。 */
+    /** A module it depends on was not activated. */
     DEPENDENCY_INACTIVE,
-    /** 模块版本不匹配。 */
+    /** The module version does not match. */
     MODULE_VERSION_MISMATCH
 }

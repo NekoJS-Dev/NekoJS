@@ -12,20 +12,23 @@ import java.util.List;
 import java.util.Set;
 
 /**
- * node 模块类型声明提取器：从 node 模块 {@code .ts} 类型注解源码自动生成
- * {@code declare module 'node:xxx' {...}} 声明，使模块实现与补全声明同源。
+ * Node module type declaration extractor: automatically generates {@code declare module 'node:xxx' {...}}
+ * declarations from Node module {@code .ts} source code to keep implementation and declaration in sync.
  *
- * <p>node 模块为脚本风格（IIFE + {@code globalThis.__nekoNodeDefine(ids, exports)}），
- * 因为脚本上下文求值不支持 ES {@code export}/{@code import}；类型注解由 Eraser 擦除。
+ * <p>Node modules are script-style (IIFE + {@code globalThis.__nekoNodeDefine(ids, exports)}),
+ * because script context evaluation does not support ES {@code export}/{@code import}. Type annotations are
+ * removed by Eraser.
  *
- * <p>{@link #registerBuiltin} 在 {@code registerNodeTypeDocs} 扩展点被调用：扫描
- * {@code nekojs/node/modules.list} 中所有 {@code .ts} 模块自动提取声明（全自动化，无手写回退）。
+ * <p>{@link #registerBuiltin} is called at the {@code registerNodeTypeDocs} extension point: it scans all
+ * {@code .ts} modules in {@code nekojs/node/modules.list} and automatically extracts declarations (fully
+ * automated, no manual fallback).
  *
- * <p>提取为简化版（针对 node 模块常见的类型化声明形式），非完整 {@code tsc --declaration}：
- * 复杂类型（条件/映射/infer）原样保留文本，无法解析的成员降级为 {@code unknown} 而非整体失败。
+ * <p>Extracts a simplified version (targeted at common typed declaration forms in Node modules), not a
+ * complete {@code tsc --declaration}: complex types (conditional/mapped/infer) are kept as-is, and
+ * unparsable members are downgraded to {@code unknown} instead of failing entirely.
  *
- * <p>注意：导出成员必须带 {@code export}（{@code export function/const}），否则在
- * {@code declare module} 内对 {@code require()} 消费者不可见，补全失效。
+ * <p>Note: exported members must have {@code export} (e.g., {@code export function/const}), otherwise
+ * invisible to {@code require()} consumers inside {@code declare module}, causing completion to fail.
  */
 public final class NodeModuleTypeDocs {
     private static final String RESOURCE_ROOT = "nekojs/node/";
@@ -34,8 +37,9 @@ public final class NodeModuleTypeDocs {
     private NodeModuleTypeDocs() {}
 
     /**
-     * 注册内置 node 模块声明：扫描 {@code modules.list} 中的 .ts 模块，用 {@link #extractTS}
-     * 自动提取类型声明。所有内置 node 模块均已重写为带类型注解的 .ts，声明全自动提取，无手写回退。
+     * Registers built-in Node module declarations: scans .ts modules in {@code modules.list} and uses {@link #extractTS}
+     * to automatically extract type declarations. All built-in Node modules have been rewritten as typed .ts files,
+     * with declarations fully automated and no manual fallback.
      */
     public static void registerBuiltin(TypeDocsRegister registry) {
         scanBuiltinTypeScriptModules(registry);
@@ -72,10 +76,11 @@ public final class NodeModuleTypeDocs {
     }
 
     /**
-     * CJS 互操作全局（{@code require}/{@code module}/{@code exports}）：运行时引擎提供这些
-     * shim，类型侧也必须自带声明——jsconfig 已禁用 Automatic Type Acquisition（ATA 只会按
-     * 依赖名联网拉 @types 包，离线/代理环境卡语言服务），没有这份声明时 {@code require()} 在
-     * .ts 脚本里报 TS2580 且无补全。
+     * CommonJS interop globals ({@code require}/{@code module}/{@code exports}). The runtime engine
+     * provides these shims, so the type side must declare them too. jsconfig disables Automatic Type
+     * Acquisition (ATA only fetches @types packages from the network by dependency name and stalls the
+     * language service offline or behind a proxy). Without this declaration {@code require()} reports
+     * TS2580 in .ts scripts and has no completion.
      */
     private static void registerCommonJsGlobals(TypeDocsRegister registry) {
         String decl = """
@@ -90,7 +95,8 @@ public final class NodeModuleTypeDocs {
             List.of()));
     }
 
-    /** 扫描 {@code modules.list} 中的 .ts 条目，自动提取类型声明并注册（跳过非 .ts 与无类型信息的模块）。 */
+    /** Scans the .ts entries of {@code modules.list}, extracts their type declarations and registers
+     *  them, skipping anything that is not .ts and modules with no type information. */
     private static void scanBuiltinTypeScriptModules(TypeDocsRegister registry) {
         String manifest = readResource(MANIFEST);
         if (manifest == null) return;
@@ -125,33 +131,39 @@ public final class NodeModuleTypeDocs {
     }
 
     /**
-     * 从 .ts node 模块源码提取类型声明。
+     * Extracts type declarations from the source of a .ts node module.
      *
-     * <p>解析 {@code __nekoNodeDefine(ids, exports)} 获取模块 id 列表与导出对象，对导出对象的成员
-     * （方法简写 {@code name(params): ret {}}、属性 {@code name: value}、简写引用 {@code name}）
-     * 关联到模块内带类型注解的 function/const 声明生成签名，并收集顶层
-     * {@code type}/{@code interface}/{@code enum}/{@code namespace} 声明，包成 {@code declare module 'id' { ... }}。
-     * 类型语法（泛型/联合/交叉/字面量）原样保留文本。
+     * <p>Parses {@code __nekoNodeDefine(ids, exports)} to get the module id list and the exports
+     * object. It maps the exports object's members (method shorthand {@code name(params): ret {}},
+     * property {@code name: value}, shorthand reference {@code name}) to the typed function/const
+     * declarations in the module to build signatures, and collects top-level
+     * {@code type}/{@code interface}/{@code enum}/{@code namespace} declarations, wrapping them in
+     * {@code declare module 'id' { ... }}. Type syntax (generics, unions, intersections, literals) is
+     * kept as text.
      *
-     * @param source .ts 源码（脚本风格：IIFE + {@code __nekoNodeDefine}）
-     * @return 生成的 {@code declare module} 声明文本；无类型信息可提取时返回空字符串
+     * @param source .ts source (script style: an IIFE plus {@code __nekoNodeDefine})
+     * @return the generated {@code declare module} text; an empty string when no type information
+     *         can be extracted
      */
     public static String extractTS(String source) {
         if (source == null || source.isBlank()) return "";
         return new TSExtractor(source).extract();
     }
 
-    /** __nekoNodeDefine 调用的解析结果：模块 id 列表 + 第二参数（exports 表达式）的源码范围。 */
+    /** Parsed result of a __nekoNodeDefine call: the module id list and the source range of the
+     *  second argument (the exports expression). */
     private record DefineCall(List<String> ids, int exportsStart, int exportsEnd) {}
 
-    /** 单个导出成员的解析结果：签名文本（null 表示跳过）与成员结束位置。 */
+    /** Parsed result of one exported member: the signature text (null means skipped) and where the
+     *  member ends. */
     private record Member(String sig, int next) {}
 
-    // ============================ .ts 提取器 ============================
+    // ============================ .ts extractor ============================
 
     /**
-     * 只读扫描 .ts 源码，定位 {@code __nekoNodeDefine} 调用与导出成员，生成 declare module。
-     * 所有扫描原语跳过字符串/模板/注释，匹配括号/泛型对，不修改源码。
+     * Scans .ts source read-only, finds the {@code __nekoNodeDefine} call and its exported members,
+     * and generates a declare module. All scanning primitives skip strings, templates and comments,
+     * match bracket and generic pairs, and never modify the source.
      */
     static final class TSExtractor {
         private final String s;
@@ -181,7 +193,7 @@ public final class NodeModuleTypeDocs {
             return out.toString();
         }
 
-        // ---- 定位 __nekoNodeDefine 调用 ----
+        // ---- Locate the __nekoNodeDefine call ----
 
         private List<DefineCall> findDefineCalls() {
             List<DefineCall> calls = new ArrayList<>();
@@ -193,7 +205,7 @@ public final class NodeModuleTypeDocs {
                 from = idx + needle.length();
                 if (idx > 0 && isIdentPart(s.charAt(idx - 1))) continue; // __nekoNodeDefineX
                 int parenOpen = skipWsAndComments(idx + needle.length());
-                if (parenOpen >= n || s.charAt(parenOpen) != '(') continue; // 非调用（如赋值）
+                if (parenOpen >= n || s.charAt(parenOpen) != '(') continue; // Not a call (e.g. an assignment)
                 int parenClose = matchParen(parenOpen);
                 if (parenClose < 0) continue;
                 int[] args = splitTopLevelArgs(parenOpen, parenClose);
@@ -204,7 +216,8 @@ public final class NodeModuleTypeDocs {
             }
         }
 
-        /** 拆分参数列表为前两个顶层参数的范围 [s1,e1, s2,e2]（exclusive end）；不足两个返回 null。 */
+        /** Splits the argument list into ranges for the first two top-level arguments [s1,e1, s2,e2]
+         *  (end exclusive). Returns null when there are fewer than two. */
         private int[] splitTopLevelArgs(int open, int close) {
             int i = open + 1;
             int firstStart = skipWsAndComments(i);
@@ -227,11 +240,11 @@ public final class NodeModuleTypeDocs {
                 }
                 i++;
             }
-            if (firstEnd < 0) return null; // 只有一个参数
+            if (firstEnd < 0) return null; // only one parameter
             return new int[] { firstStart, firstEnd, secondStart, trimEnd(close) };
         }
 
-        /** 解析 id 参数：数组字面量 {@code ['a', "b"]} 或单个字符串字面量 {@code 'a'}。 */
+        /** Parses the id argument: an array literal {@code ['a', "b"]} or a single string literal {@code 'a'}. */
         private List<String> parseIds(int start, int end) {
             List<String> ids = new ArrayList<>();
             if (start >= end) return ids;
@@ -257,7 +270,7 @@ public final class NodeModuleTypeDocs {
             return ids;
         }
 
-        // ---- 解析 exports 表达式 ----
+        // ---- Resolve the exports expression ----
 
         private List<String> resolveExports(int start, int end) {
             int i = skipWsAndComments(start);
@@ -344,7 +357,7 @@ public final class NodeModuleTypeDocs {
             return members;
         }
 
-        /** 查找 {@code (const|let|var) <name> = { ... }} 的对象字面量 `{` 位置。 */
+        /** Finds the `{` of the object literal in {@code (const|let|var) <name> = { ... }}. */
         private int findExportsVarDef(String name) {
             int i = 0;
             while (i < n) {
@@ -377,7 +390,7 @@ public final class NodeModuleTypeDocs {
             return -1;
         }
 
-        // ---- 对象字面量成员解析 ----
+        // ---- Object literal member parsing ----
 
         private List<String> parseObjectMembers(int bodyStart, int bodyEnd) {
             List<String> sigs = new ArrayList<>();
@@ -410,13 +423,13 @@ public final class NodeModuleTypeDocs {
                 key = s.substring(i + 1, q - 1);
                 i = q;
             } else if (c == '[') {
-                // 计算属性，跳过
+                // Computed property, skip it
                 int close = matchBracket(i);
                 return new Member(null, close + 1);
             } else if (isIdentStart(c)) {
                 int ke = readIdent(i);
                 String first = s.substring(i, ke);
-                // async 前缀：取后者为 key；get/set → getterSetterMember
+                // async prefix: take the following name as the key; get/set goes to getterSetterMember
                 if (first.equals("async")) {
                     int next = skipWsAndComments(ke);
                     if (next < limit && isIdentStart(s.charAt(next))) { i = next; ke = readIdent(i); }
@@ -432,7 +445,7 @@ public final class NodeModuleTypeDocs {
                 return new Member(null, i + 1);
             }
             int afterKey = skipWsAndComments(i);
-            // 泛型方法简写：key<Gen>(...)
+            // Generic method shorthand: key<Gen>(...)
             String generics = "";
             if (afterKey < n && s.charAt(afterKey) == '<') {
                 int ac = matchAngle(afterKey);
@@ -447,12 +460,13 @@ public final class NodeModuleTypeDocs {
             if (afterKey < n && s.charAt(afterKey) == ':') {
                 return propertyMember(key, skipWsAndComments(afterKey + 1));
             }
-            // 简写属性：引用 key 本身
+            // Shorthand property: references the key itself
             String sig = resolveReferenceSig(key);
             return new Member(sig, afterKey);
         }
 
-        /** 方法简写 {@code key<G>(params): ret { body }} → {@code export function key<G>(params): ret;} */
+        /** Method shorthand {@code key<G>(params): ret { body }} becomes
+         * {@code export function key<G>(params): ret;} */
         private Member methodMember(String key, int parenOpen, String generics) {
             int parenClose = matchParen(parenOpen);
             if (parenClose < 0) return new Member(null, parenOpen + 1);
@@ -472,12 +486,12 @@ public final class NodeModuleTypeDocs {
         }
 
         /**
-         * 属性 {@code key: value}。value 为 arrow/function → {@code export function key(...)...}；
-         * 否则 {@code export const key: <inferred>;}。
+         * Property {@code key: value}. An arrow or function value becomes
+         * {@code export function key(...)...}; any other value becomes {@code export const key: <inferred>;}.
          */
         private Member propertyMember(String key, int valueStart) {
             int i = skipWsAndComments(valueStart);
-            // async 前缀
+            // async prefix
             if (i < n && isIdentStart(s.charAt(i))) {
                 int ke = readIdent(i);
                 if (s.substring(i, ke).equals("async")) i = skipWsAndComments(ke);
@@ -487,13 +501,14 @@ public final class NodeModuleTypeDocs {
             if (i < n && s.charAt(i) == '{') {
                 return inlineObjectMember(key, i);
             }
-            // 字面量 / 引用
+            // Literal or reference
             int ve = valueEnd(valueStart);
             String type = inferValueType(valueStart, ve);
             return new Member("export const " + key + ": " + type + ";", ve);
         }
 
-        /** 嵌套对象字面量 → export const key: { a: T; method(): R; ... };（递归，空对象→Record<string,unknown>）*/
+        /** Nested object literal becomes export const key: { a: T; method(): R; ... }. Members are
+         * handled recursively, and an empty object becomes Record<string, unknown>. */
         private Member inlineObjectMember(String key, int open) {
             int close = matchBrace(open);
             if (close < 0) return new Member("export const " + key + ": Record<string, unknown>;", open + 1);
@@ -515,7 +530,8 @@ public final class NodeModuleTypeDocs {
             return "{ " + String.join("; ", parts) + " }";
         }
 
-        /** 对象字面量 get/set → export const prop: T;（get 返回类型 / set 首参类型；get+set 同名由 seen 去重）*/
+        /** Object literal get/set becomes export const prop: T;. The type is the getter's return type or
+         * the setter's first parameter, and seen dedupes a get and a set with the same name. */
         private Member getterSetterMember(String kind, int propStart, int limit, Set<String> seen) {
             int ke = readIdent(propStart);
             String prop = s.substring(propStart, ke);
@@ -539,7 +555,8 @@ public final class NodeModuleTypeDocs {
             return new Member("export const " + prop + ": " + t + ";", next);
         }
 
-        /** arrow {@code (params): Ret => body} 或 function 值 → export function 签名；否则 null。 */
+        /** Arrow {@code (params): Ret => body} or function value becomes an export function signature;
+         * otherwise null. */
         private Member functionValueSig(String key, int i, int valueStart) {
             if (i < n && s.charAt(i) == '(') {
                 int parenClose = matchParen(i);
@@ -560,7 +577,7 @@ public final class NodeModuleTypeDocs {
                 int ke = readIdent(i);
                 if (s.substring(i, ke).equals("function")) {
                     int p = skipWsAndComments(ke);
-                    if (p < n && isIdentStart(s.charAt(p))) p = readIdent(p); // 可选名字
+                    if (p < n && isIdentStart(s.charAt(p))) p = readIdent(p); // Optional name
                     p = skipWsAndComments(p);
                     if (p < n && s.charAt(p) == '(') {
                         int parenClose = matchParen(p);
@@ -581,9 +598,10 @@ public final class NodeModuleTypeDocs {
             return null;
         }
 
-        // ---- 引用解析 ----
+        // ---- Reference resolution ----
 
-        /** 解析简写引用的标识符：function → export function；const/let/var → export const name: type；否则 unknown。 */
+        /** Resolves a shorthand reference by identifier: a function becomes export function, a
+         * const/let/var becomes export const name: type, and anything else becomes unknown. */
         private String resolveReferenceSig(String name) {
             String cl = classDeclSig(name);
             if (cl != null) return cl;
@@ -597,7 +615,7 @@ public final class NodeModuleTypeDocs {
             return "export const " + name + ": unknown;";
         }
 
-        // ---- class 成员提取（constructor/方法/static/字段/get-set）----
+        // ---- Class member extraction (constructor/method/static/field/get-set) ----
 
         /** Emits an exported class within its enclosing ambient module; returns null if no class is found. */
         private String classDeclSig(String name) {
@@ -846,13 +864,14 @@ public final class NodeModuleTypeDocs {
             return "unknown";
         }
 
-        /** 查找 {@code function <name><G>(params): ret}，返回完整 export function 签名；不存在返回 null。 */
+        /** Finds {@code function <name><G>(params): ret} and returns the full export function
+         * signature; returns null if there is none. */
         private String funcSigOf(String name) {
             int i = findKeywordThenIdent("function", name);
             if (i < 0) return null;
             int after = skipWsAndComments(i + "function".length());
             if (after < n && s.charAt(after) == '*') after = skipWsAndComments(after + 1); // generator
-            int ne = readIdent(after); // 跳过 name
+            int ne = readIdent(after); // Skip the name
             int p = skipWsAndComments(ne);
             String generics = "";
             if (p < n && s.charAt(p) == '<') {
@@ -876,7 +895,8 @@ public final class NodeModuleTypeDocs {
             return withLeadingDoc(i, "export function " + name + generics + params + ret + ";");
         }
 
-        /** 查找 {@code (const|let|var) <name>} 定义，返回其类型注解或字面量推断类型；不存在返回 null。 */
+        /** Finds the {@code (const|let|var) <name>} declaration and returns its type annotation or the
+         * type inferred from its literal; returns null if there is none. */
         private String varTypeOf(String name) {
             int i = findVarNamePos(name);
             if (i < 0) return null;
@@ -893,7 +913,8 @@ public final class NodeModuleTypeDocs {
             return "unknown";
         }
 
-        /** 查找 {@code const|let|var <name>} 中 name 的起始位置；不存在返回 -1。 */
+        /** Returns the position where name starts in {@code const|let|var <name>}, or -1 if there is no
+         * such declaration. */
         private int findVarNamePos(String name) {
             int from = 0;
             while (true) {
@@ -909,7 +930,8 @@ public final class NodeModuleTypeDocs {
             }
         }
 
-        /** 查找 {@code <keyword> <name>} 中 keyword 的起始位置（keyword 与 name 之间仅空白/注释）。 */
+        /** Returns the position of keyword in {@code <keyword> <name>}. Only whitespace and comments may
+         * sit between the keyword and the name. */
         private int findKeywordThenIdent(String keyword, String name) {
             int from = 0;
             while (true) {
@@ -922,7 +944,7 @@ public final class NodeModuleTypeDocs {
             }
         }
 
-        // ---- 值类型推断 ----
+        // ---- Value type inference ----
 
         private String inferValueType(int valueStart, int valueEnd) {
             int i = skipWsAndComments(valueStart);
@@ -953,7 +975,7 @@ public final class NodeModuleTypeDocs {
             return sb.toString();
         }
 
-        // ---- 顶层 type/interface/enum 收集 ----
+        // ---- Top-level type/interface/enum collection ----
 
         private String collectTypeDeclarations() {
             StringBuilder sb = new StringBuilder();
@@ -986,19 +1008,22 @@ public final class NodeModuleTypeDocs {
             return sb.toString();
         }
 
-        /** keyword 后是否跟标识符或字符串（确认是声明而非变量名等）。 */
+        /** Whether an identifier or string follows the keyword (confirming a declaration rather than a variable name). */
         private boolean isDeclAfter(int afterKw) {
             int p = skipWsAndComments(afterKw);
             return p < n && (isIdentStart(s.charAt(p)) || s.charAt(p) == '\'' || s.charAt(p) == '"');
         }
 
         /**
-         * type 声明结束：顶层（depth=0）的 {@code ;}，或无分号时换行结束（联合/交叉跨行用 {@code |}/{@code &} 续行）。
+         * Finds the end of a type declaration: the top-level (depth=0) {@code ;}, or when no semicolon
+         * is present, the end of the line. A union or intersection written across lines continues
+         * through {@code |}/{@code &}.
          *
-         * <p>{@code <}/{@code >} 用独立 angle 计数（与 {@link #valueEnd}/{@link #typeEnd} 一致），
-         * 避免 {@code =>} 箭头的 {@code >} 被误判为泛型闭合而提前归零 depth —— 否则
-         * {@code type X = { m: (a: T) => R; ... }} 会在首个 {@code ;} 截断，丢失闭合 {@code }}，
-         * 导致外层 {@code declare module} 借用闭合 {@code }}，TS 报 "Expected '}'"。
+         * <p>{@code <} and {@code >} use a separate angle counter, the same as {@link #valueEnd} and
+         * {@link #typeEnd}. Otherwise the {@code >} of an {@code =>} arrow looks like a closed generic
+         * and resets depth too early: {@code type X = { m: (a: T) => R; ... }} would stop at the first
+         * {@code ;}, lose the closing {@code }} and make the enclosing {@code declare module} borrow a
+         * closing {@code }}, so TypeScript reports "Expected '}'".
          */
         private int typeDeclEnd(int start) {
             int i = start, depth = 0, angle = 0;
@@ -1024,7 +1049,7 @@ public final class NodeModuleTypeDocs {
             return n;
         }
 
-        /** interface/enum 声明结束：第一个 `{` 的匹配 `}` 后（无体则到 `;`）。 */
+        /** End of an interface/enum declaration: after the `}` matching the first `{` (or at the `;` when there is no body). */
         private int blockDeclEnd(int start) {
             int i = start;
             while (i < n) {
@@ -1051,13 +1076,13 @@ public final class NodeModuleTypeDocs {
                 || findKeywordThenIdent("enum", name) >= 0;
         }
 
-        /** 若 pos 前紧贴 JSDoc 块注释，把它作为 sig 的前导文档输出（注释 + 换行 + sig）；否则原样返回 sig。 */
+        /** When a JSDoc block comment sits right before pos, emits it as leading documentation of sig (comment + newline + sig); otherwise returns sig unchanged. */
         private String withLeadingDoc(int pos, String sig) {
             String doc = docCommentBefore(pos);
             return doc == null ? sig : doc + "\n" + sig;
         }
 
-        /** 返回紧贴 pos 之前（仅隔空白）的 JSDoc 块注释原文；无则 null。块体内不含块尾分隔符，故 lastIndexOf 可定位块首。 */
+        /** Returns the raw JSDoc block comment right before pos (separated only by whitespace), or null. A block body holds no closing delimiter, so lastIndexOf finds the block start. */
         private String docCommentBefore(int pos) {
             int i = pos - 1;
             while (i >= 0 && Character.isWhitespace(s.charAt(i))) i--;
@@ -1067,7 +1092,7 @@ public final class NodeModuleTypeDocs {
             return s.substring(start, i + 1);
         }
 
-        // ---- 扫描原语 ----
+        // ---- Scanning primitives ----
 
         private int valueEnd(int start) {
             int i = start, depth = 0, angle = 0;
@@ -1089,7 +1114,7 @@ public final class NodeModuleTypeDocs {
             return n;
         }
 
-        /** 类型表达式结束（复刻 Eraser.typeExpressionEnd 语义）。 */
+        /** Ends the type expression (replicates Eraser.typeExpressionEnd semantics). */
         private int typeEnd(int start) {
             int i = start, angle = 0, paren = 0, bracket = 0, brace = 0;
             while (i < n) {
@@ -1178,7 +1203,7 @@ public final class NodeModuleTypeDocs {
             return NekoSourceLexerBase.previousNonWhitespace(s, n, idx);
         }
 
-        /** 返回包含位置 pb（ident 尾）的标识符起始位置；非 ident 返回 -1。 */
+        /** Returns the identifier start position containing position pb (ident end); returns -1 if not an identifier. */
         private int identStartBefore(int exclusiveEnd) {
             int i = exclusiveEnd - 1;
             if (i < 0 || !isIdentPart(s.charAt(i))) return -1;

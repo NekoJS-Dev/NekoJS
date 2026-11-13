@@ -9,9 +9,9 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Ticket 45 difference-report tests: controlled differences between a reference and an
- * actual snapshot must produce precisely the expected ranked entries — node rects,
- * resolved style, overflow, resource states, bindings, and structural breaks — with all
+ * Difference-report tests: controlled differences between a reference and an actual
+ * snapshot must produce exactly the expected ranked entries — node rects, resolved
+ * style, overflow, resource states, bindings, and structural breaks — with all
  * provenance fields retained.
  */
 class SnapshotDifferTest {

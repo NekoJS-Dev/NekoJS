@@ -1,26 +1,28 @@
 package com.tkisor.nekojs.fabric;
 
 /**
- * fabric 客户端「离开旧世界才清」守卫：NeoForge 侧挂在 client level unload（断线与切维度
- * 都触发），fabric 无对应事件——盯客户端世界实例变化等价（切维度换 {@code ClientLevel}
- * 实例、断线变 null）。
+ * Clears only when the client leaves an existing world. NeoForge hooks client level unload, which
+ * fires on both disconnect and dimension change; Fabric has no matching event, so watching the
+ * client level instance is equivalent (a dimension change swaps the {@code ClientLevel} instance,
+ * a disconnect makes it null).
  *
- * <p>关键语义：只在「离开一个已有世界」（上次见过非 null 世界）时报告需要清空；
- * 首次进服那次 null→世界 的变化不清——否则会把刚随进服推下来的数据
- * （pdata mirror / clientData 键值）一起抹掉。实例按引用（identity）比较，
- * 每次世界实例变化都视为切换。
+ * <p>The rule: report a clear only when leaving an existing world, meaning the last level seen was
+ * non-null. The null-to-level change on the first join does not clear, because it would wipe the
+ * data just pushed down on join (the pdata mirror and the clientData key-value store). Levels are
+ * compared by identity, so every new level instance counts as a switch.
  *
- * <p>进程级单实例（与两端挂钩点同生命周期）：
- * {@code FabricPDataSync}（清 pdata mirror）与 {@code FabricPlayNetwork}
- * （清 clientData store）各持一个，互不串扰。
+ * <p>One instance per process, living as long as both hook points: {@code FabricPDataSync} holds
+ * one for clearing the pdata mirror and {@code FabricPlayNetwork} holds one for clearing the
+ * clientData store, so the two never interfere.
  */
 public final class ClientLevelWatch {
 
     private Object lastLevel;
 
     /**
-     * 每客户端 tick 喂当前世界实例（可为 null）；返回是否「离开了旧世界」——
-     * true 时调用方应清空其对应的客户端 mirror/store，false 时不动。
+     * Feeds the current level instance (possibly null) once per client tick and returns whether the
+     * client left its previous level. When it returns true the caller must clear its own client-side
+     * mirror or store; when false, leave that data alone.
      */
     public boolean leftPreviousLevel(Object currentLevel) {
         if (currentLevel == lastLevel) return false;

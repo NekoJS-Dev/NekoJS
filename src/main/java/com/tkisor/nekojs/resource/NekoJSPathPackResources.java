@@ -33,7 +33,8 @@ public class NekoJSPathPackResources extends PathPackResources {
                 root
         );
 
-        // SharedConstants.*_PACK_FORMAT_MAJOR 已废弃：从当前 WorldVersion 按 PackType 取 PackFormat 的 major
+        // SharedConstants.*_PACK_FORMAT_MAJOR is deprecated: take the PackFormat major for the PackType from
+        // the current WorldVersion
         int format = SharedConstants.getCurrentVersion().packVersion(type).major();
 
         String json = """

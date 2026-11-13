@@ -17,14 +17,15 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 /**
- * 覆盖 {@link ProbeCoordinator} 的实例化重构（C3）：
- * 用自定义 {@link NekoJSPaths} + {@link ProbeExternalArtifacts#NONE} 在临时目录里隔离测试
- * 实例方法（readConfig/reloadConfigCache/runProbe）的缓存、NONE 早退不写盘、多实例缓存互不影响；
- * 静态 facade（config() 等旧签名）保持可调用。
+ * Covers the instance-based {@link ProbeCoordinator}:
+ * a custom {@link NekoJSPaths} plus {@link ProbeExternalArtifacts#NONE} isolate the instance methods
+ * (readConfig/reloadConfigCache/runProbe) in a temp directory. Tests the config cache, the early
+ * return in NONE mode that writes nothing, and that two instances keep separate caches; the static
+ * facade (config() and the other old signatures) stays callable.
  */
 class ProbeCoordinatorInstanceTest {
 
-    /* ================= (a) readConfig() 缓存、自动重读与 reloadConfigCache ================= */
+    /* ================= (a) readConfig() cache, automatic reload and reloadConfigCache ================= */
 
     @Test
     void configCachesAndReloadsFromDisk(@TempDir Path tmp) throws Exception {
@@ -57,7 +58,8 @@ class ProbeCoordinatorInstanceTest {
         assertFalse(first.enabled());
         assertSame(first, c.readConfig(), "mtime 未变 → 命中缓存");
 
-        // 模拟用户改配置：内容变更 + 显式推进 mtime（部分文件系统 mtime 粒度粗，保证可检测）
+        // Simulates the user editing the config: change the content and push mtime forward explicitly, since
+        // some file systems have a coarse mtime granularity.
         Files.writeString(cfgFile, "enabled = true\n", StandardCharsets.UTF_8);
         Files.setLastModifiedTime(cfgFile, java.nio.file.attribute.FileTime.fromMillis(System.currentTimeMillis() + 5_000));
 
@@ -66,7 +68,8 @@ class ProbeCoordinatorInstanceTest {
         assertNotSame(first, second, "自动重读后应为新加载的实例");
         assertSame(second, c.readConfig(), "重读后 mtime 未再变 → 再次命中缓存");
 
-        // 文件被删除：应重新走 loader（创建默认文件或回退默认），不得返回陈旧缓存
+        // The file was deleted: readConfig must go through the loader again (create the default file or fall
+        // back to the defaults) and must not return a stale cache.
         Files.delete(cfgFile);
         ProbeConfig third = c.readConfig();
         assertTrue(Files.exists(cfgFile), "文件缺失时 loader 应重新自动创建");
@@ -79,7 +82,8 @@ class ProbeCoordinatorInstanceTest {
         Path cfgFile = paths.probeConfig();
         Files.createDirectories(cfgFile.getParent());
 
-        // 固定 mtime、只变内容长度：仅凭 mtime 的缓存戳会漏检（部分文件系统 mtime 粒度粗）
+        // Fix mtime and change only the content length: a cache stamp that relies on mtime alone would miss
+        // it, since some file systems have a coarse mtime granularity.
         java.nio.file.attribute.FileTime fixed = java.nio.file.attribute.FileTime.fromMillis(1_700_000_000_000L);
         Files.writeString(cfgFile, "enabled = true\n", StandardCharsets.UTF_8);
         Files.setLastModifiedTime(cfgFile, fixed);
@@ -90,14 +94,14 @@ class ProbeCoordinatorInstanceTest {
         assertSame(first, c.readConfig(), "mtime 与 size 均未变 → 命中缓存");
 
         Files.writeString(cfgFile, "enabled = false\n", StandardCharsets.UTF_8);
-        Files.setLastModifiedTime(cfgFile, fixed); // 关键：mtime 与缓存戳相同，仅 size 变化
+        Files.setLastModifiedTime(cfgFile, fixed); // The key case: mtime equals the cached stamp and only the size changed.
 
         ProbeConfig second = c.readConfig();
         assertFalse(second.enabled(), "size 变化（同 mtime）也应触发自动重读");
         assertNotSame(first, second);
     }
 
-    /* ================= (b) runProbe：NONE 模式早退，不写盘 ================= */
+    /* ================= (b) runProbe: early return in NONE mode, nothing is written ================= */
 
     @Test
     void runNoneModeReturnsFailureWithoutWriting(@TempDir Path tmp) throws Exception {
@@ -114,7 +118,7 @@ class ProbeCoordinatorInstanceTest {
         assertFalse(Files.exists(paths.gameDir().resolve(".neko_probe")), "NONE 早退不应写任何输出");
     }
 
-    /* ================= (c) 两个实例（不同 tmp 目录）缓存互不影响 ================= */
+    /* ================= (c) Two instances in different temp directories keep independent caches ================= */
 
     @Test
     void twoInstancesHaveIndependentConfigCaches(@TempDir Path tmp) throws Exception {
@@ -131,24 +135,25 @@ class ProbeCoordinatorInstanceTest {
         assertFalse(a.readConfig().enabled());
         assertTrue(b.readConfig().enabled());
 
-        // b 重载只读自己的 probe.toml；a 的缓存与磁盘变化都不得互相影响
+        // Reloading b reads only its own probe.toml; neither a's cache nor a's disk changes may affect it.
         Files.writeString(cfgB, "enabled = false\n", StandardCharsets.UTF_8);
         b.reloadConfigCache();
         assertFalse(b.readConfig().enabled());
 
-        // a 自己的文件被修改 → 自动重读只读自己目录的新值；b 不受影响
+        // a's own file changed: the automatic reload reads the new value from a's directory only; b is unaffected.
         Files.writeString(cfgA, "enabled = true\n", StandardCharsets.UTF_8);
         Files.setLastModifiedTime(cfgA, java.nio.file.attribute.FileTime.fromMillis(System.currentTimeMillis() + 5_000));
         assertTrue(a.readConfig().enabled(), "a 的文件变化后应自动重读（不依赖 b 或手动 reload）");
         assertFalse(b.readConfig().enabled(), "b 的缓存不得被 a 的重读影响");
     }
 
-    /* ================= (d) 静态 facade 仍可调用 ================= */
+    /* ================= (d) Static facade stays callable ================= */
 
     @Test
     void staticConfigFacadeRemainsCallable() {
-        // 静态 config() 委托 NekoJSPaths.get()（Platform.getGameDir()）：测试环境须先注入平台；
-        // 注入失败（如环境不支持反射）则跳过——实例方法路径已在上面覆盖。
+        // The static config() delegates to NekoJSPaths.get() (Platform.getGameDir()), so the test has to
+        // inject the platform first. When injection fails (for example the environment does not allow
+        // reflection), skip: the instance method path is already covered above.
         try {
             TestPlatformInit.ensureInitialized();
             ProbeConfig cfg = ProbeCoordinator.config();
@@ -159,7 +164,7 @@ class ProbeCoordinatorInstanceTest {
         }
     }
 
-    /* ================= 工具 ================= */
+    /* ================= Helpers ================= */
 
     private static NekoScriptCatalogSnapshot emptySnapshot() {
         return new NekoScriptCatalogSnapshot(

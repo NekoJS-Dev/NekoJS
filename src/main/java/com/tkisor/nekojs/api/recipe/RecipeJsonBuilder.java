@@ -210,11 +210,13 @@ public class RecipeJsonBuilder implements RecipeBuilder {
         return this;
     }
 
-    // ---- 原料动作：作用于合成余量，纯脚本状态不进 JSON，见 IngredientActionRegistry ----
+    // ---- Ingredient actions: they apply to the crafting remainder and are pure script state, never
+    // written to JSON. See IngredientActionRegistry ----
 
     /**
-     * 匹配的合成原料在消耗时耐久 +amount（不可破坏的物品按保留处理；耐久耗尽则消失）。
-     * 例：{@code .damageIngredient('minecraft:iron_pickaxe', 1)}。
+     * A matching crafting ingredient takes amount durability damage when consumed. Unbreakable
+     * items count as kept; an item whose durability runs out disappears.
+     * Example: {@code .damageIngredient('minecraft:iron_pickaxe', 1)}.
      */
     @com.tkisor.nekojs.api.annotation.Doc("Matched crafting ingredients come back with durability reduced by amount (unbreakable items are kept intact; broken ones vanish).")
     @com.tkisor.nekojs.api.annotation.Param(name = "ingredient", value = "item id, item array, tag like '#c:tools', or an Ingredient")
@@ -225,7 +227,10 @@ public class RecipeJsonBuilder implements RecipeBuilder {
         return this;
     }
 
-    /** 匹配的合成原料在消耗时原样保留（复制一份，不损耗耐久）。例：{@code .keepIngredient('#c:tools')}。 */
+    /**
+     * A matching crafting ingredient is kept as it is when consumed, using a copy that loses no
+     * durability. Example: {@code .keepIngredient('#c:tools')}.
+     */
     @com.tkisor.nekojs.api.annotation.Doc("Matched crafting ingredients are kept intact after crafting (a fresh copy stays in the grid).")
     @com.tkisor.nekojs.api.annotation.Param(name = "ingredient", value = "item id, item array, tag like '#c:tools', or an Ingredient")
     public RecipeJsonBuilder keepIngredient(Ingredient ingredient) {
@@ -235,7 +240,8 @@ public class RecipeJsonBuilder implements RecipeBuilder {
     }
 
     /**
-     * 匹配的合成原料在消耗后替换为指定物品。例：{@code .replaceIngredient('minecraft:diamond', 'minecraft:emerald')}。
+     * A matching crafting ingredient is replaced with the given item when consumed.
+     * Example: {@code .replaceIngredient('minecraft:diamond', 'minecraft:emerald')}.
      */
     @com.tkisor.nekojs.api.annotation.Doc("Matched crafting ingredients are replaced with the given item after crafting.")
     @com.tkisor.nekojs.api.annotation.Param(name = "ingredient", value = "item id, item array, tag like '#c:tools', or an Ingredient")
@@ -260,8 +266,9 @@ public class RecipeJsonBuilder implements RecipeBuilder {
     }
 
     /**
-     * 阶段 5：捕获当前脚本 id。在脚本回调执行期间（EventBusJS 已 switchCurrentScriptId），
-     * {@code Context.getCurrent()} 返回当前 Graal 上下文；非脚本线程（如插件直接调用）返回 null。
+     * Captures the current script id. While a script callback runs (EventBusJS has switched the
+     * current script id), {@code Context.getCurrent()} returns the current Graal context. On a
+     * non-script thread, such as a plugin calling this directly, it returns null.
      */
     private static String captureScriptId() {
         try {
@@ -269,7 +276,7 @@ public class RecipeJsonBuilder implements RecipeBuilder {
             if (context == null) return null;
             return com.tkisor.nekojs.script.ScriptContextRegistry.currentScriptIdOf(context);
         } catch (IllegalStateException e) {
-            // 不在 polyglot 上下文中
+            // Not inside a polyglot context
             return null;
         }
     }

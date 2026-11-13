@@ -11,9 +11,10 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * pdata 同步的客户端去重/清除语义：acceptClientSync 按 revision 单调推进，
- * 空 data 包 = 清除该实体的 mirror；clearClientMirrors 全清（断线/换世界）。
- * 纯静态 Map 逻辑，无 live Entity——两条平台（NeoForge/fabric 的 receiver）喂同一入口。
+ * Client-side dedup and clear semantics for pdata sync: acceptClientSync advances by revision
+ * monotonically, and a packet with empty data clears that entity's mirror. clearClientMirrors
+ * clears everything (disconnect or world change). This is plain static Map logic with no live
+ * Entity: the receivers on both platforms (NeoForge and Fabric) feed the same entry point.
  */
 class PDataSyncAcceptTest {
 
@@ -32,8 +33,9 @@ class PDataSyncAcceptTest {
     void acceptStoresAndMirrorsReadBackByEntityId() {
         PDataSyncService.acceptClientSync(new PDataSyncPacket(7, 1, tagOf("mana", 5)));
 
-        // mirror 读取需要一个 Entity——acceptClientSync 的存储与 revision 判定不依赖 Entity，
-        // mirror 的可见性经 clear/覆盖语义验证（clientMirror(Entity) 需要真实体，见实体侧测试）
+        // Reading the mirror needs an Entity. acceptClientSync stores data and compares revisions
+        // without one, so mirror visibility is checked through clear and overwrite semantics
+        // (clientMirror(Entity) needs a real entity, covered by the entity-side tests).
         assertTrue(PDataSyncService.hasPendingClientData(7), "revision-1 data must be stored");
     }
 
@@ -56,7 +58,8 @@ class PDataSyncAcceptTest {
         PDataSyncService.acceptClientSync(new PDataSyncPacket(7, 2, new CompoundTag()));
 
         assertTrue(PDataSyncService.hasPendingClientData(7), "stale empty packet must not clear the current mirror");
-        // 旧包被忽略：镜像值仍是 revision 3 的内容——经 fresh clear 空包对照验证
+        // The stale packet is ignored and the mirror keeps the revision 3 content; a fresh empty
+        // packet is the contrasting case that checks the clear.
         PDataSyncService.acceptClientSync(new PDataSyncPacket(7, 4, new CompoundTag()));
         assertFalse(PDataSyncService.hasPendingClientData(7), "empty-data packet clears the mirror");
     }
@@ -70,7 +73,7 @@ class PDataSyncAcceptTest {
         assertFalse(PDataSyncService.hasPendingClientData(1), "entity 1 cleared");
         assertTrue(PDataSyncService.hasPendingClientData(2), "entity 2 untouched");
 
-        // 同 revision 重复投递（重发）不抛、幂等
+        // Re-delivering the same revision (a resend) must not throw and must be idempotent.
         PDataSyncService.acceptClientSync(new PDataSyncPacket(2, 1, tagOf("b", 2)));
         assertTrue(PDataSyncService.hasPendingClientData(2));
     }
@@ -100,7 +103,8 @@ class PDataSyncAcceptTest {
     }
 
     private static CompoundTag mirrorOfCleared(int entityId) {
-        // 清除后 getOrDefault 路径：直接构造空结果语义检查
+        // The getOrDefault path after a clear returns an empty tag; this helper checks that semantic
+        // directly.
         return PDataSyncService.clientMirrorById(entityId);
     }
 }

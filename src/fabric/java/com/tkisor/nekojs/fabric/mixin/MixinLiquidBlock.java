@@ -12,19 +12,20 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 /**
- * 流体硬化事件（{@code BlockEvents.fluidPlaced}）的 fabric 挂点（一）：
- * {@code LiquidBlock#shouldSpreadLiquid(Level, BlockPos, BlockState)} 内两处
- * {@code Level.setBlockAndUpdate} 调用点（INVOKE，javap 实证偏移 114/154）。
+ * Fabric hook (the first one) for the fluid-hardening event ({@code BlockEvents.fluidPlaced}): the
+ * two {@code Level.setBlockAndUpdate} call sites inside
+ * {@code LiquidBlock#shouldSpreadLiquid(Level, BlockPos, BlockState)} (INVOKE, javap offsets 114
+ * and 154).
  *
- * <p>原版方法体（javap + 补丁源码实证）：岩浆方块遇水邻居 →
- * 第一处（偏移 114）{@code isSource ? OBSIDIAN : COBBLESTONE}；灵魂土+蓝冰 →
- * 第二处（偏移 154）{@code BASALT}。两个 handler 按 ordinal 各挂一处，
- * newState 与原版计算式一致（脚本载荷 {@code newState} 与实际写入值相同）。
+ * <p>With one handler per ordinal, and newState computed the same way as vanilla (javap and patch
+ * source), the script payload {@code newState} equals the value actually written: an obsidian or
+ * cobblestone block placed when lava meets water, and basalt for soul soil plus blue ice.
  *
- * <p>取消语义：{@code cir.setReturnValue(true)}——{@code shouldSpreadLiquid} 的
- * 返回值 {@code true} 表示"未硬化、正常流动"，即取消后流体不转化也不 fizz，
- * 继续原版流动逻辑。与 NeoForge 侧差异：NF 26.1.2 无本方法补丁点（其
- * FluidPlaceBlockEvent 只挂 LavaFluid 三处），覆盖范围语义差异记入移植台账。
+ * <p>Cancelling: {@code cir.setReturnValue(true)}. A return value of {@code true} from
+ * {@code shouldSpreadLiquid} means "not hardened, flows normally", so a cancelled event leaves
+ * the fluid unconverted and without fizz and the vanilla flowing continues. This differs from
+ * NeoForge, where 26.1.2 has no patch point in this method and its FluidPlaceBlockEvent only
+ * hooks three places in LavaFluid, so the event fires in fewer cases here.
  */
 @Mixin(LiquidBlock.class)
 public abstract class MixinLiquidBlock {

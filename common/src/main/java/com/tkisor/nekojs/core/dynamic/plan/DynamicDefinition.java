@@ -12,14 +12,16 @@ import java.util.Set;
 import java.util.regex.Pattern;
 
 /**
- * 一条<b>全规范化</b>的动态注册定义（ticket 16，AC5）：不可变快照，携带类型、规范化 id、
- * mode、全部可写属性的规范化读数与 definition fingerprint。
+ * One fully normalized dynamic registration definition: an immutable snapshot carrying the type,
+ * the normalized id, the mode, the normalized readings of every writable property, and the
+ * definition fingerprint.
  *
- * <p>fingerprint 覆盖 Builder 输入的全部可写属性读数（含 mode）——不依赖对象身份，
- * 也不只看部分字段；{@code 约定连带声明}在冻结的三个类型范围内即「builder 的完整
- * 属性集」（Item/SoundEvent/MobEffect 无自动连带注册对象，spec 08 一期边界）。
- * 相同定义（跨实例、跨 reload）得到相同 fingerprint；任一字段变化即产生不同 fingerprint。
- * 由 {@link #of} 从 builder 派生（唯一构造路径，保证规范化不变量）。
+ * <p>The fingerprint covers the readings of every writable builder property, mode included. It
+ * depends neither on object identity nor on a subset of fields; across the frozen three types the
+ * builder property set is the whole definition, since Item, SoundEvent and MobEffect register no
+ * companion objects. The same definition yields the same fingerprint across instances and
+ * reloads, and any changed field yields a different one. {@link #of} is the only way to construct
+ * a definition, which keeps the normalization rules in place.
  */
 public record DynamicDefinition(
         DynamicDefinitionType type,
@@ -28,7 +30,8 @@ public record DynamicDefinition(
         List<String> readings,
         String fingerprint) {
 
-    /** vanilla Identifier 形状（MC-free 校验）：小写字母/数字/点/下划线/连字符。 */
+    /** Vanilla identifier shape, checked without MC types: lowercase letters, digits, dot,
+     * underscore and hyphen. */
     private static final Pattern NAMESPACE = Pattern.compile("^[a-z0-9_.-]+$");
     private static final Pattern PATH = Pattern.compile("^[a-z0-9_./-]+$");
 
@@ -37,11 +40,13 @@ public record DynamicDefinition(
     }
 
     /**
-     * 从 builder 派生规范化定义（脚本面 {@code event.item(id, cb)} 的收集终点）。
+     * Derives a normalized definition from a builder; this is where the script face
+     * {@code event.item(id, cb)} ends collection.
      *
-     * @param rawId 脚本提供的 id（空白拒绝；无命名空间时按 vanilla 惯例取
-     *              {@code minecraft:}；大写/非法字符拒绝——与旧入口
-     *              {@code Identifier.parse} 的错误面同语义，MC-free 实现）
+     * @param rawId the id the script supplied. A blank id is rejected, a missing namespace gets
+     *              {@code minecraft:} by vanilla convention, and uppercase or illegal characters
+     *              are rejected. The error behavior matches {@code Identifier.parse}, implemented
+     *              without MC types.
      */
     public static DynamicDefinition of(DynamicDefinitionType type, String rawId, DynamicDefinitionBuilder builder) {
         Objects.requireNonNull(type, "type");
@@ -54,17 +59,17 @@ public record DynamicDefinition(
                 fingerprint(type, id, mode, readings));
     }
 
-    /** 计划/存储键：{@code minecraft:item|mymod:ruby}。 */
+    /** The plan and store key, shaped like {@code minecraft:item|mymod:ruby}. */
     public String key() {
         return type.registryKey() + "|" + id;
     }
 
-    /** 声明面/诊断用的完整描述（类型 + id + 读数）。 */
+    /** Full description for declarations and diagnostics: type, id and readings. */
     public String describe() {
         return type.apiName() + "('" + id + "', " + readings + ")";
     }
 
-    // ---- id 规范化（MC-free；与旧入口 Identifier.parse 语义对齐） ----
+    // ---- Id normalization: no MC types, same semantics as Identifier.parse ----
 
     static String normalizeId(String rawId) {
         if (rawId == null || rawId.isBlank()) {
@@ -92,7 +97,7 @@ public record DynamicDefinition(
         return namespace + ":" + path;
     }
 
-    // ---- fingerprint（确定性 sha256，规范化输入） ----
+    // ---- Fingerprint: deterministic sha256 over normalized input ----
 
     static String fingerprint(
             DynamicDefinitionType type, String id, DynamicRegisterMode mode, List<String> readings) {
@@ -131,12 +136,13 @@ public record DynamicDefinition(
         }
     }
 
-    /** 测试可见性辅助：读数集合包含判断（语义测试断言用）。 */
+    /** Test helper: whether the readings contain this name=value pair, used by semantic test
+     * assertions. */
     public boolean hasReading(String name, String value) {
         return readings.contains(name + "=" + value);
     }
 
-    /** 冻结三类型的受支持注册表键集合（诊断/测试用）。 */
+    /** The supported registry keys of the three frozen types, for diagnostics and tests. */
     public static Set<String> supportedRegistryKeys() {
         return Set.of(DynamicDefinitionType.ITEM.registryKey(),
                 DynamicDefinitionType.SOUND_EVENT.registryKey(),

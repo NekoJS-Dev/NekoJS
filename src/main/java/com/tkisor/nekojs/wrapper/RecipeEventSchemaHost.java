@@ -32,7 +32,7 @@ final class RecipeEventSchemaHost implements RecipeSchemaHost {
         this.event = event;
     }
 
-    /** 创建 JSON 配方 builder（代理到 {@link RecipeJsonBuilder}）。 */
+    /** Creates a JSON recipe builder; delegates to {@link RecipeJsonBuilder}. */
     @Override
     public RecipeBuilder builder(String type, String prefix) {
         return new RecipeJsonBuilder(event, type, prefix);
@@ -51,19 +51,20 @@ final class RecipeEventSchemaHost implements RecipeSchemaHost {
         return event.registryAccess();
     }
 
-    /** 添加自定义（非 schema 化）配方 JSON。 */
+    /** Adds a custom recipe JSON that skips the recipe schema. */
     @Override
     public Object custom(JsonObject json) {
         return event.custom(json);
     }
 
-    /** 任意 JS 值 → 配方 JSON（经 {@link RecipeJsonValueConverter}）。 */
+    /** Converts any JS value to recipe JSON through {@link RecipeJsonValueConverter}. */
     @Override
     public JsonElement toJson(Value value) {
         return RecipeJsonValueConverter.toJson(event, value);
     }
 
-    /** 按字段种类编码 JS 值：标量直转，ingredient/fluid 走各 resolver 后序列化。 */
+    /** Encodes a JS value by field kind: scalars convert directly, ingredient and fluid values
+     * go through their resolvers and are then serialized. */
     @Override
     public JsonElement encodeField(RecipeFieldKind kind, Value value) {
         return switch (kind) {
@@ -79,17 +80,20 @@ final class RecipeEventSchemaHost implements RecipeSchemaHost {
             case FLUID_INGREDIENT -> event.serializeFluidIngredient(FluidResolver.ingredientFromValue(value));
             case SIZED_FLUID_INGREDIENT -> event.serializeSizedFluidIngredient(FluidResolver.sizedFromValue(value));
 //?} else {
-/*            // fabric 无流体配方体系（FluidResolver 未移植）：fluid 字段在 fabric 未支持
-            default -> throw new UnsupportedOperationException(
-                    "fluid recipe fields are not supported on fabric yet");
-*///?}
+/*            // fabric has no fluid recipe system (FluidResolver is not ported): fluid fields
+// are not supported there
+default -> throw new UnsupportedOperationException(
+"fluid recipe fields are not supported on fabric yet");
+ *///?}
         };
     }
 
     /**
-     * 带字段上下文的转换（阶段 2：类型安全构造器）。数组元素也逐一带字段名报错。
-     * 覆盖 {@link RecipeSchemaHost#convertField} 的 default 实现，在标量/数组编码失败时
-     * 抛出带「recipe 字段名 + 期望类型 + 实际类型」的清晰错误。
+     * Converts a value together with its field context, so a failure names the recipe field.
+     * Array elements are reported one by one with the field name as well. Overrides the default
+     * {@link RecipeSchemaHost#convertField} implementation and, when scalar or array encoding
+     * fails, throws an error that carries the recipe field name, the expected type and the
+     * actual type.
      */
     @Override
     public JsonElement convertField(RecipeFieldDefinition field, Value value) {
@@ -134,7 +138,8 @@ final class RecipeEventSchemaHost implements RecipeSchemaHost {
         return String.valueOf(value);
     }
 
-    /** 带字段上下文标记的类型错误（convertField 捕获后补字段名）。 */
+    /** A type error tagged with the field context; {@code convertField} catches it and adds the
+     * field name. */
     private static final class RecipeFieldTypeException extends RuntimeException {
         private static final long serialVersionUID = 1L;
 

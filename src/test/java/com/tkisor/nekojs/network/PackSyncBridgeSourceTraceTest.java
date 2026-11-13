@@ -13,19 +13,18 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Config-phase bridge fixture for ticket 19 AC1/AC8 (pure file reads, runs on every node):
- * the push order of the NeoForge {@code PackSyncConfigurationTask} and the fabric
- * {@code FabricPackSync.PushTask} configuration bridges must be decided by a single shared
- * core point ({@code PackSyncServer}) — gather first, hash list sent first, and the bundle
- * sent only after {@code PackSyncServer.shouldSendBundle} allows it; on the receive side the
- * remote-address → trust-bucket normalization ({@code PackSyncClient.normalizeRemoteAddress})
- * and the CLIENT reload ({@code root.reload(ScriptType.CLIENT)}) likewise go only through the
- * shared routes.
+ * Fixture for the configuration-phase bridges (plain file reads, so every node runs it): the
+ * push order of the NeoForge {@code PackSyncConfigurationTask} and the fabric
+ * {@code FabricPackSync.PushTask} must be decided in one shared place ({@code PackSyncServer}):
+ * gather first, send the hash list first, and send the bundle only when
+ * {@code PackSyncServer.shouldSendBundle} allows it. On the receive side the remote address to
+ * trust bucket normalization ({@code PackSyncClient.normalizeRemoteAddress}) and the CLIENT
+ * reload ({@code root.reload(ScriptType.CLIENT)}) likewise go through the shared routes only.
  *
- * <p>Deletion condition (AC8): the hashOnly/emptiness checks and the InetSocketAddress
- * resolution routes previously duplicated per loader side were deleted after equivalence on
- * both sides (shared-core single point + both bridges delegating) was verified; this trace is
- * that verification surface — no local duplicated decision may reappear inside a bridge.
+ * <p>The hashOnly/emptiness checks and the InetSocketAddress resolution that used to be
+ * duplicated on each loader side are gone; they were removed once both sides were shown to be
+ * equivalent. This trace keeps that check in place: a bridge must not decide these locally
+ * again.
  */
 class PackSyncBridgeSourceTraceTest {
 

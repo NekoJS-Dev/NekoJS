@@ -23,19 +23,23 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * 票 15 AC6：启动期注册的最小可运行示例链路——按生产序列（STARTUP 脚本挂监听 → 首个注册表 pass 前恰好一次收集 → 逐注册表
- * 抽干到节点 sink）经真实 GraalJS 求值端到端跑通。
+ * Runs the smallest working example of startup registration end to end through a real
+ * GraalJS evaluation, following the production sequence: a STARTUP script installs its
+ * listener, collection runs exactly once before the first registry pass, and each
+ * registry is drained into the node sink.
  *
- * <p>五种入口全覆盖：default 类型糖方法、命名类型、{@code custom}、裸 Supplier
- * {@code register(registry, id, supplier)}、setter/property parity；连带注册以
- * supplier 通道的 drain 结果观察（真实 Block→BlockItem 需 vanilla/FML）。
- * 示例只使用已通过 gate 的启动注册能力，不触碰服务器运行期 Dynamic Registry（独立生命周期）。
+ * <p>All five entry points are covered: the default type sugar method, an explicit named
+ * type, {@code custom}, a bare Supplier {@code register(registry, id, supplier)}, and
+ * setter/property parity. Co-registration is observed through the drain result on the
+ * supplier channel; a real Block to BlockItem conversion needs vanilla/FML. The example
+ * only uses startup registration that already passed the gate and leaves the server-side
+ * Dynamic Registry alone, since that one has its own lifecycle.
  */
 class RegistryStartupMinimalExampleTest {
 
     private static final String NODE = "example-node";
 
-    /** 与 baseline examples/registry-startup.js 的 STARTUP 段一致。 */
+    /** Matches the STARTUP section of the baseline examples/registry-startup.js. */
     static final String STARTUP_EXAMPLE = """
             // startup_scripts/registry.js —— 启动期声明注册（票 15 示例）
             RegistryEvents.register(event => {
@@ -54,10 +58,12 @@ class RegistryStartupMinimalExampleTest {
             """;
 
     /**
-     * 双形状 sink：{@code deferred} 集合内的注册表按 NeoForge {@code RegisterEvent} 形状
-     * 只记录 Supplier（平台在注册冻结前才执行——裸 JUnit 无 FML，ItemBuilder 构建需
-     * vanilla 引导），其余立即执行（fabric 直注同款形状）。两种形状消费的都是 Runtime
-     * 包装过的同一个 {@code validatedSupplier}。
+     * A sink with two shapes. Registries in the {@code deferred} set follow the NeoForge
+     * {@code RegisterEvent} shape: they only record the Supplier, which the platform runs
+     * before registration freezes, because bare JUnit has no FML and building an ItemBuilder
+     * needs the vanilla bootstrap. Every other registry runs its supplier immediately, the
+     * same shape as a Fabric direct registration. Both shapes consume the same
+     * {@code validatedSupplier} wrapped by the Runtime.
      */
     static final class RecordingSink implements StartupRegistryRuntime.RegistrySink {
         final List<String> registered = new ArrayList<>();
@@ -95,7 +101,8 @@ class RegistryStartupMinimalExampleTest {
         return new RegistryTypesPoint.RegistryTypes(collector.byRegistry, collector.defaults, collector.builderClasses);
     }
 
-    /** 生产序列：STARTUP 上下文里挂监听（EventGroupJS 生产同款绑定）→ 首 pass 前收集一次。 */
+    /** Runs the production sequence: installs the listener in a STARTUP context (the same
+     * EventGroupJS binding production uses), then collects once before the first pass. */
     private static StartupRegistryRuntime runExample() {
         StartupRegistryRuntime runtime = new StartupRegistryRuntime(NODE);
         try (Context context = Context.newBuilder("js").allowAllAccess(true).build()) {

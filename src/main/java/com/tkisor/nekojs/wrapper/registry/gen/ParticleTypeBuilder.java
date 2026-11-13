@@ -4,14 +4,15 @@ import net.minecraft.core.particles.SimpleParticleType;
 import net.minecraft.resources.Identifier;
 
 /**
- * 粒子类型 builder：其余由粒子定义 JSON（{@code assets/<ns>/particles/<path>.json}）提供。
+ * Particle type builder. The rest of the definition comes from the particle JSON at
+ * {@code assets/<ns>/particles/<path>.json}.
  * <pre>
  * event.particleType('mymod:spark', b =&gt; { b.overrideLimiter = true })
  * </pre>
  */
 public class ParticleTypeBuilder extends RegistryObjectBuilder<SimpleParticleType> {
 
-    /** 无视距离限制。 */
+    /** Ignores the distance limit. */
     private boolean overrideLimiter = false;
 
     public ParticleTypeBuilder(Identifier id) {

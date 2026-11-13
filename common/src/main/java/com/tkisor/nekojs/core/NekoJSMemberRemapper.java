@@ -7,9 +7,10 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 
 /**
- * GraalJS host 层成员名重映射：委托 {@link JavaMemberIndex#remapName}，hideMarker 传
- * {@code MemberRemapper.HIDE_MEMBER}，未命中时返回 {@code MemberRemapper.FALL_THROUGH}，
- * 让后续 remapper 或 Graal 默认规则继续处理。
+ * Remaps host member names for the GraalJS layer. Delegates to {@link JavaMemberIndex#remapName},
+ * passing {@code MemberRemapper.HIDE_MEMBER} as the hide marker. Returns
+ * {@code MemberRemapper.FALL_THROUGH} when nothing matches, so a later remapper or Graal's
+ * default rules still handle the member.
  *
  * @author ZZZank
  */

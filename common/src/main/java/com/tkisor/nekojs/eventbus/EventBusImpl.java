@@ -21,7 +21,8 @@ public final class EventBusImpl<E> extends EventBusBase<E, Consumer<E>> implemen
         return false;
     }
 
-    // 泛型数组无法直接创建，toArray 的数组类型强制转换是擦除层面的必然操作
+    // A generic array cannot be created directly, so the array type cast passed to toArray is
+    // unavoidable under erasure.
     @SuppressWarnings("unchecked")
     static <E> Consumer<E> compile(Stream<Consumer<E>> consumerStream) {
         var arr = consumerStream.toArray((IntFunction<Consumer<E>[]>) Consumer[]::new);

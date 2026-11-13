@@ -9,12 +9,12 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.neoforged.bus.api.Event;
 
 /**
- * 方块随机 tick 事件（{@code BlockEvents.randomTick}）。
+ * Block random tick event ({@code BlockEvents.randomTick}).
  *
- * <p>原版没有对应的 NeoForge 事件；由 {@code BlockBehaviourMixin} 在
- * {@code BlockBehaviour.BlockStateBase.randomTick} HEAD 注入并 post 到
- * {@code NeoForge.EVENT_BUS}。仅对 {@code isRandomlyTicking()} 为 true 的方块触发
- * （对标原版/ KubeJS 语义）。
+ * <p>Vanilla has no matching NeoForge event, so {@code BlockBehaviourMixin} injects at the
+ * HEAD of {@code BlockBehaviour.BlockStateBase.randomTick} and posts to
+ * {@code NeoForge.EVENT_BUS}. It fires only for blocks whose {@code isRandomlyTicking()}
+ * returns true (matching vanilla / KubeJS semantics).
  */
 public class RandomTickEvent extends Event {
     private final ServerLevel level;

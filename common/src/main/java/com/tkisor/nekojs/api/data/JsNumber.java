@@ -3,10 +3,12 @@ package com.tkisor.nekojs.api.data;
 import java.util.Objects;
 
 /**
- * 携带原始文本的 JS 数值包装，保留脚本侧数字的字面量表示。
+ * JS numeric value that also carries its original text, preserving the literal form the
+ * script wrote.
  *
- * <p>用于在 JSON/NBT 等输出中还原 JS 数字的精确文本（如 {@code "1e21"}、{@code "0.1"}），
- * 同时提供标准 {@link Number} 数值访问。值必须为有限数；不可变。
+ * <p>Used to reproduce the exact text of a JS number in JSON, NBT and similar output (for
+ * example {@code "1e21"} or {@code "0.1"}), while still offering the standard {@link Number}
+ * accessors. The value must be finite. Immutable.
  */
 public final class JsNumber extends Number {
     private static final long serialVersionUID = 1L;
@@ -15,8 +17,8 @@ public final class JsNumber extends Number {
     private final String canonicalText;
 
     /**
-     * @param value         数值，必须为有限数（非 NaN/无穷）
-     * @param canonicalText 该数值的规范文本表示，不能为空
+     * @param value         the numeric value; must be finite (not NaN or infinite)
+     * @param canonicalText the canonical text form of the value; must not be blank
      */
     public JsNumber(double value, String canonicalText) {
         if (!Double.isFinite(value)) {
@@ -29,12 +31,12 @@ public final class JsNumber extends Number {
         }
     }
 
-    /** 返回规范文本表示。 */
+    /** Returns the canonical text form. */
     public String canonicalText() {
         return canonicalText;
     }
 
-    /** 若数值为整数且落在 long 范围内返回 {@link Long}，否则返回 {@link Double}。 */
+    /** Returns a {@link Long} when the value is an integer that fits in a long, otherwise a {@link Double}. */
     public Number nativeNumber() {
         if (value == Math.rint(value) && value >= -0x1.0p63 && value < 0x1.0p63) {
             return Long.valueOf((long) value);
@@ -47,7 +49,7 @@ public final class JsNumber extends Number {
     @Override public float floatValue() { return (float) value; }
     @Override public double doubleValue() { return value; }
 
-    /** 返回规范文本表示。 */
+    /** Returns the canonical text form, so the number prints the way the script wrote it. */
     @Override
     public String toString() {
         return canonicalText;

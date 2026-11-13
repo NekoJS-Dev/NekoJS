@@ -32,20 +32,21 @@ import java.util.function.Function;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * runProbe 的失败路径与生命周期硬化回归：
+ * Failure paths and lifecycle regressions for runProbe:
  * <ol>
- *   <li>并发第二次 runProbe 被拒（fail-fast 互斥，不排队）</li>
- *   <li>同 outputDir 的后续 backend 被跳过（就地同步会把先跑者的产物当陈旧文件删掉）</li>
- *   <li>一个 backend 失败不影响后续 backend</li>
- *   <li>contributeEditorConfig 抛异常不影响生成成功结果（进 warnings）</li>
- *   <li>Python 渲染中途失败 → 旧输出完整保留（渲染阶段不触盘）</li>
- *   <li>目录交换时代遗留的 .staging/.old 在下一次运行被清理，且内容不泄漏</li>
- *   <li>assign_type 先于 modify_type 应用（modify 的显式设置不被 assign 二次覆盖）</li>
+ *   <li>a second concurrent runProbe is rejected (fail-fast mutex, no queueing)</li>
+ *   <li>a later backend with the same outputDir is skipped (an in-place sync would delete the
+ *       earlier backend's output as stale files)</li>
+ *   <li>one backend failing does not affect later backends</li>
+ *   <li>a throwing contributeEditorConfig does not fail the successful result (it lands in warnings)</li>
+ *   <li>a Python render that fails midway keeps the old output intact (rendering does not touch disk)</li>
+ *   <li>.staging/.old left over from the directory-swap era are cleaned up on the next run and leak no content</li>
+ *   <li>assign_type is applied before modify_type (an explicit modify setting is not overwritten by assign)</li>
  * </ol>
  */
 class ProbeCoordinatorHardeningTest {
 
-    /** ScriptType 静态初始化需要 Platform（Python backend / BindingCatalogEntry 均触及）。 */
+    /** Static initialization of ScriptType needs Platform (both the Python backend and BindingCatalogEntry touch it). */
     @BeforeAll
     static void initPlatform() {
         TestPlatformInit.ensureInitialized();
@@ -53,7 +54,7 @@ class ProbeCoordinatorHardeningTest {
 
     /* ================= fixtures ================= */
 
-    /** 顺序测试宿主：m1/m2 均返回 {@link OrderHelper}（SYMBOL 槽）。 */
+    /** Ordering test host: m1 and m2 both return {@link OrderHelper} (SYMBOL slot). */
     public static class OrderHelper {}
 
     public static class OrderHost {
@@ -67,8 +68,9 @@ class ProbeCoordinatorHardeningTest {
     }
 
     /**
-     * 可编排的假 backend：render 返回构造时给定的文件映射（默认空），由接口默认 generate
-     * 统一落盘/提交；contributeEditorConfig 行为由构造传入的动作决定。
+     * Scriptable fake backend: render returns the file map given at construction (empty by default)
+     * and the default generate method writes and commits it. What contributeEditorConfig does is
+     * decided by the action passed to the constructor.
      */
     private static final class FakeBackend implements ProbeBackend {
         private final String languageId;
@@ -114,12 +116,12 @@ class ProbeCoordinatorHardeningTest {
         }
     }
 
-    /** render 返回 {@code markerName → markerContent} 单文件的假 backend。 */
+    /** Fake backend whose render returns a single file {@code markerName → markerContent}. */
     private static FakeBackend markerBackend(String lang, String name, String markerName, String content) {
         return new FakeBackend(lang, name, false, ctx -> Map.of(markerName, content), null);
     }
 
-    /* ================= 1. 并发互斥 ================= */
+    /* ================= 1. Concurrency mutex ================= */
 
     @Test
     void concurrentSecondRunIsRejectedWhileFirstInProgress(@TempDir Path tmp) throws Exception {
@@ -166,7 +168,7 @@ class ProbeCoordinatorHardeningTest {
         assertTrue(firstSucceeded.get(), "首个 run 应正常完成且成功");
     }
 
-    /* ================= 2. outputDir 去重 ================= */
+    /* ================= 2. outputDir de-duplication ================= */
 
     @Test
     void duplicateOutputDirSkipsLaterBackend(@TempDir Path tmp) throws Exception {
@@ -190,7 +192,7 @@ class ProbeCoordinatorHardeningTest {
                 "先跑者产物必须保留");
     }
 
-    /* ================= 3. backend 失败隔离 ================= */
+    /* ================= 3. Backend failure isolation ================= */
 
     @Test
     void failingBackendDoesNotAffectLaterBackends(@TempDir Path tmp) throws Exception {
@@ -211,7 +213,7 @@ class ProbeCoordinatorHardeningTest {
                 "成功结果应携带输出目录");
     }
 
-    /* ================= 4. editor-config 失败不拖垮生成结果（进 warnings） ================= */
+    /* ================= 4. editor-config failure does not sink generation (it goes into warnings) ================= */
 
     @Test
     void editorConfigFailureDoesNotFailGeneration(@TempDir Path tmp) {
@@ -231,7 +233,7 @@ class ProbeCoordinatorHardeningTest {
         assertTrue(results.get(0).warnings().get(0).contains("editor-config boom"));
     }
 
-    /* ================= 5/6. Python 渲染失败与残留恢复 ================= */
+    /* ================= 5/6. Python render failure and leftover recovery ================= */
 
     @Test
     void pythonRenderFailureKeepsOldOutput(@TempDir Path tmp) throws Exception {
@@ -240,8 +242,9 @@ class ProbeCoordinatorHardeningTest {
         Files.createDirectories(out);
         Files.writeString(out.resolve("old-marker.txt"), "keep");
 
-        // 毒丸 IR：fqn 含 NUL（JDK 在 Windows/Linux 均拒绝 NUL 路径段）→ render 内包路径计算失败。
-        // 渲染阶段不触盘：旧输出天然保留，且不应产生任何中间目录。
+        // Poison IR: the fqn contains NUL (the JDK rejects NUL path segments on both Windows and Linux),
+        // so the package path computation inside render fails. Rendering never touches disk, so the old
+        // output survives and no intermediate directory is created.
         TypeDecl good = new TypeDecl(TypeDecl.Kind.CLASS, null, "pkg.a.Foo");
         TypeDecl poison = new TypeDecl(TypeDecl.Kind.CLASS, null, "bad\u0000pkg.Cls");
         ProbeContext ctx = new ProbeContext.Of(emptySnapshot(), List.of(),
@@ -258,8 +261,9 @@ class ProbeCoordinatorHardeningTest {
     void legacySwapLeftoversAreCleanedUpAndNeverLeakIntoOutput(@TempDir Path tmp) throws Exception {
         NekoJSPaths paths = NekoJSPaths.fromGameDir(tmp);
         Path out = paths.gameDir().resolve(".neko_probe").resolve("python");
-        // 目录交换时代（或其崩溃）遗留的 .staging/.old：现在只清理，不再恢复成输出目录——
-        // 产物完全由本次 render 决定，旧内容没有回填价值
+        // .staging/.old left behind by the directory-swap era (or by a crash during it): they are only
+        // cleaned up now, never restored as the output directory. This run's render alone decides the
+        // output; the old content has nothing worth restoring.
         Files.createDirectories(out.resolveSibling("python.staging"));
         Files.writeString(out.resolveSibling("python.staging").resolve("junk.txt"), "half-written");
         Files.createDirectories(out.resolveSibling("python.old"));
@@ -280,7 +284,7 @@ class ProbeCoordinatorHardeningTest {
         assertEquals(out, res.outputDir());
     }
 
-    /* ================= 7. assign_type 先于 modify_type ================= */
+    /* ================= 7. assign_type before modify_type ================= */
 
     @Test
     void assignTypeAppliedBeforeModifyTypeExplicitEdit(@TempDir Path tmp) {
@@ -333,7 +337,7 @@ class ProbeCoordinatorHardeningTest {
                 .orElseThrow(() -> new AssertionError("方法 " + name + " 不在 " + host.fqn + " 的 IR 中"));
     }
 
-    /* ================= 工具 ================= */
+    /* ================= Helpers ================= */
 
     private static NekoScriptCatalogSnapshot emptySnapshot() {
         return new NekoScriptCatalogSnapshot(

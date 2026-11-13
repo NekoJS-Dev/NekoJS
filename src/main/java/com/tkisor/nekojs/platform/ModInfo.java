@@ -13,7 +13,8 @@ public class ModInfo implements IModInfo {
             field = net.neoforged.fml.loading.moddiscovery.ModInfo.class.getDeclaredField("displayName");
             field.setAccessible(true);
         } catch (Exception e) {
-            // 反射失败会导致 setName() 静默失效；至少告警让用户知道显示名无法修改
+            // If reflection fails, setName() silently stops working; log a warning so the user knows the display
+            // name cannot be changed
             com.tkisor.nekojs.NekoJS.LOGGER.warn("Failed to locate ModInfo#displayName; mod display-name updates will be disabled", e);
         }
         DISPLAY_NAME_FIELD = field;

@@ -13,12 +13,12 @@ public final class ApiRuntimeVersionReader {
     private static final String RESOURCE_PATH = "nekojs/api-runtime.properties";
 
     /**
-     * 读取 api-runtime.properties 中的版本信息。
+     * Reads the version information from api-runtime.properties.
      *
-     * <p>{@code spi.version} 和 {@code runtime.contract.version} 当前为 {@code 0.0.0}，表示
-     * "未指定——不强制版本门控"。任何按这些版本做插件兼容性检查的逻辑（如
-     * {@code runtime.spiVersion >= plugin.requires}）在 0.0.0 下都会放行所有插件。
-     * SPI 稳定后应 bump 到 0.1.0。
+     * <p>{@code spi.version} and {@code runtime.contract.version} are currently {@code 0.0.0},
+     * meaning "unspecified, so no version gate is enforced". Any plugin compatibility check
+     * driven by these versions (such as {@code runtime.spiVersion >= plugin.requires}) lets
+     * every plugin through while they are 0.0.0. Bump them to 0.1.0 once the SPI is stable.
      */
 
     private ApiRuntimeVersionReader() {}

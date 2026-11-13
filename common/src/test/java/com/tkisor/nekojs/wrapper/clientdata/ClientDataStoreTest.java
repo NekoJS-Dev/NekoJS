@@ -22,12 +22,12 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * {@link ClientDataStore} 的 JSON 往返与存储语义回归：
- * 脚本侧对象（GraalJS 对 Object 参数的默认映射：Map/List/装箱原始值）→
- * {@link ClientDataStore#toJsonElement} → JSON 文本（网络线格式）→
- * {@link JsonParser} → {@link ClientDataStore#accept} →
- * {@link ClientDataStore#get}（还原为 Map/List/装箱原始值）。
- * 纯 Java，无 Platform/Graal/Minecraft fixture。
+ * Regression tests for JSON round-tripping and the storage semantics of {@link ClientDataStore}:
+ * a script-side object (GraalJS's default mapping for an {@code Object} parameter, so
+ * Map/List/boxed primitives) goes through {@link ClientDataStore#toJsonElement}, JSON text (the
+ * wire format), {@link JsonParser} and {@link ClientDataStore#accept}, and comes back out of
+ * {@link ClientDataStore#get} as Map/List/boxed primitives. Plain Java, no Platform, Graal or
+ * Minecraft fixture.
  */
 class ClientDataStoreTest {
 
@@ -43,7 +43,7 @@ class ClientDataStoreTest {
         ClientDataStore.SHARED.clear();
     }
 
-    /** 模拟网络链路：JsonElement → JSON 文本 → 重新解析（与平台 payload 的线格式一致）。 */
+    /** Simulates the network path: JsonElement to JSON text and back, matching the wire format of platform payloads. */
     private static JsonElement overTheWire(JsonElement element) {
         return JsonParser.parseString(element.toString());
     }
@@ -101,7 +101,8 @@ class ClientDataStoreTest {
 
     @Test
     void jsonElementAndNullValuePassThrough() {
-        // 已是 JsonElement 的直接通过（平台 handler 解析后的路径）
+        // A value that is already a JsonElement passes straight through; this is the path taken after a
+        // platform handler parses the payload.
         JsonObject object = new JsonObject();
         object.addProperty("k", "v");
         store.accept("raw", object);
@@ -146,7 +147,7 @@ class ClientDataStoreTest {
 
     @Test
     void clientDataBindingReadsSharedStore() {
-        // clientData 绑定是 SHARED 存储的只读视图
+        // The clientData binding is a read-only view of the SHARED store.
         ClientDataJS binding = new ClientDataJS();
         ClientDataStore.SHARED.accept("hud:mana", overTheWire(ClientDataStore.toJsonElement(Map.of("cur", 12))));
         assertTrue(binding.has("hud:mana"));

@@ -5,13 +5,15 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 /**
- * 工单 10 AC10 删除门：旧隐式跨类型回退（进程级 NekoGlobal 静态 Map）随本票删除，
- * 不保留旧新双写或隐式回退兼容层（1.2.0 clean cutover）。本 fixture 钉住删除本身——
- * 类若被复活（或删除被 revert），这里立刻变红提醒补一次显式决策。
+ * Deletion test: the implicit cross-type fallback (the process-wide NekoGlobal static Map) is
+ * deleted and stays deleted. There is no compatibility layer that writes both the old and the
+ * new place or falls back implicitly; 1.2.0 made a clean cutover. This test pins the deletion
+ * itself: if the class comes back, or the deletion is reverted, it fails at once and forces an
+ * explicit decision.
  *
- * <p>迁移后的可观察替代语义（旧跨类型 global 不可见）由
- * {@code Ticket10GlobalStateTest.sameTypeUsageUnchangedAndLegacyCrossTypeFallbackIsGone}
- * 承载；本测试只守「实现只有一套」。
+ * <p>The replacement semantics (the old cross-type global is no longer visible) are covered by
+ * {@code Ticket10GlobalStateTest.sameTypeUsageUnchangedAndLegacyCrossTypeFallbackIsGone}.
+ * This test only guards that there is a single implementation.
  */
 class NekoGlobalRemovalTest {
 

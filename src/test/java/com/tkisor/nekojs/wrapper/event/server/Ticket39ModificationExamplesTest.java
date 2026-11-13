@@ -1,4 +1,4 @@
-// 26.x 面（block 示例与 block parity 是 26.x API）。
+// 26.x only (the block example and block parity are 26.x APIs).
 //? if >=26 {
 package com.tkisor.nekojs.wrapper.event.server;
 
@@ -21,18 +21,21 @@ import java.util.stream.Collectors;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
- * 票 39 AC12：最小可运行示例链路——物品修改、setter/property parity、方块修改与
- * 声明移除恢复四个示例脚本按生产序列（初始 generation 收集点 +
- * SERVER 事务 reload）经真实 Graal 管线 + 真实 Adapter 端到端跑通。
+ * The smallest runnable example chain: item modification, setter/property parity, block
+ * modification, and restoration after a declaration is removed. The four example scripts run
+ * end to end through the real Graal pipeline and the real Adapter, in production order (the
+ * initial generation's collection point plus a SERVER transactional reload).
  *
- * <p>示例只使用已通过 gate 的能力（`ItemEvents`/`BlockEvents.modification` 的既有事件面与属性目录）；
- * 不触碰 legacy/raw 面，也不依赖未声明 supported 的同步能力。
+ * <p>The examples only use capabilities that already passed the gate (the existing event
+ * surface and property catalog of `ItemEvents`/`BlockEvents.modification`); they touch no
+ * legacy/raw surface and depend on no sync capability that is not declared supported.
  *
- * <p>环境门同 {@code Ticket39ModificationScriptE2ETest}（vanilla 注册表；裸 JVM 跳过）。
+ * <p>The environment gate matches {@code Ticket39ModificationScriptE2ETest} (vanilla
+ * registries; a bare JVM skips).
  */
 class Ticket39ModificationExamplesTest {
 
-    /** examples/item-modification.js（保持同源）。 */
+    /** examples/item-modification.js (kept identical to the source file). */
     private static final String ITEM_EXAMPLE = """
             ItemEvents.modification(event => {
               event.modify('minecraft:diamond', item => {
@@ -54,7 +57,7 @@ class Ticket39ModificationExamplesTest {
             })
             """;
 
-    /** examples/item-setter-property-parity.js（保持同源）。 */
+    /** examples/item-setter-property-parity.js (kept identical to the source file). */
     private static final String PARITY_EXAMPLE = """
             ItemEvents.modification(event => {
               event.modify('minecraft:diamond', item => {
@@ -68,7 +71,7 @@ class Ticket39ModificationExamplesTest {
             })
             """;
 
-    /** examples/block-modification.js（保持同源）。 */
+    /** examples/block-modification.js (kept identical to the source file). */
     private static final String BLOCK_EXAMPLE = """
             BlockEvents.modification(event => {
               event.modify('minecraft:stone', block => {
@@ -86,7 +89,7 @@ class Ticket39ModificationExamplesTest {
             })
             """;
 
-    /** examples/declaration-removal-recovery.js 的 A 段（保持同源）。 */
+    /** The A part of examples/declaration-removal-recovery.js (kept identical to the source file). */
     private static final String REMOVAL_EXAMPLE = """
             ItemEvents.modification(event => {
               event.modify('minecraft:diamond', item => item.setMaxStackSize(16))
@@ -167,7 +170,8 @@ class Ticket39ModificationExamplesTest {
         run(REMOVAL_EXAMPLE);
         assertEquals(16, maxStack(Items.DIAMOND));
 
-        // B 段：脚本不再声明 → 成功 reload 先恢复基线，再应用新的空计划
+        // Part B: the script no longer declares it, so a successful reload restores the baseline
+        // first and then applies the new, empty plan
         harness.writeServerScript("example.js", "global.noModification = true\n");
         harness.root.reload(ScriptType.SERVER);
         assertEquals(64, maxStack(Items.DIAMOND));

@@ -1,4 +1,4 @@
-// 26.x 面（BlockBehaviour.Properties 修改面为 26.x API，1.21.1 无 BlockEvents.modification 总线）。
+// 26.x only: BlockBehaviour.Properties modification uses 26.x APIs; 1.21.1 has no BlockEvents.modification event.
 //? if >=26 {
 package com.tkisor.nekojs.wrapper.event.server;
 
@@ -16,19 +16,20 @@ import net.minecraft.world.level.block.Block;
 import java.util.function.Consumer;
 
 /**
- * Server-side block property modification event payload（{@code BlockEvents.modification}）。
+ * Event object for {@code BlockEvents.modification} on the server.
  *
- * <h2>ticket 39 起的收集语义（与 {@link ItemModificationEventJS} 同）</h2>
- * 事件由 {@code ModificationDomainOwner} 在两个合法收集点派发（事务 reload 的
- * DOMAIN_PLAN 阶段派发给候选挂起监听器 / 初始 generation 派发给 active 总线）。
- * {@link #modify} 只<b>收集与规范化</b>声明，不触碰 live Block/BlockState——
- * 「恢复基线 → 应用完整新计划」只在 commit 点的平台 Adapter。
+ * <h2>Collection behavior (same as {@link ItemModificationEventJS})</h2>
+ * {@code ModificationDomainOwner} dispatches this event at two collection points: to pending
+ * candidate listeners during the {@code DOMAIN_PLAN} phase of a transactional reload, and to
+ * active listeners for the initial generation. {@link #modify} only collects and normalizes
+ * declarations without touching live {@link Block} or {@code BlockState} instances; restoring
+ * baselines and applying the full plan happens at commit time in {@code ModificationDomainOwner}.
  *
- * <h2>JS API（不变）</h2>
+ * <h2>JS API</h2>
  * <pre>
  * BlockEvents.modification(event {@code ->} {
  *   event.modify('minecraft:stone', block {@code ->} {
- *     block.hardness = 2;              // 与 block.setHardness(2) 经同一 setter
+ *     block.hardness = 2;              // uses the same setter as block.setHardness(2)
  *     block.resistance = 6;
  *     block.lightLevel = 15;
  *   });
@@ -46,7 +47,7 @@ public class BlockModificationEventJS {
     private final ModificationCandidatePlan plan;
     private int declaredCount;
 
-    /** @param plan 收集目标计划（由 {@code ModificationDomainOwner} 创建）。 */
+    /** @param plan target candidate plan created by {@code ModificationDomainOwner} */
     @ScriptInternalConstructor
     public BlockModificationEventJS(ModificationCandidatePlan plan) {
         this.plan = plan;
@@ -54,18 +55,18 @@ public class BlockModificationEventJS {
 
     /**
      * Records a modification declaration for the block with the given id. The callback
-     * receives a {@link BlockModificationJS} view（回调抛出的异常向上传播：收集期失败 →
-     * 整批失败，不再有旧路径的部分应用）。
+     * receives a {@link BlockModificationJS} view; any exception thrown by the callback
+     * propagates out so a collection failure aborts the whole batch.
      *
-     * <p>回调参数类型保持改造前的函数式接口签名（{@code Consumer<BlockModificationJS>}）：
-     * Java 侧直接传 lambda；脚本侧的 Graal 函数由沙盒 HostAccess
-     * （{@code allowAllImplementations}）实现该接口。视图本身是
-     * {@link graal.graalvm.polyglot.proxy.ProxyObject}，所以脚本拿到的参数上
-     * {@code block.hardness = 2} 与 {@code block.setHardness(2)} 命中同一 setter /
-     * 校验 / 规范化 / 计划路径（AC8，见 {@link ModificationViewSurface}）。
+     * <p>The parameter uses {@code Consumer<BlockModificationJS>} so Java callers can pass a
+     * lambda directly while script functions implement the interface through sandbox HostAccess
+     * ({@code allowAllImplementations}). Because the view implements
+     * {@link graal.graalvm.polyglot.proxy.ProxyObject}, {@code block.hardness = 2} and
+     * {@code block.setHardness(2)} invoke the same setter, validation, normalization, and plan
+     * recording path (see {@link ModificationViewSurface}).
      *
      * @param blockId block id, e.g. {@code 'minecraft:stone'} (namespace optional)
-     * @param modifier property callback（脚本函数或 Java {@code Consumer}）
+     * @param modifier property callback (script function or Java {@code Consumer})
      */
     @Doc("Records a runtime property modification declaration for one block.")
     @Param(name = "blockId", value = "block id like 'minecraft:stone' (the 'minecraft:' prefix is optional)")

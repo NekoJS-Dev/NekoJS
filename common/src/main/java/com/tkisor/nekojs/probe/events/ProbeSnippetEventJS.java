@@ -4,8 +4,9 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * {@code probe.snippets} 事件：脚本登记编辑器片段（VSCode {@code .code-snippets}）。当前仅 TS backend 消费
- * （合并进 {@code nekojs/.vscode/nekojs.code-snippets}，probe 拥有的片段名替换，用户片段保留）。
+ * The {@code probe.snippets} event: scripts register editor snippets (VSCode {@code .code-snippets}). Only the TS
+ * backend consumes them today; they are merged into {@code nekojs/.vscode/nekojs.code-snippets}, where snippets
+ * owned by probe replace each other by name and user snippets are kept.
  */
 public final class ProbeSnippetEventJS {
     private final List<Snippet> snippets = new ArrayList<>();

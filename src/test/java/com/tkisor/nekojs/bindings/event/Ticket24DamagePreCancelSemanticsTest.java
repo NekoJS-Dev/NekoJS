@@ -22,18 +22,18 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Ticket 24 D4 fixture: script-side cancellation of {@code EntityEvents.damagePre} must be a
- * real lever, not a silent no-op. NeoForge's native {@code LivingDamageEvent.Pre} does not
- * implement {@code ICancellableEvent} (checked on 21.1.227 / 26.1.2.71 / 26.2.0.57), so the
- * family declares the bus explicitly cancellable and the FORGE_BRIDGE maps the bus's cancel
- * result to {@code setNewDamage(0)} — the documented zero-damage lever; the native damage
- * sequence itself still completes (damagePost keeps firing with zero damage).
+ * Checks that script-side cancellation of {@code EntityEvents.damagePre} is a real lever and
+ * not a silent no-op. NeoForge's native {@code LivingDamageEvent.Pre} does not implement
+ * {@code ICancellableEvent} (checked on 21.1.227 / 26.1.2.71 / 26.2.0.57), so the family
+ * declares the bus explicitly cancellable and the FORGE_BRIDGE maps the bus's cancel result to
+ * {@code setNewDamage(0)}, the documented zero-damage lever. The native damage sequence itself
+ * still completes: damagePost keeps firing with zero damage.
  *
  * <p>This test pins the bus-side half on the real family bus: the bus stays cancellable under
  * the production predicate, and a cancelling listener short-circuits and is observable from
  * {@code post}. The bridge half (cancel result applied through the adapter-supplied action)
- * lives in {@code EventBusForgeBridgeCancelActionTest}; the real-machine health leg was
- * evidenced by the 2026-09-28 maintainer session (damage still applied after return true).
+ * lives in {@code EventBusForgeBridgeCancelActionTest}; a maintainer session on 2026-09-28
+ * recorded the real-machine evidence (damage still applied after returning true).
  */
 class Ticket24DamagePreCancelSemanticsTest {
 

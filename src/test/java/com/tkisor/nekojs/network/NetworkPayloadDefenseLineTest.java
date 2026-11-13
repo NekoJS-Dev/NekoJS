@@ -19,14 +19,17 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * 票 17 防线等价 fixture：网络线程收包侧的坏输入（非法 channel、坏 NBT、超大 payload、
- * 空 key）在线格式解码边界被拒绝——以异常形式呈现（平台据此断连），不静默 no-op，也不
- * 把异常漏进平台网络线程的后续处理；发送面的 {@link NetworkJS} 语义（data 归一化、经
- * {@link PlayPacketDispatchers} 装配）与既有契约一致。
+ * Fixture for bad input on the receiving side of the network thread: an illegal channel, bad
+ * NBT, an oversized payload or an empty key is rejected at wire decode as an exception (the
+ * platform disconnects on it). Decode never silently no-ops, and the exception never leaks into
+ * the platform network thread's remaining work. On the sending side {@link NetworkJS} keeps its
+ * existing behavior: it normalizes data and assembles the packet through
+ * {@link PlayPacketDispatchers}.
  *
- * <p>「不炸平台网络线程」的最终仲裁在 loader 侧（NeoForge/Fabric 把解码异常转成断连），
- * JVM 层钉住的是本仓库的防线输入：decode 必须抛、post 核心必须吞掉监听器异常
- * （见 NetworkGenerationRoutingTest.listenerExceptionIsContainedAndDoesNotAbortDispatch）。
+ * <p>The loader decides whether the platform network thread survives (NeoForge and Fabric turn a
+ * decode failure into a disconnect). The JVM level pins what this repository feeds it: decode
+ * must throw, and the post core must swallow listener exceptions (see
+ * NetworkGenerationRoutingTest.listenerExceptionIsContainedAndDoesNotAbortDispatch).
  */
 class NetworkPayloadDefenseLineTest {
 
@@ -39,11 +42,12 @@ class NetworkPayloadDefenseLineTest {
         return new FriendlyByteBuf(Unpooled.buffer());
     }
 
-    // ---- 解码侧防线：坏输入必须抛（不是静默 no-op） ----
+    // ---- Decode side: bad input must throw, not silently no-op ----
 
     @Test
     void illegalChannelOnWireIsRejectedAtDecode() {
-        // UTF8(65 chars) + 空 CompoundTag(0a 00)：字符串读出后经 compact 构造器拒绝
+        // UTF8(65 chars) + empty CompoundTag(0a 00): the string reads out, then the compact
+        // constructor rejects it
         StringBuilder channel = new StringBuilder();
         for (int i = 0; i < 65; i++) channel.append('a');
         FriendlyByteBuf buf = vanillaBuf();
@@ -78,11 +82,12 @@ class NetworkPayloadDefenseLineTest {
 
     @Test
     void malformedNbtOnWireIsRejectedAtDecode() {
-        // 合法 channel + 截断的 NBT（TAG_Int 名字后缺 4 字节载荷）：解码必须失败。
-        // 断言 Throwable 而非具体异常类型：坏 NBT 走 NbtIo.readTagSafe → CrashReport——
-        // 游戏进程内是 DecoderException（平台转断连），裸 JUnit 里 CrashReport 的静态初始化
-        // （SystemReport）本身不可用，以 Error 形态冒泡。两种形态都不是静默 no-op，
-        // 「解码绝不产出 payload」才是钉住的契约。
+        // A legal channel plus truncated NBT (a TAG_Int name with its 4 payload bytes missing): decode
+        // must fail. The assertion accepts any Throwable because bad NBT goes through
+        // NbtIo.readTagSafe into a CrashReport: inside the game that is a DecoderException (the
+        // platform turns it into a disconnect), while in bare JUnit the CrashReport static
+        // initialization (SystemReport) is itself unavailable and surfaces as an Error. Neither
+        // form is a silent no-op; the pinned rule is that decode never produces a payload.
         FriendlyByteBuf buf = vanillaBuf();
         try {
             buf.writeUtf("ch");
@@ -94,9 +99,10 @@ class NetworkPayloadDefenseLineTest {
                     () -> NekoScriptPayload.CODEC.decode(
                             new net.minecraft.network.RegistryFriendlyByteBuf(buf, net.minecraft.core.RegistryAccess.EMPTY)),
                     "malformed NBT must fail decode loudly (platform disconnects), never decode into a payload");
-            // Throwable 级断言的判别力下界：排除把 setup/断言自身的 AssertionError 误当
-            // 解码失败——真实形态只能是 DecoderException（游戏内）或 CrashReport 初始化
-            // 失败的 Error（裸 JUnit），二者都源于 NBT 解码路径
+            // Lower bound on what the Throwable assertion can tell apart: it rules out mistaking an
+            // AssertionError from the setup or the assertion itself for a decode failure. The real
+            // form is either a DecoderException inside the game or an Error from CrashReport
+            // initialization failure in bare JUnit; both come from the NBT decode path.
             assertFalse(thrown instanceof AssertionError,
                     "decode failure must originate from the NBT path, not from a test assertion");
         } finally {
@@ -159,9 +165,9 @@ class NetworkPayloadDefenseLineTest {
         }
     }
 
-    // ---- 发送面：NetworkJS 语义不变 + 经 PlayPacketDispatcher 装配 ----
+    // ---- Send side: NetworkJS behavior is unchanged and the packet goes through PlayPacketDispatcher ----
 
-    /** 记录型 dispatcher：钉住 NetworkJS 的发送路由与 payload 形状。 */
+    /** Recording dispatcher: pins the send route and the payload shape of NetworkJS. */
     private static final class RecordingDispatcher implements PlayPacketDispatcher {
         final List<Sent> sent = new ArrayList<>();
 
@@ -194,7 +200,7 @@ class NetworkPayloadDefenseLineTest {
         CompoundTag tag = new CompoundTag();
         tag.putInt("v", 1);
         NetworkJS.sendToPlayer(null, "ch", tag);
-        NetworkJS.sendToAll("ch", null); // null data 归一化为空 CompoundTag（既有语义）
+        NetworkJS.sendToAll("ch", null); // null data is normalized to an empty CompoundTag, as before
 
         assertEquals(2, dispatcher.sent.size());
         NekoScriptPayload toPlayer = (NekoScriptPayload) dispatcher.sent.get(0).payload();
@@ -207,7 +213,10 @@ class NetworkPayloadDefenseLineTest {
         assertEquals("all", dispatcher.sent.get(1).method());
     }
 
-    /** 装配契约：发送失败不打断脚本——未装配/异常路径静默丢弃（NOOP 兜底，首次告警）。 */
+    /**
+     * Wiring: a failed send never breaks the script. With no dispatcher installed, or on an error
+     * path, the send is dropped silently (the NOOP fallback warns once).
+     */
     @Test
     void noopDispatcherDropsSendsWithoutThrowing() {
         PlayPacketDispatchers.install(PlayPacketDispatchers.NOOP);

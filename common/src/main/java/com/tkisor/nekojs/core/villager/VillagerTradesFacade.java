@@ -1,17 +1,17 @@
 package com.tkisor.nekojs.core.villager;
 
 /**
- * Process-level facade for the {@code VillagerTrades} query binding (ticket 22).
+ * Process-level facade for the {@code VillagerTrades} query binding.
  *
- * <p>Follows the existing facade precedent of this repository (see
- * {@code DynamicRegistryFacade}): the platform assembly creates the domain owner, registers it
- * into {@code NekoRuntimeRoot} through {@code registerDomainCollector} (the root owns its
- * lifecycle and closes it) and installs the owner's {@link VillagerTradeDomainState} here so
- * the script binding can reach it. This is <b>not</b> a second runtime owner: it holds no
- * context, no listeners and no lifecycle — it is a lookup seam for a stateless binding.
+ * <p>Follows the existing facade pattern of this repository (see {@code DynamicRegistryFacade}):
+ * the platform assembly creates the domain owner, registers it into {@code NekoRuntimeRoot}
+ * through {@code registerDomainCollector} (the root owns its lifecycle and closes it), then
+ * installs the owner's {@link VillagerTradeDomainState} here so the script binding can reach it.
+ * This is <b>not</b> a second runtime owner: it holds no context, no listeners and no lifecycle.
+ * It only looks up the state for a stateless binding.
  *
- * <p>Detection semantics: no state installed means the node has no villager trade support
- * (Fabric today). That must surface as an explicit unavailable answer, never as a silent no-op.
+ * <p>No installed state means the node has no villager trade support (Fabric today). Callers
+ * must report that as an explicit unavailable answer, never as a silent no-op.
  */
 public final class VillagerTradesFacade {
 

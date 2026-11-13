@@ -59,12 +59,13 @@ public final class ScriptBindingSchema {
     }
 
     /**
-     * 绑定成员 schema。{@code valueClasses} 供链式类型流（{@code Item.of(x).member}
-     * 的第二级成员检查）取成员/返回值类型；只有名字没有类信息时传空集合。
+     * Binding member schema. {@code valueClasses} supplies the member and return types to chained type
+     * flows (the second-level member check of {@code Item.of(x).member}); pass an empty set when only
+     * names are known.
      *
-     * <p>{@code dynamicMembers} = true 表示该绑定是动态键容器（如工单 10 的
-     * {@code global}/{@code shared} 状态容器）：任意顶层 key 都是合法成员，binding
-     * preflight 不得把未列出的成员名当拼写错误上报。
+     * <p>{@code dynamicMembers} = true marks the binding as a dynamic key container (such as the
+     * {@code global}/{@code shared} state containers): any top-level key is a valid member, so the
+     * binding preflight must not report an unlisted member name as a typo.
      */
     public record BindingMembers(Set<String> memberNames, Set<Class<?>> valueClasses, boolean dynamicMembers) {
         public BindingMembers {
@@ -80,7 +81,7 @@ public final class ScriptBindingSchema {
             this(memberNames, Set.of());
         }
 
-        /** 动态键容器（任意成员合法，preflight 跳过成员枚举检查）。 */
+        /** Dynamic key container: any member is valid, so the preflight skips the member-name check. */
         public static BindingMembers dynamicContainer() {
             return new BindingMembers(Set.of(), Set.of(), true);
         }
@@ -108,12 +109,12 @@ public final class ScriptBindingSchema {
     }
 
     /**
-     * 从脚本文件路径推导所属 {@link ScriptType}。平铺布局直接按类型根前缀判定；脚本包布局
-     * （GLOBAL {@code <root>/packs/<id>/…}、WORLD {@code <world>/nekojs_packs/<id>/…}、
-     * SERVER_CACHE {@code …/server_packs/…}）不在任何类型根之下，按路径中的
-     * {@code <type>_scripts} 段推导——与 {@code DefaultErrorTracker.extractScriptDisplayPath}
-     * 同一约定。缺了这一步，包内脚本的预检 schema 恒为空，成员/事件回调校验对包脚本
-     * 整体静默失效。
+     * Derives the {@link ScriptType} from a script file path. A flat layout is decided by the type root
+     * prefix. Pack layouts (GLOBAL {@code <root>/packs/<id>/...}, WORLD
+     * {@code <world>/nekojs_packs/<id>/...}, SERVER_CACHE {@code .../server_packs/...}) sit below no type
+     * root, so the type comes from the {@code <type>_scripts} segment in the path, the same convention
+     * used by {@code DefaultErrorTracker.extractScriptDisplayPath}. Without this, a pack script gets an
+     * empty preflight schema and both member and event callback checks are skipped for it.
      */
     public static ScriptType inferType(Path path) {
         if (path == null) return null;

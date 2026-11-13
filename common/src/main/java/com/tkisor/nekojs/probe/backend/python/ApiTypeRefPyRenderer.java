@@ -7,11 +7,12 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
- * {@link ApiTypeRef} → Python 类型字符串（PEP 484）。供 {@link PythonClassRenderer} 与
- * {@link PythonProbeBackend} 使用。
+ * Renders an {@link ApiTypeRef} as a Python type string (PEP 484). Used by
+ * {@link PythonClassRenderer} and {@link PythonProbeBackend}.
  *
- * <p>Phase 3 best-effort：泛型类型变量统一渲染为 {@code Any}（不展开 {@code TypeVar}/{@code Generic}）；
- * 未被 probe 收集（不在 {@code availableFqns}）的 SYMBOL 也渲染为 {@code Any}，避免悬空引用导致 pyright 报错。
+ * <p>Best-effort: generic type variables all render as {@code Any} (no expansion to
+ * {@code TypeVar}/{@code Generic}). A SYMBOL the probe did not collect (not in
+ * {@code availableFqns}) also renders as {@code Any}, so no dangling reference makes pyright fail.
  */
 public final class ApiTypeRefPyRenderer {
     private final Set<String> availableFqns;
@@ -51,8 +52,10 @@ public final class ApiTypeRefPyRenderer {
     }
 
     /**
-     * 标准库单实参集合的 FQN 表——渲染为 {@code list[实参]}（IR 已不再把集合塌缩为数组，
-     * 语法糖由本渲染器决定；镜像旧 toRef 的 isCollectionLike 语义，按名覆盖 java.util/stream 标准库）。
+     * FQNs of the standard library collection types that take one type argument. Each renders as a
+     * Python list of that argument ({@code list[T]}). The IR no longer collapses collections into
+     * arrays, so this renderer decides the sugar; the table covers the java.util and stream
+     * standard library types by name.
      */
     private static final Set<String> COLLECTION_FQNS = Set.of(
             "java.util.List", "java.util.ArrayList", "java.util.LinkedList",
@@ -71,7 +74,9 @@ public final class ApiTypeRefPyRenderer {
             case SYMBOL -> {
                 String fqn = extractFqn(ref.name());
                 if (!availableFqns.contains(fqn)) yield "Any";
-                // 单实参标准库集合 → list[实参]（其余符号的泛型实参不渲染——Python stub 泛型展平）
+                // A standard library collection with one type argument becomes list[argument].
+                // Generic arguments of any other symbol are not rendered, because the Python stub
+                // flattens generics.
                 if (ref.arguments().size() == 1
                         && (COLLECTION_FQNS.contains(fqn) || fqn.startsWith("java.util.stream."))) {
                     yield "list[" + render(ref.arguments().get(0)) + "]";
@@ -93,20 +98,23 @@ public final class ApiTypeRefPyRenderer {
         };
     }
 
-    /** symbol name 形如 {@code "java:net.Foo"} → 取 FQN。 */
+    /** Extracts the FQN from a symbol name such as {@code "java:net.Foo"}. */
     static String extractFqn(String symbolName) {
         int colon = symbolName.indexOf(':');
         return colon >= 0 ? symbolName.substring(colon + 1) : symbolName;
     }
 
-    /** FQN → Python 简单名：最后一段点分，嵌套 {@code $} → {@code _}。 */
+    /** FQN to Python simple name: the last dot-separated segment, with {@code $} replaced by {@code _}. */
     static String simplePyName(String fqn) {
         int dot = fqn.lastIndexOf('.');
         String simple = dot >= 0 ? fqn.substring(dot + 1) : fqn;
         return simple.replace('$', '_');
     }
 
-    /** 收集 ref 引用的所有 SYMBOL 全限定名（供模块 import 收集用，不做可用性过滤）。 */
+    /**
+     * Collects the fully qualified names of every SYMBOL the ref references, for collecting module
+     * imports. It does not filter by availability.
+     */
     static void collectSymbolFqns(ApiTypeRef ref, Set<String> out) {
         if (ref == null) return;
         switch (ref.kind()) {
@@ -116,7 +124,7 @@ public final class ApiTypeRefPyRenderer {
             }
             case ARRAY -> collectSymbolFqns(ref.arguments().get(0), out);
             case UNION -> { for (ApiTypeRef a : ref.arguments()) collectSymbolFqns(a, out); }
-            default -> { /* PRIMITIVE/VOID/TYPE_VARIABLE/CALLBACK 无 SYMBOL import */ }
+            default -> { /* PRIMITIVE, VOID, TYPE_VARIABLE and CALLBACK contribute no SYMBOL import. */ }
         }
     }
 }

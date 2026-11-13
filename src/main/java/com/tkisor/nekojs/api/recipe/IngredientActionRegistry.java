@@ -13,32 +13,37 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * 原料动作注册表：{@code damageIngredient / keepIngredient / replaceIngredient}
- * 在 {@link RecipeJsonBuilder} 上登记，作用于对应配方的合成余量（crafting remainder）。
+ * Registry of ingredient actions: {@code damageIngredient / keepIngredient / replaceIngredient}
+ * register an action on {@link RecipeJsonBuilder}, and the action applies to the crafting
+ * remainder of that recipe.
  *
- * <p>动作是纯脚本状态：<strong>不写进配方 JSON</strong>（vanilla 反序列化会拒绝未知字段），
- * 只存内存表，配方 id → 动作列表。脚本在每次数据包加载 / 服务器启动时重跑
- * （RecipeManagerMixin 的 {@code nekojs$applyScripts}），重跑前整表清空——因此无需持久化，
- * 脚本里删掉一行动作，下次 /reload 后动作即消失。
+ * <p>Actions are pure script state and are <strong>not written into the recipe JSON</strong>
+ * (vanilla deserialization rejects unknown fields). They live only in an in-memory table that maps
+ * recipe id to a list of actions. Scripts rerun on every datapack load and server start
+ * ({@code nekojs$applyScripts} in RecipeManagerMixin), and the table is cleared before each rerun,
+ * so nothing needs persisting: delete an action from a script and it is gone after the next
+ * /reload.
  *
- * <p>消费点：{@code ResultSlotMixin} 在 vanilla 计算完默认余量后，按配方 id 查表变换
- * （匹配过滤器的槽位替换其余量；不匹配的槽位保留 vanilla 语义，如空桶/水瓶）。
+ * <p>The consumer is {@code ResultSlotMixin}. After vanilla computes the default remainders, it
+ * looks up the recipe id and rewrites the remainders of the slots that match a filter. Slots that
+ * match nothing keep the vanilla result, such as an empty bucket or a water bottle.
  */
 public final class IngredientActionRegistry {
 
-    /** 动作种类。 */
+    /** The kind of an action. */
     public enum Kind {
-        /** 耐久 +amount（不可破坏或耗尽的物品直接消失）。 */
+        /** Takes amount durability damage. Unbreakable items, and items that run out, disappear. */
         DAMAGE,
-        /** 原样保留（复制一份不损耗的原料）。 */
+        /** Keeps the ingredient as it is, using a copy that loses no durability. */
         KEEP,
-        /** 替换为指定物品。 */
+        /** Replaces the ingredient with the given item. */
         REPLACE
     }
 
     /**
-     * 单条动作：{@code filter} 匹配网格中的原料栈（{@link Ingredient#test(ItemStack)}），
-     * {@code amount} 仅 DAMAGE 使用，{@code replacement} 仅 REPLACE 使用。
+     * One action: {@code filter} matches ingredient stacks in the crafting grid
+     * ({@link Ingredient#test(ItemStack)}), {@code amount} is used by DAMAGE only, and
+     * {@code replacement} is used by REPLACE only.
      */
     public record Action(Kind kind, Ingredient filter, int amount, ItemStack replacement) {}
 
@@ -46,7 +51,7 @@ public final class IngredientActionRegistry {
 
     private IngredientActionRegistry() {}
 
-    /** 脚本重跑前整表清空（RecipeManagerMixin 在 post RECIPES 事件前调用）。 */
+    /** Clears the whole table before scripts rerun. RecipeManagerMixin calls it before it posts the RECIPES event. */
     public static void clear() {
         ACTIONS.clear();
     }
@@ -61,10 +66,12 @@ public final class IngredientActionRegistry {
     }
 
     /**
-     * 按配方 id 变换默认余量表：对每个匹配某条动作过滤器的网格槽位，替换其余量；
-     * 其余槽位不动。同一槽位只应用第一条匹配的动作（脚本声明顺序）。
+     * Rewrites the default remainder table for one recipe id. For each grid slot that matches an
+     * action filter, it replaces the remainder of that slot; other slots stay untouched. Only the
+     * first matching action applies to a slot, in script declaration order.
      *
-     * @return 传入的 {@code remainders}（原地修改；无任何匹配时内容与 vanilla 结果一致）
+     * @return the passed-in {@code remainders}, modified in place; when nothing matches, the content
+     *         equals the vanilla result
      */
     public static NonNullList<ItemStack> transform(Identifier recipeId, CraftingInput input, NonNullList<ItemStack> remainders) {
         List<Action> actions = recipeId == null ? null : ACTIONS.get(recipeId);
@@ -90,7 +97,7 @@ public final class IngredientActionRegistry {
             case DAMAGE -> {
                 ItemStack copy = gridStack.copyWithCount(1);
                 if (!copy.isDamageableItem()) {
-                    // 不可损耗物品按保留处理：damage 一个无耐久的物品没有可定义的结果
+                    // Items that cannot take damage count as kept: damaging an item that has no durability has no defined result.
                     yield copy;
                 }
                 int newDamage = copy.getDamageValue() + Math.max(1, action.amount());

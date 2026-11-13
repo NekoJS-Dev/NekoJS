@@ -29,16 +29,19 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * 扩展点自包含新形态（initializer / collector / finisher / handle）与点优先执行序的引擎语义：
+ * Engine semantics of the self-contained extension point shape (initializer / collector /
+ * finisher / handle) and of point-first execution order:
  *
  * <ul>
- *   <li>点优先顺序可观测：后注册点在 collect 里能拿到先注册点的产物
- *       （第二个点收集任意插件时，第一个点已经 finish 并发布）；</li>
- *   <li>finisher 产物可经注册句柄 {@link NekoPluginExtensionHandle} 与结果容器
- *       （{@code NekoPluginRuntime.extensionProduct}）取回；</li>
- *   <li>连续两轮 bootstrap（模拟完整 reload）不串状态、不 NPE：
- *       扩展点每轮重建累积器，第一轮的注册内容不出现在第二轮产物中，
- *       probe 单例整体替换而非抛异常。</li>
+ *   <li>Point-first order is observable: a point registered later sees an earlier point's product
+ *       inside collect (while the second point collects any plugin, the first point has already
+ *       finished and published);</li>
+ *   <li>A finisher product can be retrieved through the registered handle
+ *       {@link NekoPluginExtensionHandle} and through the result container
+ *       ({@code NekoPluginRuntime.extensionProduct});</li>
+ *   <li>Two consecutive bootstraps (a full reload) share no state and throw no NPE: each
+ *       bootstrap rebuilds the accumulators, registrations from the first round do not appear in
+ *       the second round's products, and the probe singleton is replaced instead of failing.</li>
  * </ul>
  */
 class NekoPluginExtensionPointTest {
@@ -48,7 +51,7 @@ class NekoPluginExtensionPointTest {
         TestPlatformInit.ensureInitialized();
     }
 
-    /** 后注册点在 collect 里引用先注册点的产物：第二个点记录 collect 时可见的 first 产物。 */
+    /** A later point reads an earlier point's product in collect: the second point records what it sees. */
     private static final class SequencingProvider implements NekoPluginExtensionProvider {
         NekoPluginExtensionHandle<List<String>> firstHandle;
 
@@ -75,7 +78,7 @@ class NekoPluginExtensionPointTest {
         }
     }
 
-    /** 第二个点的累积器：持有 bootstrap context，collect 期可查询先注册点的产物。 */
+    /** Accumulator of the second point: holds the bootstrap context and queries earlier products in collect. */
     private static final class SecondAccumulator {
         private final NekoPluginExtensionContext context;
         private final List<String> records = new ArrayList<>();
@@ -93,7 +96,7 @@ class NekoPluginExtensionPointTest {
         }
     }
 
-    /** 普通插件：只作为被收集对象，验证自定义点对非定义者插件同样收集。 */
+    /** Plain plugin, collected like any other: a custom point also collects plugins that do not define it. */
     private static final class PlainPluginA implements NekoJSPlugin {
     }
 
@@ -108,8 +111,8 @@ class NekoPluginExtensionPointTest {
                 List.of(provider, new PlainPluginA(), new PlainPluginB()),
                 new ScriptPropertyRegistry.Impl());
 
-        // 点优先执行序：first 点先完整收集（三个插件）并 finish，
-        // second 点才开始收集；second 的每次 collect 都能看到完整的 first 产物
+        // Point-first order: the first point finishes collecting all three plugins before the
+        // second point starts; every second-point collect sees the complete first product
         assertEquals(List.of(
                 "second:SequencingProvider:firstProduct=[first:SequencingProvider, first:PlainPluginA, first:PlainPluginB]",
                 "second:PlainPluginA:firstProduct=[first:SequencingProvider, first:PlainPluginA, first:PlainPluginB]",
@@ -143,7 +146,7 @@ class NekoPluginExtensionPointTest {
                 "product type mismatch must fail fast");
     }
 
-    /** 连续两轮 bootstrap（模拟完整 reload）：不串状态、不 NPE。 */
+    /** Two consecutive bootstraps (a full reload): no leaked state, no NPE. */
     private static final class NodeModulePlugin implements NekoJSPlugin, NodeModulesPoint.Contributor {
         @Override
         public void registerNodeModules(NodeModuleRegister registry) {
@@ -158,7 +161,8 @@ class NekoPluginExtensionPointTest {
         assertEquals("module.exports = 'round'", first.nodeModules().get("test:round"),
                 "first round must see the plugin-registered module");
 
-        // 第二轮不反射清任何静态单例：probe finisher 的 setInstance 必须整体替换旧单例
+        // The second round clears no static singleton by reflection: the probe finisher's setInstance
+        // must replace the old one
         NekoPluginRuntime second = assertDoesNotThrow(
                 () -> NekoPluginBootstrap.bootstrap(List.of(), new ScriptPropertyRegistry.Impl()),
                 "second bootstrap (simulated full reload) must not crash on static singletons");
@@ -168,13 +172,17 @@ class NekoPluginExtensionPointTest {
         assertTrue(ProbeBackendRegistry.get().isLocked(),
                 "probe singleton must be replaced (not duplicated) by the second bootstrap");
 
-        // 第二轮再注册同一模块 id：新累积器可写、产物正常交付
+        // The second round registers the same module id again: the new accumulator accepts writes and
+        // the product is delivered
         NekoPluginRuntime third = NekoPluginBootstrap.bootstrap(
                 List.of(new NodeModulePlugin()), new ScriptPropertyRegistry.Impl());
         assertEquals("module.exports = 'round'", third.nodeModules().get("test:round"));
     }
 
-    /** 内置点也已迁移到新形态：finisher 产物直接进入结果容器（以 probe 点为例）。 */
+    /**
+     * Built-in points use the same shape: the finisher product goes straight into the result
+     * container (the probe point is one example).
+     */
     @Test
     void builtInPointsRunAsSelfContainedPoints() {
         NekoPluginRuntime runtime = NekoPluginBootstrap.bootstrap(
@@ -191,7 +199,10 @@ class NekoPluginExtensionPointTest {
                 "all built-in points must publish products into the result container");
     }
 
-    /** registerEvents 与 registerClientEvents 注册同名组：服务器进程只有 server 总线。 */
+    /**
+     * registerEvents and registerClientEvents register groups with the same name: a server process
+     * has only the server bus.
+     */
     private static final class MixedEventsPlugin implements NekoJSPlugin, EventsPoint.Contributor, ClientEventsPoint.Contributor {
         @Override
         public void registerEvents(EventGroupRegistry registry) {
@@ -209,19 +220,22 @@ class NekoPluginExtensionPointTest {
     }
 
     /**
-     * client_events（仅客户端收集）在 initializer 里引用 {@code nekojs:events} 的产物：
-     * 客户端进程上两组同名合并、产物冻结；专用服务器进程整个点跳过，产物回退为 events 产物。
+     * client_events (collected on the client only) reads the {@code nekojs:events} product in its
+     * initializer: on a client process the two same-named groups merge and the product freezes; on
+     * a dedicated server the whole point is skipped and its product falls back to the events
+     * product.
      */
     @Test
     void clientEventsPointMergesEarlierEventsProductOnClientOnly() throws Exception {
-        // 默认测试平台 isClient=false：client_events 跳过，事件组只有 server 总线
+        // The default test platform has isClient=false: client_events is skipped and the group has only the server bus
         NekoPluginRuntime serverRuntime = NekoPluginBootstrap.bootstrap(
                 List.of(new MixedEventsPlugin()), new ScriptPropertyRegistry.Impl());
         assertEquals(Set.of("serverBus"),
                 serverRuntime.eventGroups().get("SharedEvents").viewBuses().keySet(),
                 "on a dedicated server the client_events point must be skipped entirely");
 
-        // 临时把平台换成客户端：client_events 的 initializer 读取 events 产物并合并同名组
+        // Switch the platform to the client: the client_events initializer reads the events product and
+        // merges same-named groups
         Field instance = Platform.class.getDeclaredField("INSTANCE");
         instance.setAccessible(true);
         Object original = instance.get(null);

@@ -1,5 +1,5 @@
-// 1.21.1 实现，与版本树 src/ 下的同名 26.x 文件成对。内容等于那份文件在本节点求值后的形态。
-// 26.x 侧行为变更时须同步本文件。
+// 1.21.1 implementation. It pairs with the same-named 26.x file under src/ in the version
+// tree: this file is that file evaluated for this node. Keep them in sync when 26.x changes.
 package com.tkisor.nekojs.client.gui.components;
 
 import net.minecraft.client.gui.Font;
@@ -25,14 +25,14 @@ public class NekoToast {
         int startY = ty;
         int endY = ty + 16;
 
-        // 背景
+        // background
         g.fill(startX, startY, endX, endY, 0xCC000000);
 
-        // 1.21.1: 用 4 条 fill 替代 outline
-        g.fill(startX, startY, endX, startY + 1, 0xFF44FF44);           // 上边框
-        g.fill(startX, endY - 1, endX, endY, 0xFF44FF44);               // 下边框
-        g.fill(startX, startY + 1, startX + 1, endY - 1, 0xFF44FF44);   // 左边框
-        g.fill(endX - 1, startY + 1, endX, endY - 1, 0xFF44FF44);       // 右边框
+        // 1.21.1: four fill calls instead of outline
+        g.fill(startX, startY, endX, startY + 1, 0xFF44FF44);           // top border
+        g.fill(startX, endY - 1, endX, endY, 0xFF44FF44);               // bottom border
+        g.fill(startX, startY + 1, startX + 1, endY - 1, 0xFF44FF44);   // left border
+        g.fill(endX - 1, startY + 1, endX, endY - 1, 0xFF44FF44);       // right border
         g.drawCenteredString(font, message, screenWidth / 2, ty + 4, -1);
     }
 }

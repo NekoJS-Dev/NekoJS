@@ -13,9 +13,9 @@ public final class NekoJsxCompiler {
     }
 
     /**
-     * 编译 .jsx。
-     * @param automatic true 用标准自动 runtime（{@code jsx}/{@code jsxs}/{@code Fragment}，children 在 props 中），
-     *                  false 用 classic runtime（{@code globalThis.__nekoJsxFactory}/{@code __nekoJsxFragment}）。
+     * Compiles .jsx files.
+     * @param automatic true uses the standard automatic runtime ({@code jsx}/{@code jsxs}/{@code Fragment}, with children in props),
+     *                  false uses the classic runtime ({@code globalThis.__nekoJsxFactory}/{@code __nekoJsxFragment}).
      */
     public static ScriptCompileResult compileJsx(Path file, String source, boolean automatic) {
         JsxTransformResult result = new Transpiler(file, source == null ? "" : source, automatic).transpileDetailed();
@@ -26,7 +26,7 @@ public final class NekoJsxCompiler {
         return compileTsx(file, source, false);
     }
 
-    /** 同 {@link #compileTsx(Path, String)} 但可选自动 runtime。 */
+    /** Similar to {@link #compileTsx(Path, String)} but with optional automatic runtime. */
     public static ScriptCompileResult compileTsx(Path file, String source, boolean automatic) {
         JsxTransformResult lowered = new Transpiler(file, source == null ? "" : source, automatic).transpileDetailed();
         NekoTypeScriptCompiler.TypeScriptTransformResult erased = NekoTypeScriptCompiler.erasePreservingSourceMap(file, lowered.code(), lowered.sourceMap());
@@ -95,8 +95,8 @@ public final class NekoJsxCompiler {
         }
 
         /**
-         * 自动 runtime：在文件头注入标准 import。
-         * 仅按实际使用注入 {@code jsx}/{@code jsxs}/{@code Fragment}。
+         * Automatic runtime: Injects standard imports at the file header.
+         * Injects {@code jsx}, {@code jsxs}, or {@code Fragment} only if used.
          */
         private String jsxRuntimeImport() {
             if (!usedJsx && !usedJsxs && !usedFragment) {
@@ -134,14 +134,14 @@ public final class NekoJsxCompiler {
 
             String tagName = source.substring(nameStart, nameEnd);
             int index = nameEnd;
-            // 泛型组件 <Foo<number>/>：JSX 层把 <number> 作为 tag 表达式的一部分透传，
-            // TSX 模式下由后续 TS 擦除阶段处理；.jsx 模式下不应出现（用户责任）。
+            // Generic components <Foo<number>/>: The JSX layer passes <number> as part of the tag expression,
+            // which is handled by the subsequent TS erasure stage in TSX mode; it should not appear in .jsx mode (user responsibility).
             int genericArgsEnd = skipGenericArgsIfPresent(index);
             String tagExpr;
             if (genericArgsEnd > index) {
-                // 泛型参数仅用于 TS 类型检查，不能成为运行时组件表达式。
-                // compileTsx 的擦除器会处理完整的 TypeScript 源；这里直接保留标签值，
-                // 同时消费参数段，避免对象类型中的 {…} 被误作 JSX 属性。
+                // Generic arguments are only for TS type checking and cannot be runtime component expressions.
+                // The compileTsx eraser handles full TypeScript source; here we keep the tag value,
+                // and consume the argument segment to avoid objects like {…} being mistaken for JSX attributes.
                 tagExpr = tagName;
                 index = genericArgsEnd;
             } else {
@@ -149,7 +149,7 @@ public final class NekoJsxCompiler {
             }
             List<GeneratedPart> props = new ArrayList<>();
             boolean selfClosing = false;
-            // automatic runtime：key 不进 props，单独作为 jsx()/jsxs() 的第三实参（React 约定）
+            // Automatic runtime: key does not go into props, but is passed as the third argument to jsx()/jsxs() (React convention).
             GeneratedPart keyExpression = null;
 
             while (index < length) {
@@ -286,8 +286,8 @@ public final class NekoJsxCompiler {
             char valueStart = source.charAt(index);
             if (valueStart == '\'' || valueStart == '"') {
                 int valueEnd = skipString(index, valueStart);
-                // 与 React/TS 的 JSX 语义一致：字符串属性值解码 HTML 实体（&amp; → &），
-                // 并经 stringLiteral 转义（多行属性值原样拷贝会产出非法 JS 字符串字面量）
+                // Consistent with React/TS JSX semantics: string attribute values decode HTML entities (&amp; → &),
+                // and are escaped via stringLiteral (copying multi-line attribute values literally would produce invalid JS string literals).
                 String decoded = decodeHtmlEntities(source.substring(index + 1, valueEnd - 1));
                 GeneratedPart valuePart = GeneratedPart.unmapped(stringLiteral(decoded));
                 String text = attributeKey(name) + ": " + valuePart.text();
@@ -307,7 +307,7 @@ public final class NekoJsxCompiler {
                 String text = attributeKey(name) + ": (" + transformed + ")";
                 List<NekoSourceMapBuilder.MappingPoint> mappings = new ArrayList<>();
                 mappings.add(new NekoSourceMapBuilder.MappingPoint(0, start));
-                // generatedStart 相对 text：紧随 "name: (" 之后的 transformed 起点 = '(' 后一位
+                // generatedStart relative to text: the start point of the transformed string, right after "name: (" (one character after '(').
                 mappings.addAll(rebasedMappings(lowered, inner, text.indexOf('(') + 1, index + 1));
                 GeneratedPart valuePart = new GeneratedPart("(" + transformed + ")",
                         rebasedMappings(lowered, inner, 1, index + 1));
@@ -331,18 +331,18 @@ public final class NekoJsxCompiler {
         }
 
         /**
-         * 递归 lowering 子表达式，返回转换后代码与内部 source map。
+         * Recursively lowers sub-expressions, returning the transformed code and internal source map.
          *
-         * <p>内部 source map 把 transformed 的行列映射回 innerSource 的行列。
-         * {@link #rebasedMappings} 据此重建到外层源文件的精确偏移，替代此前按 1:1
-         * 线性合成的近似偏移（嵌套 JSX / 实体解码会改变 transformed 长度，旧逻辑会漂移）。
+         * <p>The internal source map maps rows/columns of the transformed code back to the inner source.
+         * {@link #rebasedMappings} uses this to reconstruct precise offsets to the outer source file, replacing the previous approximate 1:1
+         * linear approximate offsets (nested JSX/entity decoding changes transformed length, causing drift in old logic).
          */
         private JsxTransformResult transformDetailed(String innerSource) {
             if (innerSource == null || innerSource.isBlank()) {
                 return new JsxTransformResult(innerSource == null ? "" : innerSource, null);
             }
-            // 子表达式递归 lowering：复用本 Transpiler 的 automatic 标志（同一文件 runtime 模式一致）；
-            // 内部不再 prepend import（由最外层统一注入）。
+            // Sub-expression recursive lowering: reuses the automatic flag of this Transpiler (runtime mode is consistent for the same file);
+            // internal imports are not prepended (injected centrally by the outermost layer).
             Transpiler inner = new Transpiler(file, innerSource, automatic);
             inner.suppressRuntimeImport = true;
             inner.usedJsx = this.usedJsx;
@@ -356,16 +356,16 @@ public final class NekoJsxCompiler {
         }
 
         /**
-         * 把内部 transpiler 的 source map 重基（rebase）到外层生成文本/源文件的偏移。
+         * Rebases the internal transpiler source map to offsets of the outer generated text/source file.
          *
-         * <p>内部 source map 的每个 segment 是 (genLine, genCol)→(srcLine, srcCol)，
-         * 行列均相对 transformed / innerSource。重基：
+         * <p>Each segment of the internal source map is (genLine, genCol)→(srcLine, srcCol),
+         * where rows and columns are relative to transformed/innerSource. Rebase:
          * <ul>
-         *   <li>generated 偏移 = generatedStart + transformed 内偏移</li>
-         *   <li>original 偏移  = originalStart  + innerSource 内偏移</li>
+         *   <li>generated offset = generatedStart + offset within transformed</li>
+         *   <li>original offset = originalStart + offset within innerSource</li>
          * </ul>
-         * 这样嵌套表达式内部的每一行都能精确指回外层源文件，而非按 1:1 长度近似。
-         * 解析失败（空 map / 非 v3 / 无 mappings）时回退到单锚点，保证不丢映射起点。
+         * This allows every line within nested expressions to map precisely back to the outer source file instead of using 1:1 length approximations.
+         * Falls back to a single anchor point if parsing fails (empty map / non-v3 / no mappings) to ensure the mapping start is not lost.
          */
         private List<NekoSourceMapBuilder.MappingPoint> rebasedMappings(
                 JsxTransformResult inner, String innerSource,
@@ -396,12 +396,12 @@ public final class NekoJsxCompiler {
                 mappings.add(new NekoSourceMapBuilder.MappingPoint(
                         generatedStart + genOffset, originalStart + srcOffset));
             }
-            // 保持按 generated 偏移升序（appendMapped 要求升序输入）
+            // Maintains ascending generated offsets (appendMapped requires ascending input).
             mappings.sort(java.util.Comparator.comparingInt(NekoSourceMapBuilder.MappingPoint::generatedOffset));
             return mappings;
         }
 
-        /** 行首偏移表：lineStarts[i] = 第 i 行起始字符在文本中的偏移（第 0 行恒为 0）。 */
+        /** Line start offset table: lineStarts[i] is the offset of the first character of line i in the text (line 0 is always 0). */
         private static int[] lineStartOffsets(String text) {
             java.util.List<Integer> starts = new ArrayList<>();
             starts.add(0);
@@ -425,9 +425,9 @@ public final class NekoJsxCompiler {
         }
 
         /**
-         * 解码 v3 source map 的 mappings 字段为 segment 数组。
-         * 每个 segment = {genLine, genCol, srcLine, srcCol}（忽略 source index，恒为 0）。
-         * 行列均按累计增量还原为绝对值。
+         * Decodes the mappings field of a v3 source map into a segment array.
+         * Each segment is {genLine, genCol, srcLine, srcCol} (ignoring source index, which is always 0).
+         * Rows and columns are restored to absolute values via cumulative increments.
          */
         private static int[][] decodeSourceMapMappings(String sourceMapJson) {
             com.google.gson.JsonObject root;
@@ -460,7 +460,7 @@ public final class NekoJsxCompiler {
                     i++;
                     continue;
                 }
-                // 解一个 segment：[genColDelta, srcIndexDelta, srcLineDelta, srcColDelta, (nameDelta)]
+                // Decodes a segment: [genColDelta, srcIndexDelta, srcLineDelta, srcColDelta, (nameDelta)]
                 int[] fieldDeltas = new int[5];
                 int fields = 0;
                 while (i < n) {
@@ -473,11 +473,11 @@ public final class NekoJsxCompiler {
                     i = vlq[1];
                 }
                 if (fields < 4) {
-                    // 缺字段（如纯 generated 映射）——对 JSX 表达式映射无意义，跳过
+                    // Missing fields (e.g., pure generated mapping) — meaningless for JSX expression mappings, skip.
                     continue;
                 }
                 genCol += fieldDeltas[0];
-                // fieldDeltas[1] 是 source index delta，恒为 0（单源），忽略
+                // fieldDeltas[1] is source index delta, always 0 (single source), ignore.
                 srcLine += fieldDeltas[2];
                 srcCol += fieldDeltas[3];
                 out.add(new int[]{genLine, genCol, srcLine, srcCol});
@@ -485,7 +485,7 @@ public final class NekoJsxCompiler {
             return out.toArray(new int[0][]);
         }
 
-        /** 解一个 Base64 VLQ，返回 {value, nextIndex}。 */
+        /** Decodes a Base64 VLQ and returns {value, nextIndex}. */
         private static final String VLQ_CHARS =
                 "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 
@@ -508,10 +508,10 @@ public final class NekoJsxCompiler {
         }
 
         /**
-         * JSX 文本白空白的 React/Babel 规则（换行驱动，而非一刀切 trim）：
-         * 换行后的行首空白与换行前的行尾空白去除、纯空白行删除、保留行之间的换行折叠为
-         * 单个空格；同一行内的空白（元素间空格 {@code <b>x</b> <i>y</i>}）原样保留——
-         * 旧实现 {\s+→" "}+trim 把元素间有效空格也丢了。
+         * JSX text whitespace React/Babel rule (newline-driven, not wholesale trim):
+         * Removes leading whitespace after newlines and trailing whitespace before newlines, deletes empty lines, and folds newlines between lines into
+         * a single space; whitespace within the same line (inter-element spaces {@code <b>x</b> <i>y</i>}) is preserved as is—
+         * The old implementation ({\s+→" "}+trim) also discarded valid inter-element spaces.
          */
         private String normalizeText(String raw) {
             if (raw == null) {
@@ -548,9 +548,9 @@ public final class NekoJsxCompiler {
         }
 
         /**
-         * 解码 JSX 文本里的 HTML 实体（与 React/JSX 规范一致）。
-         * 支持命名实体（amp/lt/gt/quot/apos/nbsp）与数字实体（&#NN; / &#xHH;）。
-         * 字符串属性值里的实体是字面量（由 parseAttribute 原样保留），本方法只作用于元素文本。
+         * Decodes HTML entities in JSX text (consistent with React/JSX specification).
+         * Supports named entities (amp/lt/gt/quot/apos/nbsp) and numeric entities (&#NN; / &#xHH;).
+         * Entities in string attribute values are literal (retained as-is by parseAttribute); this method only applies to element text.
          */
         private String decodeHtmlEntities(String text) {
             if (text.indexOf('&') < 0) return text;
@@ -560,14 +560,14 @@ public final class NekoJsxCompiler {
                 char c = text.charAt(i);
                 if (c != '&') { sb.append(c); i++; continue; }
                 int semi = text.indexOf(';', i + 1);
-                if (semi < 0 || semi - i > 10) { sb.append(c); i++; continue; } // 不是实体，原样
+                if (semi < 0 || semi - i > 10) { sb.append(c); i++; continue; } // Not an entity, original.
                 String body = text.substring(i + 1, semi);
                 String decoded = decodeEntityBody(body);
                 if (decoded != null) {
                     sb.append(decoded);
                     i = semi + 1;
                 } else {
-                    sb.append(c); i++; // 无法识别，原样保留 &
+                    sb.append(c); i++; // Unrecognized, original & retained.
                 }
             }
             return sb.toString();
@@ -582,7 +582,7 @@ public final class NekoJsxCompiler {
                 case "apos": return "'";
                 case "nbsp": return "\u00a0";
                 default:
-                    // 数字实体 &#39; / &#x27;
+                    // Numeric entity &#39; / &#x27;
                     if (body.startsWith("#")) {
                         try {
                             int code;
@@ -602,11 +602,11 @@ public final class NekoJsxCompiler {
         }
 
         private String jsxTagExpression(String tagName) {
-            // 命名空间标签不是合法的 JavaScript 表达式，须作为完整字符串传给 factory。
+            // Namespace tags are not valid JavaScript expressions and must be passed as a full string to the factory.
             if (tagName.indexOf(':') >= 0) {
                 return stringLiteral(tagName);
             }
-            // 成员表达式 / 索引 / 调用作为组件表达式透传。
+            // Member expressions / indexing / calls are passed through as component expressions.
             if (tagName.indexOf('.') >= 0 || tagName.indexOf('[') >= 0 || tagName.indexOf('(') >= 0) {
                 return tagName;
             }
@@ -639,7 +639,7 @@ public final class NekoJsxCompiler {
             int i = start;
             while (i < length) {
                 char c = source.charAt(i);
-                // < 用于泛型组件 <Foo<number>/> —— 在 < 处停，让上层识别并跳过泛型实参
+                // < used for generic components <Foo<number>/> — stop at <, let the caller identify and skip generic arguments.
                 if (Character.isWhitespace(c) || c == '/' || c == '>' || c == '{' || c == '=' || c == '<') {
                     break;
                 }
@@ -649,9 +649,9 @@ public final class NekoJsxCompiler {
         }
 
         /**
-         * 若 index 处起是泛型组件的 {@code <T, U>} 实参段（紧跟标签名后），返回其结束位置（{@code >} 之后）；
-         * 否则返回 index。跳过字符串/嵌套尖括号。注意：TSX 泛型实参里不会出现 {@code /}（那是自闭合），
-         * 遇到 {@code />} 当作无泛型（实际是 {@code <} 比较表达式）。
+         * If index starts a generic component's {@code <T, U>} argument segment (immediately following the tag name), returns its end position (after {@code >});
+         * otherwise returns index. Skips strings/nested angle brackets. Note: TSX generic arguments cannot contain {@code /} (that is for self-closing),
+         * and {@code />} is treated as no-generic (it is actually a {@code <} comparison expression).
          */
         private int skipGenericArgsIfPresent(int index) {
             if (index >= length || source.charAt(index) != '<') return index;
@@ -663,10 +663,10 @@ public final class NekoJsxCompiler {
                 if (c == '`') { i = skipTemplate(i); continue; }
                 if (c == '<') depth++;
                 else if (c == '>') { depth--; if (depth == 0) return i + 1; }
-                else if (depth == 1 && c == '/') return index; // </Foo 自闭合的 < 不可能是泛型
+                else if (depth == 1 && c == '/') return index; // The < in </Foo self-closing tag cannot be generic.
                 i++;
             }
-            return index; // 不闭合，当作无泛型，交给后续报错
+            return index; // Not closed, treated as no-generic, let subsequent code throw the error.
         }
 
         private int readAttributeNameEnd(int start) {
@@ -693,8 +693,8 @@ public final class NekoJsxCompiler {
             if (!isIdentifierStart(first) && first != '.' && first != '(' && first != '_') {
                 return false;
             }
-            // TSX 的 <T>(x: T) => x 与 JSX 开标签同形。先识别完整泛型箭头，
-            // 交给后续 TS 擦除；否则会被 parseJsx 当成未闭合元素。
+            // TSX <T>(x: T) => x looks like JSX opening tags. First identify the full generic arrow,
+            // let subsequent TS erasure handle it; otherwise parseJsx will treat it as an unclosed element.
             if (looksLikeTsxGenericArrow(index)) {
                 return false;
             }
@@ -726,7 +726,7 @@ public final class NekoJsxCompiler {
             return false;
         }
 
-        /** 判断 <T>(...) => 或 <T,>(...) => 的 TSX 泛型箭头歧义形式。 */
+        /** Identifies TSX generic arrow ambiguity, such as <T>(...) => or <T,>(...) =>. */
         private boolean looksLikeTsxGenericArrow(int start) {
             int typeParametersEnd = skipGenericArgsIfPresent(start);
             if (typeParametersEnd == start) {
@@ -809,8 +809,8 @@ public final class NekoJsxCompiler {
                 if (c == '/') {
                     if (i + 1 < length && source.charAt(i + 1) == '/') { i = skipLineComment(i + 2); continue; }
                     if (i + 1 < length && source.charAt(i + 1) == '*') { i = skipBlockComment(i + 2); continue; }
-                    // 正则体可含 }（含字符类）。仅在 JS 正则可起始的位置跳过，
-                    // 避免把 JSX closing tag 的 </ 中 / 错作正则。
+                    // Regular expressions can contain } (within character classes). Skip only where JS regex can start,
+                    // to avoid misinterpreting the / in JSX closing tag </ as regex.
                     int previous = previousNonWhitespace(i - 1);
                     if (previous >= 0 && source.charAt(previous) != '<'
                             && (looksLikeRegexStart(i) || followsControlCondition(i, previous))) {
@@ -925,10 +925,10 @@ public final class NekoJsxCompiler {
 
         private ParseResult factoryCall(int originalStart, GeneratedPart typeExpression, GeneratedPart propsExpression, List<GeneratedPart> children, GeneratedPart keyExpression, int nextIndex) {
             if (automatic) {
-                // 标准 automatic runtime：
+                // Standard automatic runtime:
                 // - 0/1 child → jsx(type, props, key?)
                 // - 2+ children → jsxs(type, props, key?)
-                // - children 始终放在 props.children（单值或数组）；key 是第三实参，不进 props
+                // - children always go into props.children (single value or array); key is the third argument, not in props.
                 boolean multi = children.size() > 1;
                 if (multi) {
                     usedJsxs = true;
@@ -960,7 +960,7 @@ public final class NekoJsxCompiler {
 
         private ParseResult fragmentCall(int originalStart, List<GeneratedPart> children, int nextIndex) {
             if (automatic) {
-                // Fragment 是类型值，不是可调用函数：jsx(Fragment, props) / jsxs(Fragment, props)
+                // Fragment is a type value, not a callable function: jsx(Fragment, props) / jsxs(Fragment, props).
                 usedFragment = true;
                 boolean multi = children.size() > 1;
                 if (multi) {
@@ -987,9 +987,9 @@ public final class NekoJsxCompiler {
         }
 
         /**
-         * 构造 automatic runtime 的 props 对象。
-         * 无 children 时保留原 props（{@code null} 或对象字面量）；
-         * 有 children 时合并为 {@code { ...props, children: child | [..] }}。
+         * Constructs the props object for automatic runtime.
+         * Retains original props if no children ({@code null} or object literal);
+         * merges into {@code { ...props, children: child | [..] }} if children exist.
          */
         private GeneratedPart automaticProps(GeneratedPart propsExpression, List<GeneratedPart> children) {
             if (children == null || children.isEmpty()) {
@@ -1005,7 +1005,7 @@ public final class NekoJsxCompiler {
                         inner = inner.substring(1, inner.length() - 1).trim();
                     }
                     if (!inner.isEmpty()) {
-                        // 属性字段原样拷贝；mapping 在 props 层已不精确，保持文本正确优先
+                        // Attribute fields are copied as-is; mapping is already imprecise at the props layer, prioritize text correctness.
                         object.append(inner);
                         wroteField = true;
                     }
@@ -1123,7 +1123,7 @@ public final class NekoJsxCompiler {
     }
     private record ParseResult(String text, List<NekoSourceMapBuilder.MappingPoint> mappings, int nextIndex) {}
     private record ExpressionResult(GeneratedPart part, int nextIndex) {}
-    /** name 为 null 表示 spread 属性；valuePart 为属性值表达式（布尔简写属性为 null），供 key 提取复用。*/
+    /** name null indicates a spread attribute; valuePart is the attribute value expression (null for boolean shorthand attributes), used for key extraction. */
     private record AttributeResult(GeneratedPart part, int nextIndex, String name, GeneratedPart valuePart) {
         AttributeResult(GeneratedPart part, int nextIndex) {
             this(part, nextIndex, null, null);

@@ -12,8 +12,9 @@ import java.util.List;
 import java.util.function.Consumer;
 
 /**
- * 战利品池包装（JSON-first）：{@code rolls} / {@code addEntry} / {@code when}。
- * 冷门字段（functions / bonus_rolls 等）直接操作 {@code toJson()}。
+ * JSON-backed wrapper for a loot pool, exposing {@code rolls}, {@code addEntry}, and {@code when}.
+ * Less common fields (such as {@code functions} or {@code bonus_rolls}) can be edited directly on
+ * {@link #toJson()}.
  */
 @Doc("Wrapper for one loot pool inside a loot table.")
 @Doc("JSON-first: edits are applied directly to the underlying JsonObject.")
@@ -24,7 +25,7 @@ public class LootPoolJS {
         this.json = json;
     }
 
-    /** 随机次数：数字或 [min, max] 数组。 */
+    /** Sets the roll count to a number or a {@code [min, max]} range array. */
     @Doc("Sets how many times this pool rolls.")
     @Param(name = "rolls", value = "a number, or a [min, max] array for a random roll count")
     @Return("this, for chaining")
@@ -33,7 +34,7 @@ public class LootPoolJS {
         return this;
     }
 
-    /** 现有条目列表（包装对象，改动直接写回）。 */
+    /** Returns live wrappers over the existing entries; edits write directly to the underlying JSON. */
     @Doc("Gets the entries of this pool.")
     @Return("live LootEntryJS wrappers over the existing 'entries' array; edits write straight through to the JSON")
     public List<LootEntryJS> getEntries() {
@@ -44,7 +45,7 @@ public class LootPoolJS {
         return entries;
     }
 
-    /** 追加条目：物品 id / {@code '#tag'} / ItemStack / JS 对象 / {@code LootEntryJS.of(...)}。 */
+    /** Appends an entry from an item id, {@code '#tag'}, {@code ItemStack}, JS object, or {@link LootEntryJS}. */
     @Doc("Appends one loot entry.")
     @Param(name = "entry", value = "item id, '#tag', ItemStack, entry JS object, or a LootEntryJS.of(...) result")
     @Return("this, for chaining")
@@ -63,7 +64,7 @@ public class LootPoolJS {
         return this;
     }
 
-    /** 追加池条件（完整 condition JSON，如 {@code {condition: 'minecraft:random_chance', chance: 0.5}}）。 */
+    /** Appends a pool condition JSON object (for example, {@code {condition: 'minecraft:random_chance', chance: 0.5}}). */
     @Doc("Appends a condition that must pass for this pool to roll.")
     @Param(name = "condition", value = "complete condition JSON, e.g. {condition: 'minecraft:random_chance', chance: 0.5}")
     @Return("this, for chaining")

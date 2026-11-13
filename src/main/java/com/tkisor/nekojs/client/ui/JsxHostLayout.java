@@ -40,7 +40,7 @@ final class JsxHostLayout {
             InspectorNode.Rect ancestralClip = portal || parentClip == null ? source.clip() : parentClip;
             InspectorNode.Rect clip = intersect(rect, ancestralClip);
             validateBounds(rect);
-            // Project bounds and nested clips onto the same nearest-pixel boundary grid.
+            // Rounds bounds and nested clips to the same nearest-pixel grid.
             node.x = (int) Math.round(rect.x());
             node.y = (int) Math.round(rect.y());
             node.width = (int) (Math.round(rect.x() + rect.width()) - node.x);

@@ -1,5 +1,5 @@
-// 1.21.1 实现，与版本树 src/ 下的同名 26.x 文件成对。内容等于那份文件在本节点求值后的形态。
-// 26.x 侧行为变更时须同步本文件。
+// 1.21.1 implementation. It pairs with the same-named 26.x file under src/ in the version
+// tree: this file is that file evaluated for this node. Keep them in sync when 26.x changes.
 package com.tkisor.nekojs.client;
 
 import com.tkisor.nekojs.NekoJS;
@@ -44,7 +44,7 @@ public class NekoJSClient {
         ClientEvents.bindModBus(modEventBus);
     }
 
-    /// 某些事件需要极早期的时机，如RegisterKeyMappingsEvent
+    /// Some events need a very early hook point, such as RegisterKeyMappingsEvent
     private static void onClientSetup(FMLConstructModEvent event, NekoRuntimeRoot root) {
         event.enqueueWork(() -> {
             NekoJS.LOGGER.debug("Client environment ready, loading CLIENT scripts...");
@@ -79,20 +79,23 @@ public class NekoJSClient {
     private static void onLevelUnload(LevelEvent.Unload event) {
         if (event.getLevel().isClientSide()) {
             PDataSyncService.clearClientMirrors();
-            // ClientData 键值存储随断线/切世界一并清空（服务端重连后会重新推送）
+            // The ClientData key-value store is cleared on disconnect and on world switch; the server
+            // pushes the values again after a reconnect
             ClientDataStore.SHARED.clear();
         }
     }
 
     private static void onClientResourceReload(RegisterClientReloadListenersEvent event, NekoRuntimeRoot root) {
-        // 1.21.1: NeoForge 注册重载监听器不需要手动指定 ID，直接 registerReloadListener 即可
+        // 1.21.1: NeoForge does not need an explicit id when registering a reload listener, so
+        // calling registerReloadListener is enough
         event.registerReloadListener((ResourceManagerReloadListener) resourceManager -> {
             NekoJS.LOGGER.debug("Detected client resource reload (F3 + T), reloading CLIENT scripts...");
             try {
                 root.reload(ScriptType.CLIENT);
             } catch (Exception e) {
-                // 旧环境的监听器已被 reload 清空、新环境没建起来时，玩家不会有任何提示——
-                // 必须 error 级日志 + 错误面板（rt/ 条目），不再只打 DEBUG
+                // If the reload already cleared the old environment's listeners and the new environment never
+                // came up, the player gets no indication at all. Log at error level and add an error panel
+                // entry (rt/ item) instead of only logging at DEBUG
                 NekoJS.LOGGER.error("CLIENT script reload (F3+T) failed", e);
                 root.errorTracker().recordCallbackError(ScriptType.CLIENT, "client_reload", e);
             }
@@ -101,8 +104,10 @@ public class NekoJSClient {
     }
 
     /**
-     * 客户端生成事件：脚本把 asset JSON 写入 {@code <gameDir>/nekojs/assets}（磁盘 resource
-     * pack，懒读保证 reload 时序正确）。先聚合 lang 再生成 assets，与 KubeJS 流程一致。
+     * Client generation event: scripts write asset JSON into
+     * {@code <gameDir>/nekojs/assets} (a disk resource pack, read lazily so the reload order
+     * stays correct). Langs are collected first, then assets are generated, the same order the
+     * KubeJS flow uses.
      */
     private static void postClientGeneration(NekoRuntimeRoot root) {
         try {
@@ -111,12 +116,15 @@ public class NekoJSClient {
             com.tkisor.nekojs.resource.NekoJSPackLoader.prepareItemAssets(net.minecraft.server.packs.PackType.CLIENT_RESOURCES);
             PluginGenerationHooks.fireGenerateAssets(generator);
             ClientEvents.GENERATE_ASSETS.post(generator, "after_mods");
-            // 脚本模型文件已落盘后，为声明过 renderType 且未自写模型的方块补默认模型
-            // （26.x 模型驱动：translucent 需要 force_translucent 贴图引用）
+            // Once the script model files are on disk, fill in a default model for blocks that declared a
+            // renderType but did not write their own model
+            // (26.x model driver: translucent needs a force_translucent texture reference)
             generateSpawnEggModels(generator);
-            // 本轮语言集合 = 插件 generatedLangs() 声明 ∪ 脚本 keyed listener 语言，字典序确定；
-            // 先整体校验再逐语言生成，任一非法语言代码在写入任何 lang 文件之前整批拒绝，
-            // 因此不会产生部分语言文件（非 en_us 的插件语言必须显式声明，见 generatedLangs()）。
+            // The language set for this round is the plugin's generatedLangs() declarations plus the
+            // languages of script keyed listeners, in lexicographic order. Validate the whole set before
+            // generating per language: one invalid language code rejects the batch before any lang file is
+            // written, so no partial language files appear (a plugin language other than en_us has to be
+            // declared explicitly, see generatedLangs()).
             var langs = PluginGenerationHooks.resolveGeneratedLangs(ClientEvents.LANG.registeredKeys());
             for (String lang : langs) {
                 LangGeneratorJS langGenerator = new LangGeneratorJS(lang);
@@ -125,7 +133,8 @@ public class NekoJSClient {
                 langGenerator.writeTo(assets, lang);
             }
         } catch (Exception e) {
-            // 资产生成失败 = 客户端脚本产物不完整（模型/lang 缺失），同样进错误面板
+            // Asset generation failure means the client script output is incomplete (missing models or
+            // langs), so it goes to the error panel as well
             NekoJS.LOGGER.error("Client asset generation failed", e);
             root.errorTracker().recordCallbackError(ScriptType.CLIENT, "generate_assets", e);
         }

@@ -17,9 +17,9 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 /**
- * 事件声明生成器：从 EventCatalogEntry 生成 TypeScript 事件声明。
+ * Generates TypeScript event declarations from EventCatalogEntry.
  *
- * <p>格式参考 ProbeJS：
+ * <p>Output format follows ProbeJS:
  * <pre>
  * import { $RecipeEventJS } from "java:com/example";
  * import { $ResourceLocation_ } from "java:net/minecraft/resources";
@@ -47,7 +47,7 @@ public final class EventDeclarationGenerator {
     }
 
     /**
-     * 为指定 ScriptType 生成事件声明。
+     * Generates event declarations for the given ScriptType.
      */
     public String generate(List<EventCatalogEntry> events, ScriptType scriptType) {
         return generate(events, scriptType, List.of());
@@ -114,7 +114,7 @@ public final class EventDeclarationGenerator {
             sb.append("}\n\n");
         }
 
-        // 空的 module 声明（保持结构一致）
+        // Empty module declaration, to keep the structure consistent
         sb.append("declare module \"@side-only/").append(scriptType.name).append("/events\" {\n");
         sb.append("}\n\n");
 
@@ -122,7 +122,7 @@ public final class EventDeclarationGenerator {
         sb.append("export {};\n\n");
         sb.append("declare global {\n");
 
-        // 按 group 分组
+        // Group by group
         Map<String, List<EventCatalogEntry>> byGroup = events.stream()
                 .collect(Collectors.groupingBy(EventCatalogEntry::group, LinkedHashMap::new, Collectors.toList()));
 
@@ -144,7 +144,7 @@ public final class EventDeclarationGenerator {
     }
 
     /**
-     * 获取类的 TypeScript 标识符名（内部类使用 Parent$Child 格式）。
+     * Gets the TypeScript identifier for a class (a nested class uses the Parent$Child form).
      */
     private static String getTsClassName(Class<?> cls) {
         if (cls.getEnclosingClass() != null && !cls.isAnonymousClass()) {
@@ -173,7 +173,7 @@ public final class EventDeclarationGenerator {
     private String generateEventMethod(EventCatalogEntry event, EventPayload payload, TypeAliasRegistry moduleAliases) {
         StringBuilder sb = new StringBuilder();
 
-        // ScriptEvents 声明的自定义事件：载荷任意、且脚本可自己触发
+        // Custom events declared by ScriptEvents: the payload is anything and the script may fire them itself.
         if (event.scriptDefined()) {
             sb.append("        namespace ").append(event.name()).append(" {\n");
             TypeScriptDeclarationFormatter.appendCallable(sb, 12, "function post", List.of("payload?: any"), ": void;");
@@ -202,13 +202,13 @@ public final class EventDeclarationGenerator {
             return sb.toString();
         }
 
-        // 事件类类型
+        // Event class type
         String eventType = "any";
         if (payload != null) {
             eventType = payload.name();
         } else if (event.eventType() != null) {
             eventType = moduleAliases.reference(event.eventType().getName(), "$" + getTsClassName(event.eventType()));
-            // 处理泛型
+            // Handle generics
             List<TypeVariable<?>> typeParams = JavaGenericTypes.parameters(event.eventType());
             if (!typeParams.isEmpty()) {
                 eventType += "<";
@@ -221,11 +221,11 @@ public final class EventDeclarationGenerator {
             }
         }
 
-        // 无 dispatch key 的版本
+        // The version without a dispatch key
         TypeScriptDeclarationFormatter.appendCallable(sb, 8, "function " + event.name(),
                 List.of("handler: ((event: " + eventType + ") => void)"), ": void;");
 
-        // 有 dispatch key 的版本
+        // Variant that includes a dispatch key.
         if (event.dispatchable() && event.dispatchKeyType() != null) {
             String keyType = TypeScriptClassRenderer.renderTypeRef(
                     JavaTypeScriptProjection.project(event.dispatchKeyType(), TypeReflector.toRef(event.dispatchKeyType())),
@@ -277,7 +277,7 @@ public final class EventDeclarationGenerator {
     private void collectImports(Class<?> cls, Set<String> imports) {
         if (cls == null || cls.isPrimitive() || cls == Object.class) return;
 
-        // 数组类：递归收集组件类型
+        // The class is an array: collect the component type recursively.
         if (cls.isArray()) {
             collectImports(cls.getComponentType(), imports);
             return;

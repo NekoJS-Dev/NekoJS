@@ -37,12 +37,12 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Ticket 30 language × phase matrix (JS/CJS/ESM/TS/JSX/TSX/Python × prepare / resolve-link /
- * cache / execution): representative failures recorded through the real module pipeline keep
- * phase, owner, authored source location, module identity and the prepared cache revision in
- * the frozen diagnostic record. Observed at the highest caller seams —
- * {@code NekoModulePipelineCache.prepare}, {@code loadEntry} and the error tracker's public
- * error set.
+ * Language × phase matrix (JS/CJS/ESM/TS/JSX/TSX/Python × prepare / resolve-link / cache /
+ * execution): representative failures recorded through the real module pipeline keep phase, owner,
+ * authored source location, module identity and the prepared cache revision in the frozen
+ * diagnostic record. Observed through the public entry points
+ * {@code NekoModulePipelineCache.prepare}, {@code loadEntry} and the error tracker's public error
+ * set.
  */
 class DiagnosticPhaseMatrixTest {
 

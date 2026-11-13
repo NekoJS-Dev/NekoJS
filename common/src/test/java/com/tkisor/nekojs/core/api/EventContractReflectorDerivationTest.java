@@ -21,26 +21,29 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * 票 14 AC2：冻结事件进入 managed contract 的派生面——共同事件名、payload 成员、
- * side（tier）、dispatch 与 cancel 由 {@link EventContractReflector} 从运行时
- * {@link EventGroup} 反射派生（生产消费点 {@code NekoPluginRuntime.installManagedCallbackSchemas}
- * → {@code ManagedCallbackSchemaRegistry.installContractEvents}）。
+ * Derives frozen events into the managed contract. {@link EventContractReflector} reflects the
+ * event name, payload members, side (tier), dispatch mode and cancellability from each runtime
+ * {@link EventGroup}. In production the result is consumed through
+ * {@code NekoPluginRuntime.installManagedCallbackSchemas} →
+ * {@code ManagedCallbackSchemaRegistry.installContractEvents}.
  *
- * <p>钉住的契约：
+ * <p>The test pins these rules:
  * <ul>
- *   <li>每个 bus 恰好派生一条 {@link NormativeApiContract.ContractEvent}（无重复）；
- *       server-only / client-only / mixed side 事件保持独立条目；</li>
- *   <li>tier 由 bus 的规范 {@code scriptType} 映射（STARTUP/SERVER/CLIENT）；</li>
- *   <li>dispatch = PLAIN/BY_ID，BY_ID 的 dispatchKeyType 固定 {@code "string"}
- *       （脚本侧注册键永远是字符串 id）；</li>
- *   <li>cancellable 三态来自 bus 的可取消性（无外部 predicate 时为 false）；</li>
- *   <li>payload 成员 = 事件类的 public 零参 getter（getXxx/isXxx），
- *       {@code neko$} mixin 别名与桥方法不进 payload。</li>
+ *   <li>each bus derives exactly one {@link NormativeApiContract.ContractEvent}, with no
+ *       duplicates; server-only, client-only and mixed-side events stay separate entries;</li>
+ *   <li>the tier comes from the bus {@code scriptType} (STARTUP/SERVER/CLIENT);</li>
+ *   <li>dispatch is PLAIN or BY_ID; a BY_ID event always has dispatchKeyType {@code "string"}
+ *       because a script registers with a string id;</li>
+ *   <li>cancellable has three states and follows the bus; it is false when no external predicate
+ *       is registered;</li>
+ *   <li>payload members are the public no-arg getters of the event class (getXxx/isXxx);
+ *       {@code neko$} mixin aliases and bridge methods never enter the payload.</li>
  * </ul>
  */
 class EventContractReflectorDerivationTest {
 
-    /** payload 反射样本：getXxx / isXxx 进 payload，neko$ 别名与带参方法不进。 */
+    /** Payload sample for reflection: getXxx and isXxx enter the payload, neko$ aliases and
+     *  methods with parameters do not. */
     public static final class SamplePayload {
         public String getMessage() {
             return "m";
@@ -61,7 +64,7 @@ class EventContractReflectorDerivationTest {
         public void doThing() {}
     }
 
-    /** 无 public 零参 getter 的载荷：payload 为空列表。 */
+    /** Payload with no public no-arg getters: its payload list is empty. */
     public static final class EmptyPayload {
         public void run() {}
     }
@@ -137,7 +140,8 @@ class EventContractReflectorDerivationTest {
         assertEquals(NormativeApiContract.EventTier.SERVER, tierByQualifiedName.get("MixedEvents.late"),
                 "mixed side keeps a distinct entry per bus instead of merging sides");
 
-        // side 过滤口径与 catalog 一致：条目按各自规范 side 归属，不因 test(side) 宽容而合并
+        // Side filtering matches the catalog: each entry keeps its own declared side, and the
+        // tolerant test(side) never merges entries.
         Set<String> serverSideQualified = events.stream()
                 .filter(e -> e.tier() == NormativeApiContract.EventTier.SERVER)
                 .map(e -> e.group() + "." + e.name())
@@ -152,9 +156,10 @@ class EventContractReflectorDerivationTest {
     }
 
     /**
-     * 事件契约条目进入回调 schema 后可被 {@code EventCallbackSourceValidator} 消费：
-     * BY_ID 无 keyType / PLAIN 带 keyType 在 {@link NormativeApiContract.ContractEvent}
-     * 构造期即被拒绝（可诊断失败前置到契约构造，而非运行时分发时）。
+     * Contract event entries reach the callback schema and are consumed by
+     * {@code EventCallbackSourceValidator}. {@link NormativeApiContract.ContractEvent} rejects a
+     * BY_ID event without a keyType and a PLAIN event with a keyType in its constructor, so the
+     * failure is diagnosable at contract construction instead of at runtime dispatch.
      */
     @Test
     void contractEventShapeViolationsFailAtConstruction() {

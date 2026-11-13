@@ -14,45 +14,42 @@ import java.util.Set;
 import java.util.function.LongSupplier;
 
 /**
- * Server-side owner of the Dynamic Registry batch transaction (ticket 21, AC1/AC2):
- * drives one batch at a time through
+ * Server-side owner of the Dynamic Registry batch transaction. Drives one batch at a time through
  * {@code preflight → same-key fingerprint/conflict detection → server prepare →
- * client prepare/ack → controlled commit}, and turns any failure into a whole-batch
- * abort: the staged plan is discarded and cleaned, the previously activated state
- * keeps serving, and no partial registrations or mixed generations exist anywhere.
+ * client prepare/ack → controlled commit}, and turns any failure into a whole-batch abort: the
+ * staged plan is discarded and cleaned, the state activated before the batch keeps serving, and no
+ * partial registrations or mixed generations exist anywhere.
  *
- * <p><b>Declaration ledger vs activation</b>: the ticket 16 ledger commit stays where
- * it was (the reload joint commit point / the initial collection publish). This
- * coordinator governs <b>activation</b> — live registry mutation through
- * {@link DynamicRegistryAdapter} and node sync through {@link DynamicSyncTransport}.
- * A batch whose activation aborts remains a committed declaration with a recorded,
- * explicit activation rejection ({@link #activatedGeneration()} does not advance);
- * an identical re-declaration can activate later when sync completes.
+ * <p><b>Declaration ledger vs activation</b>: the declaration ledger commit stays where it was
+ * (the reload commit point / the initial collection publish). This coordinator governs
+ * <b>activation</b> — live registry mutation through {@link DynamicRegistryAdapter} and node sync
+ * through {@link DynamicSyncTransport}. A batch whose activation aborts remains a committed
+ * declaration with a recorded, explicit activation rejection ({@link #activatedGeneration()} does
+ * not advance); an identical re-declaration can activate later when sync completes.
  *
- * <p><b>prepare/ack are protocol phases only</b> — nothing here claims cross-process
- * atomic commit. The observable guarantee is: after a COMMIT record, the server
- * adapter has executed the batch exactly once and every participant has received the
- * commit for the same generation; after an ABORT record, no node activated the batch.
+ * <p><b>prepare/ack are protocol phases only</b> — nothing here claims cross-process atomic
+ * commit. The observable guarantee is: after a COMMIT record, the server adapter has executed the
+ * batch exactly once and every participant has received the commit for the same generation; after
+ * an ABORT record, no node activated the batch.
  *
- * <p><b>Thread contract</b>: every public method must be called on the transaction
- * owner thread (server main thread in production); the coordinator is not thread-safe
- * by design — cross-thread callers (network handlers) must hop first, per ticket 17's
- * receive-side discipline.
+ * <p><b>Threading</b>: every public method must be called on the transaction owner thread (server
+ * main thread in production); the coordinator is not thread-safe by design, so cross-thread
+ * callers (network handlers) must hop first.
  *
- * <p><b>Defined outcomes, no silent no-ops</b> (AC4): late acks, duplicate acks,
- * unknown-participant acks, disconnects, mid-transaction joins, ack timeout and close
- * preemption each leave an observable record in {@link #phaseLog()} or
- * {@link #syncOutcomes()} and a deterministic state transition.
+ * <p><b>Defined outcomes, no silent no-ops</b>: late acks, duplicate acks, unknown-participant
+ * acks, disconnects, mid-transaction joins, ack timeout and close preemption each leave an
+ * observable record in {@link #phaseLog()} or {@link #syncOutcomes()} and a deterministic state
+ * transition.
  */
 public final class DynamicRegistryTransactionCoordinator {
 
-    /** Transaction phases in execution order (AC1). */
+    /** Transaction phases in execution order. */
     public enum Phase { PREFLIGHT, SERVER_PREPARE, CLIENT_PREPARE, ACK, COMMIT }
 
     /** Lifecycle status of the current/last transaction. */
     public enum Status { IDLE, RUNNING, AWAITING_ACK, COMMITTED, ABORTED }
 
-    /** Observable result of one phase: outcome, generation, owner, domain and error source (AC1). */
+    /** Observable result of one phase: outcome, generation, owner, domain and error source. */
     public record PhaseRecord(
             Phase phase, long generation, boolean passed, String owner, String domain,
             String errorSource, String detail) {}
@@ -219,12 +216,12 @@ public final class DynamicRegistryTransactionCoordinator {
     }
 
     /**
-     * A participant's post-commit activation report — the answer to a COMMIT or catch-up
-     * STATE_SYNC it already received (the participant executes its own activation when
-     * the commit arrives). A failure cannot un-commit the server batch, so the defined
-     * outcome (AC4) is an observable record plus a fresh catch-up STATE_SYNC of the
-     * activated state, letting the diverged node converge on delivery instead of
-     * silently staying behind. Success reports are recorded only.
+     * A participant's activation report after a commit: its answer to a COMMIT or catch-up
+     * STATE_SYNC it already received, since the participant runs its own activation when the
+     * commit arrives. A failure cannot un-commit the server batch, so the defined outcome is an
+     * observable record plus a fresh catch-up STATE_SYNC of the activated state, letting the
+     * diverged node converge on delivery instead of silently staying behind. Success reports are
+     * recorded only.
      */
     public synchronized void onParticipantActivationReport(
             String participantId, long generation, boolean activated, String detail) {
@@ -251,11 +248,10 @@ public final class DynamicRegistryTransactionCoordinator {
     }
 
     /**
-     * Close preemption (server stopping / root close): the in-flight batch aborts and
-     * every queued batch is discarded with a recorded reason — nothing commits across
-     * a close boundary (AC2). The queue is drained <b>before</b> the in-flight abort
-     * so the abort path's follow-up pump cannot start a queued batch that this close
-     * was supposed to discard.
+     * Close preemption (server stopping or root close): the in-flight batch aborts and every
+     * queued batch is discarded with a recorded reason, so nothing commits once the close starts.
+     * The queue is drained <b>before</b> the in-flight abort, so the follow-up pump on the abort
+     * path cannot start a queued batch that this close was supposed to discard.
      */
     public synchronized boolean abortInFlight(String cause) {
         boolean aborted = false;
@@ -329,8 +325,8 @@ public final class DynamicRegistryTransactionCoordinator {
         current = txn;
         status = Status.RUNNING;
 
-        // Phase 1: preflight — collection errors and same-key fingerprint conflicts
-        // (ticket 16 semantics, re-checked against the possibly-advanced ledger).
+        // Phase 1: preflight — collection errors and same-key fingerprint conflicts,
+        // re-checked against the ledger, which may have advanced since the plan was collected.
         try {
             txn.plan.preflight();
         } catch (GlobalStateException e) {
@@ -410,9 +406,9 @@ public final class DynamicRegistryTransactionCoordinator {
     }
 
     /**
-     * Demands adapter restoration after a degraded activation (AC2: no partial
-     * registration survives); never throws — a failing rollback widens the recorded
-     * degradation detail instead of escaping the commit path.
+     * Demands adapter restoration after a degraded activation so no partial registration survives.
+     * Never throws; a failing rollback widens the recorded degradation detail instead of escaping
+     * the commit path.
      */
     private String rollbackAfterDegradedActivation(List<DynamicAdapterRequest> requests) {
         try {

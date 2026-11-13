@@ -1,5 +1,6 @@
-// 1.21.1 实现，与版本树 src/ 下的同名 26.x 文件成对。内容等于那份文件在本节点求值后的形态。
-// 26.x 侧行为变更时须同步本文件。
+// 1.21.1 implementation, paired with the same-named 26.x file under the version tree's src/. The content
+// is what that file becomes once evaluated for this node. Keep this file in sync when the 26.x behavior
+// changes.
 package com.tkisor.nekojs.listener;
 
 import com.tkisor.nekojs.NekoJS;
@@ -13,25 +14,26 @@ import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 @EventBusSubscriber(modid = NekoJS.MODID)
 public class PlayerEventListener {
 
-    // 客户端error可能不会立即显示
+    // The client may not show an error right away.
     @SubscribeEvent
     public static void onPlayerJoin(PlayerEvent.PlayerLoggedInEvent event) {
         if (event.getEntity() instanceof ServerPlayer player) {
-            // 错误计数经 ScriptErrorReporter 门面（root-owned ErrorTracker 的静态报告面，
-            // 由共享装配函数安装），不再直读 static root
+            // The error count comes through the ScriptErrorReporter facade, the static reporting side of the
+            // root-owned ErrorTracker installed by the shared wiring, so nothing reads the static root directly.
             int errorCount = ScriptErrorReporter.errorCount();
             if (player.hasPermissions(2) && errorCount > 0) {
 
                 player.displayClientMessage(NekoErrorUIHelper.getErrorComponent(errorCount), false);
             }
-            // 挂载物品栏监听器（inventoryChanged 事件）
+            // Attach the inventory listener that reports inventoryChanged.
             InventoryChangeListener.getOrCreate(player);
         }
     }
 
     @SubscribeEvent
     public static void onPlayerClone(PlayerEvent.Clone event) {
-        // 克隆（维度切换 / 死亡重生）后重新挂载：新玩家实体的 inventoryMenu 是新的
+        // Re-attach after a clone (dimension change or death respawn): the new player entity has a new
+        // inventoryMenu.
         InventoryChangeListener.getOrCreate(event.getEntity());
     }
 }

@@ -1,20 +1,21 @@
 package com.tkisor.nekojs.api.nbt;
 
 /**
- * NBT 二进制编解码失败时抛出的受检异常，携带失败原因分类。
+ * Checked exception thrown when NBT binary encoding or decoding fails. It carries a
+ * {@link Reason} that classifies the failure.
  */
 public final class NbtBinaryException extends Exception {
     private static final long serialVersionUID = 1L;
 
-    /** 失败原因分类。 */
+    /** Classifies why encoding or decoding failed. */
     public enum Reason { INVALID, LIMIT, FILE_SIZE, UNSUPPORTED }
 
     private final Reason reason;
 
     /**
-     * @param reason  失败原因（{@link Reason} 枚举）
-     * @param message 说明
-     * @param cause   底层原因，可为 {@code null}
+     * @param reason  why encoding or decoding failed, as a {@link Reason} value
+     * @param message the detail message
+     * @param cause   the underlying cause, or {@code null}
      */
     public NbtBinaryException(Reason reason, String message, Throwable cause) {
         super(message, cause);
@@ -22,14 +23,14 @@ public final class NbtBinaryException extends Exception {
     }
 
     /**
-     * @param reason  失败原因（{@link Reason} 枚举）
-     * @param message 说明
+     * @param reason  why encoding or decoding failed, as a {@link Reason} value
+     * @param message the detail message
      */
     public NbtBinaryException(Reason reason, String message) {
         this(reason, message, null);
     }
 
-    /** 返回失败原因。 */
+    /** Returns the failure reason. */
     public Reason reason() {
         return reason;
     }

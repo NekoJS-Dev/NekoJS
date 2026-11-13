@@ -11,9 +11,9 @@ import java.lang.reflect.*;
 import java.util.*;
 
 /**
- * index.d.ts 文件生成器：为每个包生成模块声明文件。
+ * Generates the index.d.ts files: one module declaration file per package.
  *
- * <p>格式参考 ProbeJS：
+ * <p>The layout follows ProbeJS:
  * <pre>
  * import { $ClassA } from "java:other/package";
  * export * as subpackage from "java:package/subpackage";
@@ -28,7 +28,7 @@ public final class IndexFileGenerator {
     private final AdapterAliasGenerator adapterAliasGenerator;
     private final FunctionalInterfaceAliasGenerator functionalInterfaceAliasGenerator;
 
-    // 性能缓存（线程安全，支持并行生成）
+    // Caches used for performance. They are thread-safe, so generation can run in parallel.
     private final java.util.concurrent.ConcurrentHashMap<String, Class<?>> classCache = new java.util.concurrent.ConcurrentHashMap<>();
     private final java.util.concurrent.ConcurrentHashMap<String, String> declCache = new java.util.concurrent.ConcurrentHashMap<>();
     private final java.util.concurrent.ConcurrentHashMap<String, Set<String>> importCache = new java.util.concurrent.ConcurrentHashMap<>();
@@ -41,20 +41,27 @@ public final class IndexFileGenerator {
     private final java.util.concurrent.ConcurrentHashMap<String, com.tkisor.nekojs.probe.ir.TypeScriptAuthoringEmission.Declaration> authoringDeclarations = new java.util.concurrent.ConcurrentHashMap<>();
     private final Set<String> authoredClasses = java.util.concurrent.ConcurrentHashMap.newKeySet();
     /**
-     * 枚举输入别名缓存（FQN → 别名名 + 就近发射的声明行）。predeclareClass 时从 {@link TypeDecl}
-     * 计算，generate() 在枚举所在包模块内发射（{@code $Color_ = $Color | "RED" | ...}）。
-     * 参数放宽由 {@link com.tkisor.nekojs.probe.types.TypeAliasRegistry} 对枚举 FQN 的
-     * 惰性别名解析完成（与适配器别名经 registerClassAlias 放宽参数的机制同一出口）。
+     * Cache of enum input aliases: FQN to the alias name plus the declaration line emitted next to the
+     * enum. predeclareClass computes an entry from the {@link TypeDecl}, and generate() emits it inside
+     * the module of the package that holds the enum ({@code $Color_ = $Color | "RED" | ...}). Parameter
+     * widening is handled by the lazy alias resolution that
+     * {@link com.tkisor.nekojs.probe.types.TypeAliasRegistry} performs for enum FQNs, the same path
+     * adapter aliases take through registerClassAlias.
      */
     private final java.util.concurrent.ConcurrentHashMap<String, EnumAlias> enumAliasCache = new java.util.concurrent.ConcurrentHashMap<>();
 
-    /** 枚举输入别名：别名名（如 {@code $DyeColor_}）+ 完整声明行（含换行）。 */
+    /**
+     * One enum input alias: the alias name (such as {@code $DyeColor_}) plus the complete declaration
+     * line, including the trailing newline.
+     */
     private record EnumAlias(String aliasName, String declaration) {}
 
     /**
-     * 被 {@code probe.modify_type} 隐藏（hide）的类 FQN 集合：generate 时过滤这些类的 import 与
-     * 类型别名，防止其他类（反射 import 收集）悬空引用已隐藏类。由 backend 在每次 generate 前
-     * 经 {@link #setHiddenClasses(Set)} 设置；{@link #clearCaches()} 不清除本集合（backend 重新设置）。
+     * FQNs of the classes that {@code probe.modify_type} hides. generate filters the imports and type
+     * aliases of these classes so other classes cannot keep a dangling reference to a hidden class
+     * through the imports collected by reflection. The backend sets the set through
+     * {@link #setHiddenClasses(Set)} before every generate; {@link #clearCaches()} does not clear it, the
+     * backend sets it again.
      */
     private volatile Set<String> hiddenClasses = Set.of();
 
@@ -75,14 +82,15 @@ public final class IndexFileGenerator {
     }
 
     /**
-     * 为一个包节点生成 index.d.ts 内容。
+     * Generates the index.d.ts content for one package node.
      */
     public String generate(String packageName, List<String> classNames, List<String> subpackages,
                            Set<String> allClasses) {
         StringBuilder sb = new StringBuilder();
         String modulePath = "java:" + packageName.replace('.', '/');
 
-        // 收集需要 import 的类（predeclareClass 已按 IR 计算并缓存；缓存缺失表示该类反射失败，跳过）
+        // Collect the classes that need an import. predeclareClass already computed them from the IR and
+        // cached them; a missing cache entry means reflection failed for that class, so it is skipped.
         Set<String> importsNeeded = new LinkedHashSet<>();
         for (String simpleName : classNames) {
             String fullName = packageName + "." + simpleName;
@@ -92,7 +100,8 @@ public final class IndexFileGenerator {
             }
         }
 
-        // 合并适配器输入别名引用的跨包类型（如 $Item、$NekoId），并探测是否引用了 @special 注册表字面量
+        // Merge the cross-package types that adapter input aliases reference (such as $Item, $NekoId) and
+        // record whether any of them references an @special registry literal.
         boolean moduleUsesRegistry = classNames.stream()
                 .anyMatch(name -> registryShapeClasses.contains(packageName + "." + name));
         for (String simpleName : classNames) {
@@ -102,12 +111,13 @@ public final class IndexFileGenerator {
             if (alias.usesRegistry()) moduleUsesRegistry = true;
         }
 
-        // 引用 @special 注册表字面量时，需要导入 RegistryTypes 命名空间
+        // A reference to an @special registry literal needs an import of the RegistryTypes namespace.
         if (moduleUsesRegistry) {
             sb.append("import type { RegistryTypes } from \"@special/types\";\n");
         }
 
-        // C5a：过滤被 hide 的类——其他类的反射 import 收集仍会引用它们（悬空），统一在此剔除
+        // Drop the hidden classes. The reflection-based import collection of other classes still
+        // references them, which would leave dangling names, so they are removed here.
         if (!hiddenClasses.isEmpty()) {
             importsNeeded.removeIf(hiddenClasses::contains);
         }
@@ -175,14 +185,16 @@ public final class IndexFileGenerator {
                 ? adapterAliasGenerator.aliasRegistry().withReferences(importNames::reference)
                 : adapterAliasGenerator.aliasRegistry();
 
-        // 生成 import 语句（按包分组；包内符号名按字典序排序，保证跨 JVM 运行输出确定——
-        // 反射的 getInterfaces/getDeclaredMethods 顺序无规范保证，直接沿用首插序会导致产物抖动）
+        // Emit the import statements, grouped by package. Symbol names inside a package are sorted
+        // alphabetically so the output is identical on every JVM run: reflection gives no guaranteed
+        // order for getInterfaces/getDeclaredMethods, and keeping first-insertion order makes the output
+        // drift between runs.
         if (!importsNeeded.isEmpty()) {
             Map<String, List<String>> importsByPackage = new TreeMap<>();
             for (var binding : importNames.bindings().entrySet()) {
                 String fqn = binding.getKey().fqn();
                 int dot = fqn.lastIndexOf('.');
-                if (dot < 0) continue; // 默认包的类无法通过模块路径导入，跳过
+                if (dot < 0) continue; // Classes in the default package cannot be imported through a module path, so skip them.
                 String pkg = fqn.substring(0, dot);
                 List<String> names = importsByPackage.computeIfAbsent(pkg, k -> new ArrayList<>());
                 String exported = binding.getKey().exportedName();
@@ -200,7 +212,7 @@ public final class IndexFileGenerator {
             sb.append("\n");
         }
 
-        // 额外的 import 语句（来自 TypeScriptClassRenderer.overrideGetter）
+        // Extra import statements, produced by TypeScriptClassRenderer.overrideGetter.
         for (String stmt : extraImports) {
             sb.append(stmt).append("\n");
         }
@@ -208,7 +220,7 @@ public final class IndexFileGenerator {
             sb.append("\n");
         }
 
-        // 生成子包 re-export
+        // Emit the re-exports of the subpackages.
         for (String sub : subpackages) {
             sb.append("export * as ").append(sub).append(" from \"")
               .append(modulePath).append("/").append(sub).append("\";\n");
@@ -217,7 +229,7 @@ public final class IndexFileGenerator {
             sb.append("\n");
         }
 
-        // 生成模块声明（仅当包内有类时）
+        // Emit the module declaration, only when the package has classes.
         if (!classNames.isEmpty()) {
             sb.append("declare module \"").append(modulePath).append("\" {\n");
 
@@ -238,8 +250,9 @@ public final class IndexFileGenerator {
                 }
             }
 
-            // 生成类型别名：优先适配器驱动的输入别名（$ItemStack_ 等），其次枚举字面量别名
-            // （$DyeColor_ = $DyeColor | "RED" | ...），否则回退到集合/残留别名
+            // Emit the type aliases: adapter-driven input aliases first (such as $ItemStack_), then the
+            // enum literal aliases ($DyeColor_ = $DyeColor | "RED" | ...), and otherwise the collection
+            // and leftover aliases.
             for (String simpleName : classNames) {
                 String fullName = packageName + "." + simpleName;
                 if (hiddenClasses.contains(fullName)) continue;
@@ -321,7 +334,7 @@ public final class IndexFileGenerator {
     }
 
     /**
-     * 生成根 index.d.ts（re-export 所有一级包）。
+     * Generates the root index.d.ts, which re-exports every top-level package.
      */
     public String generateRoot(List<String> topPackages) {
         StringBuilder sb = new StringBuilder();
@@ -346,7 +359,8 @@ public final class IndexFileGenerator {
 
     private void collectTypeImports(Type type, Set<String> imports, String currentPackage) {
         if (type instanceof Class<?> cls) {
-            // 数组类：递归收集组件类型，避免 "[Lnet/.../Foo;" 描述符泄漏到 import
+            // The class is an array: collect the component type recursively, so the "[Lnet/.../Foo;"
+            // descriptor never leaks into an import.
             if (cls.isArray()) {
                 collectTypeImports(cls.getComponentType(), imports, currentPackage);
                 return;
@@ -385,11 +399,12 @@ public final class IndexFileGenerator {
 
     /** Generates fallback aliases, sharing native collection input rules with ordinary parameter rendering. */
     private String generateTypeAlias(String fullName, String simpleName) {
-        // C5a：隐藏类的别名不生成（其声明已为空，别名会悬空引用 $Hidden）
+        // No alias is generated for a hidden class: its declaration is empty, so the alias would
+        // reference $Hidden and dangle.
         if (hiddenClasses.contains(fullName)) return null;
 
-        // 需要别名的类型：(完整名, 类型参数数量, 别名模板)
-        // 别名模板中 {0} = 第一个类型参数, {1} = 第二个类型参数
+        // Types that need an alias: the full name, the type parameter count and the alias template.
+        // In the template, {0} is the first type parameter and {1} is the second one.
         String alias = TypeAliasRegistry.collectionInputAlias(fullName) != null ? "COLLECTION_INPUT" : switch (fullName) {
             // Native List/Collection/Map conversions do not extend to concrete classes or subinterfaces.
             case "java.util.ArrayList", "java.util.LinkedList", "java.util.SequencedCollection",
@@ -402,7 +417,7 @@ public final class IndexFileGenerator {
                  "java.util.stream.Stream", "java.util.stream.IntStream",
                  "java.util.stream.LongStream", "java.util.stream.DoubleStream" ->
                     "{0}[]";
-            // ========== 非 adapter 的残留输入别名（无对应适配器，固定类型）==========
+            // ========== Leftover input aliases with no adapter, mapped to a fixed type ==========
             case "net.minecraft.world.item.Items" ->
                     "NON_GENERIC:$Items";
             case "net.minecraft.core.BlockPos" ->
@@ -419,8 +434,8 @@ public final class IndexFileGenerator {
         Class<?> cls = findClass(fullName);
         if (cls == null) return null;
 
-        // 非泛型的 adapter 输入别名（如 $ItemStack_ = $ItemStack | string）
-        // 这些没有类型参数，直接生成固定类型
+        // Non-generic adapter input aliases (such as $ItemStack_ = $ItemStack | string). They have no type
+        // parameters, so the fixed type is emitted directly.
         if (alias.startsWith("NON_GENERIC:")) {
             return "    export type $" + simpleName + "_ = " + alias.substring("NON_GENERIC:".length()) + ";\n";
         }
@@ -428,13 +443,13 @@ public final class IndexFileGenerator {
         TypeVariable<?>[] typeParams = cls.getTypeParameters();
         if (typeParams.length == 0) return null;
 
-        // 构建类型参数列表
+        // Build the type parameter list.
         StringJoiner paramJoiner = new StringJoiner(", ");
         for (TypeVariable<?> tp : typeParams) {
             paramJoiner.add(tp.getName());
         }
 
-        // 替换模板中的占位符
+        // Replace the placeholders in the template.
         String result = switch (alias) {
             case "COLLECTION_INPUT" -> adapterAliasGenerator.aliasRegistry().getCollectionAlias(fullName,
                     Arrays.stream(typeParams).map(TypeVariable::getName).toArray(String[]::new));
@@ -451,7 +466,7 @@ public final class IndexFileGenerator {
     }
 
     // ------------------------------------------------------------------
-    //  IR 唯一路径（Phase 2.7）：单次反射 → TypeDecl → 声明 + import 集合
+    //  IR path: one reflection pass produces a TypeDecl, which yields the declaration and the import set.
     // ------------------------------------------------------------------
 
     /** Collects imports from reflected heritage, generic bounds, fields and executable signatures. */
@@ -463,7 +478,7 @@ public final class IndexFileGenerator {
             collectTypeImports(decl.superType.sourceType, imports, currentPackage);
         }
 
-        // 接口
+        // Interfaces.
         for (TypeSlot iface : decl.interfaces) {
             collectTypeImports(iface.sourceType, imports, currentPackage);
         }
@@ -476,7 +491,8 @@ public final class IndexFileGenerator {
             }
         }
 
-        // 公开字段（IR 字段集 = 旧实现的公开字段集，含枚举常量）
+        // Public fields. The IR field set matches the public field set of the earlier implementation and
+        // includes the enum constants.
         for (FieldDecl field : decl.fields) {
             collectTypeImports(field.type.sourceType, imports, currentPackage);
         }
@@ -495,9 +511,10 @@ public final class IndexFileGenerator {
     }
 
     /**
-     * IR 唯一路径的类预声明：用 {@link TypeScriptClassRenderer} 渲染 {@link TypeDecl} 并缓存
-     * 声明与 import 集合（单次反射的多产物消费）。{@code extraImportFqns} 为 {@code modify_type}
-     * 编辑引入的额外 SYMBOL 全限定名（可为空）。
+     * Predeclares a class on the IR path: renders the {@link TypeDecl} with
+     * {@link TypeScriptClassRenderer} and caches the declaration and the import set, so one reflection
+     * pass feeds both outputs. {@code extraImportFqns} holds the extra SYMBOL fully qualified names that
+     * a {@code modify_type} edit introduced, and may be empty.
      */
     public void predeclareClass(String fqn, TypeDecl decl, Set<String> extraImportFqns) {
         irCache.put(fqn, decl);
@@ -553,13 +570,17 @@ public final class IndexFileGenerator {
     }
 
     /**
-     * 为枚举 {@link TypeDecl} 计算输入别名声明（{@code $Color_ = $Color | "RED" | ...}）并缓存，
-     * 供 {@link #generate} 在枚举所在包模块内就近发射。常量顺序与 {@code TypeScriptClassRenderer.renderEnum}
-     * 的静态常量发射完全一致（同一 {@code decl.fields} 序——TypeReflector 已按名字稳定排序），
-     * 不截断（对齐 ProbeJS：长枚举也发全量字面量联合）。
+     * Computes and caches the input alias declaration for an enum {@link TypeDecl}
+     * ({@code $Color_ = $Color | "RED" | ...}), so {@link #generate} can emit it next to the enum inside
+     * the module of the package that holds it. The constant order matches the static constant emission
+     * of {@code TypeScriptClassRenderer.renderEnum} exactly, because it uses the same
+     * {@code decl.fields} order, which TypeReflector has already sorted by name. Nothing is truncated:
+     * as in ProbeJS, long enums still get the full literal union.
      *
-     * <p>跳过：非枚举、被 hide 的枚举（声明为空，别名会悬空）、无 sourceClass 且未改名的
-     * 合成枚举（无法得出与声明一致的稳定命名）。适配器目标为枚举时适配器别名优先（generate 处判定）。
+     * <p>Skipped: types that are not enums; hidden enums, whose declaration is empty so the alias would
+     * dangle; and synthetic enums that have no sourceClass and were not renamed, because no stable name
+     * consistent with the declaration can be derived. When an adapter targets an enum, the adapter alias
+     * wins (decided in generate).
      */
     private void registerEnumAlias(String fqn, TypeDecl decl) {
         if (decl.kind != TypeDecl.Kind.ENUM || decl.hidden) return;
@@ -569,7 +590,8 @@ public final class IndexFileGenerator {
         StringBuilder union = new StringBuilder(aliasName).append(" = $").append(name);
         for (FieldDecl f : decl.fields) {
             if (!f.hidden && f.isEnumConstant) {
-                // 枚举常量名是合法 Java 标识符，直接双引号包裹（与 renderEnum 的静态常量同名）
+                // Enum constant names are valid Java identifiers, so they are wrapped in double quotes as
+                // is, with the same name as the static constant that renderEnum emits.
                 union.append(" | \"").append(f.effectiveName()).append("\"");
             }
         }
@@ -577,7 +599,10 @@ public final class IndexFileGenerator {
                 "    export type " + union + ";\n"));
     }
 
-    /** 渲染用的枚举名：镜像 TypeScriptClassRenderer.tsClassName（内部类 Parent$Child）；无源类 → null。 */
+    /**
+     * Enum name used for rendering. It mirrors TypeScriptClassRenderer.tsClassName and gives
+     * Parent$Child for nested classes. Returns null when there is no source class.
+     */
     private static String tsEnumName(Class<?> cls) {
         if (cls == null) return null;
         if (cls.getEnclosingClass() != null && !cls.isAnonymousClass()) {
@@ -592,8 +617,8 @@ public final class IndexFileGenerator {
     }
 
     /**
-     * 设置本次生成需过滤的隐藏类 FQN 集合（空集 = 清除上一轮的隐藏状态）。
-     * 由 {@code TypeScriptProbeBackend} 在每次 generate 前调用。
+     * Sets the FQNs of the hidden classes to filter during this generation; an empty set clears the
+     * hidden state of the previous run. {@code TypeScriptProbeBackend} calls this before each generate.
      */
     public void setHiddenClasses(Set<String> hidden) {
         this.hiddenClasses = hidden == null || hidden.isEmpty() ? Set.of() : Set.copyOf(hidden);

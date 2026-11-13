@@ -14,8 +14,9 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * 脚本包模型聚焦测试：manifest 宽松解析、状态文件优先级、目录扫描规则
- * （非包目录忽略 / 损坏 manifest 跳过 / id 清洗与去重 / 字母序）、WORLD 激活与卸载。
+ * Focused tests for the script pack model: lenient manifest parsing, state file precedence, directory
+ * scan rules (non-pack directories ignored, broken manifests skipped, id sanitizing and
+ * deduplication, alphabetical order), and WORLD activation and unload.
  */
 class ScriptPackRegistryTest {
 
@@ -35,13 +36,13 @@ class ScriptPackRegistryTest {
         Path dir = pack(packsRoot, "demo", "{\"version\": \"1.2.3\"}");
         ScriptPackManifest manifest = ScriptPackManifest.load(dir, "demo");
 
-        assertEquals("demo", manifest.id()); // id 缺失回退目录名
-        assertEquals("demo", manifest.name()); // name 缺失回退 id
+        assertEquals("demo", manifest.id()); // A missing id falls back to the directory name.
+        assertEquals("demo", manifest.name()); // A missing name falls back to the id.
         assertEquals("1.2.3", manifest.version());
         assertEquals("", manifest.description());
         assertTrue(manifest.authors().isEmpty());
-        assertTrue(manifest.enabledByDefault()); // 默认启用
-        assertTrue(manifest.clientSync()); // 默认随服分发
+        assertTrue(manifest.enabledByDefault()); // Enabled by default.
+        assertTrue(manifest.clientSync()); // Shipped with the server by default
         assertNull(manifest.signature());
     }
 
@@ -65,20 +66,21 @@ class ScriptPackRegistryTest {
         ScriptPackRegistry registry = new ScriptPackRegistry();
         registry.refreshGlobalPacks(packsRoot);
 
-        // 只有 on_by_state（manifest 禁用 + 状态文件启用）处于启用态；
-        // off_by_manifest（manifest 禁用、无状态文件）与 off_by_state（状态文件禁用）均不参与发现。
+        // Only on_by_state is enabled: the manifest disables it and the state file enables it.
+        // off_by_manifest (manifest disabled, no state file) and off_by_state (state file
+        // disabled) are not discovered.
         assertEquals(
             List.of("on_by_state"),
             registry.enabledPacks().stream().map(ScriptPack::id).toList());
-        assertEquals(3, registry.globalPacks().size()); // 全部被扫描，禁用者仅不参与发现
+        assertEquals(3, registry.globalPacks().size()); // All packs are scanned; a disabled pack is only left out of discovery.
     }
 
     @Test
     void scanIgnoresNonPacksSortsByIdAndDeduplicates() throws Exception {
         pack(packsRoot, "zeta", "{}");
         pack(packsRoot, "alpha", "{}");
-        Files.createDirectories(packsRoot.resolve("plain_directory")); // 无 manifest：非包
-        pack(packsRoot, "Alpha", "{}"); // 清洗后与 alpha 撞 id：后者跳过
+        Files.createDirectories(packsRoot.resolve("plain_directory")); // No manifest: not a pack.
+        pack(packsRoot, "Alpha", "{}"); // Collides with alpha after id cleaning, so the later one is skipped.
 
         ScriptPackRegistry registry = new ScriptPackRegistry();
         registry.refreshGlobalPacks(packsRoot);
@@ -94,7 +96,7 @@ class ScriptPackRegistryTest {
         registry.refreshGlobalPacks(packsRoot);
 
         assertEquals(1, registry.globalPacks().size());
-        assertEquals("my_pack_", registry.globalPacks().get(0).id()); // 目录名与 manifest id 同源清洗
+        assertEquals("my_pack_", registry.globalPacks().get(0).id()); // Directory names and manifest ids are cleaned the same way.
     }
 
     @Test
@@ -109,7 +111,7 @@ class ScriptPackRegistryTest {
         assertEquals(List.of("world_pack"), activated.stream().map(ScriptPack::id).toList());
         assertEquals(
             List.of("global_pack", "world_pack"),
-            registry.enabledPacks().stream().map(ScriptPack::id).toList()); // GLOBAL 在前
+            registry.enabledPacks().stream().map(ScriptPack::id).toList()); // GLOBAL packs come first.
         assertEquals(ScriptPackScope.WORLD, registry.worldPacks().get(0).scope());
 
         List<ScriptPack> removed = registry.deactivateWorldPacks();

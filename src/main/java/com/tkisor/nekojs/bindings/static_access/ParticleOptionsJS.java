@@ -13,12 +13,13 @@ import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
 
 /**
- * {@code ParticleOptions} 工厂 helper（绑定全局 {@code ParticleOptions}，成员委托
- * {@link ParticleOptions} 接口）。
+ * Factory helper for {@code ParticleOptions}, bound as the global {@code ParticleOptions} with its
+ * members delegating to the {@link ParticleOptions} interface.
  *
- * <p>无参粒子：{@code ParticleOptions.of('minecraft:cloud')} 直接返回粒子类型本身
- * （ParticleType 实现 ParticleOptions）。带参粒子：{@code ParticleOptions.of('minecraft:dust', {color: [1,0,0], size: 1})}——
- * options 走该粒子类型的 Codec 解析。
+ * <p>Particle without options: {@code ParticleOptions.of('minecraft:cloud')} returns the particle
+ * type itself (ParticleType implements ParticleOptions). Particle with options:
+ * {@code ParticleOptions.of('minecraft:dust', {color: [1,0,0], size: 1})} parses the options
+ * through that particle type's Codec.
  */
 public class ParticleOptionsJS {
 
@@ -38,8 +39,9 @@ public class ParticleOptionsJS {
                 .orElseThrow(() -> new ValueConversionException(ParticleOptions.class, "registered particle id",
                         particleId, "particle not found: " + particleId));
         JsonElement json = JsonObjectAdapter.convertValueToJson(options);
-        // MapCodec#parse(DynamicOps, T) 只在部分 DFU 版本存在；decode(ops, MapLike) 是
-        // MapCodec 的抽象核心方法，全版本可用——先经 ops.getMap 把 JsonElement 转 MapLike
+        // MapCodec#parse(DynamicOps, T) exists only in some DFU versions; decode(ops, MapLike) is the abstract
+        // core method of MapCodec and is available in every version, so turn the JsonElement into a
+        // MapLike through ops.getMap first
         var map = JsonOps.INSTANCE.getMap(json)
                 .getOrThrow(failure -> new ValueConversionException(ParticleOptions.class,
                         "particle options object for '" + particleId + "'", options, failure));

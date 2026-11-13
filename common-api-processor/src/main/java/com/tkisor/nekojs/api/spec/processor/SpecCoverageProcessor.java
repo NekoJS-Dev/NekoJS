@@ -26,42 +26,50 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * 编译期处理器：验证各平台 Extension 接口真正覆盖了其 extends 的 Spec 接口的所有 neko$ 方法。
+ * Compile-time processor that checks that each platform Extension interface really covers every
+ * {@code neko$} method of the Spec interfaces it extends.
  *
- * <p>工作原理：扫描编译单元中所有接口声明，对每个直接或间接 extends 某 Spec 接口（带
- * {@code @PlatformAvailability} 注解的接口）的接口，检查 Spec 的每个 {@code neko$} 方法
- * 是否被该接口<b>自己声明</b>（而非继承哨兵 default）。
+ * <p>How it works: it scans every interface declared in the compilation unit. For each interface
+ * that directly or indirectly extends a Spec interface (an interface annotated with
+ * {@code @PlatformAvailability}), it checks whether each {@code neko$} method of the Spec is
+ * <b>declared by that interface itself</b> rather than inherited from the sentinel default.
  *
- * <p>未覆盖 → 编译 ERROR（IDE 红线）。
+ * <p>Missing coverage becomes a compile ERROR (a red line in the IDE).
  *
- * <p><b>平台范围强制（可选）</b>：编译时传 {@code -Anekojs.platform=<nf|cr>}（nf = NeoForge
- * 系列，cr = Cleanroom）后，额外按 {@link PlatformAvailability.Scope} 语义校验：scope 要求
- * 当前平台实现、但本次编译中没有任何非 Spec 接口<b>直接 extends</b> 该 spec → 编译 ERROR。
- * 未传该选项时只做方法覆盖校验（历史行为），spec 接口完全缺失时处理器静默跳过。
+ * <p><b>Platform scope enforcement (optional)</b>: when the compiler receives
+ * {@code -Anekojs.platform=<nf|cr>} (nf = the NeoForge family, cr = Cleanroom), the processor also
+ * checks the {@link PlatformAvailability.Scope} semantics: if the scope requires the current
+ * platform to implement a spec but no non-Spec interface in this compilation <b>directly extends</b>
+ * that spec, it reports a compile ERROR. Without the option it only checks method coverage; when no
+ * spec interface exists at all, the processor skips silently.
  */
 @SupportedAnnotationTypes("*")
 @SupportedOptions(SpecCoverageProcessor.PLATFORM_OPTION)
 public class SpecCoverageProcessor extends AbstractProcessor {
 
-    /** 编译选项名：目标平台（nf = NeoForge 系列 / 26.x + 1.21.1，cr = Cleanroom 1.12.2）。 */
+    /** Compile option name for the target platform (nf = the NeoForge family / 26.x + 1.21.1,
+    cr = Cleanroom 1.12.2). */
     static final String PLATFORM_OPTION = "nekojs.platform";
 
-    /** spec 接口所在包；扫描这些包以枚举全部 spec（含仅存在于 classpath 的）。 */
+    /** Packages that hold the spec interfaces; they are scanned to enumerate every spec, including
+    the ones that exist only on the classpath. */
     private static final String[] SPEC_PACKAGES = {
         "com.tkisor.nekojs.api.spec",
         "com.tkisor.nekojs.api.spec.inject"
     };
 
-    /** 平台范围校验只关心 nekojs 自己的接口层级，其它包（如 net.minecraft.*）不可能是 spec 链的一环。 */
+    /** Platform scope checks only care about the nekojs interface hierarchy; other packages such as
+    net.minecraft.* can never be part of a spec chain. */
     private static final String NEKOJS_PACKAGE_PREFIX = "com.tkisor.nekojs.";
 
     private Types types;
     private Elements elements;
     private Messager messager;
 
-    /** 解析后的目标平台（"nf" / "cr"）；null 表示未传选项或值非法（非法时已报错）。 */
+    /** Parsed target platform ("nf" / "cr"); null means the option was absent or its value was
+    invalid (an invalid value is already reported as an error). */
     private String platform;
-    /** 保证平台选项解析 + 范围校验只在首个 round 执行一次。 */
+    /** Makes platform option parsing and scope checking run once, in the first round only. */
     private boolean scopeCheckDone;
 
     @Override
@@ -72,7 +80,8 @@ public class SpecCoverageProcessor extends AbstractProcessor {
         this.messager = env.getMessager();
     }
 
-    /** 不锁死具体版本：跟随运行编译器的最新 SourceVersion，避免新 JDK 上的过时警告。 */
+    /** Does not pin a version: follows the latest SourceVersion of the running compiler, so new JDKs
+    do not report outdated warnings. */
     @Override
     public SourceVersion getSupportedSourceVersion() {
         return SourceVersion.latestSupported();
@@ -100,16 +109,17 @@ public class SpecCoverageProcessor extends AbstractProcessor {
     }
 
     /**
-     * 解析 -Anekojs.platform 选项；值非法时报 ERROR（快速失败，防止拼错后校验静默失效）。
+     * Parses the -Anekojs.platform option; an invalid value is reported as an ERROR (fail fast, so
+     * a typo cannot silently disable the check).
      */
     private void resolvePlatformOption() {
         String raw = processingEnv.getOptions().get(PLATFORM_OPTION);
-        if (raw == null) return; // 未启用平台范围校验
+        if (raw == null) return; // Platform scope checking is not enabled.
         String value = raw.trim().toLowerCase(Locale.ROOT);
         if ("nf26".equals(value) || "nf121".equals(value) || "cr".equals(value)) {
             platform = value;
         } else if ("nf".equals(value)) {
-            // 旧值在平台标签化后无法区分 26.x 与 1.21.1，快速失败逼升级
+            // "nf" cannot tell 26.x from 1.21.1, so fail fast and force the caller to name the platform.
             messager.printMessage(Diagnostic.Kind.ERROR,
                 "-A" + PLATFORM_OPTION + "=nf 已废弃：请按平台传 nf26（NeoForge 26.x）/ nf121（1.21.1）/ cr（Cleanroom）");
         } else {
@@ -119,8 +129,9 @@ public class SpecCoverageProcessor extends AbstractProcessor {
     }
 
     /**
-     * 平台范围强制：枚举全部 spec 接口，按 scope 判定本平台必须实现哪些；
-     * 必须 implement 却没有任何非 Spec 接口直接 extends → ERROR。
+     * Enforces platform scope: enumerates every spec interface and uses its scope to decide which
+     * ones this platform must implement. A required spec that no non-Spec interface directly
+     * extends is an ERROR.
      */
     private void enforcePlatformScope(RoundEnvironment round) {
         Map<String, TypeElement> specs = new HashMap<>();
@@ -134,11 +145,12 @@ public class SpecCoverageProcessor extends AbstractProcessor {
             return;
         }
 
-        // 收集被本次编译中非 Spec 接口直接 extends 的 spec（qualified name 去重）
+        // Collect the specs that non-Spec interfaces in this compilation extend directly, deduplicated by
+        // qualified name.
         Set<String> covered = new HashSet<>();
         for (Element root : round.getRootElements()) {
             if (!(root instanceof TypeElement type) || !type.getKind().isInterface()) continue;
-            if (isSpec(type)) continue; // Spec（或 Spec 间 extends）不算实现
+            if (isSpec(type)) continue; // A spec, or a spec extending another spec, does not count as an implementation.
             for (TypeMirror superType : type.getInterfaces()) {
                 Element superElem = types.asElement(superType);
                 if (superElem instanceof TypeElement specIface && isSpec(specIface)) {
@@ -158,7 +170,8 @@ public class SpecCoverageProcessor extends AbstractProcessor {
         }
     }
 
-    /** 枚举 spec 包里的全部 spec 接口（含仅存在于 classpath / common-api jar 的）。 */
+    /** Enumerates every spec interface in the spec packages, including the ones that exist only on the
+    classpath or in the common-api jar. */
     private void collectSpecsFromPackages(Map<String, TypeElement> specs) {
         for (String packageName : SPEC_PACKAGES) {
             PackageElement pkg = elements.getPackageElement(packageName);
@@ -173,7 +186,8 @@ public class SpecCoverageProcessor extends AbstractProcessor {
         }
     }
 
-    /** 兜底：从编译单元接口的父接口闭包中补充发现 spec（只下钻 nekojs 包，避免展开 MC 类型）。 */
+    /** Fallback: finds more specs in the parent-interface closure of the compilation unit interfaces.
+    It only descends into nekojs packages, so Minecraft types are never expanded. */
     private void collectSpecsFromRoots(RoundEnvironment round, Map<String, TypeElement> specs) {
         for (Element root : round.getRootElements()) {
             if (!(root instanceof TypeElement type) || !type.getKind().isInterface()) continue;
@@ -195,13 +209,13 @@ public class SpecCoverageProcessor extends AbstractProcessor {
         }
     }
 
-    /** 读取 spec 的 scope；注解缺失时按默认值 ALL 对待。 */
+    /** Reads the scope of a spec; a missing annotation is treated as the default value ALL. */
     private PlatformAvailability.Scope scopeOf(TypeElement spec) {
         PlatformAvailability availability = spec.getAnnotation(PlatformAvailability.class);
         return availability != null ? availability.value() : PlatformAvailability.Scope.ALL;
     }
 
-    /** scope 语义：ALL = 所有平台；NF_ONLY = 仅 nf；CR_ONLY = 仅 cr。 */
+    /** Scope meaning: ALL = every platform; NF_ONLY = nf only; CR_ONLY = cr only. */
     private boolean isRequiredOn(PlatformAvailability.Scope scope) {
         return scope == PlatformAvailability.Scope.ALL
             || (scope == PlatformAvailability.Scope.NF_ONLY && ("nf26".equals(platform) || "nf121".equals(platform)))
@@ -210,7 +224,8 @@ public class SpecCoverageProcessor extends AbstractProcessor {
     }
 
     /**
-     * 检查给定接口是否 extends 某 Spec 接口；若是，验证 Spec 的每个 neko$ 方法都被覆盖。
+     * Checks whether the given interface extends a Spec interface; if it does, verifies that the
+     * interface covers every neko$ method of that Spec.
      */
     private void checkSpecCoverage(TypeElement implInterface) {
         for (TypeMirror superType : implInterface.getInterfaces()) {
@@ -218,14 +233,15 @@ public class SpecCoverageProcessor extends AbstractProcessor {
             if (!(superElem instanceof TypeElement specInterface)) continue;
             if (!isSpec(specInterface)) continue;
 
-            // 找出 Spec 的所有 neko$ 方法，逐个检查是否被 implInterface（或其非 Spec 父接口）声明
+            // Find every neko$ method of the Spec and check whether implInterface (or one of its non-Spec
+            // parent interfaces) declares it.
             for (Element member : specInterface.getEnclosedElements()) {
                 if (!(member instanceof ExecutableElement specMethod)) continue;
                 String name = specMethod.getSimpleName().toString();
                 if (!name.startsWith("neko$")) continue;
                 if (specMethod.getKind() != javax.lang.model.element.ElementKind.METHOD) continue;
 
-                // 递归检查：implInterface 自己声明了？或其非 Spec 父接口声明了？
+                // Recursive check: did implInterface declare it, or did one of its non-Spec parent interfaces?
                 if (!isCovered(implInterface, specMethod)) {
                     messager.printMessage(Diagnostic.Kind.ERROR,
                         implInterface.getQualifiedName() + " 未覆盖 " +
@@ -238,19 +254,21 @@ public class SpecCoverageProcessor extends AbstractProcessor {
     }
 
     /**
-     * 递归检查：implInterface 或其非 Spec 父接口链中，是否声明了与 specMethod 同名同签名的方法。
+     * Recursively checks whether implInterface or its chain of non-Spec parent interfaces declares a
+     * method with the same name and signature as specMethod.
      *
-     * <p>关键：Spec 接口自己的 default 方法（哨兵）不算覆盖——只有<b>非 Spec</b> 接口声明了
-     * 同名同签名方法才算覆盖。
+     * <p>The key rule: a default method of the Spec interface itself (the sentinel) does not count
+     * as coverage. Only a method with the same name and signature declared by a <b>non-Spec</b>
+     * interface counts.
      */
     private boolean isCovered(TypeElement iface, ExecutableElement specMethod) {
-        // Spec 接口自己的哨兵 default 不算覆盖
+        // A sentinel default on the Spec interface itself does not count as coverage.
         if (isSpec(iface)) {
-            // 但仍需递归检查 Spec 的非 Spec 父接口（如果有中间接口的话）
+            // Still check the non-Spec parents of the Spec recursively, in case intermediate interfaces exist.
             return checkNonSpecParents(iface, specMethod);
         }
         String name = specMethod.getSimpleName().toString();
-        // 检查 iface 自己声明的成员
+        // Check the members declared by iface itself.
         for (Element member : iface.getEnclosedElements()) {
             if (member instanceof ExecutableElement m
                 && m.getSimpleName().toString().equals(name)
@@ -258,7 +276,7 @@ public class SpecCoverageProcessor extends AbstractProcessor {
                 return true;
             }
         }
-        // 递归检查父接口
+        // Check the parent interfaces recursively.
         for (TypeMirror parentType : iface.getInterfaces()) {
             Element parentElem = types.asElement(parentType);
             if (parentElem instanceof TypeElement parentIface) {
@@ -271,7 +289,8 @@ public class SpecCoverageProcessor extends AbstractProcessor {
     }
 
     /**
-     * Spec 接口的哨兵 default 不算覆盖；递归检查其非 Spec 父接口。
+     * A sentinel default on the Spec interface does not count as coverage; checks its non-Spec
+     * parent interfaces recursively.
      */
     private boolean checkNonSpecParents(TypeElement specIface, ExecutableElement specMethod) {
         for (TypeMirror parentType : specIface.getInterfaces()) {
@@ -286,14 +305,15 @@ public class SpecCoverageProcessor extends AbstractProcessor {
     }
 
     /**
-     * 判断一个接口是否为 Spec 接口（带 @PlatformAvailability 注解）。
+     * Tells whether an interface is a Spec interface, that is, one annotated with
+     * @PlatformAvailability.
      */
     private boolean isSpec(TypeElement iface) {
         return iface.getAnnotation(PlatformAvailability.class) != null;
     }
 
     /**
-     * 签名匹配：参数个数 + 每个参数类型相同。
+     * Matches signatures: the same parameter count and the same type for every parameter.
      */
     private boolean sameSignature(ExecutableElement a, ExecutableElement b) {
         if (a.getParameters().size() != b.getParameters().size()) return false;

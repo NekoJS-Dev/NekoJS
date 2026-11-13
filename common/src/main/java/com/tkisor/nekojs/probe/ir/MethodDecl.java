@@ -16,9 +16,9 @@ public final class MethodDecl {
     /** Distinguishes intentional edits of inherited copies from reflection's unedited overload copies. */
     public boolean explicitlyEdited;
     public String name;
-    public String renameTo;             // null = 用 name
+    public String renameTo;             // null = use name
     public final List<MethodParam> params = new ArrayList<>();
-    public TypeSlot returnType;         // 构造器可为 null
+    public TypeSlot returnType;         // may be null for a constructor
     public final List<String> typeParams = new ArrayList<>();
     /** Bound slots retain import dependencies for method type parameter declarations. */
     public final Map<String, List<TypeSlot>> typeParameterBounds = new LinkedHashMap<>();
@@ -26,11 +26,12 @@ public final class MethodDecl {
     public boolean isConstructor;
     public boolean isGetter;
     public boolean isSetter;
-    public String property;             // getter/setter 的属性名
-    public TypeSlot setterParamType;    // getter 配对的 setter 入参类型；null = 无 setter
+    public String property;             // property name for the getter/setter
+    public TypeSlot setterParamType;    // type of the setter parameter paired with the getter; null = no setter
     public boolean hidden;
     public final List<String> docs = new ArrayList<>();
-    /** 手写重载（{@code @Overload} 注解），渲染为同名附加声明。 */
+    /** A hand-written overload (from the {@code @Overload} annotation), rendered as an additional
+     *  declaration with the same name. */
     public final List<Overload> overloads = new ArrayList<>();
 
     public MethodDecl(String name) {
@@ -38,12 +39,13 @@ public final class MethodDecl {
     }
 
     /**
-     * 一条手写重载声明。参数条目与返回类型是 TypeScript 片段原样输出（{@code name: Type}），
-     * 不走 {@link TypeSlot} 反射链——这些签名本来就出现在反射表达不了的位置。
+     * One hand-written overload declaration. Its parameter entries and return type are TypeScript fragments
+     * emitted verbatim ({@code name: Type}); they do not go through the {@link TypeSlot} reflection chain,
+     * because these signatures describe positions reflection cannot express.
      */
     public static final class Overload {
         public final List<String> params;
-        /** 空串 = 沿用方法的反射返回类型（构造器无返回值语义）。 */
+        /** Empty string = keep the method's reflected return type (a constructor has no return value). */
         public final String returns;
         public final List<String> docs;
 
@@ -54,17 +56,17 @@ public final class MethodDecl {
         }
     }
 
-    /** 渲染时使用的名字（renameTo 优先）。 */
+    /** Name used when rendering; renameTo takes precedence when set. */
     public String effectiveName() {
         return renameTo != null ? renameTo : name;
     }
 
-    /** 方法参数（mutable，供 modify_type 参数级编辑）。 */
+    /** A method parameter. Mutable so modify_type can edit individual parameters. */
     public static final class MethodParam {
         public String name;
         public TypeSlot type;
         public boolean varargs;
-        /** TS 可选参数：渲染为 {@code name?: type}（modify_type markOptional 设置）。 */
+        /** Optional TypeScript parameter, rendered as {@code name?: type}; markOptional in modify_type sets it. */
         public boolean optional;
 
         public MethodParam(String name, TypeSlot type, boolean varargs) {

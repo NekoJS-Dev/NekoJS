@@ -1,7 +1,9 @@
-// 26.x 实现。1.21.1 的实现是 versions/1.21.1/src 下的同名文件，改本文件行为时须同步它。
-// 加载器分叉共三处（enchantById/hasEnchantment 的动态附魔注册表服务端访问、
-// componentIngredient 的组件匹配成分），均为行内 loader 守卫——对侧编译单元整段
-// 消失（guardLint 规则 7 豁免），无整文件守卫。
+// 26.x implementation. The 1.21.1 implementation is the file of the same name under
+// versions/1.21.1/src; keep it in sync when changing behavior here.
+// There are three loader forks (the server-side access to the dynamic enchantment registry in
+// enchantById/hasEnchantment, and the component-matching ingredient in componentIngredient). All of
+// them are inline loader guards: the other side's compilation unit disappears entirely (guardLint
+// rule 7 exempts it), so there is no whole-file guard.
 package com.tkisor.nekojs.api.inject;
 
 import com.tkisor.nekojs.api.annotation.HideFromJS;
@@ -159,14 +161,15 @@ public interface ItemStackExtension extends ItemStackSpec {
     }
 
     default boolean neko$hasEnchantment(Holder<Enchantment> enchantment, int level) {
-        // 26.x 移除 ItemStack#getEnchantmentLevel —— 经 ItemEnchantments 组件查等级
+        // 26.x removed ItemStack#getEnchantmentLevel; the level is read from the ItemEnchantments component
         return self().getOrDefault(DataComponents.ENCHANTMENTS, ItemEnchantments.EMPTY).getLevel(enchantment) >= level;
     }
 
     default Ingredient neko$asIngredient() {
         if (self().isEmpty()) return Ingredient.of();
         if (self().getComponentsPatch().isEmpty()) {
-            // builtInRegistryHolder 已废弃：从注册表 wrap 等价 holder（26.x 的 ItemStack 无 getItemHolder）
+            // builtInRegistryHolder is deprecated: wrap an equivalent holder from the registry (the 26.x
+            // ItemStack has no getItemHolder)
             return Ingredient.of(HolderSet.direct(BuiltInRegistries.ITEM.wrapAsHolder(self().getItem())));
         }
         return neko$weakNBT();
@@ -188,7 +191,7 @@ public interface ItemStackExtension extends ItemStackSpec {
         }
         return DataComponentIngredient.of(strict, components.build(), HolderSet.direct(BuiltInRegistries.ITEM.wrapAsHolder(self().getItem())));
         //?}
-        /* fabric 无 strict 区分：DefaultCustomIngredients.components 按整栈组件精确匹配 */
+        /* Fabric has no strict distinction: DefaultCustomIngredients.components matches the whole stack's components exactly */
         //? if fabric {
         /*return DefaultCustomIngredients.components(self());*/
         //?}

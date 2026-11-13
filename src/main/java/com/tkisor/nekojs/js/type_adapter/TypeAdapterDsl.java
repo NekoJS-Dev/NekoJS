@@ -7,22 +7,29 @@ import com.tkisor.nekojs.api.data.RecordJSTypeAdapter;
 import java.util.Map;
 
 /**
- * platform 侧 adapter 注册 DSL。Codec 是 MC 依赖，不能放在 common 模块，故提供此入口。
+ * Adapter registration DSL for the platform side. Codec is an MC dependency and cannot live in the
+ * common module, so this entry point is provided here.
  */
 public final class TypeAdapterDsl {
     private TypeAdapterDsl() {}
 
-    /** 注册一个 {@link CodecAdapter}（precedence=LOWEST 的通用兜底映射）。 */
+    /** Registers a {@link CodecAdapter} (a generic fallback mapping with precedence=LOWEST). */
     public static <T> void registerCodec(JSTypeAdapterRegistry registry, Class<T> target, Codec<T> codec) {
         registry.register(new CodecAdapter<>(target, codec));
     }
 
-    /** 注册通用 record 适配器（{@link RecordJSTypeAdapter}）：JS 对象字面量按 component 名构造，字段全部必填。 */
+    /**
+     * Registers the generic record adapter ({@link RecordJSTypeAdapter}): a JS object literal is built by
+     * component name, and all fields are required.
+     */
     public static <T extends Record> void registerRecord(JSTypeAdapterRegistry registry, Class<T> recordClass) {
         registerRecord(registry, recordClass, Map.of());
     }
 
-    /** 同上，但为指定 component 声明默认值（缺字段时使用；probe 里对应可选槽位）。 */
+    /**
+     * Same as above, but declares defaults for the given components (used when a field is missing; the
+     * probe marks those slots optional).
+     */
     public static <T extends Record> void registerRecord(JSTypeAdapterRegistry registry, Class<T> recordClass,
                                                          Map<String, Object> defaults) {
         registry.register(new RecordJSTypeAdapter<>(recordClass, defaults));

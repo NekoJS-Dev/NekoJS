@@ -13,32 +13,37 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * typed Builder 的公开成员契约（ticket 15，AC7/AC9）：
- * 以<b>反射</b>从 Builder 类本身派生成员目录——同一份契约输入同时驱动
- * 脚本面 {@link BuilderSurface}（runtime member）、definition fingerprint、
- * TS/Python declaration 与 contract/golden，不手写第二份成员表。
+ * Public member contract of a typed Builder. The member catalog is <b>reflected</b> from the Builder
+ * class itself, so one contract input drives {@link BuilderSurface} (the runtime members), the
+ * definition fingerprint, the TS/Python declarations and the contract/golden files, with no
+ * hand-written second member table.
  *
- * <p>分类规则（确定性，按成员名字典序输出）：
+ * <p>Classification is deterministic and the output is sorted by member name:
  * <ul>
- *   <li><b>可写属性</b>——{@code setXxx(T)} 与配套 {@code getXxx():T}（或 boolean 的
- *       {@code isXxx()}) 同时存在。脚本端 {@code b.xxx = v}（经 ProxyObject putMember）
- *       与显式 {@code b.setXxx(v)}（经成员表方法）调用<b>同一个</b> setter
- *       {@link Method}，进入同一校验/规范化/指纹路径（ADR-0005 修订后的单一写入语义）。</li>
- *   <li><b>只读属性</b>——有 getter 无 setter（含 final identity 字段 {@code id}，
- *       final/只读成员是 AC3 声明的例外）。</li>
- *   <li><b>方法</b>——其余 public 实例方法（含 setter 本身：显式 setter 形态必须可用）。</li>
+ *   <li><b>Writable property</b>: {@code setXxx(T)} exists together with a matching
+ *       {@code getXxx():T} (or {@code isXxx()} for a boolean). The script form {@code b.xxx = v}
+ *       (through ProxyObject putMember) and an explicit {@code b.setXxx(v)} call (through the member
+ *       table) reach <b>the same</b> setter {@link Method} and run the same
+ *       validation/normalization/fingerprint path. This is the single write path.</li>
+ *   <li><b>Read-only property</b>: has a getter and no setter, including the final identity field
+ *       {@code id}; final and read-only members are the only exception.</li>
+ *   <li><b>Method</b>: any other public instance method, including the setters themselves, so the
+ *       explicit setter form stays callable.</li>
  * </ul>
  *
- * <p>引擎生命周期接缝（{@code build}/{@code get}/{@code handleAdditionalObjects}：
- * 先攒后建的懒构建点）与 tag 内部接缝不进脚本面——对象创建只发生在节点 Adapter 的
- * 注册 pass（AC8），脚本在收集期提前 build 会破坏「先攒后建」。
- * static 成员不属于实例面。反射结果按类缓存（builder 类不可变）。
+ * <p>Engine lifecycle members ({@code build}, {@code get}, {@code handleAdditionalObjects}: the lazy
+ * build points that collect first and build later) and the internal tag members do not appear in the
+ * script-facing API or in the declarations. Objects are created only during the node Adapter's
+ * registration pass; a script that calls build early during collection would break collect-first,
+ * build-later. static members are not part of the instance side. Reflection results are cached per
+ * class, since builder classes do not change.
  */
 public final class RegistryBuilderContract {
 
     /**
-     * 引擎生命周期/内部接缝：不出现在脚本面与声明里。{@code entityType()} 会经 {@code get()}
-     * 提前构建实体（破坏先攒后建），与 build/get 同属生命周期接缝。
+     * Engine lifecycle and internal members: they do not appear in the script-facing API or in the
+     * declarations. {@code entityType()} builds the entity early through {@code get()}, which breaks
+     * collect-first, build-later, so it belongs with build/get as a lifecycle member.
      */
     private static final Set<String> ENGINE_SEAM = Set.of(
             "build", "get", "handleAdditionalObjects", "equals", "hashCode", "toString",
@@ -46,10 +51,11 @@ public final class RegistryBuilderContract {
 
     private static final Map<Class<?>, RegistryBuilderContract> CACHE = new ConcurrentHashMap<>();
 
-    /** 成员种类：可写属性 / 只读属性 / 方法（含显式 setter）。 */
+    /** Member kind: writable property, read-only property, or method (including the explicit setters). */
     public enum MemberKind { WRITABLE_PROPERTY, READ_ONLY_PROPERTY, METHOD }
 
-    /** 单个契约成员。方法成员可含同名重载（如 {@code PotionBuilder.effect}）。 */
+    /** One contract member. A method member can hold overloads that share a name, such as
+     * {@code PotionBuilder.effect}. */
     public record Member(
             String name, MemberKind kind, Class<?> valueType, Method getter, Method setter, List<Method> overloads) {
 
@@ -57,7 +63,7 @@ public final class RegistryBuilderContract {
             this(name, kind, valueType, getter, setter, List.of());
         }
 
-        /** TS 声明类型（确定性映射；未知类型 any）。 */
+        /** TS declaration type: a deterministic mapping, with any for unknown types. */
         public String tsType() {
             return tsType(Map.of());
         }
@@ -72,7 +78,7 @@ public final class RegistryBuilderContract {
             return tsTypeOf(valueType) + (nullable() ? " | null" : "");
         }
 
-        /** Python 声明类型（与 TS 同一输入派生，成员语义一致）。 */
+        /** Python declaration type, derived from the same input as TS and with the same member semantics. */
         public String pyType() {
             return pyType(Map.of());
         }
@@ -93,16 +99,17 @@ public final class RegistryBuilderContract {
 
     private final Class<?> builderType;
     private final Map<String, Member> members;
-    /** final identity 字段（如基类 {@code id}）：只读成员（AC3 的例外清单）。 */
+    /** A final identity field, such as {@code id} from the base class: it becomes a read-only member. */
     private final Map<String, Field> readOnlyFields;
 
     private RegistryBuilderContract(Class<?> builderType) {
         this.builderType = builderType;
         Map<String, Method> getters = new LinkedHashMap<>();
         Map<String, Method> setters = new LinkedHashMap<>();
-        // 方法成员按名聚成<b>重载列表</b>（同名不同参各有存在权，如 PotionBuilder.effect
-        // 的 3 参/5 参形态）——单 Method 收集会在 getMethods() 顺序下丢重载，
-        // 令部分脚本形态不可达（审查 F1）
+        // Method members are grouped by name into an <b>overload list</b>: overloads that share a name but
+        // differ in parameters all stay callable, like the 3-argument and 5-argument forms of
+        // PotionBuilder.effect. Collecting a single Method would lose overloads depending on the
+        // getMethods() order and make some script forms unreachable.
         Map<String, List<Method>> rest = new LinkedHashMap<>();
         Map<String, Field> fields = new LinkedHashMap<>();
         for (Field field : builderType.getFields()) {
@@ -129,7 +136,7 @@ public final class RegistryBuilderContract {
         }
         Map<String, Member> result = new LinkedHashMap<>();
         Map<String, List<Method>> methodOverloads = new LinkedHashMap<>();
-        // final identity 字段（基类 id 等）作为只读成员进入目录（AC3：final id 是例外）
+        // Final identity fields such as the base class id enter the catalog as read-only members
         fields.forEach((name, field) -> result.putIfAbsent(name,
                 new Member(name, MemberKind.READ_ONLY_PROPERTY, field.getType(), null, null)));
         getters.keySet().forEach(property -> {
@@ -141,12 +148,14 @@ public final class RegistryBuilderContract {
                 result.put(property, new Member(property, MemberKind.READ_ONLY_PROPERTY, getter.getReturnType(), getter, null));
             }
         });
-        // 显式 setter 形态（b.setXxx(v)）作为方法成员保留——与属性写入同一 Method
+        // The explicit setter form b.setXxx(v) stays as a method member, backed by the same Method as the
+        // property write
         setters.forEach((property, setter) -> methodOverloads.computeIfAbsent(setter.getName(), k -> new ArrayList<>()).add(setter));
         rest.forEach((name, overloads) -> methodOverloads.computeIfAbsent(name, k -> new ArrayList<>()).addAll(overloads));
         methodOverloads.forEach((name, overloads) -> {
-            // getMethods() 顺序不保证：重载列表按参数个数降序 + 签名串稳定排序，
-            // 契约/声明/golden 派生确定（脚本侧调用按实参个数解析，不受此序影响）
+            // getMethods() order is not guaranteed: the overload list is sorted by parameter count descending,
+            // then by signature string, so the contract, declarations and golden files come out
+            // deterministically. Script calls resolve by argument count and do not depend on this order.
             List<Method> stable = overloads.stream()
                     .sorted(Comparator.comparingInt((Method m) -> -m.getParameterCount())
                             .thenComparing(m -> m.getParameterTypes().length == 0 ? "" : m.toGenericString()))
@@ -167,27 +176,27 @@ public final class RegistryBuilderContract {
         this.readOnlyFields = Map.copyOf(fields);
     }
 
-    /** 取（并缓存）某 builder 类的契约。 */
+    /** Returns the contract for a builder class, creating and caching it on first use. */
     public static RegistryBuilderContract of(Class<? extends RegistryObjectBuilder<?>> builderType) {
         return CACHE.computeIfAbsent(builderType, RegistryBuilderContract::new);
     }
 
-    /** Builder 类（契约反射输入）。 */
+    /** The Builder class the contract was reflected from. */
     public Class<?> builderType() {
         return builderType;
     }
 
-    /** 全部成员（字典序）。 */
+    /** All members, sorted by name. */
     public List<Member> members() {
         return List.copyOf(members.values());
     }
 
-    /** 按名取成员；无则 null。 */
+    /** Returns the member with this name, or null if there is none. */
     public Member member(String name) {
         return members.get(name);
     }
 
-    /** 读一个属性成员的当前值（getter 或 final identity 字段）。 */
+    /** Reads the current value of a property member, through its getter or its final identity field. */
     public Object readMember(Object builder, Member member) {
         try {
             if (member.getter() != null) {
@@ -203,21 +212,25 @@ public final class RegistryBuilderContract {
         throw new IllegalArgumentException("'" + member.name() + "' is not a readable property of " + builderType.getSimpleName());
     }
 
-    /** 成员名目录（诊断/补全）。 */
+    /** The member name catalog, used for diagnostics and completion. */
     public List<String> memberNames() {
         return List.copyOf(members.keySet());
     }
 
     /**
-     * definition fingerprint 的规范化成员读数：按字典序读出全部属性当前值
-     * （{@code name=value}）。两种写入方式经过同一 setter 后此处读数必然一致。
+     * Normalized member readings for the definition fingerprint: the current value of every property
+     * is read in name order as {@code name=value}. Both write forms go through the same setter, so the
+     * readings always match here.
      *
-     * <p><b>对象值属性规范化</b>（审查 F2）：值为 {@link RegistryObjectBuilder}（如
-     * BlockBuilder 的 {@code item} 子 builder）时不用 {@code String.valueOf}（会内嵌
-     * {@code @<identityHashCode>}，同声明跨实例/跨启动指纹漂移），改为递归展开子 builder
-     * 的<b>子指纹</b>（类型简名 + id + 其全部可写属性读数）；嵌套环以 {@code cycle}
-     * 标记截断（防御：当前连带 builder 无环，不承诺任意第三方 builder 无环）。
-     * 抑制（null）与存在（子指纹）天然可区分。
+     * <p><b>Normalizing object-valued properties</b>: when the value is a
+     * {@link RegistryObjectBuilder} (such as the {@code item} sub-builder of BlockBuilder),
+     * {@code String.valueOf} is not used, because it embeds {@code @<identityHashCode>} and the
+     * fingerprint of one declaration would drift between instances and between launches. The
+     * sub-builder is expanded recursively into a <b>sub-fingerprint</b> (simple type name + id +
+     * readings of all its writable properties). Nested cycles are cut off and marked with
+     * {@code cycle}; the bundled builders have no cycles today, but no third-party builder is
+     * promised to be acyclic. Suppression (null) and presence (a sub-fingerprint) remain
+     * distinguishable.
      */
     public List<String> normalizedPropertyReadings(Object builder) {
         return normalizedReadingsOf(builder, java.util.Collections.newSetFromMap(new java.util.IdentityHashMap<>()));
@@ -234,7 +247,8 @@ public final class RegistryBuilderContract {
         return readings;
     }
 
-    /** 单个属性值的规范化字串：null / 嵌套 builder 子指纹（递归）/ 其余 String.valueOf。 */
+    /** Canonical string for a single property value: null for null, the sub-fingerprint of a nested builder
+     * (recursive), otherwise String.valueOf. */
     private String canonicalValue(Object value, Set<Object> seen) {
         if (value == null) {
             return "null";

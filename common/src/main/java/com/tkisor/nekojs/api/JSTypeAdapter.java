@@ -10,8 +10,8 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 
 /**
- * JS 类型适配器接口。<p>
- * 插件类可以实现此接口，以提供自定义的类型转换。
+ * JS type adapter interface.<p>
+ * A plugin class can implement this interface to provide custom type conversions.
  */
 public interface JSTypeAdapter<T> extends Predicate<Value>, Function<Value, T> {
     Class<T> getTargetClass();
@@ -21,11 +21,13 @@ public interface JSTypeAdapter<T> extends Predicate<Value>, Function<Value, T> {
     }
 
     /**
-     * 声明此适配器接受的输入形状，供 probe 生成宽松的 TypeScript 输入别名。
+     * Declares the input shapes this adapter accepts, so that probe can generate a permissive
+     * TypeScript input alias.
      *
-     * <p>返回空列表（默认）表示未声明 —— probe 不会为该目标生成 {@code $Foo_} 别名，
-     * 也不会放宽引用该类型的参数。建议实现此方法，使 {@link #test(Value)} 的接受范围
-     * 与生成的类型声明保持一致。
+     * <p>An empty list (the default) means nothing is declared: probe generates no {@code $Foo_}
+     * alias for that target and does not widen parameters that reference the type. Implementing
+     * this method is recommended, so that the range accepted by {@link #test(Value)} matches the
+     * generated type declarations.
      *
      * @see AdapterInputShape
      */
@@ -34,24 +36,27 @@ public interface JSTypeAdapter<T> extends Predicate<Value>, Function<Value, T> {
     }
 
     /**
-     * 声明此适配器接受的输入语法说明，供 probe 渲染成 TypeScript 输入别名
-     * ({@code $Foo_}) 上方的 JSDoc 注释，让 IDE 使用者了解可用的字符串/对象语法。
+     * Declares the input syntax this adapter accepts, so that probe renders it as a JSDoc comment
+     * above the TypeScript input alias ({@code $Foo_}) and IDE users can see the available string
+     * and object syntax.
      *
-     * <p>例如 ingredient 适配器可在此说明 {@code #tag} / {@code @mod} / {@code *} /
-     * {@code /regex/} 前缀及 {@code { mod?, filter?, ... }} 对象形式。默认空（不附加文档）。
+     * <p>For example, the ingredient adapter can document the {@code #tag} / {@code @mod} /
+     * {@code *} / {@code /regex/} prefixes and the {@code { mod?, filter?, ... }} object form here.
+     * Empty by default (no documentation is attached).
      */
     default Optional<String> syntaxDoc() {
         return Optional.empty();
     }
 
     /**
-     * 判断 JS 值是否可以转换为目标类型
+     * Returns whether a JS value can be converted to the target type.
      */
     @Override
     boolean test(Value value);
 
     /**
-     * 将 JS 值转换为目标类型，如果无法转换应直接抛出异常更为稳妥，而非返回null
+     * Converts a JS value to the target type. When the conversion is not possible, throwing an
+     * exception is safer than returning null.
      */
     @Override
     T apply(Value value);

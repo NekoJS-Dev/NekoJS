@@ -1,7 +1,7 @@
-// 26.x 实现，本文件不应再出现版本守卫。1.21.1 的实现是 versions/1.21.1/src 下的同名文件，
-// 改本文件行为时须同步它。
+// 26.x implementation. Version guards should not appear in this file again. The 1.21.1 implementation
+// is the file of the same name under versions/1.21.1/src; when changing behavior here, update it too.
 //? if neoforge {
-// TODO(fabric): fabric 侧还没有对应实现，整文件守卫等移植完成后去掉
+// fabric: no implementation yet; keep the whole-file guard until the port is done, then remove it
 package com.tkisor.nekojs.wrapper.registry.gen;
 
 import com.tkisor.nekojs.wrapper.registry.TaggableBuilder;
@@ -19,17 +19,18 @@ import net.neoforged.neoforge.registries.NeoForgeRegistries;
 import java.util.function.Supplier;
 
 /**
- * 流体 builder（ADR-0005 四子连带注册）：一次 {@code event.fluid(id, cb)} 注册
+ * Fluid builder: one {@code event.fluid(id, cb)} call registers four side objects.
  * <ul>
- *   <li>FluidType（{@code neoforge:fluid_types}，GameData 序在 FLUID 之后）</li>
- *   <li>source（{@code id}）+ flowing（{@code flowing_<id>}）（FLUID 注册表）</li>
- *   <li>LiquidBlock（BLOCK，id = 流体 id）—— {@code noBlock()} 抑制</li>
- *   <li>BucketItem（ITEM，{@code <id>_bucket}）—— {@code noBucket()} 抑制</li>
+ *   <li>FluidType ({@code neoforge:fluid_types}, GameData order after FLUID)</li>
+ *   <li>source ({@code id}) and flowing ({@code flowing_<id>}) (FLUID registry)</li>
+ *   <li>LiquidBlock (BLOCK, id = fluid id), suppressed by {@code noBlock()}</li>
+ *   <li>BucketItem (ITEM, {@code <id>_bucket}), suppressed by {@code noBucket()}</li>
  * </ul>
- * 依赖 GameData 固定序 FLUID → BLOCK → ITEM →（modded 字母尾）FLUID_TYPES：
- * 四子全部经 {@link #handleAdditionalObjects} 投给 FLUID 之后的 pass；
- * 循环引用（fluid→bucket/block、block→fluid、bucket→fluid）经子 builder 的
- * {@code Supplier} 懒解析（{@link RegistryObjectBuilder#get()}），抽干期不触发互构。
+ * This relies on the fixed GameData order FLUID -> BLOCK -> ITEM -> (modded alphabetical tail)
+ * FLUID_TYPES: all four go through {@link #handleAdditionalObjects} into passes after FLUID. The
+ * reference cycles (fluid to bucket and block, block to fluid, bucket to fluid) are resolved lazily
+ * through each child builder's {@code Supplier} ({@link RegistryObjectBuilder#get()}), so draining
+ * never builds them against each other.
  *
  * <pre>
  * event.fluid('mymod:molten_iron', b =&gt; { b.density = 3000; b.lightLevel = 15; b.noBucket() })
@@ -42,7 +43,7 @@ public class FluidBuilder extends RegistryObjectBuilder<Fluid> implements Taggab
     private int temperature = 300;
     private int viscosity = 1000;
     private int lightLevel = 0;
-    /** 是否可无限生成源（对标原版水在 1.21 默认关闭）。 */
+    /** Whether the fluid can create source blocks endlessly (vanilla water defaults to off in 1.21). */
     private boolean canConvertToSource = false;
 
     private int slopeFindDistance = 4;
@@ -88,7 +89,8 @@ public class FluidBuilder extends RegistryObjectBuilder<Fluid> implements Taggab
         return additionalBuilders;
     }
 
-    /** {@link TaggableBuilder}：流体 tag（如 {@code minecraft:water}）归属 FLUID 注册表。 */
+    /** {@link TaggableBuilder}: the fluid tag (such as {@code minecraft:water}) belongs to the FLUID
+     * registry. */
     @Override
     public net.minecraft.resources.ResourceKey<? extends net.minecraft.core.Registry<?>> getTagRegistry() {
         return Registries.FLUID;
@@ -100,17 +102,19 @@ public class FluidBuilder extends RegistryObjectBuilder<Fluid> implements Taggab
     }
 
     /**
-     * 流体 tag 同时打 source 与 flowing 两个流体（对标原版 {@code minecraft:water} tag
-     * 同时含 {@code water} 与 {@code flowing_water}——流动性检查常落在 flowing 变体上）。
+     * A fluid tag is applied to both the source and the flowing fluid, matching vanilla's
+     * {@code minecraft:water} tag, which contains both {@code water} and {@code flowing_water};
+     * flow checks often land on the flowing variant.
      */
     @Override
     public List<Identifier> getTagTargets() {
         return List.of(id, getFlowingId());
     }
 
-    // ---- 数据属性：显式 setter 与 JavaBean property 同一写入点（ticket 15） ----
+    // ---- Data properties: the explicit setter and the JavaBean property write through the same path ----
 
-    /** 显示名（已归一化：空白视为未声明——build 期本来就走同一分支）。 */
+    /** Display name. Normalized: blank means undeclared, which follows the same branch at build time
+     * anyway. */
     @com.tkisor.nekojs.api.annotation.ScriptNullable
     public String getDisplayName() {
         return displayName;
@@ -220,22 +224,23 @@ public class FluidBuilder extends RegistryObjectBuilder<Fluid> implements Taggab
         this.block = block;
     }
 
-    /** 抑制自动桶物品（{@code <id>_bucket}）连带注册（与 {@code b.bucket = false} 同一写入点）。 */
+    /** Suppresses automatic registration of the bucket item ({@code <id>_bucket}); same write path as
+     * {@code b.bucket = false}. */
     public void noBucket() {
         setBucket(false);
     }
 
-    /** 抑制自动液体方块连带注册（与 {@code b.block = false} 同一写入点）。 */
+    /** Suppresses automatic registration of the liquid block; same write path as {@code b.block = false}. */
     public void noBlock() {
         setBlock(false);
     }
 
-    /** flowing 流体的 id：{@code flowing_<path>}（同 namespace）。 */
+    /** Id of the flowing fluid: {@code flowing_<path>}, in the same namespace. */
     public Identifier getFlowingId() {
         return Identifier.fromNamespaceAndPath(id.getNamespace(), "flowing_" + id.getPath());
     }
 
-    /** 桶物品 id：{@code <path>_bucket}。 */
+    /** Bucket item id: {@code <path>_bucket}. */
     public Identifier getBucketId() {
         return Identifier.fromNamespaceAndPath(id.getNamespace(), id.getPath() + "_bucket");
     }
@@ -246,7 +251,8 @@ public class FluidBuilder extends RegistryObjectBuilder<Fluid> implements Taggab
         return source;
     }
 
-    /** 四子连带注册：flowing（FLUID 同 pass 追加）/ block（BLOCK）/ bucket（ITEM）/ type（FLUID_TYPES）。 */
+    /** Registers the side objects: flowing (appended in the same FLUID pass), block (BLOCK), bucket (ITEM),
+     * type (FLUID_TYPES). */
     @Override
     public void handleAdditionalObjects(RegistryObjectBuilder.AdditionalObjectRegistry registry) {
         AdditionalBuilders builders = additionalBuilders();
@@ -260,7 +266,8 @@ public class FluidBuilder extends RegistryObjectBuilder<Fluid> implements Taggab
         registry.additional(NeoForgeRegistries.FLUID_TYPES.key(), id, this::createType);
     }
 
-    /** 创建（并缓存）FluidType 单例：FLUID_TYPES 注册与流体 Properties 共用同一实例。 */
+    /** Creates and caches the FluidType singleton: FLUID_TYPES registration and the fluid Properties share
+     * one instance. */
     public FluidType createType() {
         if (cachedType != null) {
             return cachedType;
@@ -295,7 +302,8 @@ public class FluidBuilder extends RegistryObjectBuilder<Fluid> implements Taggab
         return props;
     }
 
-    /** 液体方块：引用 source 流体；noCollision + 高抗爆 + 无 loot（对标 vanilla 水/岩浆）。 */
+    /** The liquid block: it uses the source fluid, has no collision, resists explosions strongly and has
+     * no loot table (the same setup as vanilla water and lava). */
     private LiquidBlock createLiquidBlock() {
         BlockBehaviour.Properties props = BlockBehaviour.Properties.of()
                 .setId(net.minecraft.resources.ResourceKey.create(Registries.BLOCK, id))
@@ -306,7 +314,7 @@ public class FluidBuilder extends RegistryObjectBuilder<Fluid> implements Taggab
         return liquid;
     }
 
-    /** 桶物品：引用 source 流体；stacksTo(1)。 */
+    /** The bucket item: it uses the source fluid and is limited to one per stack. */
     private BucketItem createBucketItem() {
         net.minecraft.resources.ResourceKey<Item> key =
                 net.minecraft.resources.ResourceKey.create(Registries.ITEM, getBucketId());

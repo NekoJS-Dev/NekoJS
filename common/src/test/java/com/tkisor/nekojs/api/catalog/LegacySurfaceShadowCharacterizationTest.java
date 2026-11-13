@@ -31,21 +31,24 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * AC3（ticket 09）legacy 观察面 characterization：
+ * Characterization of the legacy observation side:
  * <ul>
- *   <li>legacy catalog 符号可被 {@link LegacySurfaceAdapter} 转换为迁移观察面
- *       （{@code NekoScriptCatalogSnapshot.legacySurface()}），但<b>不进入 managed surface</b>、
- *       不获得 managed stable 身份；</li>
- *   <li>同名冲突时 managed 契约身份原样保留（不被覆盖、不合并签名），resolver 层把
- *       legacy 保留名对 managed global 的遮蔽判为 {@code LEGACY_NAME_COLLISION} 显式失败。</li>
+ *   <li>{@link LegacySurfaceAdapter} converts legacy catalog symbols into observation entries
+ *       ({@code NekoScriptCatalogSnapshot.legacySurface()}), but they do not enter the managed
+ *       surface and get no managed stable identity;</li>
+ *   <li>when names collide, the managed contract identity is kept as is (not overwritten, not
+ *       merged with signatures); the resolver treats a legacy reserved name that shadows a managed
+ *       global as an explicit {@code LEGACY_NAME_COLLISION} failure.</li>
  * </ul>
- * 只固化既有行为（characterization），不改变迁移观察职责。
+ * The test only pins existing behavior (characterization) and does not change what migration
+ * observation does.
  */
 class LegacySurfaceShadowCharacterizationTest {
 
     private static final URI TEST_CODE_SOURCE = URI.create("file:///test-nekojs-legacy-shadow.jar");
 
-    /** 与 managed global 同名的 legacy binding（观察面必收，但不得覆盖 managed 契约）。 */
+    /** A legacy binding with the same name as a managed global: it must appear on the observation side,
+     *  but must not overwrite the managed contract. */
     private static final String MANAGED_NAME = "Text";
 
     @Test
@@ -57,7 +60,8 @@ class LegacySurfaceShadowCharacterizationTest {
         assertEquals(1, legacy.size());
         assertEquals(ApiSymbolId.parse("global:" + MANAGED_NAME), legacy.getFirst().id(),
                 "legacy binding maps to an observation id in the legacy surface");
-        // 观察面占位签名：无参 function（kind=global 仅为迁移观察元数据，不是 stable 承诺）
+        // Observation placeholder signature: a no-arg function (kind=global is migration metadata, not a
+        // stable promise)
         assertEquals(List.of(ApiSignature.function(List.of(), com.tkisor.nekojs.api.surface.ApiTypeRef.voidType())),
                 legacy.getFirst().signatures());
     }
@@ -77,14 +81,15 @@ class LegacySurfaceShadowCharacterizationTest {
                 Map.of(ScriptType.SERVER, managed),
                 legacySurface);
 
-        // managed surface 原样保留：契约符号一个不少
+        // The managed surface is kept as is: no contract symbol is missing
         Set<String> contractIds = contractSymbolIds();
         Set<String> managedIds = snapshot.managedApis().get(ScriptType.SERVER).surfaceSnapshot()
                 .symbols().stream().map(s -> s.id().value()).collect(Collectors.toSet());
         assertEquals(contractIds, managedIds,
                 "legacy catalog entries must not add, remove or replace managed surface symbols");
 
-        // 同名 global:Text 在 managed surface 中仍是契约签名（object 全局对象），未被 legacy void 签名覆盖
+        // global:Text is still a contract signature in the managed surface (an object global); the legacy
+        // void signature does not overwrite it
         ApiSymbol managedText = symbolById(
                 snapshot.managedApis().get(ScriptType.SERVER).surfaceSnapshot().symbols(), "global:" + MANAGED_NAME);
         assertNotNull(managedText);
@@ -94,7 +99,7 @@ class LegacySurfaceShadowCharacterizationTest {
                 managedSig.callKey() + ":" + managedSig.returnType().compatibilityKey(),
                 "managed global must not be shadowed by the legacy placeholder signature");
 
-        // legacy 面独立存在：观察条目在 legacySurface，而非 managedApis
+        // The legacy side stands alone: the observation entry lives in legacySurface, not in managedApis
         assertEquals(1, snapshot.legacySurface().size());
         assertEquals(ApiSymbolId.parse("global:" + MANAGED_NAME), snapshot.legacySurface().getFirst().id());
     }
@@ -107,7 +112,8 @@ class LegacySurfaceShadowCharacterizationTest {
                 com.tkisor.nekojs.api.contract.VerifiedContractSet.of(contract);
         com.tkisor.nekojs.core.api.CoreManagedApiBootstrap.CoreManagedApi core =
                 CoreManagedApiBootstrap.load(new EmptyPlatform(), TEST_CODE_SOURCE);
-        // 重新 build 一份 contributions（load 的 contributions 已绑定同一 contracts，可直接用）
+        // Build a fresh set of contributions; the ones returned by load already bind the same contracts,
+        // so they can be used directly
         ApiResolutionException thrown = org.junit.jupiter.api.Assertions.assertThrows(
                 ApiResolutionException.class,
                 () -> JsApiSurfaceResolver.resolve(
@@ -138,11 +144,12 @@ class LegacySurfaceShadowCharacterizationTest {
                 "legacy observation ids use observation kinds, not managed stable kinds");
 
         for (ApiSymbol symbol : legacy) {
-            // 观察面占位签名：无参、void 返回——不承载 managed 契约承诺
+            // Observation placeholder signature: no parameters, void return; it makes no managed contract promise
             assertEquals(1, symbol.signatures().size());
             assertEquals(List.of(), symbol.signatures().getFirst().parameters());
         }
-        // LEGACY_PREVIEW tier 仍是分层词汇的一部分（保留给贡献层使用），managed surface 不消费它
+        // LEGACY_PREVIEW is still part of the tier vocabulary (reserved for the contribution layer);
+        // the managed surface does not consume it
         assertNotNull(ApiTier.valueOf("LEGACY_PREVIEW"));
     }
 
@@ -180,7 +187,7 @@ class LegacySurfaceShadowCharacterizationTest {
                 Map.of());
     }
 
-    /** legacy 观察面用例的最小宿主类。 */
+    /** Minimal host class for the legacy observation tests. */
     public static final class LegacyApiStub {
         public String legacyOnlyMethod() { return "legacy"; }
     }

@@ -11,11 +11,12 @@ import net.neoforged.neoforge.fluids.FluidStack;
 import net.neoforged.neoforge.fluids.crafting.SizedFluidIngredient;
 
 /**
- * 脚本静态绑定 {@code Fluid}：流体栈 / 流体配料工厂。
+ * Script static binding {@code Fluid}: factory for fluid stacks and fluid ingredients.
  */
 @Doc("Static binding 'Fluid': factory helpers for fluid stacks and fluid ingredients.")
 public class FluidJS {
-    /** 从 id / 流体对象 / {@code {fluid, amount}} 对象解析流体栈（默认 1 桶）。 */
+    /** Resolves a fluid stack from an id, a fluid object, or a {@code {fluid, amount}} object
+     * (one bucket by default). */
     @Doc("Creates a fluid stack from a fluid-like value.")
     @Doc("Accepts a fluid id like 'minecraft:water', a Fluid/FluidStack object, or a JS object {fluid|id, amount}.")
     @Param(name = "value", value = "fluid id, fluid/fluid stack object, or {fluid|id, amount} JS object")
@@ -24,7 +25,7 @@ public class FluidJS {
         return FluidResolver.stackFromValue(toValue(value));
     }
 
-    /** 同 {@link #of(Object)}，但覆盖数量（mB；非正数抛异常）。 */
+    /** Same as {@link #of(Object)}, but overrides the amount in mB; a non-positive amount throws. */
     @Doc("Creates a fluid stack with an explicit amount in millibuckets.")
     @Param(name = "value", value = "fluid id, fluid/fluid stack object, or {fluid|id, amount} JS object")
     @Param(name = "amount", value = "stack amount in millibuckets; must be positive")
@@ -38,14 +39,14 @@ public class FluidJS {
         return copy;
     }
 
-    /** 1 桶水。 */
+    /** One bucket of water. */
     @Doc("Creates a water stack of one bucket.")
     @Return("a FluidStack of water, 1000 mB")
     public FluidStack water() {
         return water(FluidResolver.stackFromFluid(Fluids.WATER).getAmount());
     }
 
-    /** 指定数量（mB）的水。 */
+    /** Water of the given amount in mB. */
     @Doc("Creates a water stack with the given amount.")
     @Param(name = "amount", value = "stack amount in millibuckets")
     @Return("a FluidStack of water with the given amount")
@@ -53,14 +54,14 @@ public class FluidJS {
         return FluidResolver.stackFromFluid(Fluids.WATER, amount);
     }
 
-    /** 1 桶岩浆。 */
+    /** One bucket of lava. */
     @Doc("Creates a lava stack of one bucket.")
     @Return("a FluidStack of lava, 1000 mB")
     public FluidStack lava() {
         return lava(FluidResolver.stackFromFluid(Fluids.LAVA).getAmount());
     }
 
-    /** 指定数量（mB）的岩浆。 */
+    /** Lava of the given amount in mB. */
     @Doc("Creates a lava stack with the given amount.")
     @Param(name = "amount", value = "stack amount in millibuckets")
     @Return("a FluidStack of lava with the given amount")
@@ -68,14 +69,14 @@ public class FluidJS {
         return FluidResolver.stackFromFluid(Fluids.LAVA, amount);
     }
 
-    /** 空流体栈。 */
+    /** An empty fluid stack. */
     @Doc("Creates an empty fluid stack.")
     @Return("the shared FluidStack.EMPTY instance")
     public FluidStack empty() {
         return FluidStack.EMPTY;
     }
 
-    /** 由多个流体值构造「或」关系的流体配料。 */
+    /** Builds a fluid ingredient that matches any of the given fluid values. */
     @Doc("Builds a fluid ingredient matching any of the given fluid-like values.")
     @Param(name = "values", value = "fluid ids ('#tag', '@mod', '*', '/regex/' also work), fluids, stacks, or ingredients")
     @Return("a FluidIngredientJS combining all values with OR; empty wrapper when no value is given")
@@ -89,7 +90,7 @@ public class FluidJS {
         return wrapper;
     }
 
-    /** 从流体值解析带数量的流体配料（值本身可带 amount）。 */
+    /** Resolves a sized fluid ingredient from a fluid value; the value may carry its own amount. */
     @Doc("Creates a sized fluid ingredient from a fluid-like value carrying its own amount.")
     @Param(name = "value", value = "fluid id, stack, or {fluid|id, amount} JS object")
     @Return("the resolved SizedFluidIngredient")
@@ -97,7 +98,7 @@ public class FluidJS {
         return FluidResolver.sizedFromValue(toValue(value));
     }
 
-    /** 从流体值 + 显式数量（mB）解析带数量的流体配料。 */
+    /** Resolves a sized fluid ingredient from a fluid value and an explicit amount in mB. */
     @Doc("Creates a sized fluid ingredient with an explicit amount in millibuckets.")
     @Param(name = "value", value = "fluid id, stack, or ingredient-like value (its own amount is ignored)")
     @Param(name = "amount", value = "required amount in millibuckets")

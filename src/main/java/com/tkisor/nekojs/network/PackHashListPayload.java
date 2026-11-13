@@ -11,10 +11,11 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * S2C 配置阶段包哈希清单（{@code nekojs:pack_hashes}）：{@code [(syncId, hash)]}。
- * 空清单同样有效——客户端据此清空远端包并重载客户端脚本。
+ * S2C configuration-phase pack hash list ({@code nekojs:pack_hashes}): {@code [(syncId, hash)]}.
+ * An empty list is valid too: the client uses it to clear the remote packs and reload client scripts.
  *
- * <p>线格式（与 neoforge-1.21.1 同名包一致）：varint 数量 + 每项 UTF(syncId) + UTF(hash)。
+ * <p>Wire format (same as the packet of the same name in neoforge-1.21.1): varint count + per entry
+ * UTF(syncId) + UTF(hash).
  */
 public record PackHashListPayload(List<HashEntry> entries) implements CustomPacketPayload {
 
@@ -28,7 +29,7 @@ public record PackHashListPayload(List<HashEntry> entries) implements CustomPack
         entries = List.copyOf(entries);
     }
 
-    /** 各平台推送面共用：包快照列表 → 线格式哈希清单。 */
+    /** Shared by every platform's push side: a list of pack snapshots becomes the wire hash list. */
     public static PackHashListPayload of(List<SyncedPack> packs) {
         List<HashEntry> entries = new ArrayList<>();
         for (SyncedPack pack : packs) {
@@ -37,7 +38,7 @@ public record PackHashListPayload(List<HashEntry> entries) implements CustomPack
         return new PackHashListPayload(entries);
     }
 
-    /** 各平台接收面共用：线格式条目 → 客户端管线条目。 */
+    /** Shared by every platform's receive side: wire entries become client pipeline entries. */
     public List<PackSyncClient.HashEntry> toClientEntries() {
         List<PackSyncClient.HashEntry> out = new ArrayList<>(entries.size());
         for (HashEntry entry : entries) {

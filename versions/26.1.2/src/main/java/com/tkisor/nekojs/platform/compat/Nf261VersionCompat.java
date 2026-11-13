@@ -3,9 +3,9 @@ package com.tkisor.nekojs.platform.compat;
 import net.minecraft.world.entity.EntityType;
 
 /**
- * 26.1 侧 {@link McVersionCompat.Impl}：{@code LIGHTNING_BOLT} 常量仍在
- * {@link EntityType}（26.2 移到了 {@code EntityTypes}）。
- * 注册：{@code META-INF/services/com.tkisor.nekojs.platform.compat.McVersionCompat$Impl}。
+ * 26.1 implementation of {@link McVersionCompat.Impl}. The {@code LIGHTNING_BOLT} constant still
+ * lives in {@link EntityType}; 26.2 moved it to {@code EntityTypes}.
+ * Registered through {@code META-INF/services/com.tkisor.nekojs.platform.compat.McVersionCompat$Impl}.
  */
 public final class Nf261VersionCompat implements McVersionCompat.Impl {
 

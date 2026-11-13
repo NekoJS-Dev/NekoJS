@@ -17,10 +17,11 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
- * {@link ScriptLocator} 脚本包发现测试：包内脚本的 ScriptId 携带
- * {@code packs/<id>/}（GLOBAL）或 {@code worldpacks/<id>/}（WORLD）前缀；
- * 加载顺序 GLOBAL → WORLD → 平铺目录；禁用包与包内非脚本文件不参与发现。
- * 平铺目录来自静态 {@code ScriptType.path}（测试环境无脚本文件），只断言包来源的容器。
+ * Tests {@link ScriptLocator} script pack discovery: a script inside a pack gets a ScriptId with a
+ * {@code packs/<id>/} (GLOBAL) or {@code worldpacks/<id>/} (WORLD) prefix; load order is GLOBAL, then
+ * WORLD, then flat directories; disabled packs and non-script files inside a pack are not discovered.
+ * Flat directories come from the static {@code ScriptType.path} and hold no scripts in the test
+ * environment, so only the containers from packs are asserted.
  */
 class ScriptLocatorPackTest {
 
@@ -41,7 +42,7 @@ class ScriptLocatorPackTest {
     void packScriptsAreDiscoveredWithPrefixedIdAndPackAttribution() throws Exception {
         Path scripts = packScripts(packsRoot, "demo");
         Files.writeString(scripts.resolve("main.js"), "console.info('hi')");
-        Files.writeString(scripts.resolve("nested"), "ignored"); // 无扩展名：非脚本文件
+        Files.writeString(scripts.resolve("nested"), "ignored"); // No extension: not a script file.
 
         ScriptPackRegistry registry = new ScriptPackRegistry();
         registry.refreshGlobalPacks(packsRoot);

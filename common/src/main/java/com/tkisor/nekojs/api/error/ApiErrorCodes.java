@@ -1,60 +1,60 @@
 package com.tkisor.nekojs.api.error;
 
 /**
- * API 错误码常量集合，供 {@link ApiInvocationException} 等使用。
+ * API error code constants, used by {@link ApiInvocationException} etc.
  *
- * <p>错误码是跨平台稳定的字符串，脚本侧据此判断错误类型。本类不可实例化。
+ * <p>Error codes are platform-stable strings, used by scripts to determine error types. This class cannot be instantiated.
  */
 public final class ApiErrorCodes {
-    /** 能力不支持。 */
+    /** Capability not supported. */
     public static final String UNSUPPORTED_CAPABILITY = "UNSUPPORTED_CAPABILITY";
-    /** 模块不支持。 */
+    /** Module not supported. */
     public static final String UNSUPPORTED_MODULE = "UNSUPPORTED_MODULE";
-    /** 无效引用。 */
+    /** Invalid reference. */
     public static final String INVALID_REFERENCE = "INVALID_REFERENCE";
-    /** API 契约违规。 */
+    /** API contract violation. */
     public static final String API_CONTRACT_VIOLATION = "API_CONTRACT_VIOLATION";
-    /** API 符号重复。 */
+    /** Duplicate API symbol. */
     public static final String DUPLICATE_API_SYMBOL = "DUPLICATE_API_SYMBOL";
-    /** 能力提供者重复。 */
+    /** Duplicate capability provider. */
     public static final String DUPLICATE_CAPABILITY_PROVIDER = "DUPLICATE_CAPABILITY_PROVIDER";
-    /** 原生类型泄漏。 */
+    /** Native type leak. */
     public static final String NATIVE_TYPE_LEAK = "NATIVE_TYPE_LEAK";
-    /** API 清单过期。 */
+    /** API manifest expired. */
     public static final String STALE_API_MANIFEST = "STALE_API_MANIFEST";
-    /** 无匹配签名。 */
+    /** No matching signature. */
     public static final String NO_MATCHING_SIGNATURE = "NO_MATCHING_SIGNATURE";
-    /** 调用歧义。 */
+    /** Call ambiguity. */
     public static final String AMBIGUOUS_CALL = "AMBIGUOUS_CALL";
-    /** 类型不匹配。 */
+    /** Type mismatch. */
     public static final String TYPE_MISMATCH = "TYPE_MISMATCH";
-    /** 回调不可执行。 */
+    /** Callback not executable. */
     public static final String CALLBACK_NOT_EXECUTABLE = "CALLBACK_NOT_EXECUTABLE";
-    /** 调用错误。 */
+    /** Invocation error. */
     public static final String INVOCATION_ERROR = "INVOCATION_ERROR";
-    /** 非法 JSON。 */
+    /** Invalid JSON. */
     public static final String INVALID_JSON = "INVALID_JSON";
-    /** JSON 超限。 */
+    /** JSON limit exceeded. */
     public static final String JSON_LIMIT_EXCEEDED = "JSON_LIMIT_EXCEEDED";
-    /** JSON 路径被禁止。 */
+    /** JSON path forbidden. */
     public static final String JSON_PATH_FORBIDDEN = "JSON_PATH_FORBIDDEN";
-    /** JSON 文件过大。 */
+    /** JSON file too large. */
     public static final String JSON_FILE_TOO_LARGE = "JSON_FILE_TOO_LARGE";
-    /** JSON IO 错误。 */
+    /** JSON IO error. */
     public static final String JSON_IO_ERROR = "JSON_IO_ERROR";
-    /** JSON 原子写失败。 */
+    /** JSON atomic write failed. */
     public static final String JSON_ATOMIC_WRITE_FAILED = "JSON_ATOMIC_WRITE_FAILED";
-    /** 非法 NBT。 */
+    /** Invalid NBT. */
     public static final String INVALID_NBT = "INVALID_NBT";
-    /** NBT 超限。 */
+    /** NBT limit exceeded. */
     public static final String NBT_LIMIT_EXCEEDED = "NBT_LIMIT_EXCEEDED";
-    /** NBT 路径被禁止。 */
+    /** NBT path forbidden. */
     public static final String NBT_PATH_FORBIDDEN = "NBT_PATH_FORBIDDEN";
-    /** NBT 文件过大。 */
+    /** NBT file too large. */
     public static final String NBT_FILE_TOO_LARGE = "NBT_FILE_TOO_LARGE";
-    /** NBT IO 错误。 */
+    /** NBT IO error. */
     public static final String NBT_IO_ERROR = "NBT_IO_ERROR";
-    /** NBT 原子写失败。 */
+    /** NBT atomic write failed. */
     public static final String NBT_ATOMIC_WRITE_FAILED = "NBT_ATOMIC_WRITE_FAILED";
 
     private ApiErrorCodes() {

@@ -3,22 +3,26 @@ package com.tkisor.nekojs.api.surface;
 import java.util.*;
 
 /**
- * 平台无关的 API 类型引用，用于契约/签名中描述类型（含泛型参数、回调签名等）。
+ * Platform-independent reference to an API type, used to describe types in contracts and
+ * signatures (including generic arguments and callback signatures).
  *
- * <p>通过静态工厂构造；构造时按 {@link Kind} 强校验各字段约束：ARRAY 须恰好一个元素、
- * UNION 至少两个成员且去重排序、CALLBACK 须携带回调签名、VOID 不得有额外数据。
+ * <p>Instances are built through the static factories, and the constructor enforces the field
+ * rules for each {@link Kind}: ARRAY needs exactly one element, UNION needs at least two members
+ * that are deduplicated and sorted, CALLBACK needs a callback signature, and VOID carries no extra
+ * data.
  *
- * <p>{@link #compatibilityKey()} 生成用于跨平台兼容性比对的稳定字符串。不可变。
+ * <p>{@link #compatibilityKey()} returns a stable string used to compare compatibility across
+ * platforms. Immutable.
  *
- * @param kind             类型种类
- * @param name             类型名（PRIMITIVE/SYMBOL/TYPE_VARIABLE 时有效，其余为 {@code null}）
- * @param arguments        泛型/成员参数（ARRAY/UNION 时使用）
- * @param callbackSignature 回调签名（CALLBACK 时使用，其余为 {@code null}）
+ * @param kind              type kind
+ * @param name              type name (set for PRIMITIVE/SYMBOL/TYPE_VARIABLE, {@code null} otherwise)
+ * @param arguments         generic or member arguments (used by ARRAY/UNION)
+ * @param callbackSignature callback signature (used by CALLBACK, {@code null} otherwise)
  */
 public record ApiTypeRef(Kind kind, String name, List<ApiTypeRef> arguments,
                          ApiSignature callbackSignature) {
 
-    /** 类型种类。 */
+    /** The kind of type. */
     public enum Kind { PRIMITIVE, SYMBOL, ARRAY, UNION, CALLBACK, VOID, TYPE_VARIABLE }
 
     public ApiTypeRef {
@@ -32,8 +36,9 @@ public record ApiTypeRef(Kind kind, String name, List<ApiTypeRef> arguments,
                 }
             }
             case SYMBOL -> {
-                // SYMBOL 允许携带泛型实参（如 Map<K, V>）：probe IR 用它无损承载参数化 Java 类型，
-                // 各语言渲染器自行决定渲染形态（TS 的 $Map<$K, $V>、Python 的语法糖）。
+                // SYMBOL may carry generic arguments (such as Map<K, V>): the probe IR uses this to carry
+                // parameterized Java types without loss, and each language renderer chooses the output
+                // form (TS $Map<$K, $V>, sugar in Python).
                 requireName(name);
                 if (callbackSignature != null) {
                     throw new IllegalArgumentException("symbol type cannot have a callback signature");
@@ -67,17 +72,18 @@ public record ApiTypeRef(Kind kind, String name, List<ApiTypeRef> arguments,
         }
     }
 
-    /** 构造原始类型引用（如 {@code int}、{@code string}）。 */
+    /** Creates a primitive type reference (such as {@code int} or {@code string}). */
     public static ApiTypeRef primitive(String name) {
         return new ApiTypeRef(Kind.PRIMITIVE, requireName(name), List.of(), null);
     }
 
-    /** 构造符号类型引用（以 {@link ApiSymbolId} 命名）。 */
+    /** Creates a symbol type reference named by an {@link ApiSymbolId}. */
     public static ApiTypeRef symbol(ApiSymbolId id) {
         return new ApiTypeRef(Kind.SYMBOL, Objects.requireNonNull(id, "id").value(), List.of(), null);
     }
 
-    /** 构造带泛型实参的符号类型引用（如 {@code Map<K, V>}）——probe IR 无损承载参数化 Java 类型用。 */
+    /** Creates a symbol type reference with generic arguments (such as {@code Map<K, V>});
+     * the probe IR uses it to carry parameterized Java types without loss. */
     public static ApiTypeRef symbol(ApiSymbolId id, List<ApiTypeRef> arguments) {
         return new ApiTypeRef(Kind.SYMBOL, Objects.requireNonNull(id, "id").value(),
                 arguments == null ? List.of() : List.copyOf(arguments), null);
@@ -91,12 +97,13 @@ public record ApiTypeRef(Kind kind, String name, List<ApiTypeRef> arguments,
         return new ApiTypeRef(Kind.TYPE_VARIABLE, requireName(name), List.of(), null);
     }
 
-    /** 构造数组类型引用（元素类型）。 */
+    /** Creates an array type reference for the given element type. */
     public static ApiTypeRef array(ApiTypeRef element) {
         return new ApiTypeRef(Kind.ARRAY, null, List.of(Objects.requireNonNull(element, "element")), null);
     }
 
-    /** 构造联合类型引用（去重并按兼容性键排序，至少两个成员）。 */
+    /** Creates a union type reference: members are deduplicated and sorted by compatibility key,
+     * and at least two are required. */
     public static ApiTypeRef union(List<ApiTypeRef> members) {
         List<ApiTypeRef> normalized = members.stream()
                 .distinct()
@@ -106,17 +113,17 @@ public record ApiTypeRef(Kind kind, String name, List<ApiTypeRef> arguments,
         return new ApiTypeRef(Kind.UNION, null, normalized, null);
     }
 
-    /** 构造回调类型引用（携带回调签名）。 */
+    /** Creates a callback type reference that carries the callback signature. */
     public static ApiTypeRef callback(ApiSignature signature) {
         return new ApiTypeRef(Kind.CALLBACK, null, List.of(), Objects.requireNonNull(signature, "signature"));
     }
 
-    /** 构造 void 类型引用。 */
+    /** Creates the void type reference. */
     public static ApiTypeRef voidType() {
         return new ApiTypeRef(Kind.VOID, null, List.of(), null);
     }
 
-    /** 返回用于跨平台兼容性比对的稳定字符串。 */
+    /** Returns a stable string used to compare compatibility across platforms. */
     public String compatibilityKey() {
         StringBuilder sb = new StringBuilder();
         sb.append(kind.name());

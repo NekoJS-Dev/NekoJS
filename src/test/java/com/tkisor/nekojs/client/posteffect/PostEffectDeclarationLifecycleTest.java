@@ -20,17 +20,20 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * 票 28 AC 贯穿 fixture（五节点共享同一份代码）：真实 CLIENT 脚本经
- * {@code ClientEvents.postEffects} 声明 register/unregister，候选期 inert，commit 点由平台
- * {@link PostEffectDomainOwner} Adapter 安装新 generation 并退役旧 generation。
+ * End-to-end fixture for post-effect declarations, shared by all five nodes. Real CLIENT scripts
+ * declare register/unregister through {@code ClientEvents.postEffects}; declarations stay inert while
+ * the candidate is built, and at the commit point the platform {@link PostEffectDomainOwner} adapter
+ * installs the new generation and retires the old one.
  *
- * <p>覆盖：候选期 live 定义不变（AC2）、成功 commit 后新 generation 可回读（AC3）、
- * 旧 generation 的声明被退役且不再可见（AC3）、声明 JSON 无效整批失败保留旧 active
- * （AC4）、显式 unregister 与声明移除（AC4/AC3）、generation/stale 只读查询（AC3/AC7）、
- * 运行时 binding 未被声明事件替代（AC5）。
+ * <p>Covers: live definitions stay unchanged while the candidate is built, a committed generation can
+ * be read back, declarations of the old generation are retired and no longer visible, an invalid
+ * declaration JSON fails the whole batch and keeps the old active state, an explicit unregister and a
+ * removed declaration both take effect, generation and stale queries stay read-only, and the runtime
+ * binding is not replaced by the declaration event.
  *
- * <p>断言只走公开 seam：脚本、reload 成败、{@code owner.lastDiagnostics()}、
- * {@code PostEffectManager} 的只读查询面；不断言私有静态 Map。
+ * <p>Assertions only use public entry points: scripts, reload success or failure,
+ * {@code owner.lastDiagnostics()} and the read-only queries of {@code PostEffectManager}. They never
+ * assert on a private static map.
  */
 class PostEffectDeclarationLifecycleTest {
 
@@ -100,8 +103,10 @@ class PostEffectDeclarationLifecycleTest {
         assertEquals(List.of("nekojs:gray"), PostEffectDeclarationHarness.installedIds());
         long beforeReload = harness.owner.activeGeneration();
 
-        // 候选构建期（DOMAIN_PLAN 已收集、commit 之前）live 定义必须仍是旧 generation。
-        // probe 收集器在真实 owner 之后注册 → 观察到的是「同轮声明已收集但尚未安装」的 live 面。
+        // While the candidate is built (DOMAIN_PLAN collected, not yet committed) the live definitions
+        // must still be the old generation.
+        // The probe collector is registered after the real owner, so it sees the live state where this
+        // round's declarations are collected but not yet installed.
         List<List<String>> seenDuringCandidate = new ArrayList<>();
         harness.root.registerDomainCollector(new com.tkisor.nekojs.core.lifecycle.CandidateDomainCollector() {
             @Override public String domain() { return "post-effect-e2e-probe"; }
@@ -139,7 +144,8 @@ class PostEffectDeclarationLifecycleTest {
         assertEquals(List.of("nekojs:gray"), PostEffectDeclarationHarness.installedIds());
         long generationBefore = harness.owner.activeGeneration();
 
-        // 候选 JSON 无效：STATE_PLAN 联合预检拒绝整批，旧 generation 继续可用。
+        // The candidate JSON is invalid, so the STATE_PLAN preflight rejects the whole batch and the old
+        // generation stays usable.
         harness.writeClientScript("fx.js", """
                 ClientEvents.postEffects(event => {
                   event.register('nekojs:broken', { chainJson: '{not json' })
@@ -179,7 +185,8 @@ class PostEffectDeclarationLifecycleTest {
         assertEquals(List.of("nekojs:gray"), PostEffectDeclarationHarness.installedIds(),
                 "neither declaration of the failed batch is installed (whole batch fails)");
 
-        // 候选资源随失败丢弃：下一轮正常 reload 仍能提交。
+        // The candidate resources are dropped with the failure, so the next normal reload can still
+        // commit.
         harness.writeClientScript("fx.js", """
                 ClientEvents.postEffects(event => event.register('nekojs:sepia', { chainJson: '%s' }))
                 """.formatted(chainJson("minecraft:post/blur")));
@@ -196,7 +203,8 @@ class PostEffectDeclarationLifecycleTest {
         harness.loadAndApplyInitialPlan();
         assertTrue(harness.owner.hasActiveDefinition(Identifier.parse("nekojs:gray")));
 
-        // 脚本不再声明：成功 reload 后旧 id 被退役，不再对本 generation 可见。
+        // The script no longer declares anything, so a successful reload retires the old id and it is no
+        // longer visible to this generation.
         harness.writeClientScript("fx.js", "global.noEffects = true\n");
         harness.reloadClientScripts();
 
@@ -232,7 +240,8 @@ class PostEffectDeclarationLifecycleTest {
 
     @Test
     void generationAndStaleQueriesReportTheActiveDeclarationGeneration() throws Exception {
-        // 无声明：查询面明确报告空 generation（无 id），而不是靠静默 no-op 表达「没声明」。
+        // With no declarations the query reports an empty generation (no id) instead of expressing
+        // "nothing declared" as a silent no-op.
         harness.writeClientScript("fx.js", "global.idle = true\n");
         harness.loadAndApplyInitialPlan();
 
@@ -260,8 +269,10 @@ class PostEffectDeclarationLifecycleTest {
 
     @Test
     void aCandidatePreflightThatPassesDoesNotPublishAnObservation() throws Exception {
-        // P3：本域 preflight 通过 ≠ 本域已提交。整批仍可能因其它域/STATE_PLAN/close 抢占丢弃，
-        // 而 lastDiagnostics 是「active generation 现在是什么」的公开读面——候选期不得写它。
+        // A passing preflight in this domain does not mean this domain committed: the whole batch can
+        // still be dropped by another domain, by STATE_PLAN, or by a close. lastDiagnostics is the
+        // public read of what the active generation is now, so nothing may write it while the candidate
+        // is built.
         harness.writeClientScript("fx.js", """
                 ClientEvents.postEffects(event => event.register('nekojs:gray', { chainJson: '%s' }))
                 """.formatted(chainJson("minecraft:post/invert")));
@@ -269,7 +280,8 @@ class PostEffectDeclarationLifecycleTest {
         PostEffectDomainOwner.Diagnostics before = harness.owner.lastDiagnostics();
         assertEquals(PostEffectDomainOwner.Outcome.APPLIED, before.outcome());
 
-        // 另一个域在 STATE_PLAN 联合预检失败：本域 preflight 会先通过，但整批不提交。
+        // Another domain fails the STATE_PLAN preflight: this domain passes its own preflight first, but
+        // the batch is not committed.
         harness.root.registerDomainCollector(new com.tkisor.nekojs.core.lifecycle.CandidateDomainCollector() {
             @Override public String domain() { return "post-effect-failing-peer"; }
             @Override public ScriptType scriptType() { return ScriptType.CLIENT; }
@@ -294,13 +306,12 @@ class PostEffectDeclarationLifecycleTest {
 
     @Test
     void reloadTeardownDoesNotTouchTheRuntimePicture() throws Exception {
-        // P4：close(ScriptType) 不再清屏——声明注册表已由 generation 生命周期持有，运行时画面
-        // 状态不是 binding 的清理对象。1.1.x 的 clearRegistered() 在 reload 前清声明账本时
-        // 会顺带 clear()（清屏），收口后该副作用消失。
+        // close(ScriptType) does not clear the screen. The declaration registry is owned by the
+        // generation lifecycle, and runtime screen state is not something a binding cleans up.
         //
-        // 这里断言 binding **没有** 覆写 close：唯一的清理路径回到 Binding 的默认 no-op，因此
-        // reload teardown 不产生调用者可见的清屏。渲染状态本身需要真机客户端，不在无头 JVM 断言
-        // （见 REPORT §5 未验证项）。
+        // The assertion here is that the binding does NOT override close: the only cleanup path is the
+        // default no-op of Binding, so reload teardown cannot clear the screen as a visible side effect.
+        // The render state itself needs a real client, so a headless JVM cannot assert it.
         java.lang.reflect.Method close;
         try {
             close = PostEffectsJS.class.getDeclaredMethod("close", ScriptType.class);
@@ -314,8 +325,9 @@ class PostEffectDeclarationLifecycleTest {
 
     @Test
     void runtimeBindingMembersStayAvailableAndAreNotReplacedByTheDeclarationEvent() {
-        // AC5：set/clear/toggle/current 仍是运行时 binding；声明事件不提供它们。
-        // 反射读真实成员，而不是对字面量集合自断言（那恒真，证明不了任何事）。
+        // set/clear/toggle/current are still runtime binding members; the declaration event does not
+        // provide them. The members are read by reflection rather than asserted against a literal set,
+        // which would always pass and prove nothing.
         Set<String> bindingMembers = new java.util.HashSet<>();
         for (var method : PostEffectsJS.class.getMethods()) {
             bindingMembers.add(method.getName());

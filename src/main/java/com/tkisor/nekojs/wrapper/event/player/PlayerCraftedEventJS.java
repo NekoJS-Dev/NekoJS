@@ -7,17 +7,20 @@ import net.minecraft.world.Container;
 import net.minecraft.world.item.ItemStack;
 
 /**
- * 玩家合成/烧炼产物事件（{@code PlayerEvents.crafted / smelted}，均按物品 id 分发）的
- * 加载器中立载荷。
+ * Loader-neutral payload for the player crafted / smelted event
+ * ({@code PlayerEvents.crafted / smelted}, both dispatched by item id).
  *
- * <p>NeoForge 侧对应原生 {@code PlayerEvent.ItemCraftedEvent}（getCrafting/getInventory）
- * 与 {@code PlayerEvent.ItemSmeltedEvent}（getSmelting/getAmountRemoved）；本载荷统一为
- * {@code result}（产出的物品栈，合成=crafting、烧炼=smelting）与可空的 {@code container}
- * （crafted 为合成输入容器 {@code CraftingContainer}，smelted 无对应成员为 null）。
+ * <p>On NeoForge these correspond to the native {@code PlayerEvent.ItemCraftedEvent}
+ * (getCrafting/getInventory) and {@code PlayerEvent.ItemSmeltedEvent}
+ * (getSmelting/getAmountRemoved). This payload uses {@code result} (the produced stack:
+ * crafting for crafted, smelting for smelted) and a nullable {@code container} (for crafted,
+ * the crafting input container {@code CraftingContainer}; smelted has no such member and gets
+ * null).
  *
- * <p>注意：NeoForge 26.x 在 {@code ResultSlot#checkTakeAchievements}（crafted）与
- * {@code FurnaceResultSlot#checkTakeAchievements}（smelted）内触发，fabric 侧挂点
- * 与之一致——只覆盖工作台（含手机工作台）与熔炉/高炉/烟熏炉的取件动作。
+ * <p>NeoForge 26.x fires these inside {@code ResultSlot#checkTakeAchievements} (crafted) and
+ * {@code FurnaceResultSlot#checkTakeAchievements} (smelted), and the fabric hook matches them.
+ * They only cover taking the result from a crafting table (including the portable one) and
+ * from a furnace, blast furnace or smoker.
  */
 @Doc("Fired when a player takes a crafted or smelted item (PlayerEvents.crafted / smelted, dispatched by item id).")
 @Doc("event.result is the produced stack; event.container (crafted only) is the crafting input container, null for smelted.")

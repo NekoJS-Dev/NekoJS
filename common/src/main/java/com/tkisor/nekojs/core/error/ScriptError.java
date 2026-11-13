@@ -35,12 +35,12 @@ public class ScriptError {
     private final DefaultErrorTracker tracker;
     private final NekoSourceMapView sourceMaps;
     private final NekoVirtualModuleView virtualModules;
-    /** Generation the error was recorded under (-1 when none was published); frozen with the Context view (ticket 30). */
+    /** Generation the error was recorded under (-1 when none was published); frozen with the Context view. */
     private final long recordedGeneration;
     private final boolean recordedDuringCandidate;
     /** Callback kind (e.g. {@code event}/{@code timer}/{@code preflight-validator}); used only for phase classification. */
     private final String callbackKind;
-    /** Frozen diagnostic record (ticket 30): built once after parsing, never mutated afterwards. */
+    /** Frozen diagnostic record: built once after parsing and never mutated afterwards. */
     private ScriptDiagnosticRecord diagnostic;
 
     private ScriptError(Context context, ScriptContainer script, Throwable rawException, DefaultErrorTracker tracker) {
@@ -84,10 +84,11 @@ public class ScriptError {
     }
 
     /**
-     * 构造并解析脚本错误。
+     * Builds and parses a script error.
      *
-     * <p>解析（{@link #parseException()}）放在构造<b>完成后</b>执行：若在构造器内调用
-     * 实例方法，会把未完全初始化的 {@code this} 交给可能被重写的方法（this-escape）。
+     * <p>{@link #parseException()} runs <b>after</b> construction finishes. Calling it inside the
+     * constructor would hand the not fully initialized {@code this} to a method that may be
+     * overridden (this-escape).
      */
     public static ScriptError create(ScriptContainer script, Throwable rawException, DefaultErrorTracker tracker) {
         return create(null, script, rawException, tracker);
@@ -101,8 +102,9 @@ public class ScriptError {
     }
 
     /**
-     * 构造并解析回调/事件错误（同 {@link #create(ScriptContainer, Throwable, DefaultErrorTracker)}，
-     * 解析在构造完成后执行，避免 this-escape）。
+     * Builds and parses a callback or event error. Same as
+     * {@link #create(ScriptContainer, Throwable, DefaultErrorTracker)}: parsing runs after
+     * construction to avoid this-escape.
      */
     public static ScriptError create(ScriptType scriptType, ScriptId errorId, String fallbackPath, Throwable rawException, DefaultErrorTracker tracker) {
         return create(null, scriptType, errorId, fallbackPath, rawException, tracker);
@@ -129,10 +131,10 @@ public class ScriptError {
     }
 
     /**
-     * Ticket 30 frozen record: built once, read-only afterwards. Field priority — the staged
+     * Freezes the diagnostic record: built once, read-only afterwards. Field priority: the staged
      * pipeline error's ({@link com.tkisor.nekojs.core.module.NekoModuleError}) attribution wins,
-     * then the source-mapped authored location; without a location the sourcePath stays null
-     * (it is never a UI fallback path).
+     * then the source-mapped authored location. Without a location the sourcePath stays null; it is
+     * never a UI fallback path.
      */
     private ScriptDiagnosticRecord buildDiagnostic(ErrorSignature signature) {
         ScriptDiagnostics.Classification classification = ScriptDiagnostics.classify(rawException, callbackKind);
@@ -187,15 +189,16 @@ public class ScriptError {
         return sourcePath == null ? null : sourceMaps.mappedCacheRevision(sourcePath);
     }
 
-    /** Frozen diagnostic record (ticket 30): immutable after creation; mutable state (occurrences) stays behind this class's existing getters. */
+    /** Frozen diagnostic record: immutable after creation; mutable occurrence counts stay behind the existing getters. */
     public ScriptDiagnosticRecord diagnostic() {
         return diagnostic;
     }
 
     /**
-     * 轻量解析（不读取源码文件）：仅提取错误信息、映射后的行列号等字段。
-     * 既作为去重签名（{@code DefaultErrorTracker} 在构造完整 {@code ScriptError} 之前先比对），
-     * 也作为完整解析 {@link #parseException()} 的输入，保证两者字段完全一致。
+     * Lightweight parse that does not read the source file: it extracts only the error message, the
+     * mapped line and column, and similar fields. It serves as the de-duplication signature
+     * ({@code DefaultErrorTracker} compares it before building a full {@code ScriptError}) and as
+     * the input of the full {@link #parseException()}, so both produce identical fields.
      */
     static ErrorSignature parseSignature(DefaultErrorTracker tracker, Throwable rawException, ScriptContainer script) {
         ScriptType type = script == null ? null : script.type;
@@ -250,7 +253,7 @@ public class ScriptError {
                 null, false);
     }
 
-    /** 将轻量解析结果写入实例字段；仅在 {@code buildSnippet} 时读取源码文件构造代码片段。 */
+    /** Copies the lightweight parse result into the instance fields; only {@code buildSnippet} reads the source file. */
     private void applySignature(ErrorSignature signature) {
         this.errorMessage = signature.errorMessage;
         this.errorPath = signature.errorPath;
@@ -261,21 +264,22 @@ public class ScriptError {
             this.sourceCodeSnippet = "";
             return;
         }
-        // ESM 诊断沿用旧 parseEsmDiagnostic 的 getDisplayPath() 语义；Polyglot 异常沿用旧逻辑的 errorPath。
+        // ESM diagnostics take the snippet path from getDisplayPath(), matching parseEsmDiagnostic;
+        // Polyglot exceptions use errorPath.
         String snippetPath = signature.snippetFromDisplayPath ? getDisplayPath() : signature.errorPath;
         this.sourceCodeSnippet = buildSourceSnippet(snippetPath, signature.sourceContent, signature.fallbackSnippet);
     }
 
-    /** 轻量解析结果（包内可见）：错误信息、映射后的行列号等去重签名所需字段。 */
+    /** Lightweight parse result (package-visible): error message, mapped line and column, plus other signature fields. */
     static final class ErrorSignature {
         final String errorMessage;
         final String errorPath;
         final int lineNumber;
         final int columnNumber;
         final String originalSymbolName;
-        /** true = 需要读取源码文件构建代码片段；false = 片段为空串。 */
+        /** true means the source file must be read to build the snippet; false means the snippet is an empty string. */
         final boolean buildSnippet;
-        /** true = 片段路径用 getDisplayPath()（ESM 诊断）；false = 用 errorPath（Polyglot 异常）。 */
+        /** true takes the snippet path from getDisplayPath() (ESM diagnostics); false uses errorPath (Polyglot exceptions). */
         final boolean snippetFromDisplayPath;
         final String sourceContent;
         final String fallbackSnippet;

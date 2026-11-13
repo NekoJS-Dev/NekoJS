@@ -6,15 +6,16 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 
 /**
- * 方块实体 tick 事件（{@code BlockEvents.blockEntityTick}）的**加载器中立**载荷。
+ * Loader-neutral payload for the block entity tick event ({@code BlockEvents.blockEntityTick}).
  *
- * <p>成员名与 NeoForge 侧原生载荷 {@code BlockEntityTickEvent}（NF Event 子类）
- * 同形（blockEntity）——两加载器脚本面一致，载荷类各自持有（孪生决策见
- * 移植台账第 14 批）。
+ * <p>The member name matches the NeoForge native payload {@code BlockEntityTickEvent} (an NF
+ * Event subclass): {@code blockEntity}. The script surface is the same on both loaders, but
+ * each loader owns its payload class.
  *
- * <p>触发点：{@code LevelChunk$BoundTickingBlockEntity#tick} HEAD（两加载器同点），
- * 对所有有 ticker 的方块实体触发（原版 + 脚本），按 {@link BlockEntityType} 分发。
- * 不可取消。高频通道：无监听器时零事件对象（绑定处已过滤失效实体）。
+ * <p>Fires at the HEAD of {@code LevelChunk$BoundTickingBlockEntity#tick}, the same point on
+ * both loaders, for every block entity that has a ticker (vanilla and script). Dispatched by
+ * {@link BlockEntityType}. Not cancellable. High-frequency channel: no event object is built
+ * when nothing is listening (the binding already filters out invalid entities).
  */
 @Doc("Fired every tick for each ticking block entity (furnaces, machines, ...).")
 @Getter

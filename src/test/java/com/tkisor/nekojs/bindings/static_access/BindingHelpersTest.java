@@ -20,8 +20,8 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * 绑定 helper 的可裸跑部分：KMath 纯数学；ParticleOptions 无参路径经
- * {@link VanillaRegistryProbe} assume-skip（注册表真值）。
+ * The parts of the binding helpers that run on a bare JVM: KMath is pure math, and the no-argument
+ * ParticleOptions path assume-skips through {@link VanillaRegistryProbe}, which reads the real registry.
  */
 class BindingHelpersTest {
 

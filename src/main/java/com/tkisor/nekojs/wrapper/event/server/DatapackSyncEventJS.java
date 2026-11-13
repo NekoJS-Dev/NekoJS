@@ -6,14 +6,15 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.players.PlayerList;
 
 /**
- * 数据包同步事件（{@code ServerEvents.datapackSync}）的**加载器中立**载荷。
+ * Loader-neutral event object for {@code ServerEvents.datapackSync}.
  *
- * <p>NeoForge 侧直传原生 {@code OnDatapackSyncEvent}，不经本类；fabric 侧由
- * {@code FabricServerEventBindings} 从 {@code ServerLifecycleEvents.SYNC_DATA_PACK_CONTENTS}
- * 转换（签名与语义 javap 实证：player 为 null 表示 reload 后的全体玩家，
- * 与 NF 的 reload 语义一致）。
+ * <p>NeoForge passes its native {@code OnDatapackSyncEvent} directly and does not use this class.
+ * On Fabric, {@code FabricServerEventBindings} adapts {@code ServerLifecycleEvents.SYNC_DATA_PACK_CONTENTS}
+ * into this wrapper; {@code player} is {@code null} when syncing to all players after a reload,
+ * matching NeoForge's reload behavior.
  *
- * <p>通知型，不可取消。脚本典型用途：数据包重载后给玩家发包/重置客户端缓存。
+ * <p>Notification-only and not cancellable. Typically used to send packets or reset client caches
+ * after a datapack reload.
  */
 @Doc("Fired when datapack-synced content should be (re)sent to players.")
 @Doc("player is null when syncing to all players after a reload.")

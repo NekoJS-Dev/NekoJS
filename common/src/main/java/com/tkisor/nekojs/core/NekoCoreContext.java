@@ -6,16 +6,18 @@ import com.tkisor.nekojs.core.fs.ClassFilter;
 import graal.graalvm.polyglot.Engine;
 
 /**
- * 核心运行时横切依赖的不可变载体。
+ * Immutable holder for the core-wide cross-cutting dependencies.
  *
- * <p>只承载 core-wide、与 config/engine/error 同生命周期的 4 个字段：
- * {@code engine}、{@code sandboxConfig}、{@code classFilter}、{@code errorTracker}。
- * 路径通过 {@link com.tkisor.nekojs.core.fs.NekoJSPaths#get()} 单例访问。
+ * <p>It carries only the 4 fields that are core-wide and live as long as config, engine and
+ * error handling: {@code engine}, {@code sandboxConfig}, {@code classFilter} and
+ * {@code errorTracker}. Paths are reached through the
+ * {@link com.tkisor.nekojs.core.fs.NekoJSPaths#get()} singleton.
  *
  * <ul>
- *   <li>不提供 {@code get()} / {@code current()} 等服务查找能力。</li>
- *   <li>普通业务类构造器默认不接收 {@code NekoCoreContext}。</li>
- *   <li>接收 {@code NekoCoreContext} 的类只能作为 terminal consumer / factory input。</li>
+ *   <li>It offers no service lookup such as {@code get()} / {@code current()}.</li>
+ *   <li>Ordinary business classes do not take {@code NekoCoreContext} in their constructors.</li>
+ *   <li>A class that does take {@code NekoCoreContext} may only be a terminal consumer or a
+ *       factory input.</li>
  * </ul>
  */
 public record NekoCoreContext(

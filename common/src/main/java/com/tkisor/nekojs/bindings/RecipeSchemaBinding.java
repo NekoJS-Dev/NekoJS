@@ -23,11 +23,11 @@ public class RecipeSchemaBinding {
     }
 
     public List<String> types(String namespace) {
-        // 合并 handler 方法名和 schema type 名
+        // Merge handler method names into the schema type names
         List<String> all = new ArrayList<>(current().types(namespace));
         RecipeNamespaceEntry entry = NekoRuntimeAccess.get().recipeNamespaces().get(namespace);
         if (entry != null) {
-            // handler 的方法名也算 type
+            // Handler method names also count as types
             for (var method : entry.handlerClass().getMethods()) {
                 String name = method.getName();
                 if (method.getDeclaringClass() != Object.class && !all.contains(name)) {
@@ -38,14 +38,17 @@ public class RecipeSchemaBinding {
         return all;
     }
 
-    /** JSON 目录（mod jar recipes JSON 里声明的 type 清单；无 schema 字段，仅供查询）。 */
+    /**
+     * JSON catalog: the types declared in mod jar recipe JSON. There is no schema field, so
+     * this list is for lookup only.
+     */
     public List<String> jsonTypes(String namespace) {
         return new ArrayList<>(RecipeJsonTypeCatalog.types(namespace));
     }
 
     public Map<String, Object> describe(String namespace, String type) {
         var def = current().get(namespace, type);
-        // 检查是否有 handler 方法
+        // Check whether a handler method exists
         boolean hasHandler = hasHandlerMethod(namespace, type);
 
         if (def == null && !hasHandler) {
@@ -58,7 +61,7 @@ public class RecipeSchemaBinding {
         result.put("type", def != null ? def.type() : (namespace + ":" + type));
         result.put("idPrefix", def != null ? def.prefix() : (namespace + "_" + type));
 
-        // handler 方法签名（覆盖 schema 的通用构造器）
+        // Handler method signature; overrides the schema's generic constructor
         if (hasHandler) {
             List<Map<String, Object>> handlerFields = new ArrayList<>();
             List<List<String>> handlerCtorOpts = new ArrayList<>();
@@ -92,7 +95,8 @@ public class RecipeSchemaBinding {
         return result;
     }
 
-    // Handler 方法收集委托给 RecipeNamespaceCatalogEntry（共享实现，避免重复反射逻辑）
+    // Handler method collection delegates to RecipeNamespaceEntry (shared implementation, so
+    // reflection logic is not duplicated)
     private static void collectHandlerMethods(String namespace, String type, List<Map<String, Object>> handlerFields, List<List<String>> constructorOpts) {
         RecipeNamespaceEntry entry = NekoRuntimeAccess.get().recipeNamespaces().get(namespace);
         if (entry == null) return;

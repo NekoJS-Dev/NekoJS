@@ -14,14 +14,14 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
 /**
- * Ticket 29 AC8 capability leg for the 1.21.1 node (node-local test tree, so it runs only here):
- * both assets/lang events stay available, but the typed {@code Assets} binding is absent — the
- * only production registration line sits inside a {@code >=26} stonecutter guard in
- * {@code NekoJSCorePlugin} (pinned by the shared-tree
- * {@code Ticket29AssetsLangCapabilityTraceTest} guard trace), so this node evaluates it away.
+ * Checks that the 1.21.1 node lacks the typed {@code Assets} binding. This is a node-local test
+ * tree, so it runs only here: both the assets and lang events stay available, but the typed
+ * {@code Assets} binding is absent. Its only production registration line sits inside a
+ * {@code >=26} stonecutter guard in {@code NekoJSCorePlugin}, so this node evaluates it away; the
+ * guard trace in the shared tree's {@code Ticket29AssetsLangCapabilityTraceTest} pins that.
  *
- * <p>This records an existing platform difference as an explicit capability row, not a silent
- * gap; widening the binding to 1.21.1 is a deliberate surface change, not a test fix.
+ * <p>The test records an existing platform difference explicitly instead of leaving a silent gap.
+ * Widening the binding to 1.21.1 is a deliberate API change, not a test fix.
  */
 class Ticket29AssetsAbsentOn1211Test {
 

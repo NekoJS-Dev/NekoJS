@@ -13,7 +13,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 
-/** A Context-local public-type boundary, including Bean properties and overloads. */
+/** A Context-local view of a public type, with its Bean properties and overloads. */
 public final class BindingValueProxy implements ProxyObject {
     private final Value delegate;
     private final Object target;
@@ -107,7 +107,7 @@ public final class BindingValueProxy implements ProxyObject {
         if (selected == null) throw new IllegalArgumentException("[NEKO-4057] No matching public API overload");
         try {
             if (target == null && !staticOnly) {
-                // Guest-backed public interfaces still use the declared conversion boundary.
+                // Public interfaces backed by a guest object still convert through the declared type.
                 Object guestView = delegate.as(selected.getDeclaringClass());
                 return narrow(Value.asValue(selected.invoke(guestView, converted)), selected.getReturnType());
             }

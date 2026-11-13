@@ -34,10 +34,11 @@ public final class ApiFacadeProxy implements ProxyObject, ProxyIterable {
     private final ApiGuestErrorFactory guestErrorFactory;
 
     /**
-     * getMember 返回的可执行对象缓存。脚本里每次 {@code facade.member(...)} 的成员访问都会
-     * 调一次 {@link #getMember}；lambda 只捕获本实例的 final 字段与不可变 {@code memberSymbols}
-     * 条目（无逐次可变状态），因此按 member key 复用同一个 ProxyExecutable 是安全的，
-     * 避免每次属性访问都分配一个新闭包。
+     * Cache of the executables returned by getMember. Every {@code facade.member(...)} access in a
+     * script calls {@link #getMember}, and the lambda captures only final fields of this instance
+     * and immutable {@code memberSymbols} entries, with no per-call mutable state. Reusing one
+     * ProxyExecutable per member key is therefore safe, and it avoids allocating a closure on every
+     * property access.
      */
     private final Map<String, ProxyExecutable> memberExecutables = new ConcurrentHashMap<>();
 
@@ -89,8 +90,9 @@ public final class ApiFacadeProxy implements ProxyObject, ProxyIterable {
         Objects.requireNonNull(runtimeView, "runtimeView");
         Objects.requireNonNull(typeId, "typeId");
 
-        // memberSymbols 只依赖 typeId（facade 注册是进程全局的），按 typeId 缓存，避免每次
-        // API 返回 SYMBOL 类型都重跑 stream + findSymbol 反射——这是 marshalReturn 的热路径。
+        // memberSymbols depends only on typeId (facade registration is process-wide), so cache it by
+        // typeId instead of re-running the stream and findSymbol reflection whenever an API returns
+        // a SYMBOL type. This is the hot path of marshalReturn.
         MemberLayout layout = layoutOf(runtimeView, typeId);
         Set<String> memberNames = layout.memberNames();
         Map<String, ApiSymbol> memberSymbols = layout.memberSymbols();
@@ -103,11 +105,12 @@ public final class ApiFacadeProxy implements ProxyObject, ProxyIterable {
     }
 
     /**
-     * runtimeView → typeId → (memberNames, memberSymbols) 的进程级缓存。memberSymbols 同时依赖
-     * typeId 与该 runtimeView 的符号表——不同 registry 实例下同名 typeId 的成员布局可能不同，
-     * 故外层按 runtimeView 分桶（不能只按 typeId 缓存）。外层用 WeakHashMap 使 registry 可被 GC
-     * （reload / 测试结束即回收）；facade 注册在启动期完成、脚本重载不变，故每个 registry 的布局
-     * 在其生命周期内稳定。
+     * Process-wide cache from runtimeView to typeId to (memberNames, memberSymbols). memberSymbols
+     * depends on both the typeId and the symbol table of that runtimeView, because the same typeId
+     * can have a different member layout under a different registry instance, so the outer map is
+     * keyed by runtimeView and typeId alone is not enough. The outer WeakHashMap lets a registry be
+     * collected by the GC after reload or when a test ends. Facades are registered at startup and do
+     * not change on script reload, so each registry's layout is stable for its lifetime.
      */
     private static final Map<ApiRuntimeView, ConcurrentHashMap<ApiSymbolId, MemberLayout>> LAYOUT_BY_VIEW =
             Collections.synchronizedMap(new WeakHashMap<>());
@@ -115,7 +118,8 @@ public final class ApiFacadeProxy implements ProxyObject, ProxyIterable {
     private record MemberLayout(Set<String> memberNames, Map<String, ApiSymbol> memberSymbols) {}
 
     private static MemberLayout layoutOf(ApiRuntimeView runtimeView, ApiSymbolId typeId) {
-        // 外层 computeIfAbsent 由 synchronizedMap 包装保证原子；仅首次访问某 registry 时进入。
+        // The synchronizedMap wrapper makes the outer computeIfAbsent atomic. It runs only the first
+        // time a registry is seen.
         ConcurrentHashMap<ApiSymbolId, MemberLayout> forView =
                 LAYOUT_BY_VIEW.computeIfAbsent(runtimeView, rv -> new ConcurrentHashMap<>());
         return forView.computeIfAbsent(typeId, id -> {
@@ -241,8 +245,9 @@ public final class ApiFacadeProxy implements ProxyObject, ProxyIterable {
     }
 
     /**
-     * 底层实现本身可迭代（如 {@code RegistryView} 的条目 id 列表）时，代理对象对脚本
-     * {@code for...of} 可见。元素按原样透传——今天唯一的可迭代实现产出 String id。
+     * Makes the proxy visible to a script's {@code for...of} when the implementation under it is
+     * itself iterable, for example the entry id list of {@code RegistryView}. Elements pass through
+     * unchanged; the only iterable implementation today yields String ids.
      */
     @Override
     public ProxyIterator getIterator() {

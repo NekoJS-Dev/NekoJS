@@ -28,45 +28,59 @@ import com.tkisor.nekojs.script.prop.ScriptPropertyRegistry;
 import java.util.List;
 
 /**
- * 两个 loader（NeoForge {@code NekoJSMod} / Fabric {@code NekoJSFabricMod}）共享的运行时
- * 装配序列——纯构造实现（shared construction function），<b>不是</b>新的 runtime owner：
- * 不缓存任何 static，不提供 get()/current()，产物由调用方（loader entry）私有持有。
+ * Runtime assembly sequence shared by both loaders (NeoForge {@code NekoJSMod} and Fabric
+ * {@code NekoJSFabricMod}). This is a pure construction function, <b>not</b> a new runtime owner:
+ * it caches no static state, provides no get()/current(), and the caller (the loader entry) keeps
+ * the result privately.
  *
- * <p>装配顺序（与两 loader 既有实现逐行对齐，行为保持）：
+ * <p>Assembly order:
  * <ol>
- *   <li>{@link NekoPluginRuntime#bootstrapOwned}（loader 侧插件发现在此之前完成）</li>
- *   <li>{@link NekoRuntimeAccess#get()}.fireInit()（initStartup 前置 init 钩子）</li>
- *   <li>loader 特有事件面接线（{@link PluginWiring}：registrar bind / bridge set，顺序随平台保持）</li>
- *   <li>引擎上下文：compilers → SandboxConfig → ClassFilter.INSTANCE → ErrorTracker →
- *       ScriptErrorReporter → NekoCoreContext（NekoSharedEngine）→ NekoSandboxFactory</li>
- *   <li>W3 语言管线显式装配：NekoModulePipeline + NekoModulePipelineCache 各一个实例，sandbox factory 与 root 共享（无 static 绑定、无 legacy instance）</li>
- *   <li>{@link NekoRuntimeRoot} 构造（唯一 lifecycle owner）</li>
- *   <li>逐 {@link ScriptType#autoLoadTypes()} createScriptManager + discoverScripts</li>
+ *   <li>{@link NekoPluginRuntime#bootstrapOwned} (the loader finishes plugin discovery before
+ *       this)</li>
+ *   <li>{@link NekoRuntimeAccess#get()}.fireInit() (the init hook that runs before
+ *       initStartup)</li>
+ *   <li>loader-specific event wiring ({@link PluginWiring}: registrar bind / bridge set, in the
+ *       order each platform keeps)</li>
+ *   <li>engine context: compilers -> SandboxConfig -> ClassFilter.INSTANCE -> ErrorTracker ->
+ *       ScriptErrorReporter -> NekoCoreContext (NekoSharedEngine) -> NekoSandboxFactory</li>
+ *   <li>explicit language pipeline: one NekoModulePipeline and one NekoModulePipelineCache
+ *       instance, shared by the sandbox factory and the root (no static binding, no legacy
+ *       instance)</li>
+ *   <li>{@link NekoRuntimeRoot} construction (the single lifecycle owner)</li>
+ *   <li>createScriptManager + discoverScripts for each {@link ScriptType#autoLoadTypes()}</li>
  *   <li>STARTUP loadScripts</li>
  *   <li>{@link NekoRuntimeAccess#get()}.fireInitStartup()</li>
  * </ol>
- * 之后各平台的收尾差异（如 {@code GoalEvents.postRegister()}）留在 loader entry。
+ * The per-platform finishing steps (such as {@code GoalEvents.postRegister()}) stay in the loader
+ * entry.
  *
- * <p>进程级例外（NekoSharedEngine / NekoRuntimeAccess / NekoPluginRuntime publish）只在
- * 本序列的固定点位触碰一次，不因共同装配产生第二套状态（工单 05 AC8）。
+ * <p>Process-level exceptions (NekoSharedEngine / NekoRuntimeAccess / NekoPluginRuntime publish)
+ * are touched exactly once at fixed points in this sequence, so sharing the assembly does not
+ * create a second set of state.
  */
 public final class NekoRuntimeAssembly {
 
     private NekoRuntimeAssembly() {}
 
-    /** 装配产物：{@code root} 是唯一 lifecycle 入口，由 loader entry 私有持有。 */
-    /** 只带 root：调用方（loader entry）不消费其他产物，避免装配件长出第二个访问面。 */
+    /** Assembly result: {@code root} is the only lifecycle entry point and is held privately by the loader entry. */
+    /**
+     * Only root: the caller (the loader entry) consumes nothing else, which keeps the assembly from
+     * growing a second access path.
+     */
     public record Assembled(NekoRuntimeRoot root) {}
 
-    /** loader 特有事件面接线：在 fireInit 之后、引擎装配之前执行一次。 */
+    /**
+     * Loader-specific event wiring. Runs once, after fireInit and before the engine is assembled.
+     */
     @FunctionalInterface
     public interface PluginWiring {
         void wire(NekoPluginRuntime pluginRuntime);
     }
 
     /**
-     * 执行完整装配序列。{@code ownedPlugins} 来自 loader 侧发现
-     * （{@code NekoJSBasePluginManager.getOwnedPlugins()}），装配内不再触碰 loader 发现面。
+     * Runs the full assembly sequence. {@code ownedPlugins} comes from loader-side discovery
+     * ({@code NekoJSBasePluginManager.getOwnedPlugins()}); assembly itself does not touch loader
+     * discovery.
      */
     public static Assembled assemble(
             ScriptEventBridge eventBridge,
@@ -77,9 +91,9 @@ public final class NekoRuntimeAssembly {
     }
 
     /**
-     * Assembly boundary for an explicitly authorized remote pack. The default overload above
-     * remains the local-trusted production path; the context is carried only by the preparation
-     * cache and its resolution collaborators, never by execution APIs.
+     * Assembly for an explicitly authorized remote pack. The default overload above stays the
+     * local-trusted production path. Only the preparation cache and its resolution collaborators
+     * carry the context; execution APIs never do.
      */
     public static Assembled assemble(
             ScriptEventBridge eventBridge,
@@ -91,15 +105,17 @@ public final class NekoRuntimeAssembly {
             throw new NullPointerException("trustContext");
         }
         NekoPluginRuntime pluginRuntime = NekoPluginRuntime.bootstrapOwned(ownedPlugins, scriptProperties);
-        // AC8 的计数面：本行每次进程只应出现一次（bootstrapOwned 重复调用会被 publish 拒绝），
-        // 烟测以 reload 前后各 grep 一次验证计数不变；Fabric 侧另有 entrypoint/bootstrap-done marker。
+        // This line must appear exactly once per process (repeated bootstrapOwned calls are
+        // rejected by publish). The smoke test greps for it before and after a reload to confirm
+        // the count stays the same; the Fabric side has its own entrypoint/bootstrap-done marker.
         NekoJSLoggers.get("NekoJS").info("NekoJS plugin runtime bootstrapped once (assembly)");
         NekoRuntimeAccess.get().fireInit();
         pluginWiring.wire(pluginRuntime);
 
         var compilers = ScriptCompilerRegistry.current();
         SandboxConfig sandboxConfig = ClassFilter.loadEngineConfig();
-        // 复用全局单例（NekoSecurityWarningHandler 等读取 ClassFilter.INSTANCE），避免双实例状态分裂
+        // Reuse the global singleton: NekoSecurityWarningHandler and others read
+        // ClassFilter.INSTANCE, so a second instance would split the state.
         ClassFilter classFilter = ClassFilter.INSTANCE;
         SourceMapRegistry sourceMaps = new SourceMapRegistry(NekoJSPaths.get().root());
         NekoEsmVirtualModuleRegistry virtualModules = new NekoEsmVirtualModuleRegistry(NekoJSPaths.get().root());
@@ -111,8 +127,9 @@ public final class NekoRuntimeAssembly {
                 classFilter,
                 errorTracker
         );
-        // W3 语言模块管线：单 pipeline + 单 prepared 缓存实例，执行环境侧与 root 共享；
-        // 模块 cache/session 生命周期由 root 持有（root close 全清），无 static 状态。
+        // Language pipeline: a single pipeline and a single prepared cache instance, shared with the
+        // execution environment and the root. The root owns the module cache and session lifetime
+        // and clears everything on close; there is no static state.
         NekoModulePipelineCache modulePreparationCache = new NekoModulePipelineCache(
                 new NekoModulePipeline(new NekoCompilationPipeline(), compilers, sandboxConfig),
                 sourceMaps, virtualModules, trustContext);

@@ -34,25 +34,24 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * WORLD pack relative-path regression (ticket 03 §3-1 real-code defect, ticket 07 G4
- * leftover, picked up by ticket 19): the world directory handed in by the platform may be
- * relative (a Windows dedicated server was observed passing {@code .\world\.}) while the
- * nekojs root is always absolute. If pack script paths stay relative,
+ * Regression test for relative WORLD pack paths. The world directory the platform hands in may
+ * be relative (a Windows dedicated server passed {@code .\world\.}) while the nekojs root is
+ * always absolute. If pack script paths stay relative,
  * {@code paths.root().relativize(script.path)} in {@code ScriptExecutor} mixes absolute and
- * relative inputs and throws IAE — after WORLD pack activation, the SERVER reload fails
- * every script of that pack (errors land in the panel, scripts get disabled): "activated
+ * relative inputs and throws IAE. After WORLD pack activation the SERVER reload then fails
+ * every script of that pack, with the errors in the panel and the scripts disabled: "activated
  * but never ran".
  *
- * <p>Fix semantics: {@link ScriptPackRegistry#activateWorldPacks} normalizes the world
+ * <p>{@link ScriptPackRegistry#activateWorldPacks} fixes this by normalizing the world
  * directory to an absolute path before scanning, so pack script paths are already absolute
  * when they enter ScriptContainer.
  *
- * <p>Test geometry: the shared test gameDir lives on the system temp drive, which may not be
- * the same drive as the Gradle CWD (the module directory), so no relative path from CWD can
- * reach it. This test therefore temporarily swaps the {@code NekoJSPaths} singleton for a
- * gameDir built under {@code build/} on the CWD's drive (making a relative world dir
- * reachable) and restores the original instance and global pack scan afterwards. This is a
- * test-only reflection seam (precedent: same-tree tests reflecting Platform.INSTANCE).
+ * <p>The shared test gameDir lives on the system temp drive, which may not be the same drive as
+ * the Gradle CWD (the module directory), so no relative path from the CWD can reach it. This
+ * test therefore swaps the {@code NekoJSPaths} singleton for a gameDir built under
+ * {@code build/} on the CWD's drive, which makes a relative world dir reachable, and restores
+ * the original instance and global pack scan afterwards. The swap uses reflection, as the
+ * same-tree tests already do for Platform.INSTANCE.
  */
 class WorldPackRelativePathExecutionTest {
 

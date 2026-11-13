@@ -13,12 +13,14 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Fabric 客户端入口：CLIENT 脚本加载 + 客户端事件桥（当前只接 tick）。
+ * Fabric client entry: loads CLIENT scripts and wires the client event bridge (currently only
+ * tick).
  *
- * <p>与 NeoForge 侧 {@code NekoJSClient} 对应：那边在 mod 事件（client setup，资源就绪前）
- * 里加载 CLIENT 脚本并接客户端总线；这边在 {@code ClientModInitializer} 注册 fabric 桥，
- * 脚本加载挂 {@code CLIENT_STARTED}（初始资源重载后）——时机差异见
- * {@link FabricClientEventBindings}。
+ * <p>This mirrors {@code NekoJSClient} on NeoForge. There, CLIENT scripts load and the client
+ * bus is wired inside a mod event (client setup, before resources are ready). Here the fabric
+ * bridge registers in {@code ClientModInitializer} and script loading hangs off
+ * {@code CLIENT_STARTED} (after the initial resource reload). See
+ * {@link FabricClientEventBindings} for the timing difference.
  */
 public final class NekoJSFabricClient implements ClientModInitializer {
 
@@ -37,11 +39,13 @@ public final class NekoJSFabricClient implements ClientModInitializer {
         FabricPackSync.registerClient(refreshPackResources);
         FabricPlayNetwork.registerClient();
         FabricPDataSync.registerClient();
-        // 脚本按键绑定：register 入口 + pressed/released/tick 轮询（ClientTickEvents）
+        // Script key bindings: the register entry plus pressed/released/tick polling through
+        // ClientTickEvents.
         com.tkisor.nekojs.bindings.event.client.KeyBindEvents.register();
         FabricClientEventBindings.register(() -> {
-            // root 经 loader entry 的 package-private accessor 获取（fabric entrypoint
-            // 由 loader 反射实例化，无法构造注入）；未装配完成时保留原跳过语义
+            // The root comes from the loader entry's package-private accessor, because the loader
+            // instantiates the fabric entrypoint reflectively and cannot inject it. If assembly is
+            // not finished, skip as before.
             var root = NekoJSFabricMod.runtimeRootOrNull();
             if (root == null) {
                 LOGGER.error("CLIENT_STARTED: runtime root not assembled yet, skipping CLIENT script load");

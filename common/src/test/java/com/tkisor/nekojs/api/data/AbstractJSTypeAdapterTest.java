@@ -6,13 +6,13 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * {@link AbstractJSTypeAdapter} test/apply 一致性回归：
- * 字符串输入形状只有在适配器真正覆盖 {@code fromString} 时才应被接受，
- * 不得出现「test 通过但 apply 抛异常」的不一致。
+ * Regression test for test/apply consistency in {@link AbstractJSTypeAdapter}: a string input shape
+ * is accepted only when the adapter actually overrides {@code fromString}, so test must never pass
+ * while apply throws.
  */
 class AbstractJSTypeAdapterTest {
 
-    /** 不接受字符串：未覆盖 fromString，也不识别任何宿主对象。 */
+    /** Accepts no strings: it does not override fromString and recognizes no host object. */
     static final class NoStringAdapter extends AbstractJSTypeAdapter<String> {
         @Override
         public Class<String> getTargetClass() {
@@ -25,7 +25,7 @@ class AbstractJSTypeAdapterTest {
         }
     }
 
-    /** 接受字符串：覆盖 fromString。 */
+    /** Accepts strings: it overrides fromString. */
     static final class StringAdapter extends AbstractJSTypeAdapter<String> {
         @Override
         public Class<String> getTargetClass() {

@@ -11,11 +11,11 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * Ticket 21, AC1/AC2/AC4/AC6 (server side): batch order preflight → fingerprint/conflict
- * → server prepare → client prepare/ack → controlled commit, with every phase's
- * result/generation/owner/domain/error source observable; any failure aborts the
- * whole batch with the old activated state still serving; late/duplicate/disconnect/
- * timeout/join all have defined outcomes (no silent no-op).
+ * Server side of the batch transaction: batch order preflight, fingerprint/conflict check,
+ * server prepare, client prepare/ack, then a controlled commit. Every phase's result,
+ * generation, owner, domain and error source stays observable. Any failure aborts the whole
+ * batch and the old activated state keeps serving. Late, duplicate, disconnect, timeout and
+ * join all have defined outcomes and never become a silent no-op.
  */
 class DynamicRegistryTransactionSemanticsTest {
 
@@ -55,7 +55,7 @@ class DynamicRegistryTransactionSemanticsTest {
         return generation;
     }
 
-    // ---- AC1: order and observability ----
+    // ---- Phase order and observability ----
 
     @Test
     void phasesRunInTicketOrderAndEachPhaseResultIsObservable() {
@@ -75,7 +75,7 @@ class DynamicRegistryTransactionSemanticsTest {
                 DynamicRegistryTransactionCoordinator.Phase.CLIENT_PREPARE,
                 DynamicRegistryTransactionCoordinator.Phase.ACK,
                 DynamicRegistryTransactionCoordinator.Phase.COMMIT), order);
-        // every record carries generation, owner and domain (AC1 observability)
+        // every record carries the generation, owner and domain
         coordinator.phaseLog().forEach(record -> {
             assertTrue(record.passed(), "phase " + record.phase() + " should pass: " + record);
             assertEquals(generation, record.generation());
@@ -94,7 +94,7 @@ class DynamicRegistryTransactionSemanticsTest {
                 "commit is broadcast even with zero remote participants");
     }
 
-    // ---- AC2: whole-batch abort keeps old active serving ----
+    // ---- Aborting the whole batch keeps the old active state serving ----
 
     @Test
     void conflictedBatchAbortsAndOldActiveKeepsServing() {
@@ -285,7 +285,7 @@ class DynamicRegistryTransactionSemanticsTest {
                 .anyMatch(r -> "close-preemption:server-stopping".equals(r.errorSource())));
     }
 
-    // ---- AC6/commit-once: exactly-once execution and defined late/duplicate outcomes ----
+    // ---- Exactly-once execution; late and duplicate messages have defined outcomes ----
 
     @Test
     void lateAckAfterCommitHasDefinedOutcomeAndNoDoubleExecution() {
@@ -345,7 +345,7 @@ class DynamicRegistryTransactionSemanticsTest {
         assertEquals(2, adapter.live.size(), "both batches' entries are live after both commit");
     }
 
-    // ---- AC4: join / state-sync outcomes ----
+    // ---- Join and state-sync outcomes ----
 
     @Test
     void participantJoiningMidTransactionMustAckBeforeCommit() {

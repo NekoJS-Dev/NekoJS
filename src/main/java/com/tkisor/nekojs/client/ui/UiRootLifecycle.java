@@ -4,21 +4,21 @@ package com.tkisor.nekojs.client.ui;
 import com.tkisor.nekojs.core.state.GenerationGlobals;
 
 /**
- * Lifecycle state machine and generation epoch checks for one JSX UI root (ticket 42).
- * Minecraft-free so reload, discard and stale-handle transitions stay testable without a
- * live client; {@link JsxHostAdapter} delegates every generation decision here.
+ * Tracks the lifecycle state and checks the generation epoch of one JSX UI root. It has no
+ * Minecraft dependency, so reload, discard and stale-handle transitions stay testable without
+ * a live client; {@link JsxHostAdapter} delegates every generation decision here.
  *
- * <p>States: {@code CANDIDATE} (created by an in-flight reload candidate — data preparation
- * allowed, nothing production-visible) → {@code ACTIVE} (its generation committed —
- * production Screen and input routing allowed) → {@code CLOSING} → {@code CLOSED}
- * (terminal). Transitions are forward-only; re-opening a closed root or observing an
+ * <p>States: {@code CANDIDATE} (created by an in-flight reload candidate; data preparation is
+ * allowed, nothing is visible in production) → {@code ACTIVE} (its generation committed; the
+ * production Screen and input routing are allowed) → {@code CLOSING} → {@code CLOSED}
+ * (terminal). Transitions only move forward; re-opening a closed root or observing an
  * unexpected state throws with a stable {@code NEKO-} code instead of silently succeeding.
  *
- * <p>Epoch validity has two layers: the generation number must relate to the manager's
- * committed generation (equal, or exactly one ahead while the owning candidate builds), and
- * the owning {@link GenerationGlobals} must not be closed. The instance check is what makes
- * a root from a <i>failed</i> candidate distinguishable from a later candidate that happens
- * to reuse the same number — failed candidates do not increment the counter.
+ * <p>Epoch validity has two parts: the generation number must match the manager's committed
+ * generation (equal, or exactly one ahead while the owning candidate builds), and the owning
+ * {@link GenerationGlobals} must not be closed. Comparing the instance is what makes a root
+ * from a <i>failed</i> candidate distinguishable from a later candidate that happens to reuse
+ * the same number, because failed candidates do not increment the counter.
  */
 final class UiRootLifecycle {
     enum State { CANDIDATE, ACTIVE, CLOSING, CLOSED }

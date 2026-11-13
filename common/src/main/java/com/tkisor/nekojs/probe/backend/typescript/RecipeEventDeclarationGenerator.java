@@ -21,16 +21,16 @@ import java.lang.reflect.ParameterizedType;
 import java.util.*;
 
 /**
- * 生成 recipe 事件的 TypeScript 声明。
+ * Generates the TypeScript declarations for recipe events.
  *
- * <p>参考 ProbeJS：在 @side-only/server/events/recipes/index.d.ts 中定义：
+ * <p>Following ProbeJS, it defines these in @side-only/server/events/recipes/index.d.ts:
  * <ul>
- *   <li>每个 recipe 类型的 builder 类（如 Minecraft$Smelting extends $RecipeJsonBuilder）</li>
- *   <li>DocumentedRecipes 类 — 把所有命名空间组织成嵌套对象</li>
+ *   <li>a builder class for every recipe type (such as Minecraft$Smelting extends $RecipeJsonBuilder)</li>
+ *   <li>the DocumentedRecipes class, which organizes all namespaces into nested objects</li>
  * </ul>
  *
- * <p>然后 TypeScriptClassRenderer 通过 overrideGetter 机制，
- * 让 $RecipeEventJS.recipes getter 返回 DocumentedRecipes 而不是 $RecipeRegistryProxy。
+ * <p>TypeScriptClassRenderer then uses its overrideGetter mechanism so the $RecipeEventJS.recipes getter
+ * returns DocumentedRecipes instead of $RecipeRegistryProxy.
  */
 public final class RecipeEventDeclarationGenerator {
     private final TypeAliasRegistry aliasRegistry;
@@ -97,8 +97,8 @@ public final class RecipeEventDeclarationGenerator {
     }
 
     /**
-     * 解析某个 Java 类型的输入别名名（如 ItemStack → $ItemStack_）。
-     * 优先取适配器驱动的注册别名，缺失时回退到 {@code $simple_}。
+     * Resolves the input alias name of a Java type (such as ItemStack to $ItemStack_). It uses the
+     * adapter-driven registered alias first and falls back to {@code $simple_} when there is none.
      */
     private String resolveAlias(String pkg, String simple) {
         String fqn = pkg + "." + simple;
@@ -157,7 +157,7 @@ public final class RecipeEventDeclarationGenerator {
 
         renderer.generateInputAliases(sb, namespaces);
 
-        // 1. 为每个 schema 类型生成单独的 builder 类（链式 setter）
+        // 1. Emit a separate builder class with chained setters for every schema type.
         for (RecipeNamespaceCatalogEntry ns : namespaces) {
             for (RecipeSchemaTypeEntry schemaType : ns.schemaTypes()) {
                 if (!hasBuilder(schemaType)) continue;
@@ -165,7 +165,7 @@ public final class RecipeEventDeclarationGenerator {
             }
         }
 
-        // 2. 生成 DocumentedRecipes 类 — 关键：将所有命名空间组织为嵌套对象
+        // 2. Emit the DocumentedRecipes class. The point is to organize all namespaces into nested objects.
         sb.append("\n    /**\n");
         sb.append("     * Top-level recipe registry. Access via event.recipes.<namespace>.<type>(...)\n");
         sb.append("     */\n");
@@ -182,8 +182,7 @@ public final class RecipeEventDeclarationGenerator {
     }
 
     /**
-     * 生成命名空间成员（DocumentedRecipes 内的属性）。
-     * 例如:
+     * Emits the members of one namespace, the properties inside DocumentedRecipes. For example:
      * minecraft: {
      *     smelting(result: $ItemStack_, ingredient: $Ingredient_, xp?: number, time?: number): Minecraft$Smelting;
      *     crafting_shaped(...): Minecraft$CraftingShaped;
@@ -201,14 +200,14 @@ public final class RecipeEventDeclarationGenerator {
             rejectedMethods.add(schema.type());
         }
 
-        // Handler 方法（如 shaped, smelting 等有 Java 实现的方法）
+        // Handler methods, meaning the methods that have a Java implementation (such as shaped, smelting).
         for (RecipeHandlerMethodEntry method : ns.handlerMethods()) {
             if (rejectedMethods.contains(method.methodName())) continue;
             generateHandlerMethod(sb, method, ns.namespace());
             emittedMethods.add(method.methodName());
         }
 
-        // Schema 类型方法（自动发现的 recipe 类型）
+        // Schema type methods, meaning the automatically discovered recipe types.
         for (RecipeSchemaTypeEntry schemaType : ns.schemaTypes()) {
             if (emittedMethods.contains(schemaType.type())) continue;
             generateSchemaMethod(sb, schemaType, ns.namespace());
@@ -219,7 +218,7 @@ public final class RecipeEventDeclarationGenerator {
     }
 
     /**
-     * 生成 handler 方法（有 Java 实现）。
+     * Emits a handler method, one that has a Java implementation.
      */
     private void generateHandlerMethod(StringBuilder sb, RecipeHandlerMethodEntry method, String namespace) {
         List<String> parameters = new ArrayList<>();
@@ -237,7 +236,7 @@ public final class RecipeEventDeclarationGenerator {
     }
 
     /**
-     * 生成 schema 类型方法（自动发现的 recipe 类型）。
+     * Emits a schema type method, for an automatically discovered recipe type.
      */
     private void generateSchemaMethod(StringBuilder sb, RecipeSchemaTypeEntry schemaType, String namespace) {
         String returnType = hasBuilder(schemaType)
@@ -277,7 +276,7 @@ public final class RecipeEventDeclarationGenerator {
     }
 
     /**
-     * 为 schema 类型生成 builder 类。
+     * Emits the builder class for a schema type.
      */
     private void generateSchemaClass(StringBuilder sb, RecipeSchemaTypeEntry schemaType, String namespace) {
         String className = capitalize(namespace) + "$" + capitalize(schemaType.type());
@@ -423,7 +422,7 @@ public final class RecipeEventDeclarationGenerator {
     }
 
     /**
-     * 收集所有命名空间用到的输入别名类型，生成 import 映射。
+     * Collects the input alias types used by all namespaces and emits the import map for them.
      */
     private void collectImports(List<RecipeNamespaceCatalogEntry> namespaces, Set<TypeScriptImportNames.Symbol> imports) {
         boolean usesBuilder = namespaces.stream().anyMatch(namespace -> {
@@ -473,11 +472,13 @@ public final class RecipeEventDeclarationGenerator {
     }
 
     /**
-     * field kind → (package, className)。className 需加 _ 后缀作为输入别名。
-     * 包路径按平台（{@link com.tkisor.nekojs.platform.Platform#recipeFieldKindPackage}）：
-     * 1.21+ 为 {@code net.minecraft.world.item*}，1.12.2 为 {@code net.minecraft.item*}。
-     * 别名同名（$ItemStack_/$Ingredient_），包路径必须与真实类一致，否则与 handler 反射
-     * 路径（真实 FQN）产生重复 import，整个 recipes 声明文件 TS 报错。
+     * Maps a field kind to a (package, className) pair. The className needs the _ suffix to become an
+     * input alias. The package path comes from the platform
+     * ({@link com.tkisor.nekojs.platform.Platform#recipeFieldKindPackage}):
+     * {@code net.minecraft.world.item*} on 1.21+, {@code net.minecraft.item*} on 1.12.2. The alias name
+     * stays the same ($ItemStack_, $Ingredient_), so the package path has to match the real class;
+     * otherwise the handler reflection path, which uses the real FQN, produces a duplicate import and
+     * TypeScript rejects the whole recipes declaration file.
      */
     private static String[] kindToImport(String kind) {
         RecipeFieldKind k;
@@ -494,7 +495,7 @@ public final class RecipeEventDeclarationGenerator {
         try {
             pkg = Platform.recipeFieldKindPackage(k);
         } catch (IllegalStateException e) {
-            pkg = null; // 未初始化平台的纯测试环境：schema 字段路径不会真正渲染
+            pkg = null; // Pure test environment with no initialized platform: schema field paths never actually render.
         }
         if (pkg == null) return null;
         String simple = switch (k) {
@@ -509,7 +510,8 @@ public final class RecipeEventDeclarationGenerator {
     }
 
     /**
-     * handler param type name → (package, className)。走与 schema kind 相同的平台映射。
+     * Maps a handler parameter type name to a (package, className) pair, using the same platform mapping
+     * as the schema kinds.
      */
     private static String[] typeToImport(String type) {
         RecipeFieldKind k = switch (type) {
@@ -587,11 +589,12 @@ public final class RecipeEventDeclarationGenerator {
     }
 
     /**
-     * 修复参数名 — 不能是 TS 保留字，不能与类型名冲突。
+     * Makes a parameter name safe: it must not be a TypeScript reserved word and must not collide with a
+     * type name.
      */
     private static String safeParamName(String name, int index) {
         if (name == null || name.isEmpty()) return "arg" + index;
-        // TS 保留字
+        // TypeScript reserved words.
         return switch (name) {
             case "default", "function", "class", "let", "const", "var", "if", "else",
                  "return", "for", "while", "do", "switch", "case", "break", "continue",
@@ -603,11 +606,12 @@ public final class RecipeEventDeclarationGenerator {
     }
 
     /**
-     * 修复方法名 — recipe 类型名可能是不合法标识符（含特殊字符）时引号包围。
+     * Makes a method name safe: a recipe type name that is not a valid identifier (it contains special
+     * characters) is wrapped in quotes.
      */
     private static String safeMethodName(String name) {
         if (name == null || name.isEmpty()) return "_";
-        // 检查是否是合法 JS 标识符
+        // Check whether the name is a valid JS identifier.
         if (!Character.isJavaIdentifierStart(name.charAt(0))) return "\"" + name + "\"";
         for (int i = 1; i < name.length(); i++) {
             if (!Character.isJavaIdentifierPart(name.charAt(i))) return "\"" + name + "\"";
@@ -615,7 +619,10 @@ public final class RecipeEventDeclarationGenerator {
         return name;
     }
 
-    /** 大写归一显式用 {@link Locale#ROOT}，避免默认区域（如 tr 的 i→İ）导致产物漂移。 */
+    /**
+     * Uppercasing uses {@link Locale#ROOT} explicitly, so the default locale (such as tr, where i becomes
+     * İ) cannot make the output drift.
+     */
     private static String capitalize(String s) {
         if (s == null || s.isEmpty()) return s;
         if (s.contains("_")) {

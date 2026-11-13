@@ -6,11 +6,13 @@ import com.tkisor.nekojs.api.data.AttachedData;
 import com.tkisor.nekojs.api.ScriptType;
 
 /**
- * 平台层 mixin 在首次访问 {@code host.data} 时调用本工具，遍历所有已加载插件触发对应的
- * {@link NekoJSPlugin#attachServerData} / {@link NekoJSPlugin#attachLevelData} / {@link NekoJSPlugin#attachPlayerData}。
+ * Platform mixins call this helper on the first access to {@code host.data}. It walks every
+ * loaded plugin and fires the matching
+ * {@link NekoJSPlugin#attachServerData} / {@link NekoJSPlugin#attachLevelData} / {@link NekoJSPlugin#attachPlayerData}.
  *
- * <p>单个插件 attach 异常被 try/catch 隔离（仿 {@code NekoPluginRuntime#runRecipeHooks}），不中断其他插件。
- * 集中在此处供三个平台模块的 mixin 复用，避免重复。
+ * <p>An exception from one plugin's attach is caught and isolated (like
+ * {@code NekoPluginRuntime#runRecipeHooks}), so the remaining plugins still run. All three
+ * platform modules reuse this single place instead of duplicating it.
  */
 public final class AttachedDataHooks {
     private AttachedDataHooks() {}

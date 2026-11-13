@@ -14,13 +14,12 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
 /**
- * 票 18 AC4 接收侧的 fabric 面（节点本地，两 fabric 节点同体分发）：
- * {@code FabricPlayNetwork.acceptClientData}（client receiver 在
- * {@code context.client().execute()} hop 后调用的主线程解析入口，与 NeoForge
- * ClientDataMessageHandler 同语义）：合法 JSON 文本覆盖写入 SHARED store；
- * 非法 JSON 文本丢弃、不抛（WARN 记录面见 REPORT characterization）、不写入，
- * 且不影响后续包。receiver 的「先 hop 主线程再解析」由源码形状钉住（fabric 侧
- * receiver 一律 {@code context.client().execute(...)}，票 17 trace 已覆盖同文件）。
+ * Fabric side of the receive path for the client-data feature (node-local; both Fabric nodes dispatch the same body):
+ * {@code FabricPlayNetwork.acceptClientData}, the main-thread parse entry called by the client receiver after the
+ * {@code context.client().execute()} hop, with the same semantics as the NeoForge ClientDataMessageHandler.
+ * Valid JSON text is written over the SHARED store. Invalid JSON is dropped without throwing (the WARN record is
+ * described in the feature report), nothing is written, and later packets are unaffected. The "hop to the main thread,
+ * then parse" order is fixed by the source shape: Fabric receivers always use {@code context.client().execute(...)}.
  */
 class FabricClientDataAcceptTest {
 
@@ -46,7 +45,7 @@ class FabricClientDataAcceptTest {
         assertDoesNotThrow(() -> accept("hud:broken", "{\"cur\": "));
         assertFalse(ClientDataStore.SHARED.has("hud:broken"), "malformed JSON must be discarded");
 
-        // 坏包不打断主线程任务链：后续包照常写入
+        // A bad packet does not break the main-thread task chain: later packets still get written.
         accept("hud:ok", "7");
         assertEquals(7L, ClientDataStore.SHARED.get("hud:ok"));
     }

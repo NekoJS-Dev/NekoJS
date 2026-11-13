@@ -285,7 +285,8 @@ class ApiFacadeProxyTest {
 
     @Test
     void iterableImplementationIsForOfAble() {
-        // 可迭代实现（如 RegistryView 的条目 id 列表）经代理转发后 for...of 仍然成立
+        // An iterable implementation (such as the RegistryView entry id list) still
+        // supports for...of after the proxy forwards it
         try (Context context = Context.newBuilder("js").allowAllAccess(true).build()) {
             ApiFacadeProxy proxy = ApiFacadeProxy.global(
                     resolve(contractWithStable()), ApiSymbolId.parse("global:Stable"),

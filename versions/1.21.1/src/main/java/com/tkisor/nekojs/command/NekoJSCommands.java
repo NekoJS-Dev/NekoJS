@@ -114,8 +114,10 @@ public final class NekoJSCommands {
     }
 
     /**
-     * /nekojs trust &lt;address&gt;：把服务器脚本包来源加入本进程的信任存储（多人脚本分发的
-     * 首连断连→信任→重连流程）。仅在客户端进程生效（单人环境即本进程）。
+     * Handles {@code /nekojs trust &lt;address&gt;}: adds a server script pack source to this process's
+     * trust store. This is part of the multiplayer script distribution flow, where the first connection
+     * drops, the user trusts the server, and the client reconnects. Only works in a client process; in
+     * singleplayer that process is the local one.
      */
     private static int trustServer(CommandSourceStack source, String address) {
         if (!com.tkisor.nekojs.platform.Platform.isClient()) {
@@ -352,7 +354,7 @@ public final class NekoJSCommands {
                 return scheduleClientReload(source, type, root, null);
             }
             reloadResult = root.reload(type);
-            // SERVER 脚本 reload 后重新应用配方脚本（NeoForge 配方热重载）
+            // Re-apply recipe scripts after a SERVER script reload (NeoForge recipe hot reload).
             boolean recipeBroadcast = false;
             if (type == ScriptType.SERVER) {
                 try {
@@ -378,8 +380,8 @@ public final class NekoJSCommands {
             }
             return reportReloadResult(source, root, reloadResult);
         } catch (com.tkisor.nekojs.core.lifecycle.NekoReloadException e) {
-            // 候选 generation 失败（工单 06）：active 保留，失败结果携带
-            // generation/phase/source location/owner/domain 结构化字段（无修复指引）
+            // The candidate generation failed: the active generation is kept, and the failure carries structured
+            // generation, phase, source location, owner and domain fields, with no fix hints.
             NekoJS.LOGGER.error("Reloading {} scripts failed", type.name, e);
             source.sendFailure(Component.literal(RuntimeCommandResultFormatter.reloadFailure(
                     e.report(), root.isActiveFailed(type))));
@@ -465,9 +467,10 @@ public final class NekoJSCommands {
     }
 
     /**
-     * SERVER 脚本 reload 后重新应用配方脚本（NeoForge 配方热重载）。
-     * RecipeManagerMixin.nekojs$applyScripts() 从永久缓存的 baseJsons 重建工作集并重跑配方脚本，
-     * 把脚本生成/修改/删除的配方 JSON 重新解析并替换 RecipeManager 的 recipes。
+     * Re-applies recipe scripts after a SERVER script reload (NeoForge recipe hot reload).
+     * {@code RecipeManagerMixin.nekojs$applyScripts()} rebuilds the working set from the permanently
+     * cached baseJsons and runs the recipe scripts again, so recipe JSON that scripts added, changed or
+     * removed is parsed again and replaces the recipes in the RecipeManager.
      */
     private static boolean applyRecipeScripts(CommandSourceStack source) {
         MinecraftServer server = source.getServer();
@@ -519,7 +522,7 @@ public final class NekoJSCommands {
     }
 
     private static List<ErrorSummaryDTO> errorSnapshot(NekoRuntimeRoot.ErrorSnapshot snapshot) {
-        // Ticket 30: keep the legacy packet shape and project each frozen diagnostic record once.
+        // Keep the legacy packet shape and project each frozen diagnostic record once.
         return snapshot.errors().stream()
                 .map(err -> err.diagnostic().toErrorSummary(
                         err.getOccurrenceCount(),
@@ -540,9 +543,10 @@ public final class NekoJSCommands {
         refreshOpenErrorDashboard(source, errors);
         int count = errors.count();
         if (count > 0) {
-            // 错误数并进同一条消息且可点击打开错误列表，不再追加独立的警告组件：
-            // 此分支只覆盖无配方广播的路径（test/单文件 reload/CLIENT/STARTUP/控制台），
-            // 玩家执行的 SERVER reload 由 RecipeManagerMixin 的广播单独反馈（见 reloadType）。
+            // The error count is folded into the same message, which can be clicked to open the error list, so no
+            // separate warning component is appended. This branch only covers paths without a recipe broadcast
+            // (test, single-file reload, CLIENT, STARTUP, console); a player-run SERVER reload is reported
+            // separately by the broadcast in RecipeManagerMixin (see reloadType).
             MutableComponent message = Component.literal(successMessage + " (" + count + " error(s) remain)")
                     .withStyle(style -> style
                             .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, Component.translatable("nekojs.error.tracker.hover_hint")))
@@ -554,7 +558,7 @@ public final class NekoJSCommands {
     }
 
     // ------------------------------------------------------------------
-    //  Probe（多 backend）
+    //  Probe (multiple backends)
     // ------------------------------------------------------------------
 
     private static LiteralArgumentBuilder<CommandSourceStack> probeCommand() {
@@ -566,8 +570,9 @@ public final class NekoJSCommands {
                 .executes(context -> listProbeBackends(context.getSource())));
         probe.then(Commands.literal("reload")
                 .executes(context -> reloadProbeConfig(context.getSource())));
-        // reset_config：删除各 backend 管理的编辑器配置（jsconfig/pyrightconfig/snippets，保留共享
-        // 的 .vscode/settings.json 与用户内容），重建出厂基础配置后立即重跑默认 probe 生成。
+        // reset_config: deletes the editor config each backend manages (jsconfig, pyrightconfig, snippets) but
+        // keeps the shared .vscode/settings.json and user content, rebuilds the factory base config, then
+        // immediately reruns the default probe generation.
         probe.then(Commands.literal("reset_config")
                 .executes(context -> {
                     CommandSourceStack source = context.getSource();
@@ -628,7 +633,8 @@ public final class NekoJSCommands {
                 final long ms = maxMs;
                 source.sendSuccess(() -> Component.literal(
                         "Probe generated: " + tf + " files in " + ms + "ms"), false);
-                // 输出目录提示：用户最常问「文件去哪了」；相对游戏目录显示
+                // Says where the generated files went, which is the question users ask most; paths are shown relative
+                // to the game directory.
                 String dirs = results.stream()
                         .map(ProbeBackend.GenerateResult::outputDir)
                         .filter(java.util.Objects::nonNull)
@@ -671,14 +677,14 @@ public final class NekoJSCommands {
         return 1;
     }
 
-    /** /nekojs probe enable：运行时启用 probe（开关持久化由 ProbeCoordinator.setEnabled 负责）。 */
+    /** /nekojs probe enable: enables probe at runtime. ProbeCoordinator.setEnabled persists the toggle. */
     private static int enableProbe(CommandSourceStack source) {
         ProbeCoordinator.setEnabled(true);
         source.sendSuccess(() -> Component.literal("Probe enabled."), false);
         return 1;
     }
 
-    /** /nekojs probe disable：运行时禁用 probe。 */
+    /** /nekojs probe disable: disables probe at runtime. */
     private static int disableProbe(CommandSourceStack source) {
         ProbeCoordinator.setEnabled(false);
         source.sendSuccess(() -> Component.literal("Probe disabled."), false);

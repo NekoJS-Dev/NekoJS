@@ -18,10 +18,12 @@ import java.util.Map;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * {@link ProbeOutputCommitter} 就地同步语义：写变化的、跳过相同的、删陈旧的、清历史遗留目录。
+ * Covers the in-place sync behavior of {@link ProbeOutputCommitter}: write changed files, skip
+ * identical ones, delete stale ones, and clean up leftover directories.
  *
- * <p>之前是「staging → 输出目录」的目录级 rename，在 Windows 上只要编辑器盯着输出目录就
- * 恒定 AccessDenied，故改成逐文件就地同步；这些测试固定新语义。
+ * <p>The tests pin down this per-file sync. A directory-level rename from a staging directory onto
+ * the output directory failed on Windows with a constant AccessDenied whenever an editor was
+ * watching the output directory.
  */
 class ProbeOutputCommitterTest {
 
@@ -50,7 +52,8 @@ class ProbeOutputCommitterTest {
 
         var report = ProbeOutputCommitter.commitInPlace(out, Map.of("a.d.ts", "same", "b.d.ts", "after"));
 
-        // 内容相同就不重写：少一次编辑器重载，也少一次和语言服务抢锁
+        // Identical content is not rewritten: this saves an editor reload and avoids competing with the
+        // language service for the file lock.
         assertEquals(stamp, Files.getLastModifiedTime(untouched));
         assertEquals("after", Files.readString(out.resolve("b.d.ts")));
         assertEquals(1, report.written());
@@ -91,7 +94,7 @@ class ProbeOutputCommitterTest {
     void escapingRelativePathIsRejectedBeforeWriting(@TempDir Path tmp) throws Exception {
         Path out = tmp.resolve("typescript");
 
-        // firstIllegalRelativePath 是第一道闸；commitInPlace 自己也再挡一次
+        // firstIllegalRelativePath is the first check; commitInPlace rejects an illegal path again itself.
         assertEquals("../evil.d.ts",
                 ProbeOutputCommitter.firstIllegalRelativePath(java.util.List.of("ok.d.ts", "../evil.d.ts")));
         assertThrows(IOException.class,
@@ -115,7 +118,8 @@ class ProbeOutputCommitterTest {
         ProbeOutputCommitter.commitInPlace(out, Map.of("doc.d.ts", content));
 
         assertEquals(content, Files.readString(out.resolve("doc.d.ts"), StandardCharsets.UTF_8));
-        // 第二次同步必须判定为未变化（说明比较用的是 UTF-8 字节而不是平台默认编码）
+        // The second sync must report the file unchanged, which shows the comparison uses UTF-8 bytes
+        // rather than the platform default encoding.
         assertEquals(1, ProbeOutputCommitter.commitInPlace(out, Map.of("doc.d.ts", content)).unchanged());
     }
 
@@ -132,12 +136,12 @@ class ProbeOutputCommitterTest {
         assertFalse(Files.exists(tree));
     }
 
-    // ---- Windows 外部占用（编辑器/TS 语言服务用内存映射盯住 .d.ts）----
+    // ---- External occupation on Windows (an editor or the TS language service maps the .d.ts files) ----
 
     /**
-     * 被内存映射占住的文件在 Windows 上无法截断/删除（ERROR_USER_MAPPED_FILE →
-     * AccessDeniedException）——这正是 TS 语言服务看住 probe 输出时的锁形态。
-     * 映射行为是 Windows 语义，其它平台直接跳过。
+     * On Windows a mapped file cannot be truncated or deleted (ERROR_USER_MAPPED_FILE becomes an
+     * {@code AccessDeniedException}). That is exactly the lock the TS language service holds on the
+     * probe output. The mapping behavior is Windows-specific, so other platforms skip this test.
      */
     private static boolean windows() {
         return System.getProperty("os.name", "").toLowerCase().contains("win");
@@ -149,7 +153,10 @@ class ProbeOutputCommitterTest {
         }
     }
 
-    /** 确定性解除映射：否则 @TempDir 清理在 Windows 上会因映射残留而失败。 */
+    /**
+     * Releases the mapping deterministically. Without this, {@code @TempDir} cleanup fails on Windows
+     * because the mapping outlives the test.
+     */
     private static void releaseMapping(MappedByteBuffer buffer) {
         try {
             Class<?> unsafeClass = Class.forName("sun.misc.Unsafe");
@@ -158,7 +165,8 @@ class ProbeOutputCommitterTest {
             Object unsafe = theUnsafe.get(null);
             unsafeClass.getMethod("invokeCleaner", ByteBuffer.class).invoke(unsafe, buffer);
         } catch (ReflectiveOperationException | RuntimeException cleanupFailed) {
-            // 退路：丢强引用交给 Cleaner；此时 @TempDir 清理可能报占用，但断言已全部完成
+            // Fallback: drop the strong reference and let the Cleaner unmap the buffer. {@code @TempDir} cleanup
+            // may then report the file as in use, but all assertions have already run.
             System.gc();
         }
     }

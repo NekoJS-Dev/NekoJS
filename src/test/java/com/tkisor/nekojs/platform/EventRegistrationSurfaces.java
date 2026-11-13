@@ -19,10 +19,10 @@ import java.util.Map;
  * entry points and invokes their {@code registerEvents}/{@code registerClientEvents} hooks into
  * a fresh {@link EventGroupRegistry}.
  *
- * <p>Extracted from {@code EventSurfaceDomainGateTest} (ticket 33) so the declared-event-surface
- * golden test drives the exact same discovery input instead of a second, drifting copy. The
- * discovery contract is frozen there: neoforge = every {@link RegisterNekoJSPlugin} class on the
- * test classpath (the {@code NeoForgePluginLoader} scan scope), fabric = those classes plus the
+ * <p>{@code EventSurfaceDomainGateTest} also uses this class, so the declared-event-surface
+ * golden test drives the same discovery input instead of a second, drifting copy. The discovery
+ * contract is frozen here: neoforge = every {@link RegisterNekoJSPlugin} class on the test
+ * classpath (the {@code NeoForgePluginLoader} scan scope), fabric = those classes plus the
  * {@code FabricPluginLoader.BUILTIN_PLUGINS} built-in list. No runtime gating ({@code clientOnly},
  * {@code requiredMods}) is applied — this proves the registration surface, not runtime activation.
  */

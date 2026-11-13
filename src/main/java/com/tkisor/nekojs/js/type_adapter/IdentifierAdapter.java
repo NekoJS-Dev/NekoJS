@@ -47,7 +47,7 @@ public class IdentifierAdapter extends AbstractJSTypeAdapter<Identifier> {
         if (host instanceof NekoId id) {
             return Identifier.fromNamespaceAndPath(id.namespace(), id.path());
         }
-        return null; // 不识别
+        return null; // Not recognized
     }
 }
 //?}

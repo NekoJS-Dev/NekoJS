@@ -3,35 +3,36 @@ package com.tkisor.nekojs.api.registry;
 import java.util.List;
 
 /**
- * 只读的 Minecraft 注册表查询 SPI。
+ * Read-only query SPI over the Minecraft registries.
  *
- * <p>由各平台实现，返回基础类型（id 字符串、布尔值），
- * 不暴露任何 Minecraft 原生类型。供 {@code Registry} 脚本绑定使用。
+ * <p>Each platform implements it and returns plain values (id strings, booleans); it exposes no
+ * Minecraft types. Used by the {@code Registry} script binding.
  */
 public interface RegistryQueryService {
-    /** 指定注册表是否存在（例如 {@code minecraft:item}）。 */
+    /** Whether the given registry exists (for example {@code minecraft:item}). */
     boolean hasRegistry(String registryId);
 
-    /** 注册表内所有条目 id（含命名空间），按注册表自身顺序。 */
+    /** All entry ids in the registry, namespaced, in the registry's own order. */
     List<String> all(String registryId);
 
-    /** 注册表内是否存在指定 id（例如 {@code minecraft:stone}）。 */
+    /** Whether the registry contains the given id (for example {@code minecraft:stone}). */
     boolean has(String registryId, String id);
 
-    /** 指定 tag 下的所有条目 id（例如 tag {@code minecraft:planks}）。 */
+    /** All entry ids under the given tag (for example the tag {@code minecraft:planks}). */
     List<String> tag(String registryId, String tagId);
 
     /**
-     * 指定注册表已注册的所有 data map 类型 id（例如 {@code neoforge:furnace_fuels}）。
-     * 注册表未知或平台无 data map（如 1.12.2）时返回空列表。
+     * All data map type ids registered for the given registry (for example
+     * {@code neoforge:furnace_fuels}). Returns an empty list when the registry is unknown or the
+     * platform has no data maps, such as 1.12.2.
      */
     default List<String> dataMapIds(String registryId) {
         return List.of();
     }
 
     /**
-     * 读取指定注册表条目的 data map 值，序列化为 JSON 字符串。
-     * 条目 / data map 类型 / 注册表任一不存在时返回 {@code null}。
+     * Reads a data map value for the given registry entry and serializes it to a JSON string.
+     * Returns {@code null} when the entry, the data map type or the registry does not exist.
      */
     default String dataMapValue(String registryId, String dataMapTypeId, String id) {
         return null;

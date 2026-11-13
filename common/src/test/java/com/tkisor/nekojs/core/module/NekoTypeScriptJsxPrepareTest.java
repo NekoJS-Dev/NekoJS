@@ -31,12 +31,13 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * 票据 12 AC1 / AC4 / AC6：.ts、.jsx、.tsx 经 {@link NekoModulePipelineCache#prepare} 得到
- * 正确 language id、module mode、可执行 code 与可用 source map；准备期语法/转换错误携带
- * 原始 authored 文件与行列；源码 / 语言 / mode 变化使 cache key 失效。
+ * Covers {@link NekoModulePipelineCache#prepare} for .ts, .jsx and .tsx: each file gets the right
+ * language id, module mode, executable code and a usable source map; prepare-stage syntax and
+ * transform errors carry the original authored file, line and column; a change to the source,
+ * language or mode invalidates the cache key.
  *
- * <p>断言口径是最高调用者 seam 的可观察结果（prepared module 字段、异常对象字段、cache key），
- * 不读私有 AST 布局。
+ * <p>Assertions check observable results at the top-level caller (prepared module fields, exception
+ * object fields, cache key), not private AST layout.
  */
 class NekoTypeScriptJsxPrepareTest {
 
@@ -69,7 +70,7 @@ class NekoTypeScriptJsxPrepareTest {
         return file;
     }
 
-    // ---- AC1: language id / mode / code / source map ----
+    // ---- Language id, mode, code and source map ----
 
     @Test
     void typescriptJsxAndTsxPublishLanguageModeCodeAndUsableMap() throws Exception {
@@ -117,7 +118,7 @@ class NekoTypeScriptJsxPrepareTest {
         assertEquals(NekoModuleMode.COMMONJS, pipeline.identify(paths.serverScripts().resolve("a.cjs")).requestedMode());
     }
 
-    // ---- AC4: prepare-stage failures carry authored file/line/column ----
+    // ---- Prepare-stage failures carry authored file, line and column ----
 
     @Test
     void typescriptTransformErrorCarriesAuthoredFileLineAndColumn() throws Exception {
@@ -153,7 +154,7 @@ class NekoTypeScriptJsxPrepareTest {
         assertEquals(3, tsxError.sourceColumn(), tsxError.detail());
     }
 
-    // ---- AC6: cache key invalidation and observable hits ----
+    // ---- Cache key invalidation and observable hits ----
 
     @Test
     void unchangedTsJsxTsxInputsHitTheSamePreparedIdentity() throws Exception {

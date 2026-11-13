@@ -5,18 +5,20 @@ import graal.graalvm.polyglot.proxy.ProxyExecutable;
 import graal.graalvm.polyglot.proxy.ProxyObject;
 
 /**
- * 自定义脚本事件的脚本侧句柄：既可调用（注册监听，转发给底层 {@link EventBusJS}），
- * 又带一个 {@code post} 成员（触发事件）。
+ * Script-side handle for a custom script event. It is callable, which registers a listener that is
+ * forwarded to the underlying {@link EventBusJS}, and it also carries a {@code post} member that fires
+ * the event.
  *
  * <pre>
- * // startup_scripts：声明
+ * // startup_scripts: declare
  * ScriptEvents.server(event => event.register('MyEvents', 'bossKilled'))
- * // server_scripts：监听与触发
+ * // server_scripts: listen and fire
  * MyEvents.bossKilled(payload => console.log(payload.boss))
  * MyEvents.bossKilled.post({ boss: 'ender_dragon' })
  * </pre>
  *
- * <p>内置事件组不走本类——只有 {@code ScriptEvents} 声明出来的事件才允许脚本自己 post。
+ * <p>Built-in event groups do not go through this class. Only events declared through
+ * {@code ScriptEvents} can be posted by a script.
  */
 public final class ScriptEventBusJS implements ProxyExecutable, ProxyObject {
 
@@ -25,7 +27,10 @@ public final class ScriptEventBusJS implements ProxyExecutable, ProxyObject {
     private final String groupName;
     private final String eventName;
     private final EventBusJS<Object, ?> bus;
-    /** post 句柄按实例缓存：每次 getMember 新建会让 {@code a.post !== a.post}。 */
+    /**
+     * The post handle is cached per instance: creating a new one on each getMember would make
+     * {@code a.post !== a.post}.
+     */
     private final ProxyExecutable post;
 
     @SuppressWarnings("unchecked")
@@ -35,12 +40,12 @@ public final class ScriptEventBusJS implements ProxyExecutable, ProxyObject {
         this.bus = (EventBusJS<Object, ?>) bus;
         this.post = arguments -> {
             this.bus.post(arguments.length == 0 ? null : arguments[0].as(Object.class));
-            // 自定义事件总线不可取消，post 不返回"是否被取消"以免给出无意义的 false
+            // Custom event buses cannot be cancelled, so post returns nothing instead of a meaningless false.
             return null;
         };
     }
 
-    /** 调用即注册监听：形态与内置事件总线一致（可带优先级名）。 */
+    /** Calling it registers a listener, the same shape as the built-in event buses (a priority name is allowed). */
     @Override
     public Object execute(Value... arguments) {
         return bus.execute(arguments);

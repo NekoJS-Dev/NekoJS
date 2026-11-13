@@ -24,10 +24,11 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * AC2/AC5（ticket 09）Python 侧确定性派生 fixture：同一 runtime member 输入
- * （{@link TypeReflector} 反射同一组 fixture 类）重复生成 Python declaration（.pyi）
- * 两次，整棵产物树逐字节一致；且 .pyi 成员与 runtime member parity（成员名、
- * module 归属）。产物只写入 {@code @TempDir}，不触碰任何 golden。
+ * Deterministic derivation fixture for the Python side: it reflects the same set of fixture classes
+ * ({@link TypeReflector}) into runtime members and generates the Python declarations (.pyi) twice. The
+ * whole output tree must be byte-identical between the two runs, and the .pyi members must match the
+ * runtime members by name and module attribution. Output only goes to {@code @TempDir}; no golden file
+ * is touched.
  */
 class PythonDeclarationDeterminismParityTest {
 
@@ -36,14 +37,14 @@ class PythonDeclarationDeterminismParityTest {
         TestPlatformInit.ensureInitialized();
     }
 
-    /** fixture：public 实例方法（runtime member）。 */
+    /** Fixture: public instance methods (runtime members). */
     public static final class ParityFixture {
         public String getLabel() { return "label"; }
         public int compute(int base, int delta) { return base + delta; }
         public boolean isReady() { return true; }
     }
 
-    /** fixture：静态方法 + 字段访问器，覆盖静态段与 getter 语义。 */
+    /** Fixture: static methods plus field accessors, covering the static section and getter semantics. */
     public static final class StaticFixture {
         public static String of(String id) { return id; }
         public String getName() { return "static"; }
@@ -75,23 +76,24 @@ class PythonDeclarationDeterminismParityTest {
         String module = tree.get("nekojs/_java/com/tkisor/nekojs/probe/__init__.pyi");
         assertTrue(module != null, "fixture package module missing; files: " + tree.keySet());
 
-        // 类归属：fixture 类型必须出现在其运行时包对应的 module 里（module attribution；
-        // 嵌套类名按渲染规则把 $ 展平为 _）
+        // Class attribution: the fixture types must appear in the module of their runtime package. Nested
+        // class names are flattened from $ to _ by the render rules.
         assertTrue(module.contains("class PythonDeclarationDeterminismParityTest_ParityFixture"),
                 "ParityFixture missing: " + module);
         assertTrue(module.contains("class PythonDeclarationDeterminismParityTest_StaticFixture"),
                 "StaticFixture missing: " + module);
 
-        // runtime member parity（Python 渲染语义）：
-        // - 普通/静态方法 → def（静态为 @staticmethod）
-        // - getXxx/isXxx getter → @property 属性（名去 get/is 前缀）
+        // Runtime member parity (Python render semantics):
+        // - plain and static methods become def (static ones get @staticmethod)
+        // - getXxx/isXxx getters become @property attributes, with the get/is prefix dropped from the name
         assertMemberPresent(module, "def compute(self, base: int, delta: int) -> int");
         assertMemberPresent(module, "@property\n    def label(self) -> str");
         assertMemberPresent(module, "@property\n    def ready(self) -> bool");
         assertMemberPresent(module, "@staticmethod\n    def of(id: str) -> str");
         assertMemberPresent(module, "@property\n    def name(self) -> str");
 
-        // 产物不得声明 runtime 上不存在的方法（以一个不存在的名字为负样本）
+        // The output must not declare methods that do not exist at runtime; a nonexistent name is the negative
+        // sample.
         assertTrue(!module.contains("def notARuntimeMember("), "phantom member leaked into declaration");
     }
 
@@ -102,7 +104,10 @@ class PythonDeclarationDeterminismParityTest {
                 "runtime member missing from Python declaration: " + memberDeclaration + "\n" + module);
     }
 
-    /** 反射 fixture → IR → PythonProbeBackend.generate，返回相对路径 → 文件内容的整棵树。 */
+    /**
+     * Runs reflect fixture -> IR -> {@code PythonProbeBackend.generate} and returns the whole tree as
+     * relative path -> file content.
+     */
     private Map<String, String> generateTree() throws IOException {
         List<TypeDecl> ir = List.of(
                 new TypeReflector().reflect(ParityFixture.class),

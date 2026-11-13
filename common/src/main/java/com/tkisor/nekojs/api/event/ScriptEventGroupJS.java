@@ -8,7 +8,7 @@ import java.util.Map;
 public class ScriptEventGroupJS implements ProxyObject {
     private final String groupName;
     private final Map<String, ScriptEventDefinition> definitions;
-    /** 事件句柄按名缓存：每次 getMember 新建会让 {@code G.n !== G.n}。 */
+    /** Event handles are cached by name: creating a new one on each getMember would make {@code G.n !== G.n}. */
     private final Map<String, ScriptEventBusJS> handles = new java.util.concurrent.ConcurrentHashMap<>();
 
     public ScriptEventGroupJS(String groupName, Map<String, ScriptEventDefinition> definitions) {

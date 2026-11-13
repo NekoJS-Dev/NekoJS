@@ -34,15 +34,20 @@ import java.util.TreeMap;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * IR 渲染路径（Strategy B）的三个保证：
+ * Three guarantees of the IR render path:
  * <ol>
- *   <li>（C1）**未编辑** IR 与旧 ClassDeclGenerator 路径产出逐字一致：同一收集结果分别在
- *       {@code ir=null} 与 {@code ir=未编辑列表} 下生成，两棵输出树文件集合与内容必须完全一致。</li>
- *   <li>（A1）getter 覆盖（RecipeEventJS.recipes → DocumentedRecipes）在 IR 重渲染路径同样生效：
- *       renderer 级（直接渲染 mutated TypeDecl）与 backend 级（带 mutated IR 走完整 generate）。
- *       另有一个机制级测试（不依赖 RecipeEventJS，用测试 classpath 上必然存在的 fixture 类）：
- *       override 键是「类名 + getter 属性名」，与被覆盖类无关，任何类都可注册覆盖。</li>
- *   <li>TypeDecl 的 docs 列表渲染为 JSDoc 块。</li>
+ *   <li>(C1) An <b>unedited</b> IR produces the same output as the old ClassDeclGenerator path: the
+ *       same collection result is generated once with {@code ir=null} and once with a non-null
+ *       unedited IR list; both output trees must have the same file set and the same content.
+ *   </li>
+ *   <li>(A1) The getter override (RecipeEventJS.recipes -> DocumentedRecipes) also applies on the IR
+ *       re-render path: at renderer level (render the mutated TypeDecl directly) and at backend level
+ *       (run the full generate with the mutated IR). A third mechanism-level test does not depend on
+ *       RecipeEventJS and uses a fixture class that is always present on the test classpath: the
+ *       override key is the class name plus the getter property name, independent of the class, so
+ *       any class can register an override.
+ *   </li>
+ *   <li>The docs list of a TypeDecl renders as a JSDoc block.</li>
  * </ol>
  */
 class TypeScriptNoopIrGoldenTest {
@@ -58,8 +63,8 @@ class TypeScriptNoopIrGoldenTest {
     Path tempDir;
 
     /**
-     * 照抄 {@link ProbeOutputCompatibilityTest#generateAt} 的 ProbeConfig 构造：
-     * 显式 5 前缀白名单 + maxDepth 5 + SMART。
+     * Builds the same ProbeConfig as {@link ProbeOutputCompatibilityTest#generateAt}: the explicit
+     * five-prefix whitelist, maxDepth 5 and SMART mode.
      */
     private static ProbeConfig goldenConfig() {
         return new ProbeConfig(true, ".neko_probe", new ProbeConfig.ScanConfig(
@@ -68,7 +73,7 @@ class TypeScriptNoopIrGoldenTest {
     }
 
     // ------------------------------------------------------------------
-    //  C1：未编辑 IR 与旧路径的产出树完全一致
+    //  C1: an unedited IR produces the same tree as the old path
     // ------------------------------------------------------------------
 
     @Test
@@ -78,15 +83,16 @@ class TypeScriptNoopIrGoldenTest {
         List<Class<?>> collected = new ArrayList<>(ProbeCoordinator.collectClasses(snapshot, cfg));
         assertFalse(collected.isEmpty(), "shared collection must not be empty");
 
-        // 未编辑 IR：每个收集到的类反射成 TypeDecl；反射失败的类跳过（两棵树仍应一致，
-        // 因为未被触及的 IR 对 TS 产物零影响）。
+        // Unedited IR: every collected class is reflected into a TypeDecl. A class that fails reflection is
+        // skipped, and the two trees should still match, because an IR that is not touched has no effect
+        // on the TS output.
         TypeReflector reflector = new TypeReflector();
         List<TypeDecl> ir = new ArrayList<>();
         for (Class<?> cls : collected) {
             try {
                 ir.add(reflector.reflect(cls));
             } catch (Throwable ignored) {
-                // 反射失败跳过：旧路径 pregenerateDeclarations 同样按类容错
+                // Reflection failures are skipped: the old path, pregenerateDeclarations, also tolerates them per class.
             }
         }
         assertFalse(ir.isEmpty(), "at least one class must be reflectable");
@@ -94,7 +100,7 @@ class TypeScriptNoopIrGoldenTest {
         Path outA = tempDir.resolve("legacy").resolve("probe-types");
         Path outB = tempDir.resolve("ir").resolve("probe-types");
 
-        // 每次 generate 用独立的 backend 实例，避免缓存/状态串扰
+        // Each generate call uses its own backend instance, so cache entries or state cannot leak between them.
         ProbeContext ctxA = ctx(snapshot, collected, cfg, outA, null);
         ProbeContext ctxB = ctx(snapshot, collected, cfg, outB, ir);
 
@@ -116,10 +122,13 @@ class TypeScriptNoopIrGoldenTest {
     }
 
     // ------------------------------------------------------------------
-    //  A1：getter 覆盖在 IR 重渲染路径生效
+    //  A1: the getter override applies on the IR re-render path
     // ------------------------------------------------------------------
 
-    /** renderer 级：mutated TypeDecl 经注册了 override 的 renderer 渲染，recipes getter 返回 DocumentedRecipes。 */
+    /**
+     * Renderer level: a mutated TypeDecl is rendered by a renderer with the override registered, so the
+     * recipes getter returns {@code DocumentedRecipes}.
+     */
     @Test
     void getterOverrideSurvivesIrRerender() throws Exception {
         Class<?> recipeEventClass = recipeEventClassOrSkip();
@@ -133,7 +142,8 @@ class TypeScriptNoopIrGoldenTest {
             return;
         }
 
-        // 找 getter property == "recipes"，并触碰一个无关方法模拟 modify_type 编辑
+        // Finds the getter whose property is "recipes" and touches an unrelated method to simulate a
+        // modify_type edit.
         MethodDecl recipes = null;
         MethodDecl other = null;
         for (MethodDecl m : decl.methods) {
@@ -151,11 +161,15 @@ class TypeScriptNoopIrGoldenTest {
         String out = renderer.render(decl);
         assertTrue(out.contains("get recipes(): DocumentedRecipes;"),
                 "override must survive IR re-render:\n" + out);
-        // 镜像 ClassDeclGenerator：命中覆盖时只发射 get 行，不双发射原方法名
+        // Mirrors ClassDeclGenerator: when an override matches, only the get line is emitted; the original
+        // method name is not emitted as well.
         assertFalse(out.contains("getRecipes():"), out);
     }
 
-    /** backend 级：带 mutated RecipeEventJS 的 IR 走完整 generate()，产物含覆盖后的 getter 类型与 import。 */
+    /**
+     * Backend level: an IR with a mutated RecipeEventJS goes through the full {@code generate()}, and the
+     * output carries the overridden getter type and its import.
+     */
     @Test
     void getterOverrideSurvivesFullGenerateWithMutatedIr() throws Exception {
         Class<?> recipeEventClass = recipeEventClassOrSkip();
@@ -167,7 +181,7 @@ class TypeScriptNoopIrGoldenTest {
             Assumptions.assumeTrue(false, "RecipeEventJS reflection failed: " + t);
             return;
         }
-        decl.mutated = true; // mutated → applyMutatedOverrides 走 renderer 重渲染
+        decl.mutated = true; // The mutated IR goes through applyMutatedOverrides, which re-renders with the renderer.
 
         Path out = tempDir.resolve("probe-types");
         ProbeContext ctx = ctx(emptySnapshot(), List.of(recipeEventClass), goldenConfig(),
@@ -176,7 +190,7 @@ class TypeScriptNoopIrGoldenTest {
         ProbeBackend.GenerateResult result = new TypeScriptProbeBackend().generate(ctx);
         assertTrue(result.success(), result.message());
 
-        // 包路径 = fqn 包名（$ 内部类按 fqn 写入该包）
+        // The package path is the FQN's package; a nested class (with $) is written into that same package.
         Path declFile = out.resolve("@package/com/tkisor/nekojs/wrapper/event/server/index.d.ts");
         assertTrue(Files.exists(declFile), "declaration file missing: " + declFile);
         String content = Files.readString(declFile, StandardCharsets.UTF_8);
@@ -187,10 +201,12 @@ class TypeScriptNoopIrGoldenTest {
     }
 
     /**
-     * A1 机制级（不依赖 RecipeEventJS，避免 Assume 跳过）：override 键是「类名 + getter 属性名」，
-     * 与被覆盖的类无关。用测试 classpath 上必然存在的 fixture 类验证：
-     * ClassEditor 触碰一个无关成员把 TypeDecl 标记 mutated 后，renderer 上注册的
-     * override（label → MyCustomType）在重渲染时替换 getter 返回类型，且不双发射原 getLabel()。
+     * Mechanism level, without RecipeEventJS so an assumption cannot skip the test: the override key is
+     * the class name plus the getter property name and is independent of the overridden class. A fixture
+     * class that is always on the test classpath proves it: after a ClassEditor touches an unrelated
+     * member and marks the TypeDecl as mutated, the override registered on the renderer
+     * (label -> MyCustomType) replaces the getter return type on re-render, and getLabel() is not
+     * emitted as well.
      */
     @Test
     void getterOverrideAppliesToArbitraryClassOnTestClasspath() {
@@ -198,8 +214,8 @@ class TypeScriptNoopIrGoldenTest {
 
         TypeDecl decl = new TypeReflector().reflect(OverrideMechanismFixture.class);
 
-        // 经 ClassEditor 的公开入口（ProbeModifyTypeEventJS.forClass）隐藏一个无关成员，
-        // 模拟 probe.modify_type 的参数级编辑 → decl 被标记 mutated
+        // Hides an unrelated member through the public ClassEditor entry point
+        // (ProbeModifyTypeEventJS.forClass) to simulate a probe.modify_type edit, which marks decl as mutated.
         var event = new ProbeModifyTypeEventJS(Map.of(decl.fqn, decl));
         var editor = event.forClass(decl.fqn);
         assertNotNull(editor, "forClass 必须返回 fixture 的 ClassEditor");
@@ -221,8 +237,9 @@ class TypeScriptNoopIrGoldenTest {
     }
 
     /**
-     * A1 机制测试夹具：含一个 getter（getLabel → property "label"）与一个无关成员（ping）。
-     * 必须是 public static 类，TypeReflector 才会反射其公共成员。
+     * Fixture for the mechanism test: one getter (getLabel becomes the property "label") and one
+     * unrelated member (ping). It must be a public static class for TypeReflector to reflect its public
+     * members.
      */
     public static class OverrideMechanismFixture {
         public String getLabel() {
@@ -230,12 +247,13 @@ class TypeScriptNoopIrGoldenTest {
         }
 
         public void ping() {
-            // 无关成员：仅用于被 ClassEditor.hideMethod 触碰，把 TypeDecl 标记为 mutated
+            // Unrelated member: only there to be touched by ClassEditor.hideMethod, which marks the TypeDecl as
+            // mutated.
         }
     }
 
     // ------------------------------------------------------------------
-    //  docs 渲染为 JSDoc 块
+    //  Docs render as JSDoc blocks
     // ------------------------------------------------------------------
 
     @Test
@@ -270,12 +288,12 @@ class TypeScriptNoopIrGoldenTest {
         TypeScriptClassRenderer renderer = new TypeScriptClassRenderer(aliases);
         String out = renderer.render(decl);
 
-        // 单行 doc → 一行块注释
+        // A single-line doc becomes a one-line block comment
         assertTrue(out.contains("    /** Class-level doc */\n    export class $Unknown"), out);
         assertTrue(out.contains("        /** field doc */\n        value: number"), out);
         assertTrue(out.contains("        /** ctor doc */\n        constructor();"), out);
         assertTrue(out.contains("        /** getter doc */\n        get x(): string"), out);
-        // 多行 doc → 逐行星号前缀
+        // A multi-line doc becomes one star-prefixed line per doc line
         assertTrue(out.contains("        /**\n"
                 + "         * method line one\n"
                 + "         * method line two\n"
@@ -284,16 +302,16 @@ class TypeScriptNoopIrGoldenTest {
     }
 
     // ------------------------------------------------------------------
-    //  内部工具
+    //  Helpers
     // ------------------------------------------------------------------
 
-    /** forName 失败（RecipeEventJS 不在测试 classpath）时跳过当前测试。 */
+    /** Skips the current test when {@code forName} fails because RecipeEventJS is not on the test classpath. */
     private static Class<?> recipeEventClassOrSkip() {
         try {
             return Class.forName(RECIPE_EVENT_JS_FQN, false, Thread.currentThread().getContextClassLoader());
         } catch (ClassNotFoundException e) {
             Assumptions.assumeTrue(false, "RecipeEventJS not on test classpath");
-            return null; // unreachable（assumeTrue(false) 抛 TestAbortedException）
+            return null; // Unreachable: {@code assumeTrue(false)} throws TestAbortedException
         }
     }
 
@@ -310,7 +328,8 @@ class TypeScriptNoopIrGoldenTest {
                 List.of(), List.of(), List.of(), List.of(), List.of(), List.of(), null, Map.of(), List.of());
     }
 
-    /** 照抄 {@link ProbeOutputCompatibilityTest#readTree}：相对路径归一化 + 行尾归一化。 */
+    /** Mirrors {@link ProbeOutputCompatibilityTest#readTree}: keys are paths relative to the root with
+     * '/' separators, and values have normalized line endings. */
     private Map<String, String> readTree(Path root) throws IOException {
         Map<String, String> files = new TreeMap<>();
         if (!Files.exists(root)) return files;

@@ -14,10 +14,12 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 
 /**
- * 用于将 {@link IEventBus} 与 {@link EventBusJS} 接驳在一起。
+ * Wires an {@link IEventBus} to an {@link EventBusJS}.
  * <p>
- * 在调用 {@code .bind(...)} 或 {@code .bindTransformed(...)} 时，{@code EventBusJS} 自身会作为一个事件监听注册到
- * {@link #create(IEventBus) 创建实例}时提供的 EventBus 中。因此调用 {@code .bind(...)} 之后 不 需 要 额外手动把事件发布到 EventBusJS
+ * When {@code .bind(...)} or {@code .bindTransformed(...)} is called, the {@code EventBusJS}
+ * registers itself as an event listener on the EventBus supplied to {@link #create(IEventBus)}
+ * when the instance is created. After {@code .bind(...)} there is no need to publish events to
+ * the EventBusJS manually.
  *
  * @author ZZZank
  */
@@ -62,12 +64,15 @@ public class EventBusForgeBridge {
     }
 
     /**
-     * 绑定一个显式可取消总线，并把脚本的取消结果经 {@code cancelAction} 写回原生事件。
+     * Binds an explicitly cancellable bus and writes the script's cancellation result back to the
+     * native event through {@code cancelAction}.
      *
-     * <p>用于原生事件不实现 {@link ICancellableEvent}、但自带等效取消杠杆的家族总线
-     * （如 {@code LivingDamageEvent.Pre} 的 {@code setNewDamage(0)}）：监听器返回
-     * {@code true} 时总线 post 返回真，由本方法把该结果转成对原生事件的写回。
-     * {@code busJS} 的底层总线必须可取消，否则取消恒不可见（静默 no-op），绑定时即失败。
+     * <p>It is meant for bus families whose native event does not implement
+     * {@link ICancellableEvent} but offers an equivalent cancel lever (for example
+     * {@code setNewDamage(0)} on {@code LivingDamageEvent.Pre}): when a listener returns
+     * {@code true} the bus post returns true, and this method turns that result into a write on the
+     * native event. The underlying bus of {@code busJS} must be cancellable; otherwise cancellation
+     * is never visible (a silent no-op), and binding fails right away.
      */
     public <E extends Event> EventBusForgeBridge bindCancellable(EventBusJS<E, ?> busJS, Consumer<E> cancelAction) {
         Objects.requireNonNull(cancelAction, "cancelAction");
@@ -84,14 +89,17 @@ public class EventBusForgeBridge {
     }
 
     /**
-     * 绑定一个带谓词过滤的 NekoJS 总线：仅当原生事件通过 {@code filter} 时才投递给脚本。
+     * Binds a NekoJS bus with a predicate filter: a native event is delivered to scripts only when it
+     * passes {@code filter}.
      *
-     * <p>用于双逻辑侧事件（{@code PlayerTickEvent}/{@code LevelTickEvent}/
-     * {@code EntityTickEvent}/{@code EntityJoinLevelEvent}/交互事件等）绑定到 SERVER 总线的场景：
-     * 单人集成服上这些事件的客户端实例在 Render 线程触发，直接进入 SERVER 脚本 Context 会触发
-     * Graal 的多线程访问拒绝（{@code Multi threaded access ... is not allowed}）。约定 SERVER
-     * 总线只投递服务端实例（{@code !level().isClientSide()}），客户端侧事件属于 CLIENT 总线。
-     * filter 仅决定是否投递给脚本，不会取消被过滤掉的原生事件本身。
+     * <p>It is meant for dual-side events ({@code PlayerTickEvent}/{@code LevelTickEvent}/
+     * {@code EntityTickEvent}/{@code EntityJoinLevelEvent}/interaction events and so on) bound to the
+     * SERVER bus. On an integrated server these events fire a client instance on the render thread,
+     * and entering a SERVER script Context from there trips Graal's multi-threaded access rejection
+     * ({@code Multi threaded access ... is not allowed}). The convention is that the SERVER bus only
+     * delivers server instances ({@code !level().isClientSide()}); client-side events belong to the
+     * CLIENT bus. The filter only decides whether to deliver to scripts; it does not cancel the
+     * filtered-out native event.
      */
     public <E extends Event> EventBusForgeBridge bind(EventBusJS<E, ?> busJS, Predicate<E> filter) {
         return bind(busJS, filter, EventPriority.NORMAL, false);

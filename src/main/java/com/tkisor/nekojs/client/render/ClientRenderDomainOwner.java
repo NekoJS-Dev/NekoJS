@@ -4,23 +4,30 @@ import com.tkisor.nekojs.api.ScriptType;
 import com.tkisor.nekojs.core.lifecycle.CandidateDomainCollector;
 
 /**
- * 脚本 HUD / 世界渲染器注册面的候选域收集器（票 26 AC4）：把「本候选 generation 注册了
- * 哪些常驻渲染器」挂上候选的联合预检/发布边界，使提交点能整体换装生产表。
+ * Candidate-domain collector for the script HUD and world renderer registration face: it
+ * attaches "which persistent renderers this candidate generation registered" to the
+ * candidate's preflight and publish steps, so the commit point can swap the production tables
+ * in one go.
  *
- * <p><b>收集无条件发生</b>：即使本代一个渲染器都没注册，也要注册一个批次——
- * 「新 generation 不再注册」正是旧渲染器退役的唯一路径，空批次不参与 commit 就永远换不掉
- * 旧表（{@link CandidateDomainCollector} 的空计划契约）。批次实例来自两处之一：脚本执行期
- * 首个 {@code hudRender}/{@code worldRender} 调用已建好（此时挂的是同一实例），或本代一个都
- * 没注册而在此**新建**（空批次）。
+ * <p><b>Collection always happens</b>: register a batch even when this generation registers no
+ * renderer at all. "The new generation registers nothing" is the only path that retires the
+ * old renderers, and an empty batch that never reaches commit can never replace the old table
+ * (the empty-plan rule of {@link CandidateDomainCollector}). The batch instance comes from one
+ * of two places: the first {@code hudRender}/{@code worldRender} call during script execution
+ * created it (that same instance is attached here), or this generation registered nothing and
+ * it is created here as an empty batch.
  *
- * <p><b>候选期不可见</b>：批次是 inert 的（只按 id 记账），渲染钩子要等 commit 点
- * {@code publish()} 才看得到新 generation；候选失败/取消时批次随候选丢弃，旧 active
- * 继续服务。这也是 {@code ClientRenderPlugin#beforeScriptsLoaded} 那套「加载前整表清空」
- * 被删除的原因：它会清掉旧 active。
+ * <p><b>Not visible during the candidate phase</b>: the batch is inert (it only records ids)
+ * and render hooks see the new generation only after {@code publish()} at the commit point.
+ * When the candidate fails or is cancelled the batch is dropped with it and the old active
+ * generation keeps serving. That is also why
+ * {@code ClientRenderPlugin#beforeScriptsLoaded} no longer clears the whole table before
+ * loading: that cleared the old active renderers too.
  */
 public final class ClientRenderDomainOwner implements CandidateDomainCollector {
 
-    /** 收集器标识（与候选计划共用，进入结构化 reload 失败的 {@code domain-collect:<id>}）。 */
+    /** Collector identity, shared with the candidate plan and reported in structured reload failures
+     * as {@code domain-collect:<id>}. */
     public static final String DOMAIN = ClientRenderRegistry.CANDIDATE_DOMAIN;
 
     @Override
@@ -28,7 +35,7 @@ public final class ClientRenderDomainOwner implements CandidateDomainCollector {
         return DOMAIN;
     }
 
-    /** CLIENT-only：渲染器注册只在 client_scripts 可见。 */
+    /** CLIENT-only: renderer registration is visible only to client scripts. */
     @Override
     public ScriptType scriptType() {
         return ScriptType.CLIENT;

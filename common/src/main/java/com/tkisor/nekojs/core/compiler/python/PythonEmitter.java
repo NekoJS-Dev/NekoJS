@@ -70,9 +70,9 @@ public final class PythonEmitter {
     };
 
     /**
-     * Python 真值助手：空数组/空字典(对象字面量)/空 Map/空 Set 为假（JS 中对象与数组恒真）。
-     * 用户类实例（constructor !== Object）保持恒真，对应 Python 未定义 {@code __bool__}/
-     * {@code __len__} 时的默认语义。仅当模块用到需要真值判断的构造时发射（见 {@link #scanHelpers}）。
+     * Python truthiness helper: Empty arrays/objects (literals), empty Maps/Sets are false (JS objects/arrays are always true).
+     * User instances (constructor !== Object) are always true, corresponding to default Python semantics when {@code __bool__}/
+     * {@code __len__} are undefined. Emitted only when the module uses truthiness checks (see {@link #scanHelpers}).
      */
     private static final String TRUTHY_HELPER =
             "const __nekoTruthy = function (__v) {"
@@ -82,8 +82,8 @@ public final class PythonEmitter {
             + " return Boolean(__v); };";
 
     /**
-     * Python and/or 是值语义（返回操作数本身而非布尔）且以 Python 真值短路。右操作数包成
-     * thunk 保持惰性（短路），左操作数作为实参只求值一次。
+     * Python and/or use value semantics (return the operand, not boolean) and short-circuit based on Python truthiness.
+     * The right operand is wrapped in a thunk for laziness; the left operand is evaluated once.
      */
     private static final String AND_HELPER =
             "const __nekoAnd = function (__a, __b) { return __nekoTruthy(__a) ? __b() : __a; };";
@@ -91,12 +91,12 @@ public final class PythonEmitter {
             "const __nekoOr = function (__a, __b) { return __nekoTruthy(__a) ? __a : __b(); };";
 
     /**
-     * Python 取模：结果符号跟随除数（JS {@code %} 跟随被除数，{@code -7 % 2} 得 -1）。
-     * 除数为 0 时按 Python 语义抛 {@code ZeroDivisionError}（JS 会静默得到 NaN）。
-     * 注意 {@code __b === 0} 对 {@code -0} 同样成立（JS 中 -0 === 0），与 Python 的
-     * {@code 1 / -0.0} 也抛 ZeroDivisionError 一致。
-     * 左操作数是字符串时为 Python %-格式化（{@code "%s=%d" % (k, v)}），路由到
-     * {@link #PERCENT_HELPER}——曾无字符串分支，静默得到 {@code NaN}。
+     * Python modulo: Result sign follows the divisor (JS {@code %} follows the dividend, {@code -7 % 2} is -1).
+     * Division by zero throws {@code ZeroDivisionError} (JS silently results in NaN).
+     * Note {@code __b === 0} also holds for {@code -0} (JS treats -0 as 0), consistent with Python's
+     * {@code 1 / -0.0} throwing ZeroDivisionError.
+     * When the left operand is a string, it acts as Python %-formatting ({@code "%s=%d" % (k, v)}), routed to
+     * {@link #PERCENT_HELPER}; previously, the string branch was missing, silently resulting in {@code NaN}.
      */
     private static final String MOD_HELPER =
             "const __nekoMod = function (__a, __b) {"
@@ -105,8 +105,9 @@ public final class PythonEmitter {
             + " return ((__a % __b) + __b) % __b; };";
 
     /**
-     * Python %-格式化子集：{@code %s %r %d %i %f %g %x %X %o %%}，支持宽度（含 {@code -}
-     * 左对齐）与精度。数值/字符串转换沿用 {@code __nekoPyStr} 的 Python 拼写。
+     * The supported Python %-formatting subset: {@code %s %r %d %i %f %g %x %X %o %%}, with width
+     * (including {@code -} for left alignment) and precision. Number and string conversion keeps the
+     * Python spelling of {@code __nekoPyStr}.
      */
     private static final String PERCENT_HELPER =
             "const __nekoPyPercent = function (fmt, args) {"
@@ -126,9 +127,11 @@ public final class PythonEmitter {
             + " };";
 
     /**
-     * Python {@code str()}/print/{@code %s} 的字符串化：{@code None}/{@code True}/{@code False}、
-     * 数组（元素递归 PyStr 化、{@code ', '} 连接——JS 的 String(arr) 同形但元素是 JS 拼写）、
-     * 普通对象按 {@code {k: v}}。自定义对象退化为 JS 拼写（未实现 {@code __str__}）。
+     * String conversion for Python {@code str()}, print and {@code %s}: {@code None}/{@code True}/
+     * {@code False} are spelled out, arrays are converted element by element with PyStr and joined
+     * with {@code ', '} (JS String(arr) has the same shape but spells the elements the JS way), and
+     * plain objects render as {@code {k: v}}. A custom object falls back to the JS spelling because
+     * {@code __str__} is not implemented.
      */
     private static final String PYSTR_HELPER =
             "const __nekoPyStr = function (v) {"
@@ -143,23 +146,24 @@ public final class PythonEmitter {
             + " };";
 
     /**
-     * Python 真除法：除数为 0 抛 {@code ZeroDivisionError}（JS 静默得到 ±Infinity）。
-     * 消息与 CPython 的 {@code "division by zero"} 一致。
+     * Python true division: a zero divisor throws {@code ZeroDivisionError} (JS silently yields +/-Infinity).
+     * The message matches CPython's {@code "division by zero"}.
      */
     private static final String DIV_HELPER =
             "const __nekoDiv = function (__a, __b) {"
             + " if (__b === 0) throw new ZeroDivisionError(\"division by zero\");"
             + " return __a / __b; };";
 
-    /** Python 地板除：先做同样的零除检查，再 {@code Math.floor}。 */
+    /** Python floor division: the same zero-divisor check first, then {@code Math.floor}. */
     private static final String FLOORDIV_HELPER =
             "const __nekoFloorDiv = function (__a, __b) {"
             + " if (__b === 0) throw new ZeroDivisionError(\"integer division or modulo by zero\");"
             + " return Math.floor(__a / __b); };";
 
     /**
-     * 序列重复：{@code [0] * 4} / {@code 'ab' * 3}（两个方向都合法）重复序列，负数/零次为空，
-     * 其余情况退回数值乘法。JS 的 {@code *} 对字符串/数组是 NaN/0——静默错误，故一律经此助手。
+     * Sequence repetition: {@code [0] * 4} / {@code 'ab' * 3} in either direction; a negative or zero count is
+     * empty, anything else is numeric multiplication. JS {@code *} gives NaN/0 silently for a string/array,
+     * so every repetition goes through this helper.
      */
     private static final String MUL_HELPER =
             "const __nekoMul = function (__a, __b) {"
@@ -170,12 +174,12 @@ public final class PythonEmitter {
             + " return __a * __b; };";
 
     /**
-     * Python {@code +}/{@code +=}：数组拼接（{@code [1,2] + [3]} → {@code [1,2,3]}——JS 的 {@code +}
-     * 会把两个数组串成字符串 {@code "1,23"}）、str+str 拼接与数值加法。str 与非 str 混用（如
-     * {@code 'a' + 5}）按 Python 抛 {@code TypeError}（JS 会静默隐式转换成 {@code 'a5'}）——
-     * 抛出的是异常 prelude 的 TypeError 类（needsAdd 连带发射 prelude，同 needsMod →
-     * ZeroDivisionError 的先例）。其余非 str/非数组组合退回 JS {@code +} 语义。f-string 与相邻
-     * 字符串字面量拼接发生在解析层（单个 STRING 记号），不经此助手。
+     * Python {@code +}/{@code +=}: array concatenation ({@code [1,2] + [3]} -> {@code [1,2,3]}; JS {@code +} would
+     * stringify the two arrays into {@code "1,23"}), str+str concatenation and numeric addition. Mixing str with a
+     * non-str (such as {@code 'a' + 5}) throws {@code TypeError} as Python does (JS silently coerces it to {@code 'a5'});
+     * the thrown class is the TypeError of the exception prelude (needsAdd pulls the prelude in, following the
+     * needsMod -> ZeroDivisionError precedent). Other non-str/non-array combinations fall back to JS {@code +}
+     * semantics. f-string and adjacent string literal concatenation happens in the parser (one STRING token) and skips this helper.
      */
     private static final String ADD_HELPER =
             "const __nekoAdd = function (__a, __b) {"
@@ -187,10 +191,11 @@ public final class PythonEmitter {
             + " return __a + __b; };";
 
     /**
-     * Python {@code str.replace(old, new[, count])}：JS 的 {@code replaceAll} 把 old 当正则、
-     * {@code replace} 把 new 里的 {@code $} 当替换模式——都静默错误。本助手用 {@code split(old).join(rep)}
-     * 实现字面量替换（字符串分隔符在 JS split 中就是字面量）。count&lt;0 = 不限；count==0 = 原样返回；
-     * count&gt;0 只替换前 count 次。空 old 按 Python 语义在字符间与两端插入（len+1 处），count 限制插入次数。
+     * Python {@code str.replace(old, new[, count])}: JS {@code replaceAll} reads old as a regex and {@code replace}
+     * reads a {@code $} in new as a replacement pattern, both silently wrong. This helper uses {@code split(old).join(rep)}
+     * for literal replacement (a string separator stays literal in split). count&lt;0 = no limit; count==0 = returned
+     * unchanged; count&gt;0 = the first count occurrences. An empty old inserts between characters and at both ends
+     * (len+1 places), and count limits the insertions.
      */
     private static final String REPLACE_HELPER =
             "const __nekoPyStrReplace = function (__s, __old, __rep, __count) {"
@@ -213,8 +218,9 @@ public final class PythonEmitter {
             + "};";
 
     /**
-     * Python {@code str.count(sub[, start[, end]])}：按 Python 切片钳制 start/end（负值从末尾回数），
-     * 非重叠统计；空子串按切片长度+1 计（与 CPython 一致：{@code ''.count('') == 1}）。
+     * Python {@code str.count(sub[, start[, end]])}: start/end clamp as Python slices do (a negative value counts
+     * from the end), counting is non-overlapping, and an empty substring counts as the slice length + 1 (as CPython:
+     * {@code ''.count('') == 1}).
      */
     private static final String STR_COUNT_HELPER =
             "const __nekoPyStrCount = function (__s, __sub, __start, __end) {"
@@ -239,8 +245,8 @@ public final class PythonEmitter {
             + "};";
 
     /**
-     * Python {@code str.zfill(width)}：符号（-/+）保持在最前，零填充在符号与数字之间；
-     * width &lt;= len 时原样返回。JS {@code padStart} 会把负号一起当内容填充（{@code 00-42}）。
+     * Python {@code str.zfill(width)}: the sign (-/+) stays in front and the zeros go between sign and digits;
+     * when width &lt;= len the input is returned unchanged. JS {@code padStart} would pad the minus sign as content ({@code 00-42}).
      */
     private static final String ZFILL_HELPER =
             "const __nekoPyZfill = function (__s, __w) {"
@@ -254,8 +260,8 @@ public final class PythonEmitter {
             + "};";
 
     /**
-     * {@code in} 成员判断：dict(对象字面量)按自有键、Map/Set 按 {@code .has}、数组/字符串按
-     * {@code .includes}。旧实现对 dict/set 发射 {@code .includes} —— 运行时 TypeError。
+     * {@code in} membership test: dict (an object literal) by own keys, Map/Set by {@code .has}, array/string by
+     * {@code .includes}; using {@code .includes} for dict/set would be a runtime TypeError.
      */
     private static final String IN_HELPER =
             "const __nekoIn = function (__v, __c) {"
@@ -265,8 +271,8 @@ public final class PythonEmitter {
             + " return false; };";
 
     /**
-     * 可迭代归一：dict(对象字面量)迭代键、Map 迭代键，其余（数组/字符串/生成器/Set）原样透传。
-     * {@code for k in d:} 旧实现发射 {@code for (var k of d)} —— 对普通对象是运行时 TypeError。
+     * Iterable normalization: dict (an object literal) and Map iterate their keys, everything else (array/string/
+     * generator/Set) passes through unchanged. A bare {@code for (var k of d)} over a plain object is a runtime TypeError.
      */
     private static final String ITER_HELPER =
             "const __nekoIter = function (__v) {"
@@ -274,7 +280,7 @@ public final class PythonEmitter {
             + " if (typeof __v === 'object' && __v !== null && __v.constructor === Object) return Object.keys(__v);"
             + " return __v; };";
 
-    /** {@code len()}：数组/字符串取 length，Map/Set 取 size，dict(对象字面量)取键数。 */
+    /** {@code len()}: length for an array/string, size for Map/Set, the key count for a dict (an object literal). */
     private static final String LEN_HELPER =
             "const __nekoLen = function (__v) {"
             + " if (__v instanceof Map || __v instanceof Set) return __v.size;"
@@ -282,18 +288,18 @@ public final class PythonEmitter {
             + " return __v.length; };";
 
     /**
-     * 内建异常匹配助手：先按类匹配（prelude 类层级），再按 {@code Error.name} 兜底——这样
-     * JS 原生错误（如 {@code null.foo} 抛的原生 TypeError）仍能被 {@code except TypeError} 捕获。
+     * Built-in exception match helper: a class match first (the prelude class hierarchy), then a {@code Error.name}
+     * fallback, so a native JS error (the native TypeError from {@code null.foo}, say) is still caught by {@code except TypeError}.
      */
     private static final String EXCIS_HELPER =
             "const __nekoExcIs = function (__e, __t) {"
             + " return (__e instanceof __t) || (__e instanceof Error && __e.name === __t.name); };";
 
     /**
-     * 内建异常 prelude：{@code class X extends Error} 家族，让 {@code raise ValueError('boom')}
-     * 发射 {@code throw new ValueError("boom")}（旧实现发射裸 {@code ValueError} 引用 → 运行时
-     * ReferenceError）、{@code except ValueError} 按 {@code instanceof ValueError} 精确匹配。
-     * 基类先于派生类声明；仅当模块引用了任一内建异常名（或含 assert）时发射。
+     * Built-in exception prelude: the {@code class X extends Error} family, so {@code raise ValueError('boom')}
+     * emits {@code throw new ValueError("boom")} (a bare {@code ValueError} reference would be a runtime ReferenceError)
+     * and {@code except ValueError} matches exactly through {@code instanceof ValueError}. Base classes come before
+     * derived ones; emitted only when the module references a built-in exception name (or contains an assert).
      */
     private static final String[] EXC_PRELUDE = {
             "class Exception extends Error {}",
@@ -316,9 +322,9 @@ public final class PythonEmitter {
             "class IndexError extends LookupError {}",
             "class NotImplementedError extends RuntimeError {}",
             "class RecursionError extends RuntimeError {}",
-            // JS 子类实例的 .name 默认继承 Error.prototype.name（"Error"）——按类名重设，
-            // 使 e.name / e.message 与 Python 的 str(e) 约定一致，也让 __nekoExcIs 的原生错误
-            // name 兜底匹配成立。
+            // A JS subclass instance inherits Error.prototype.name ("Error") for .name; reset it to the class name so
+            // e.name / e.message match Python's str(e) convention and __nekoExcIs can fall back to matching a native
+            // error's name.
             "[Exception, ValueError, TypeError, AttributeError, NameError, AssertionError, StopIteration,"
             + " ImportError, OSError, EOFError, MemoryError, OverflowError, ZeroDivisionError, ArithmeticError,"
             + " LookupError, KeyError, IndexError, NotImplementedError, RecursionError]"
@@ -326,16 +332,16 @@ public final class PythonEmitter {
     };
 
     /**
-     * 内建类型探针 prelude：{@code isinstance(x, int/str/list/...)} 的第二实参是内建类型名时，
-     * 旧实现发射 {@code x instanceof str} —— JS 没有这些全局 → 运行时 ReferenceError。现在按
-     * 探针函数判定（{@link #exceptionCond} 路由）。语义取舍（务实处理，见各探针注释）：
-     * int 接受 boolean（Python 的 bool 是 int 子类，{@code isinstance(True, int)} 为 True）；
-     * float 接受一切 number（本转译器里 int/float 同为 JS number，5 与 5.0 不可区分）；
-     * list 与 tuple 同为 JS 数组（不可区分）；dict 仅指对象字面量（constructor === Object，
-     * 与 {@link #TRUTHY_HELPER}/{@link #ITER_HELPER} 的判定一致，排除数组/Map/Set/用户类实例）；
-     * set 与 frozenset 同为 Set。异常类名仍走 {@link #EXCIS_HELPER} 的精确 instanceof 路径
-     * （混合元组 {@code isinstance(e, (ValueError, str))} 两种路由在同一析取链共存）。
-     * 仅当模块的 isinstance/except 类型位置引用了这些名字时发射（见 {@link #scanHelpers}）。
+     * Built-in type probe prelude: when the second argument of {@code isinstance(x, int/str/list/...)} is a built-in
+     * type name, the check uses probe functions (routed by {@link #exceptionCond}); {@code x instanceof str} would
+     * be a runtime ReferenceError since JS has no such globals. Deliberate semantic choices (see each probe):
+     * int accepts a boolean (Python's bool is an int subclass; {@code isinstance(True, int)} is True); float accepts
+     * any number (int and float are both a JS number here, so 5 and 5.0 are indistinguishable); list and tuple are
+     * both a JS array (indistinguishable); dict means only an object literal (constructor === Object, matching
+     * {@link #TRUTHY_HELPER}/{@link #ITER_HELPER} and excluding arrays/Map/Set/user class instances); set and frozenset
+     * are both a Set. Exception class names still take the exact instanceof path of {@link #EXCIS_HELPER} (in a mixed
+     * tuple such as {@code isinstance(e, (ValueError, str))} both routes coexist in the same disjunction).
+     * Emitted only when an isinstance/except type position references these names (see {@link #scanHelpers}).
      */
     private static final String[] TYPE_PRELUDE = {
             "const __nekoPyInt = function (v) { return typeof v === 'boolean'"
@@ -351,7 +357,7 @@ public final class PythonEmitter {
             "const __nekoPyTuple = function (v) { return Array.isArray(v); };",
     };
 
-    /** isinstance/except 类型位置可引用的内建类型名 → {@link #TYPE_PRELUDE} 探针。 */
+    /** Built-in type names an isinstance/except type position can reference -> a {@link #TYPE_PRELUDE} probe. */
     private static final java.util.Set<String> BUILTIN_TYPES = java.util.Set.of(
             "int", "float", "str", "bool", "list", "dict", "set", "tuple", "frozenset");
 
@@ -372,8 +378,8 @@ public final class PythonEmitter {
             "constructor", "prototype");
 
     /**
-     * dict 方法劫持的 worst-offender 名单：这些名字既是 dict 方法也是常见用户方法名，
-     * 需要额外的接收者防护（见 {@link #rtDispatch}）。
+     * Worst offenders for dict method hijacking: these names are both dict methods and common user method
+     * names, so they need extra receiver guarding (see {@link #rtDispatch}).
      */
     private static final java.util.Set<String> DICT_METHODS = java.util.Set.of(
             "get", "keys", "values", "items", "update", "pop");
@@ -386,7 +392,7 @@ public final class PythonEmitter {
     private final IdentityHashMap<PythonNode, Integer> srcLines;
     private boolean rewriteSelf = false;   // true inside a class method body (self → this)
     private final java.util.Set<String> classNames = new java.util.HashSet<>();   // for `new` on calls
-    /** 由异常/用户类名赋值得到的别名（{@code VE = ValueError}），raise VE / raise VE(...) 同样需要 {@code new}。 */
+    /** An alias from an assignment of an exception/user class name ({@code VE = ValueError}); raise VE / raise VE(...) needs {@code new} as well. */
     private final java.util.Set<String> excClassAliases = new java.util.HashSet<>();
     /** Top-level names defined by this module (def/class/assign), re-exported so .py files are importable. */
     private final java.util.Set<String> definedNames = new java.util.LinkedHashSet<>();
@@ -398,22 +404,22 @@ public final class PythonEmitter {
     private final java.util.Set<String> kwClassNames = new java.util.HashSet<>();
     /** True when any f-string format spec / conversion is used → the __nekoFmt helper is emitted. */
     private boolean needsFmt = false;
-    /** 按需发射的运行时助手开关（一次 AST 预扫描 {@link #scanHelpers} 收集，见 {@link #emitRuntimeHelpers}）。 */
-    private boolean needsTruthy = false;   // if/while/not/and/or/bool/any/all/推导式过滤/三元/assert/match guard
+    /** Switches for the helpers emitted on demand (collected by one AST prescan in {@link #scanHelpers}; see {@link #emitRuntimeHelpers}). */
+    private boolean needsTruthy = false;   // if/while/not/and/or/bool/any/all/comprehension filter/ternary/assert/match guard
     private boolean needsMod = false;      // %、%=、divmod
-    private boolean needsDiv = false;      // /、//、/=、//=、divmod（除零抛 ZeroDivisionError）
+    private boolean needsDiv = false;      // /, //, /=, //=, divmod (divide by zero throws ZeroDivisionError)
     private boolean needsMul = false;      // *、*=
-    private boolean needsAdd = false;      // +、+=（数组/字符串拼接与混合类型 TypeError）
-    private boolean needsReplace = false;  // str.replace(old, new[, count]) → 字面量替换助手
-    private boolean needsStrCount = false; // str.count(sub[, start[, end]]) → Python 语义计数助手
-    private boolean needsZfill = false;    // str.zfill(width) → 符号保持在前的零填充助手
+    private boolean needsAdd = false;      // +, += (array/string concatenation and mixed-type TypeError)
+    private boolean needsReplace = false;  // str.replace(old, new[, count]) -> literal replacement helper
+    private boolean needsStrCount = false; // str.count(sub[, start[, end]]) -> Python-semantics counting helper
+    private boolean needsZfill = false;    // str.zfill(width) -> zero-fill helper that keeps the sign in front
     private boolean needsIn = false;       // in / not in
-    private boolean needsIter = false;     // for 语句 / 推导式 for 子句
+    private boolean needsIter = false;     // for statements / comprehension for clauses
     private boolean needsLen = false;      // len()
-    private boolean needsExc = false;      // 内建异常名被引用 / assert → 异常 prelude + __nekoExcIs
-    private boolean needsTypes = false;    // isinstance/except 类型位置引用内建类型名 → 类型探针 prelude
-    private boolean needsPyStr = false;    // str()/print()/%-格式化 → __nekoPyStr（Python 字符串拼写）
-    /** 当前正在发射的语句的 Python 源码行（1-based；由 emitStmt 从 srcLines 维护），供 {@link #err} 附加位置。 */
+    private boolean needsExc = false;      // a built-in exception name is referenced / assert -> exception prelude + __nekoExcIs
+    private boolean needsTypes = false;    // an isinstance/except type position references a built-in type name -> type probe prelude
+    private boolean needsPyStr = false;    // str()/print()/%-formatting -> __nekoPyStr (Python string spelling)
+    /** Python source line of the statement being emitted (1-based, maintained by emitStmt from srcLines), attached to {@link #err}. */
     private int curLine = -1;
     /** The variable bound to the current exception in each enclosing except clause (top = innermost). */
     private final java.util.Deque<String> errStack = new java.util.ArrayDeque<>();
@@ -440,13 +446,13 @@ public final class PythonEmitter {
         // (foo → ./foo, a.b.c → ./a/b/c); NekoModuleResolver probes .py / .js / index.* automatically.
         for (PythonNode stmt : module.body()) {
             Integer stmtLine = srcLines.get(stmt);
-            if (stmtLine != null) curLine = stmtLine;   // import 阶段的报错同样带上源码行
+            if (stmtLine != null) curLine = stmtLine;   // import-phase errors carry the source line as well
             if (stmt instanceof PythonNode.Import imp) {
                 recordMapping(stmt);
                 for (PythonNode.Spec s : imp.specs()) line(esmNamespaceImport(s));
             } else if (stmt instanceof PythonNode.ImportFrom impf) {
-                // 魔法 import：`from nekojs import *`（或具名）是给 IDE/pyright 看的类型桩入口，
-                // 运行时无意义——剥离之（不 recordMapping、不 line，source map 零影响）。
+                // Magic import: `from nekojs import *` (or a named form) is a type-stub entry for IDE/pyright and means
+                // nothing at runtime, so it is stripped (no recordMapping, no line, no source-map effect).
                 if ("nekojs".equals(impf.module())) continue;
                 if (impf.star()) throw err("python 'from X import *' is not supported");
                 recordMapping(stmt);
@@ -466,8 +472,8 @@ public final class PythonEmitter {
     }
 
     /**
-     * 按需发射运行时助手与异常 prelude：每个至多一次、先于所有语句（无 source map 行，与
-     * {@link #FMT_HELPER} 注入方式一致）。开关由 {@link #scanHelpers} 预扫描设置。
+     * Emits the runtime helpers and the exception prelude on demand: each at most once, before every statement
+     * (no source-map line, the same injection as {@link #FMT_HELPER}). Switches come from the {@link #scanHelpers} prescan.
      */
     private void emitRuntimeHelpers() {
         if (needsFmt) { for (String l : FMT_HELPER) line0(l); }
@@ -484,8 +490,8 @@ public final class PythonEmitter {
         if (needsIter) line0(ITER_HELPER);
         if (needsLen) line0(LEN_HELPER);
         if (needsTypes) { for (String l : TYPE_PRELUDE) line0(l); }
-        // 除法/取模/加法助手会在运行时 throw new ZeroDivisionError / new TypeError —— prelude 类
-        // 必须随之发射（__nekoAdd 抛的 TypeError 也来自 prelude，不能落到 JS 原生 TypeError 类）。
+        // The division/modulo/addition helpers throw new ZeroDivisionError / new TypeError at runtime, so the prelude
+        // classes must ship with them (the TypeError from __nekoAdd comes from the prelude, not the native JS TypeError).
         if (needsExc || needsMod || needsDiv || needsAdd) { for (String l : EXC_PRELUDE) line0(l); line0(EXCIS_HELPER); }
     }
 
@@ -499,7 +505,7 @@ public final class PythonEmitter {
     private void emitStmt(PythonNode node) {
         // Record a statement-level mapping (the line about to be emitted ← its Python source line).
         if (!(node instanceof PythonNode.Pass)) recordMapping(node);
-        // 记录当前语句的源码行（供 err() 附加位置）；嵌套语句由递归的 emitStmt 自行保存/恢复。
+        // Record the source line of the current statement (err() attaches it); nested statements save and restore it in the recursive emitStmt.
         Integer ln = srcLines.get(node);
         int prevLine = curLine;
         if (ln != null) curLine = ln;
@@ -513,10 +519,10 @@ public final class PythonEmitter {
                     block(f.body());
                     line("}");
                 } else if (rewriteSelf && !f.isGenerator()) {
-                    // 方法体内嵌套 def：Python 的嵌套函数经闭包引用外层 self——发成箭头函数
-                    // （lexical this = 方法的 this），self → this 的重写得以穿透。
-                    // 曾一律发 function：this 重绑，嵌套体里的 self 变 undefined。
-                    // 生成器（箭头不可为 generator）与 **kwargs（prologue 依赖 arguments）保持 function。
+                    // Nested def inside a method body: a Python nested function reaches the outer self through the closure,
+                    // so it becomes an arrow function (lexical this = the method's this) and the self -> this rewrite reaches
+                    // inside it. A plain function would rebind this and make self undefined in the nested body;
+                    // generators (an arrow cannot be a generator) and **kwargs (the prologue relies on arguments) stay function.
                     line("var " + jsName(f.name()) + " = (" + emitParams(f.params()) + ") => {");
                     block(f.body());
                     line("};");
@@ -615,7 +621,7 @@ public final class PythonEmitter {
             case PythonNode.For f -> {
                 String flag = f.elseBody().isEmpty() ? null : ("__nekoBrk" + (tempCounter++));
                 if (flag != null) line("var " + flag + " = true;");   // stays true unless the body `break`s
-                // dict/Map 经 __nekoIter 归一为键迭代（其余可迭代对象原样透传）
+                // dict/Map are normalized by __nekoIter to key iteration (other iterables pass through unchanged)
                 line("for (var " + emitTarget(f.target()) + " of __nekoIter(" + emitExpr(f.iter()) + ")) {");
                 loopFlags.push(flag);
                 block(f.body());
@@ -649,12 +655,12 @@ public final class PythonEmitter {
                     }
                     line("throw " + errStack.peek() + ";");   // re-raise the current exception
                 } else if (r.exc() instanceof PythonNode.Name rn && isThrowableClassName(rn.id())) {
-                    // raise Cls ≡ raise Cls()（Python 语义）：裸类名（内建异常 / 用户类 / 异常类
-                    // 别名）必须实例化后抛出——旧实现只对内建异常名 new，用户类抛出的是类对象
-                    // 本身，except Cls 的 instanceof 永远不匹配 → 未捕获崩溃。
+                    // raise Cls == raise Cls() (Python semantics): a bare class name (built-in exception, user class, or
+                    // exception class alias) must be instantiated before throwing; a user class used to be thrown as the
+                    // class object itself, so `except Cls` never matched through instanceof and the crash went uncaught.
                     line("throw new " + jsName(rn.id()) + "();");
                 } else {
-                    // raise ValueError('x') → throw new ValueError("x")（内建异常类由 prelude 提供）
+                    // raise ValueError('x') -> throw new ValueError("x") (the built-in exception classes come from the prelude)
                     line("throw " + emitExpr(r.exc()) + ";");
                 }
             }
@@ -665,8 +671,8 @@ public final class PythonEmitter {
             case PythonNode.Del d -> {
                 for (PythonNode t : d.targets()) {
                     if (t instanceof PythonNode.Name n) {
-                        // `delete x;` 在 ESM 严格模式下是语法错误，且 JS 无法解除 var 绑定
-                        // （Python 的 del x 语义）→ 编译期报错；仅支持 del d[k] / del obj.attr。
+                        // `delete x;` is a syntax error in ESM strict mode and JS cannot unbind a var, which is what Python's
+                        // del x means, so it is a compile error; only del d[k] / del obj.attr are supported.
                         throw err("python 'del " + n.id()
                                 + "' is not supported (JS cannot unbind a name; use del d[key] / del obj.attr)");
                     }
@@ -706,8 +712,8 @@ public final class PythonEmitter {
             case PythonNode.FunctionDef f -> definedNames.add(f.name());
             case PythonNode.ClassDef c -> {
                 definedNames.add(c.name());
-                // 预扫描阶段就登记类名（emitClass 也会加，Set 去重）：raise Cls / Cls(...) 需要
-                // new，且与其后是否先出现 raise/别名赋值无关（函数体内的 raise 可以先于类定义发射）。
+                // Register the class name during the prescan (emitClass adds it too; the Set dedupes): raise Cls / Cls(...) need
+                // new whether or not a raise/alias assignment is emitted first (a raise in a function body can precede the class definition).
                 classNames.add(c.name());
             }
             case PythonNode.Assign a -> {
@@ -719,10 +725,10 @@ public final class PythonEmitter {
     }
 
     /**
-     * 记录异常类别名：{@code VE = ValueError}（值是内建异常名 / 用户类名）→ VE 之后的
-     * {@code raise VE} / {@code raise VE('x')} 与直接用类名同样需要 {@code new} 实例化，
-     * 否则 {@code throw VE("x")} 不带 new 调 class → 运行时 TypeError。仅覆盖模块顶层的
-     * 别名赋值（函数体内的别名赋值不追踪，见残留限制）。
+     * Records an exception class alias: for {@code VE = ValueError} (the value being a built-in exception name or
+     * a user class name), {@code raise VE} / {@code raise VE('x')} afterwards need {@code new} just like the class
+     * name itself; otherwise {@code throw VE("x")} calls a class without new, a runtime TypeError. Only top-level
+     * alias assignments are covered (an alias inside a function body is not tracked).
      */
     private void collectExcAlias(PythonNode.Assign a) {
         if (a.value() instanceof PythonNode.Name vn && isThrowableClassName(vn.id())) {
@@ -732,7 +738,7 @@ public final class PythonEmitter {
         }
     }
 
-    /** raise 的目标是否是一个类名（内建异常 / 用户类 / 异常类别的别名）→ 需要 {@code new} 实例化。 */
+    /** Whether the raise target is a class name (built-in exception, user class, or exception class alias) and so needs {@code new}. */
     private boolean isThrowableClassName(String id) {
         return BUILTIN_EXCEPTIONS.contains(id) || classNames.contains(id) || excClassAliases.contains(id);
     }
@@ -1049,14 +1055,14 @@ public final class PythonEmitter {
             if ("bool".equals(id) || "any".equals(id) || "all".equals(id) || "filter".equals(id)) needsTruthy = true;
             if ("len".equals(id)) needsLen = true;
             if ("divmod".equals(id)) { needsMod = true; needsDiv = true; }
-            // str()/print()：__nekoPyStr 化（None/True/False/数组的 Python 拼写）
+            // str()/print(): go through __nekoPyStr (the Python spelling of None/True/False and arrays)
             if ("str".equals(id) || "print".equals(id)) needsPyStr = true;
-            // isinstance(x, int/str/...) 或 isinstance(x, (A, str))：类型位置引用内建类型名 → 探针 prelude
+            // isinstance(x, int/str/...) or isinstance(x, (A, str)): a type position references a built-in type name -> probe prelude
             if ("isinstance".equals(id)) {
                 for (PythonNode a : call.args()) if (refsBuiltinType(a)) needsTypes = true;
             }
         } else if (o instanceof PythonNode.Call call && call.func() instanceof PythonNode.Attribute attr) {
-            // 方法名与 Python str 语义助手一一对应；此处保守预扫描，与 receiver 劫持判定无关。
+            // Method names map one-to-one onto the Python str semantics helpers; this prescan is conservative and unrelated to receiver hijack detection.
             switch (attr.attr()) {
                 case "replace" -> needsReplace = true;
                 case "count" -> needsStrCount = true;
@@ -1064,11 +1070,11 @@ public final class PythonEmitter {
                 default -> { }
             }
         } else if (o instanceof PythonNode.ExceptClause ec) {
-            // except (ValueError, str) 之类的类型位置同样可能引用内建类型名（与 isinstance 同一路由）
+            // A type position such as except (ValueError, str) can reference built-in type names too (the same route as isinstance)
             for (PythonNode t : ec.types()) if (refsBuiltinType(t)) needsTypes = true;
         } else if (o instanceof PythonNode.Assert) {
-            needsTruthy = true;   // assert 以 Python 真值判定条件
-            needsExc = true;      // assert 失败 → new AssertionError(...)
+            needsTruthy = true;   // assert tests its condition by Python truthiness
+            needsExc = true;      // an assert failure -> new AssertionError(...)
         } else if (o instanceof PythonNode.If || o instanceof PythonNode.While || o instanceof PythonNode.Ternary
                 || o instanceof PythonNode.IfComp) {
             needsTruthy = true;
@@ -1078,9 +1084,9 @@ public final class PythonEmitter {
             switch (b.op()) {
                 case "and", "or" -> needsTruthy = true;
                 case "%" -> needsMod = true;
-                case "+" -> needsAdd = true;   // 数组/字符串拼接与混合类型 TypeError → __nekoAdd
+                case "+" -> needsAdd = true;   // array/string concatenation and mixed-type TypeError -> __nekoAdd
                 case "*" -> needsMul = true;
-                case "/", "//" -> needsDiv = true;   // 除零需抛 ZeroDivisionError → __nekoDiv/__nekoFloorDiv
+                case "/", "//" -> needsDiv = true;   // division by zero must throw ZeroDivisionError -> __nekoDiv/__nekoFloorDiv
                 default -> { }
             }
         } else if (o instanceof PythonNode.AugAssign ag) {
@@ -1093,10 +1099,11 @@ public final class PythonEmitter {
         } else if (o instanceof PythonNode.For || o instanceof PythonNode.ForComp) {
             needsIter = true;
         } else if (o instanceof PythonNode.Match mt) {
-            // match 的 case guard 以 Python 真值判定
+            // A case guard on match is tested with Python truthiness
             for (var mc : mt.cases()) if (mc.guard() != null) needsTruthy = true;
         }
-        // 深度遍历 record 组件 / list 元素，继续收集标记（与具体分支判定互不干扰）。
+        // Walk into record components and list elements to keep collecting flags, independently of the
+        // branch checks above.
         Class<?> c = o.getClass();
         if (c.isRecord()) {
             for (var rc : c.getRecordComponents()) {
@@ -1112,9 +1119,10 @@ public final class PythonEmitter {
     }
 
     /**
-     * 类型表达式（isinstance 第二实参 / except 类型元组的元素）是否引用了内建类型名
-     * （int/float/str/...）——需要发射 {@link #TYPE_PRELUDE} 探针。只看类型位置，普通的
-     * {@code int('42')} 调用或变量名不会误触发。
+     * Tells whether a type expression (the second argument of isinstance or an element of an except
+     * type tuple) references a built-in type name (int/float/str/...), which requires emitting the
+     * {@link #TYPE_PRELUDE} probes. Only type positions count, so an ordinary {@code int('42')} call or
+     * a variable with such a name does not trigger it.
      */
     private static boolean refsBuiltinType(PythonNode n) {
         if (n instanceof PythonNode.Name nm) return BUILTIN_TYPES.contains(nm.id());
@@ -1320,19 +1328,22 @@ public final class PythonEmitter {
         String value = emitExpr(a.value());
         String op = a.op();
         if (op.equals("//=")) {
-            // 地板除赋值：除零抛 ZeroDivisionError → 经助手
+            // Floor division assignment: division by zero must throw ZeroDivisionError, so it goes through the helper
             line(target + " = __nekoFloorDiv(" + target + ", " + value + ");");
         } else if (op.equals("/=")) {
-            // 真除法赋值：同样经助手做零除检查（值语义与 a / b 相同）
+            // True division assignment: it also goes through the helper, which checks for division by
+            // zero (same value semantics as a / b)
             line(target + " = __nekoDiv(" + target + ", " + value + ");");
         } else if (op.equals("%=")) {
-            // Python 取模符号跟随除数 → 经助手（JS %= 跟随被除数）
+            // Python modulo takes its sign from the divisor, so it goes through the helper (JS %= takes
+            // it from the dividend)
             line(target + " = __nekoMod(" + target + ", " + value + ");");
         } else if (op.equals("*=")) {
-            // 序列重复（[0] *= 4 / 'ab' *= 3）或数值乘法 → 经助手
+            // Sequence repetition ([0] *= 4, 'ab' *= 3) or numeric multiplication, so it goes through the helper
             line(target + " = __nekoMul(" + target + ", " + value + ");");
         } else if (op.equals("+=")) {
-            // 容器拼接（xs += ys）或数值/字符串加法 → 与二元 + 同路的助手（JS 的 += 同样会静默串接）
+            // Container concatenation (xs += ys) or numeric/string addition, so it uses the same helper
+            // as binary + (JS += would also silently concatenate)
             line(target + " = __nekoAdd(" + target + ", " + value + ");");
         } else if (op.equals("@=")) {
             throw err("python matmul '@=' is not supported");
@@ -1362,10 +1373,12 @@ public final class PythonEmitter {
     }
 
     /**
-     * 类体中的普通赋值（{@code class C:\n    x = 5}）在 Python 中是类属性；JS 类体不允许
-     * {@code var}/普通语句（会是语法错误），因此降级为 ES2022 静态类字段 {@code static x = 5;}，
-     * 通过 {@code C.x} 访问，对应 Python 的类属性语义。多重赋值 / 元组解包等复杂形式暂不支持，
-     * 编译期报错（与文件内其它不支持特性的处理一致）。
+     * A plain assignment in a class body ({@code class C:\n    x = 5}) defines a class attribute in
+     * Python. A JS class body accepts no {@code var} or plain statement (that is a syntax error), so
+     * the assignment becomes an ES2022 static class field {@code static x = 5;} and is read through
+     * {@code C.x}, which matches Python class attribute semantics. Complex forms such as multiple
+     * assignment or tuple unpacking are not supported yet and fail at compile time, like the other
+     * unsupported features in a file.
      */
     private void emitClassField(PythonNode.Assign a) {
         if (a.targets().size() != 1 || !(a.targets().get(0) instanceof PythonNode.Name n)) {
@@ -1379,15 +1392,17 @@ public final class PythonEmitter {
         String fieldName = JS_RESERVED_IDENTIFIERS.contains(n.id())
                 ? "[" + jsString(n.id()) + "]"
                 : n.id();
-        // 实例字段而非 static：Python 的类属性经 self 读写（self.total += 1 是实例语义），
-        // static 字段对 this.total 不可见，曾让所有 self 访问得到 undefined/NaN。
-        // ClassName.attr 直接访问（Python 的类级读取）不再支持——脚本用法以 self 为主。
+        // An instance field, not static: Python class attributes are read and written through self
+        // (self.total += 1 is instance semantics), and a static field is invisible to this.total,
+        // which used to leave every self access undefined or NaN.
+        // Direct ClassName.attr access (a class-level read in Python) is no longer supported; scripts use self.
         line(fieldName + " = " + emitExpr(a.value()) + ";");
     }
 
     /**
-     * 类 docstring（类体中的裸字符串语句）：JS 类体不允许裸表达式语句，且 Python 中它也
-     * 不产生运行时效果，因此降级为一行注释（source map 仍映射该语句行）。
+     * A class docstring (a bare string statement in the class body) becomes a one-line comment, because
+     * a JS class body accepts no bare expression statement and it has no runtime effect in Python either.
+     * The source map still maps that statement line.
      */
     private void emitClassDocstring(PythonNode.ExprStmt e, PythonNode.StrLit doc) {
         recordMapping(e);
@@ -1468,12 +1483,15 @@ public final class PythonEmitter {
     }
 
     /**
-     * 单个异常/类型匹配条件：{@code Exception} 根 → {@code instanceof Error}（内建与 JS 原生
-     * 错误通吃）；其余内建异常名 → {@code __nekoExcIs(e, T)}（prelude 类 + JS 原生 Error 按 name
-     * 兜底）；内建类型名（int/str/list/...）→ {@link #TYPE_PRELUDE} 探针（旧实现发射
-     * {@code e instanceof str} —— JS 无此全局 → 运行时 ReferenceError）；用户类 → 普通
-     * {@code instanceof}。except 子句与 isinstance 的（元组）类型链共用此路由，混合元组
-     * {@code isinstance(e, (ValueError, str))} 自然得到 {@code __nekoExcIs(e, ValueError) || __nekoPyStr(e)}。
+     * Builds one exception or type match condition. The {@code Exception} root becomes
+     * {@code instanceof Error}, which covers both built-in and native JS errors. Any other built-in
+     * exception name becomes {@code __nekoExcIs(e, T)}, which checks the prelude class and falls back
+     * to the name of a native JS Error, and a built-in type name (int/str/list/...) becomes a
+     * {@link #TYPE_PRELUDE} probe, because emitting {@code e instanceof str} would throw a
+     * ReferenceError as JS has no such global. A user class uses plain {@code instanceof}. An except
+     * clause and the (tuple) type chain of isinstance share this routing, so a mixed tuple
+     * {@code isinstance(e, (ValueError, str))} naturally becomes
+     * {@code __nekoExcIs(e, ValueError) || __nekoPyStr(e)}.
      */
     private String exceptionCond(String varName, PythonNode type) {
         if (type instanceof PythonNode.Name n) {
@@ -1586,8 +1604,9 @@ public final class PythonEmitter {
             case "find" -> args.size() == 1 ? obj + ".indexOf(" + a + ")" : null;
             case "rfind" -> args.size() == 1 ? obj + ".lastIndexOf(" + a + ")" : null;
             case "index" -> {
-                // 劫持防护（sort 之后的同类缺口）：用户类 def index(self, x) 不能被映射成 indexOf。
-                // JS 原生 str/array 都没有 .index 方法 → typeof 探测不会误命中，用 dict 方法族同款 rtDispatch。
+                // Hijack guard, the same gap sort had: a user class with def index(self, x) must not be
+                // mapped to indexOf. JS gives str and array no .index method, so a typeof probe cannot hit
+                // by mistake, and this uses the same rtDispatch as the dict method family.
                 if (args.size() != 1 || hijackReceiverIsUserInstance(attr)) yield null;
                 yield hijackReceiverIsPlain(attr)
                         ? rtDispatch(obj, "index", obj + ".index(" + a + ")", obj + ".indexOf(" + a + ")")
@@ -1610,7 +1629,8 @@ public final class PythonEmitter {
             case "startswith" -> args.size() == 1 ? obj + ".startsWith(" + a + ")" : null;
             case "endswith" -> args.size() == 1 ? obj + ".endsWith(" + a + ")" : null;
             case "count" -> {
-                // 同 index：用户类 def count(self, x) 保有自己的方法；str/array 均无 .count → rtDispatch 探测。
+                // Same as index: a user class with def count(self, x) keeps its own method, and neither
+                // str nor array has a .count method, so rtDispatch probes it.
                 if (hijackReceiverIsUserInstance(attr)) yield null;
                 if (args.isEmpty() || args.size() > 3) {
                     throw err("python 'str.count' needs 1 to 3 arguments (count(sub[, start[, end]]))");
@@ -1652,11 +1672,13 @@ public final class PythonEmitter {
             case "join" -> args.size() == 1 ? "([..." + a + "].join(" + obj + "))" : null;
             // list
             case "append" -> args.size() == 1 ? obj + ".push(" + a + ")" : null;
-            // copy/insert/remove/pop 与 sort 同款劫持防护：静态可判定的用户类接收者（Cls(...).m /
-            // 方法体内 self.m）直接放行原生调用；简单接收者（Name/属性链/索引）再运行时探测——
-            // 只有真数组（且没有自有同名属性）才走数组降级映射，裸名字绑定的用户类实例
-            // （b = Box(); b.pop()）保有自己的方法。reverse 的数组降级与原生调用同形（obj.reverse()），
-            // 无劫持歧义，不探测。
+            // copy/insert/remove/pop get the same hijack guard as sort. A statically known user-class
+            // receiver (Cls(...).m or self.m inside a method body) goes straight to the native call.
+            // A simple receiver (Name/attribute chain/index) is probed at runtime: only a real array
+            // with no own property of that name is mapped to the array fallback, so a user-class
+            // instance held in a plain name (b = Box(); b.pop()) keeps its own method. The reverse
+            // fallback has the same shape as the native call (obj.reverse()), so it cannot be
+            // hijacked and needs no probe.
             case "copy" -> {
                 if (!args.isEmpty() || hijackReceiverIsUserInstance(attr)) yield null;
                 yield hijackReceiverIsPlain(attr)
@@ -1679,26 +1701,31 @@ public final class PythonEmitter {
                         : arrForm;
             }
             case "pop" -> {
-                // JS 数组自带 .pop（在 Array.prototype 上，typeof 探测会误命中真数组）→ 与 sort 同款
-                // Array.isArray + 无自有 pop 双条件探测；0 参时数组降级与原生调用同形（obj.pop()），无需探测。
+                // A JS array already has .pop (on Array.prototype, so a typeof probe would hit a real
+                // array), so this uses the same two-condition probe as sort: Array.isArray plus no own
+                // pop. With no arguments the array fallback has the same shape as the native call
+                // (obj.pop()), so no probe is needed.
                 if (args.size() > 1 || userInstance) yield null;
                 if (args.isEmpty()) yield obj + ".pop()";
                 String arrForm = obj + ".splice(" + e0 + ", 1)[0]";
-                if (!hijackReceiverIsPlain(attr)) yield arrForm;   // 复杂接收者只求值一次，按数组处理
+                if (!hijackReceiverIsPlain(attr)) yield arrForm;   // Complex receiver: evaluate it once and treat it as an array
                 yield rtArrayDispatch(obj, "pop", arrForm, obj + ".pop(" + e0 + ")");
             }
             case "sort" -> {
-                // 与 sorted() 相同的比较器：数值按大小（JS 默认 sort 是字典序，[10,2,1] → [1,10,2]）。
-                // 劫持防护：静态可判定的用户类接收者（Cls(...).sort / 方法体内 self.sort）直接放行
-                // 原生调用；简单接收者（Name/属性链/索引）再运行时探测——只有真数组（且没有自有
-                // sort）才注入比较器，用户类实例保有自己的 sort 方法（旧实现无条件注入，把
-                // comparator 当成第一个实参传给用户方法 → 静默错误值）。
+                // The same comparator as sorted(): numbers compare by value (JS sorts by string by
+                // default, so [10,2,1] would become [1,10,2]).
+                // Hijack guard: a statically known user-class receiver (Cls(...).sort or self.sort in a
+                // method body) goes straight to the native call. A simple receiver (Name/attribute
+                // chain/index) is probed at runtime, and the comparator is injected only into a real
+                // array with no own sort; a user-class instance keeps its own sort method, since
+                // injecting the comparator unconditionally would pass it as the first argument to that
+                // method and produce silently wrong values.
                 if (!args.isEmpty() || hijackReceiverIsUserInstance(attr)) yield null;
                 String cmp = obj + ".sort((a, b) => ((a < b) ? -1 : ((a > b) ? 1 : 0)))";
-                if (!hijackReceiverIsPlain(attr)) yield cmp;   // 复杂接收者只求值一次，按数组处理
+                if (!hijackReceiverIsPlain(attr)) yield cmp;   // Complex receiver: evaluate it once and treat it as an array
                 yield rtArrayDispatch(obj, "sort", cmp, obj + ".sort()");
             }
-            // dict (obj is a plain JS object) — worst offenders 走劫持防护
+            // dict (obj is a plain JS object): the worst offenders go through the hijack guard
             case "keys" -> {
                 if (!args.isEmpty() || userInstance) yield null;
                 yield plainReceiver ? rtDispatch(obj, m, obj + ".keys()", "Object.keys(" + obj + ")")
@@ -1721,13 +1748,14 @@ public final class PythonEmitter {
                         : "Object.assign(" + obj + ", " + a + ")";
             }
             case "get" -> {
-                if (userInstance) yield null;   // 用户类自己的 get 方法（含零参 def get(self)）
+                if (userInstance) yield null;   // The user class's own get method, including a zero-argument def get(self)
                 if (args.isEmpty()) {
-                    // 零参 .get() 旧实现发射 `obj[]`（非法 JS）——编译期显式报错
+                    // .get() with no argument would emit `obj[]`, which is invalid JS, so it fails at compile time
                     throw err("python '.get()' needs a key argument (get(key[, default]))");
                 }
                 if (args.size() > 2) yield null;
-                // 无 default 的 .get(k)：缺失键返回 None（裸索引得 undefined，is None 判定失效）
+                // .get(k) without a default: a missing key returns None, because a bare index gives
+                // undefined and an is None check on it fails
                 String fb = (e1 != null)
                         ? "(" + obj + "[" + e0 + "] !== undefined ? " + obj + "[" + e0 + "] : " + e1 + ")"
                         : "(" + obj + "[" + e0 + "] !== undefined ? " + obj + "[" + e0 + "] : null)";
@@ -1740,9 +1768,10 @@ public final class PythonEmitter {
     }
 
     /**
-     * dict 方法名劫持防护（之一）：receiver 是用户类实例的两种静态可判定情形——
-     * {@code UserClass(...).m(...)} 构造调用、方法体内的 {@code self.m(...)}。返回 true 表示
-     * 不拦截该方法名（走原生 {@code obj.m(args)} 调用）。
+     * Dict method-name hijack guard, part 1: the two cases where the receiver is a user-class instance
+     * can be decided statically, a construction call {@code UserClass(...).m(...)} and
+     * {@code self.m(...)} inside a method body. A true result means the method name is not intercepted
+     * and the native {@code obj.m(args)} call is used.
      */
     private boolean hijackReceiverIsUserInstance(PythonNode.Attribute attr) {
         if (attr.obj() instanceof PythonNode.Call cc
@@ -1750,30 +1779,36 @@ public final class PythonEmitter {
         return rewriteSelf && attr.obj() instanceof PythonNode.Name sn && "self".equals(sn.id());
     }
 
-    /** dict 方法名劫持防护（之二）：receiver 是无副作用的简单表达式（Name/属性链/索引）。 */
+    /** Dict method-name hijack guard, part 2: the receiver is a side-effect-free simple expression
+     * (a Name, an attribute chain or an index). */
     private static boolean hijackReceiverIsPlain(PythonNode.Attribute attr) {
         PythonNode o = attr.obj();
         return o instanceof PythonNode.Name || o instanceof PythonNode.Attribute || o instanceof PythonNode.Index;
     }
 
     /**
-     * 方法名劫持防护（之三）：运行时探测分发——receiver 定义了同名方法（用户类实例 /
-     * Map 自带 get/keys 等）则调用之，否则走降级映射。dict 方法族（get/keys/values/items/update/pop）
-     * 以及 JS 原生没有同名方法的 str/list 名（index/count）都用这档。receiver 必须是简单表达式
-     * （{@link #hijackReceiverIsPlain}），因为 obj 文本会被求值多次。
+     * Hijack guard for method names, part 3: runtime probe dispatch. If the receiver defines a method
+     * of that name (a user-class instance, or a Map with its own get/keys and so on), the call goes to
+     * it; otherwise it goes to the fallback mapping. This guard covers the dict method family
+     * (get/keys/values/items/update/pop) and the str/list names that JS has no native equivalent for
+     * (index/count). The receiver must be a simple expression (see {@link #hijackReceiverIsPlain}),
+     * because the obj text is evaluated more than once.
      */
     private static String rtDispatch(String obj, String attrName, String userForm, String dictForm) {
         return "(typeof " + obj + "." + attrName + " === \"function\" ? " + userForm + " : " + dictForm + ")";
     }
 
     /**
-     * 方法名劫持防护（之四）：sort/pop/copy/insert/remove 等 JS 原生数组自带（或在
-     * Array.prototype 上）的名字不能用 {@link #rtDispatch} 的 typeof 探测——真数组的
-     * {@code typeof xs.sort === "function"} 恒真，会误命中。改用 Array.isArray +
-     * 「无自有同名属性」双条件：仅真数组（同名方法都在 Array.prototype、非自有属性）走
-     * 数组降级映射，其余 receiver（用户类实例的方法在其原型上而非自有属性）原生调用自身方法。
-     * 用户用 {@code xs.pop = fn} 覆盖时自有属性存在 → 尊重覆盖。receiver 必须是简单表达式
-     * （{@link #hijackReceiverIsPlain}），因为 obj 文本会被求值多次。
+     * Hijack guard for method names, part 4: names that a JS array already has, such as sort, pop,
+     * copy, insert and remove (or that live on Array.prototype), cannot use the typeof probe of
+     * {@link #rtDispatch}, because {@code typeof xs.sort === "function"} is always true for a real
+     * array and would match the wrong branch. Instead this uses two conditions, Array.isArray plus no
+     * own property of that name: only a real array (whose methods are all on Array.prototype, never own
+     * properties) gets the array fallback mapping, and any other receiver (a user-class instance keeps
+     * its methods on the prototype, not as own properties) calls its own method natively. When the user
+     * overrides with {@code xs.pop = fn}, the own property exists, so the override is respected. The
+     * receiver must be a simple expression (see {@link #hijackReceiverIsPlain}), because the obj text
+     * is evaluated more than once.
      */
     private static String rtArrayDispatch(String obj, String attrName, String arrForm, String userForm) {
         return "((Array.isArray(" + obj + ") && !Object.prototype.hasOwnProperty.call(" + obj + ", \"" + attrName + "\")) ? "
@@ -1920,10 +1955,11 @@ public final class PythonEmitter {
 
     private void writeIf(PythonNode.If i, boolean leadIndent) {
         if (!leadIndent) {
-            // 内联嵌套 if（elif 糖改写，或 else: 下唯一一条 if）不经 emitStmt：这里按它自己登记
-            // 的源码行补 curLine 与 source map 映射，使 elif 条件里的发射期报错报告 elif 所在行
-            // （而非外层 if 的行），且 `} else if` 生成行可映射回 Python 源码。外层语句结束时
-            // emitStmt 会恢复 curLine，故无需在此保存/恢复。
+            // An inlined nested if (the elif rewrite, or the single if under else:) does not go through
+            // emitStmt, so its own recorded source line sets curLine and the source map here. Then an
+            // emit-time error in an elif condition reports the elif line instead of the outer if line,
+            // and the generated `} else if` line maps back to the Python source. emitStmt restores
+            // curLine when the outer statement ends, so nothing is saved or restored here.
             Integer ln = srcLines.get(i);
             if (ln != null) {
                 curLine = ln;
@@ -1931,8 +1967,9 @@ public final class PythonEmitter {
             }
         }
         if (leadIndent) out.append(ind());
-        // 条件经 Python 真值判定（空容器为假）；条件串里可能内嵌多行表达式（步进切片/生成器
-        // 表达式），其内嵌换行同样要推进 jsLine（与 line() 的记账一致），否则 source map 漂移。
+        // The condition is tested with Python truthiness, so an empty container is false. The condition
+        // text may contain a multi-line expression (a stepped slice or a generator expression), and its
+        // embedded newlines must advance jsLine the way line() accounts for them, or the source map drifts.
         String cond = emitExpr(i.cond());
         jsLine += countNewlines(cond);
         out.append("if (__nekoTruthy(").append(cond).append(")) {");
@@ -1980,7 +2017,7 @@ public final class PythonEmitter {
             }
             case PythonNode.Call c -> emitCall(c);
             case PythonNode.Unary u -> "not".equals(u.op())
-                    ? "(!__nekoTruthy(" + emitExpr(u.operand()) + "))"   // not 以 Python 真值判定（空容器为假）
+                    ? "(!__nekoTruthy(" + emitExpr(u.operand()) + "))"   // not is tested with Python truthiness, so an empty container is false
                     : "(" + u.op() + emitExpr(u.operand()) + ")";   // - + ~
             case PythonNode.Binary b -> emitBinary(b);
             case PythonNode.Compare c -> emitCompare(c);
@@ -2103,7 +2140,8 @@ public final class PythonEmitter {
                 }
                 case "divmod" -> {
                     if (positional.size() == 2) {
-                        // 两个元素都经零除检查的助手：divmod(1, 0) 按 Python 抛 ZeroDivisionError
+                        // Both elements go through the division-by-zero check, so divmod(1, 0) throws
+                        // ZeroDivisionError as Python does
                         String p1 = emitExpr(positional.get(1));
                         return "[__nekoFloorDiv(" + e0 + ", " + p1 + "), __nekoMod(" + e0 + ", " + p1 + ")]";
                     }
@@ -2114,9 +2152,12 @@ public final class PythonEmitter {
                         return "[...(" + emitExpr(positional.get(1)) + ")].map(" + emitExpr(positional.get(0)) + ")";
                 }
                 case "filter" -> {
-                    // 谓词结果按 Python 真值判定（空容器为假；JS 对 [] 恒真）；filter(None, seq)
-                    // 是按元素本身真值的恒等过滤（旧实现 .filter(null) → 运行时 TypeError）。
-                    // 谓词以保留名 __nekoFx 作实参调用，避免箭头参数遮蔽谓词表达式里的同名变量。
+                    // The predicate result is tested with Python truthiness, so an empty container is false
+                    // (JS treats [] as always true). filter(None, seq) is an identity filter on each
+                    // element's own truthiness, and a null predicate passed to .filter would throw a
+                    // TypeError at runtime. The predicate is called through the reserved name
+                    // __nekoFx, so the arrow parameter does not shadow a variable of the same name in
+                    // the predicate expression.
                     if (positional.size() == 2) {
                         String seq = emitExpr(positional.get(1));
                         if (positional.get(0) instanceof PythonNode.NoneLit) {
@@ -2150,9 +2191,10 @@ public final class PythonEmitter {
                 case "frozenset" -> { return positional.isEmpty() ? "new Set()" : "new Set(" + e0 + ")"; }
                 default -> {}
             }
-            // 内建异常类构造：ValueError('x') → new ValueError("x")（类由 EXC_PRELUDE 提供；
-            // 旧实现发射裸调用 → 运行时 ReferenceError，且被 except 以错误类型意外捕获）。
-            // 异类别名（VE = ValueError）同样按类构造处理。
+            // Construction of a built-in exception class: ValueError('x') becomes new ValueError("x").
+            // EXC_PRELUDE provides the classes. A bare call would throw a ReferenceError at runtime, and
+            // except would then catch it as the wrong type. An alias of the class (VE = ValueError) is
+            // constructed the same way.
             if (!hasKw && (BUILTIN_EXCEPTIONS.contains(fn.id()) || excClassAliases.contains(fn.id()))) {
                 return "new " + jsName(fn.id()) + "(" + emitArgs(positional) + ")";
             }
@@ -2189,8 +2231,9 @@ public final class PythonEmitter {
         return emitExpr(c.func()) + "(" + emitArgs(positional) + ")";
     }
 
-    /** print(args, sep=, end=) → console.log：每个实参先 __nekoPyStr 化（None/True/False、数组
-     *  元素递归），再按 sep 连接；end= 忽略（console.log 自带换行）。 */
+    /** Emits print(args, sep=, end=) as console.log: every argument goes through __nekoPyStr
+     *  first (None/True/False, array elements recursively), then the results are joined with
+     *  sep. end= is ignored because console.log already adds a newline. */
     private String emitPrint(List<PythonNode> args, Map<String, PythonNode> kwargs) {
         String sep = kwargs.containsKey("sep") ? emitExpr(kwargs.get("sep")) : "\" \"";
         return "console.log([" + emitArgs(args) + "].map(__nekoPyStr).join(" + sep + "))";
@@ -2245,31 +2288,36 @@ public final class PythonEmitter {
     private String emitBinary(PythonNode.Binary b) {
         String op = b.op();
         if (op.equals("//")) {
-            // 地板除：除零按 Python 抛 ZeroDivisionError（JS 静默 Infinity）→ 经助手
+            // Floor division. Division by zero raises ZeroDivisionError like Python (JS would silently
+            // return Infinity), so the operands go through a helper.
             return "(__nekoFloorDiv(" + emitExpr(b.left()) + ", " + emitExpr(b.right()) + "))";
         }
         if (op.equals("/")) {
-            // 真除法：同样经助手做零除检查
+            // True division. Also goes through a helper that checks for division by zero.
             return "(__nekoDiv(" + emitExpr(b.left()) + ", " + emitExpr(b.right()) + "))";
         }
         if (op.equals("@")) {
             throw err("python matmul '@' is not supported");
         }
         if (op.equals("%")) {
-            // Python 取模符号跟随除数（JS % 跟随被除数：-7 % 2 得 -1，Python 是 1）
+            // Python modulo takes the sign of the divisor; JS % takes the sign of the dividend
+            // (-7 % 2 is -1 in JS but 1 in Python).
             return "(__nekoMod(" + emitExpr(b.left()) + ", " + emitExpr(b.right()) + "))";
         }
         if (op.equals("*")) {
-            // 序列重复（[0] * 4 → 数组重复；'ab' * 3 → 字符串重复）或数值乘法 → 经助手
+            // Sequence repetition ([0] * 4 repeats an array, 'ab' * 3 repeats a string) or numeric
+            // multiplication; both go through a helper.
             return "(__nekoMul(" + emitExpr(b.left()) + ", " + emitExpr(b.right()) + "))";
         }
         if (op.equals("+")) {
-            // 数组拼接 / str+str 拼接 / 数值加法；str 与非 str 混用抛 TypeError（JS 的 + 会静默
-            // 把 [1,2]+[3] 变 "1,23"、'a'+5 变 'a5'）→ 经助手
+            // Array concatenation, str + str concatenation, or numeric addition. Mixing str with a
+            // non-str value raises TypeError; JS + would silently turn [1,2]+[3] into "1,23" and
+            // 'a'+5 into 'a5', so the operands go through a helper.
             return "(__nekoAdd(" + emitExpr(b.left()) + ", " + emitExpr(b.right()) + "))";
         }
         if (op.equals("and")) {
-            // 值语义 + Python 真值 + 短路：右操作数包成 thunk 保持惰性，左操作数作为实参只求值一次
+            // Value semantics, Python truthiness and short-circuiting: the right operand is wrapped in a
+            // thunk to keep it lazy, and the left operand is passed as an argument so it is evaluated once.
             return "__nekoAnd(" + emitExpr(b.left()) + ", () => (" + emitExpr(b.right()) + "))";
         }
         if (op.equals("or")) {
@@ -2285,8 +2333,9 @@ public final class PythonEmitter {
         if (c.left() instanceof PythonNode.Compare lc) {
             String mid = emitExpr(lc.right());
             String right = emitExpr(c.right());
-            // 链式 in / not in（a in b in c → (a in b) && (b in c)）的第二段同样必须经 __nekoIn：
-            // 旧实现发射裸 JS `in` —— 对 dict/Map/数组/字符串右操作数是运行时 TypeError 或错误语义
+            // The second part of a chained in / not in (a in b in c becomes (a in b) && (b in c)) must
+            // also go through __nekoIn. Emitting the JS in operator directly gives a runtime
+            // TypeError or wrong semantics when the right operand is a dict/Map, array or string.
             String second = switch (c.op()) {
                 case "in" -> "__nekoIn(" + mid + ", " + right + ")";
                 case "not in" -> "(!__nekoIn(" + mid + ", " + right + "))";
@@ -2297,18 +2346,21 @@ public final class PythonEmitter {
         String left = emitExpr(c.left());
         String right = emitExpr(c.right());
         return switch (c.op()) {
-            // in / not in 经助手：dict(对象)按自有键、Map/Set 按 .has、数组/字符串按 .includes
-            // （旧实现一律 .includes —— 对 dict/set 是运行时 TypeError）
+            // in / not in go through a helper: a dict (object) checks its own keys, Map/Set use .has,
+            // arrays and strings use .includes. Calling .includes for every operand is a runtime
+            // TypeError for dict and set.
             case "in" -> "__nekoIn(" + left + ", " + right + ")";
             case "not in" -> "(!__nekoIn(" + left + ", " + right + "))";
             case "is" -> "(" + left + " === " + right + ")";
             case "is not" -> "(" + left + " !== " + right + ")";
-            // == / != → 严格相等：JS 宽松 == 做类型强制（"1" == 1 为 true），会静默产生错误结果
+            // == / != use strict equality: JS loose == coerces types ("1" == 1 is true) and silently
+            // produces wrong results.
             default -> "(" + left + " " + jsCompareOp(c.op()) + " " + right + ")";
         };
     }
 
-    /** Python {@code ==/!=} 无类型强制 → JS {@code ===/!==}；其余比较运算符字面直传。 */
+    /** Python {@code ==/!=} do not coerce types, so they become JS {@code ===/!==}; every other
+     *  comparison operator is passed through unchanged. */
     private static String jsCompareOp(String op) {
         return switch (op) {
             case "==" -> "===";
@@ -2334,7 +2386,7 @@ public final class PythonEmitter {
         for (PythonNode.CompClause c : clauses) {
             if (c instanceof PythonNode.ForComp fc) {
                 targets.add(emitTarget(fc.target()));
-                iters.add("__nekoIter(" + emitExpr(fc.iter()) + ")");   // dict/Map → 键迭代
+                iters.add("__nekoIter(" + emitExpr(fc.iter()) + ")");   // dict/Map: iterate the keys
                 guards.add("");
             } else if (c instanceof PythonNode.IfComp ic) {
                 int last = guards.size() - 1;
@@ -2482,13 +2534,13 @@ public final class PythonEmitter {
 
     private void line(String s) {
         out.append(ind()).append(s);
-        // s 可能内嵌多行表达式串（步进切片 IIFE / 生成器表达式）：其中的换行同样推进生成行
-        // 计数，否则后续语句的 source map 映射会整体偏移（br() 只 +1 不够）。
+        // s may embed a multi-line expression string (a step-slice IIFE or a generator expression); its newlines
+        // advance the generated-line count too, otherwise every later source-map mapping is off (br() adds only 1).
         jsLine += countNewlines(s);
         br();
     }
 
-    /** 无缩进发射一行（运行时助手 / prelude 用；无 source map 行）。 */
+    /** Emits one line without indentation (for runtime helpers / prelude; no source-map line). */
     private void line0(String s) {
         out.append(s);
         br();
@@ -2507,8 +2559,9 @@ public final class PythonEmitter {
     }
 
     /**
-     * 发射期报错的统一出口：附上当前语句的 Python 源码行（{@link #curLine}，由 emitStmt 从
-     * srcLines 维护——表达式级报错报告其所属语句的行，可接受）。无语句上下文时原样返回。
+     * The single exit for emission-time errors: attaches the Python source line of the current statement ({@link #curLine},
+     * kept by emitStmt from srcLines; an expression-level error reports its statement's line). Without a statement
+     * context the argument is returned unchanged.
      */
     private IllegalArgumentException err(String msg) {
         // Message text is unchanged; the statement's authored line now also travels as

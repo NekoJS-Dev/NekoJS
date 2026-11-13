@@ -3,12 +3,14 @@ package com.tkisor.nekojs.api.data;
 import java.util.Objects;
 
 /**
- * 富文本样式（跨平台、MC 版本无关）。描述字体修饰、颜色、插入文本与点击/悬停事件。
+ * A text style for rich text, independent of platform and MC version. It describes font
+ * decoration, color, insertion text and click and hover events.
  *
- * <p>所有字段为 {@code null} 表示「未指定」（沿用父组件或默认）；颜色用字符串表达
- * （命名色 {@code 'red'} 或 hex {@code '#FF0000'}），由各平台 adapter 解析为本地颜色类型。
+ * <p>A {@code null} field means unspecified, so the parent component or the default applies.
+ * The color is a string, either a named color such as {@code 'red'} or a hex value such as
+ * {@code '#FF0000'}; each platform adapter parses it into its local color type.
  *
- * <p>不可变。通过 {@link #toBuilder()} 派生。
+ * <p>Immutable. Derive new instances with {@link #toBuilder()}.
  */
 public final class TextStyle {
     private final Boolean bold;
@@ -52,7 +54,7 @@ public final class TextStyle {
     public TextClickEvent clickEvent() { return clickEvent; }
     public TextHoverEvent hoverEvent() { return hoverEvent; }
 
-    /** 是否没有任何样式（可跳过样式应用）。 */
+    /** Returns whether no style is set, in which case the style can be skipped. */
     public boolean isEmpty() {
         return bold == null && italic == null && underlined == null && strikethrough == null
                 && obfuscated == null && color == null && insertion == null && font == null
@@ -83,7 +85,8 @@ public final class TextStyle {
         return Objects.hash(bold, italic, underlined, strikethrough, obfuscated, color, insertion, font, clickEvent, hoverEvent);
     }
 
-    /** 可变构建器；链式调用后用 {@link #build()} 产出不可变 {@link TextStyle}。 */
+    /** A mutable builder. Chain the calls, then use {@link #build()} to get an immutable
+     * {@link TextStyle}. */
     public static final class Builder {
         private Boolean bold;
         private Boolean italic;

@@ -1,16 +1,15 @@
 package com.tkisor.nekojs.core.dynamic.txn;
 
 /**
- * Client-to-server reply of the Dynamic Registry batch transaction protocol (ticket 21
- * platform wiring): the ack of a PREPARE / STATE_SYNC message and the post-commit
- * activation report of a COMMIT or catch-up STATE_SYNC. Same wire-safety rule as
- * {@link DynamicSyncMessage} — every field is a string/enum/number/boolean, so the
- * record crosses the in-JVM test transport and the platform payload codec without a
- * second model.
+ * Client-to-server reply of the Dynamic Registry batch transaction protocol: the ack of a
+ * PREPARE / STATE_SYNC message and the activation report after a COMMIT or catch-up STATE_SYNC.
+ * Same wire-safety rule as {@link DynamicSyncMessage}: every field is a
+ * string/enum/number/boolean, so the record crosses the in-JVM test transport and the platform
+ * payload codec without a second model.
  *
- * <p>Like the server messages, a reply is a protocol observation, not a distributed
- * atomicity proof: an ack says the participant accepted the target state; an
- * activation report says how that participant's own activation attempt ended.
+ * <p>Like the server messages, a reply is a protocol observation, not a distributed atomicity
+ * proof: an ack says the participant accepted the target state; an activation report says how
+ * that participant's own activation attempt ended.
  */
 public record DynamicSyncReply(Kind kind, long generation, Boolean accepted, String reason,
         Boolean activated, String detail) {

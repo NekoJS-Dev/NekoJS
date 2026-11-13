@@ -1,17 +1,18 @@
 package com.tkisor.nekojs.api.surface;
 
 /**
- * 运行时分布：物理客户端、专用服务端、集成服务端。
+ * Runtime distribution: physical client, dedicated server, or integrated server.
  *
- * <p>当前 {@link EnvironmentKey#current} 按 {@code Platform.isClient()} 二值映射：
- * 客户端 → {@link #CLIENT}，其余 → {@link #DEDICATED_SERVER}；{@link #INTEGRATED_SERVER}
- * 为预留值，暂未参与实际映射。
+ * <p>{@link EnvironmentKey#current} currently maps {@code Platform.isClient()} to two
+ * values: client to {@link #CLIENT}, everything else to {@link #DEDICATED_SERVER}.
+ * {@link #INTEGRATED_SERVER} is reserved and takes no part in that mapping yet.
  */
 public enum RuntimeDist {
-    /** 物理客户端。 */
+    /** Physical client. */
     CLIENT,
-    /** 专用服务端（当前把非客户端运行环境统一映射为此值）。 */
+    /** Dedicated server (every non-client runtime is currently mapped to this value). */
     DEDICATED_SERVER,
-    /** 集成服务端（单人世界内嵌）；预留，暂未参与实际映射。 */
+    /** Integrated server (embedded in a single-player world). Reserved; not part of the
+     * mapping yet. */
     INTEGRATED_SERVER
 }

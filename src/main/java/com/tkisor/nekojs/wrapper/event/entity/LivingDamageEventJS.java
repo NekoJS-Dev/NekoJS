@@ -6,16 +6,20 @@ import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.LivingEntity;
 
 /**
- * 生物受伤事件（{@code EntityEvents.damagePre / damagePost}）的加载器中立载荷，
- * 成员对齐契约承诺集（entity / source / amount）。
+ * Loader-neutral payload for the living entity damage event
+ * ({@code EntityEvents.damagePre / damagePost}), with members matching the agreed set
+ * (entity / source / amount).
  *
- * <p>NeoForge 侧直传原生 {@code LivingDamageEvent.Pre/Post}（成员同形）；fabric 侧由
- * {@code FabricEntityEventBindings} 从 {@code ServerLivingEntityEvents} 转换。
+ * <p>NeoForge passes its native {@code LivingDamageEvent.Pre/Post} straight through (same
+ * members); fabric converts {@code ServerLivingEntityEvents} in
+ * {@code FabricEntityEventBindings}.
  *
- * <p><b>已知能力差异</b>：NeoForge 的 Pre 允许脚本改写伤害量（{@code setNewDamage}），
- * 取消（返回 {@code true}）由桥映射为 {@code setNewDamage(0)}——伤害归零但原生伤害链
- * 仍走完（damagePost 仍以 0 伤害触发）；fabric 的 {@code ALLOW_DAMAGE} 只能整体放行/拒绝
- * ——damagePre 在 fabric 上取消 = 免除本次伤害，不支持改数值。
+ * <p><b>Known difference</b>: on NeoForge, Pre lets a script rewrite the damage amount
+ * ({@code setNewDamage}), and a cancel (returning {@code true}) maps to
+ * {@code setNewDamage(0)}: the damage becomes 0 but the native damage chain still finishes
+ * (damagePost still fires with 0 damage). fabric's {@code ALLOW_DAMAGE} can only allow or deny
+ * the whole hit, so cancelling damagePre on fabric prevents this damage but cannot change the
+ * amount.
  */
 @Doc("Fired when a living entity is about to take / just took damage (EntityEvents.damagePre / damagePost).")
 @Doc("damagePre is cancellable (return true to negate the damage; on NeoForge the damage becomes 0 and damagePost still fires); damagePost is not cancellable.")

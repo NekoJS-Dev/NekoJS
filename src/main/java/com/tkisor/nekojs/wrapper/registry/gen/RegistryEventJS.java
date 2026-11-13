@@ -16,39 +16,41 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
 
 /**
- * 平台无关注册事件（ADR-0004 三层解耦的脚本面）：由平台 adapter 在首个注册表
- * pass 前 post <b>一次</b>（收集阶段），脚本回调内经成员方法把 builder 攒进
- * {@link RegistryRepository}，对象创建推迟到各注册表 pass 的抽干期。
- * 零 loader import（Fabric 移植前提）。
+ * Platform-agnostic registration event (ADR-0004 three-layer decoupling script surface):
+ * Posted <b>once</b> by the platform adapter before the first registry pass (collection phase).
+ * Inside the script callback, builder objects are staged into the {@link RegistryRepository}
+ * via member methods, deferring object creation until the drain phase of each registry pass.
+ * Zero loader imports (prerequisite for Fabric porting).
  *
  * <h2>JS API</h2>
  * <pre>
  * RegistryEvents.register(event =&gt; {
- *     event.item('mymod:ruby', b =&gt; { b.maxStackSize = 16 })    // default 类型糖方法
- *     event.item('mymod:sword', 'sword', b =&gt; { ... })           // 该注册表下的命名类型
- *     event.custom('mymod:x', 'some_type', b =&gt; { ... })        // 全局唯一类型名
- *     event.register('item', 'mymod:raw', () =&gt; someFactory())   // 裸 supplier 逃逸口
+ *     event.item('mymod:ruby', b =&gt; { b.maxStackSize = 16 })    // Default type sugar method
+ *     event.item('mymod:sword', 'sword', b =&gt; { ... })           // Named type under this registry
+ *     event.custom('mymod:x', 'some_type', b =&gt; { ... })        // Globally unique type name
+ *     event.register('item', 'mymod:raw', () =&gt; someFactory())   // Raw supplier escape hatch
  * })
  * </pre>
  *
- * <p>糖方法名由 {@link RegistryInfo#sugarName()} 派生、经 {@link ProxyObject}
- * 动态成员暴露（「引擎生成，不手写」，ADR-0006）：{@code registry_types} 给某注册表
- * 登记 default 类型后糖方法即出现在成员目录里，第三方注册表同样免费获得。
- * 类型层冲突 overrideWarn（登记期裁决，见 {@link RegistryTypesPoint}）；
- * 对象层同 id 重复 fail-fast（仓库 add 期，见 {@link RegistryRepository}）。
+ * <p>Sugar method names are derived from {@link RegistryInfo#sugarName()} and exposed via
+ * {@link ProxyObject} dynamic members ("engine-generated, not handwritten", ADR-0006):
+ * sugar methods appear in the member catalog once a default type is registered for a
+ * registry via {@code registry_types}, and third-party registries get them for free.
+ * Type-level conflicts overrideWarn (adjudicated during registration, see {@link RegistryTypesPoint});
+ * object-level duplicate IDs fail-fast (during repository add phase, see {@link RegistryRepository}).
  */
 public final class RegistryEventJS implements ProxyObject {
 
     private final RegistryRepository repository;
     private final String node;
     private final RegistryTypesPoint.RegistryTypes types;
-    /** 糖方法名 → 注册表键（camelCase 归并同名时首胜）。 */
+    /** Sugar method name → registry key (first-win when merging same-name camelCase). */
     private final Map<String, ResourceKey<? extends Registry<?>>> bySugar;
-    /** 完整键名（{@code minecraft:item}）→ 注册表键（event.register 的全名形态）。 */
+    /** Full key name ({@code minecraft:item}) → registry key (full-name form for event.register). */
     private final Map<String, ResourceKey<? extends Registry<?>>> byFullName;
     private final Map<String, ProxyExecutable> members;
 
-    /** adapter 入口：runtime 由 adapter 持有（收集/校验/指纹/抽干 owner），类型表 / 元信息取 bootstrap 产物。 */
+    /** Adapter entry point: runtime held by adapter (collector/validator/fingerprinter/drain owner), type table / meta-info taken from bootstrap products. */
     public static RegistryEventJS create(RegistryRepository repository, String node) {
         return new RegistryEventJS(repository, node, NekoRegistryPointsPlugin.registryInfos(),
                 NekoRegistryPointsPlugin.registryTypes());
@@ -75,7 +77,7 @@ public final class RegistryEventJS implements ProxyObject {
         bySugar.forEach((sugar, registry) -> members.put(sugar, new SugarMember(sugar, registry)));
     }
 
-    // ---- ProxyObject：动态成员目录 ----
+    // ---- ProxyObject: dynamic member catalogue ----
 
     @Override
     public Object getMember(String name) {
@@ -92,7 +94,7 @@ public final class RegistryEventJS implements ProxyObject {
         return members.containsKey(name);
     }
 
-    /** 成员目录：有 default 类型的糖方法 + custom + register（probe / 补全用）。 */
+    /** Member catalog: sugar methods with default types + custom + register (for probe/completion). */
     @Override
     public Object getMemberKeys() {
         List<String> keys = new ArrayList<>();
@@ -128,9 +130,10 @@ public final class RegistryEventJS implements ProxyObject {
         return keys.toString();
     }
 
-    // ---- 成员实现 ----
+    // ---- Member implementations ----
 
-    /** 糖方法：{@code event.<sugar>(id, cb)}（default 类型）或 {@code event.<sugar>(id, typeName, cb)}。 */
+    /** Sugar method: {@code event.<sugar>(id, cb)} for the default type, or
+     * {@code event.<sugar>(id, typeName, cb)}. */
     private final class SugarMember implements ProxyExecutable {
 
         private final String sugar;
@@ -153,7 +156,8 @@ public final class RegistryEventJS implements ProxyObject {
         }
     }
 
-    /** {@code event.custom(id, typeName, cb)}：按全局唯一类型名登记；跨注册表同名时报错并要求限定写法。 */
+    /** {@code event.custom(id, typeName, cb)} registers by globally unique type name; the same name in
+     * more than one registry is an error and asks for the qualified form. */
     private final class CustomMember implements ProxyExecutable {
 
         @Override
@@ -177,7 +181,8 @@ public final class RegistryEventJS implements ProxyObject {
         }
     }
 
-    /** {@code event.register(registry, id, supplier)}：裸 supplier 逃逸口，registry 为糖名或 {@code ns:path}。 */
+    /** {@code event.register(registry, id, supplier)}: escape hatch for a bare supplier; registry is a
+     * sugar name or a full {@code ns:path} key. */
     private final class RegisterMember implements ProxyExecutable {
 
         @Override
@@ -204,7 +209,7 @@ public final class RegistryEventJS implements ProxyObject {
         }
     }
 
-    // ---- 共用解析 ----
+    // ---- Shared parsing ----
 
     private RegistryObjectBuilder<?> addTyped(
             ResourceKey<? extends Registry<?>> registry, Identifier id, String typeName, Value callback, String what) {
@@ -214,8 +219,9 @@ public final class RegistryEventJS implements ProxyObject {
             throw new IllegalArgumentException(what + " expects a builder callback as the last argument");
         }
         RegistryObjectBuilder<?> builder = factory.apply(id);
-        // 脚本面拿到的是 BuilderSurface（ProxyObject）：property 赋值与显式 setter 同一写入点，
-        // 不让裸宿主 builder 泄漏（无 public-field 旁路，AC3）
+        // The script side gets a BuilderSurface (ProxyObject): property assignment and an explicit
+        // setter write through the same point, so the raw host builder never leaks (no public-field
+        // bypass).
         callback.executeVoid(BuilderSurface.of(builder));
         repository.add(registry, builder,
                 typeName == null ? "<default>" : typeName,

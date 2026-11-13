@@ -29,10 +29,11 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * CJS 语法错误的定位回填：script-loader.js 的 new Function 编译失败时，
- * 异常的 SourceSection 指向 internal/script-loader.js（内部帧），真实行列丢失。
- * {@link NekoScriptModuleLoaderHost} 应通过 context.parse 重解析取回位置，
- * 包成 {@link NekoEsmLinkException} 诊断（file/line/column 指向用户脚本）。
+ * Recovers the location of CJS syntax errors. When {@code new Function} in script-loader.js fails to
+ * compile, the exception's SourceSection points at internal/script-loader.js, an internal frame, so
+ * the real line and column are lost. {@link NekoScriptModuleLoaderHost} re-parses with
+ * {@code context.parse} to recover the position and wraps it in a {@link NekoEsmLinkException}
+ * diagnostic whose file, line and column point at the user script.
  */
 class NekoScriptModuleLoaderHostSyntaxLocationTest {
     @TempDir
@@ -111,8 +112,8 @@ class NekoScriptModuleLoaderHostSyntaxLocationTest {
         Path outer = paths.serverScripts().resolve("src/outer.js");
         Files.writeString(outer, "require('./inner-broken.js')\n");
 
-        // 内层准备诊断穿过 Graal guest 边界后仍保留 PREPARE 阶段，
-        // 完整诊断文本（含 at <file>:<line>:<column>）也保留在异常消息里。
+        // The inner preparation diagnostic keeps its PREPARE stage after crossing into the Graal guest, and
+        // the full diagnostic text (including at <file>:<line>:<column>) stays in the exception message.
         IOException error = assertThrows(IOException.class,
                 () -> host.loadEntry("./server_scripts/src/outer.js"));
 

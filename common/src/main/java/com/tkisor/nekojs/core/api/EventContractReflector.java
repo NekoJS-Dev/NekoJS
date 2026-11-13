@@ -12,15 +12,17 @@ import java.util.Collection;
 import java.util.List;
 
 /**
- * 从运行时 {@link EventGroup} 集合反射派生 {@link NormativeApiContract.ContractEvent}，
- * 替代从 portable-core JSON 的 events 字段读取。
+ * Derives {@link NormativeApiContract.ContractEvent} values by reflection from the runtime
+ * {@link EventGroup} set, instead of reading the events field of the portable-core JSON.
  *
- * <p>每个 {@link EventBusJS} 携带全部事件元数据（group/name/tier/dispatch/cancellable），
- * 可直接反射。payload 字段从 {@code bus.eventType()} 的 public 零参 getter 反射。
+ * <p>Every {@link EventBusJS} carries all event metadata (group, name, tier, dispatch,
+ * cancellable), so it can be reflected directly. Payload fields come from the public no-arg
+ * getters of {@code bus.eventType()}.
  *
- * <p>调研结论：tier/dispatch/cancellable 从未被运行时代码消费（probe 也不读 JSON events），
- * ContractEvent 的唯一运行时消费者是 {@code ManagedCallbackSchemaRegistry.installContractEvents}，
- * 它只读 payload 字段名。故反射出的 ContractEvent 即使 tier/dispatch 不完全精确也不影响功能。
+ * <p>Nothing at runtime reads tier, dispatch or cancellable, and the probe does not read the JSON
+ * events either. The only runtime consumer of ContractEvent is
+ * {@code ManagedCallbackSchemaRegistry.installContractEvents}, which reads only the payload field
+ * names, so a reflected ContractEvent with an imprecise tier or dispatch still works.
  */
 public final class EventContractReflector {
 
@@ -28,10 +30,10 @@ public final class EventContractReflector {
     }
 
     /**
-     * 从事件组集合反射出 ContractEvent 列表。
+     * Reflects the event groups into a list of ContractEvent values.
      *
-     * @param eventGroups 运行时已注册的事件组（来自 {@code IPluginRuntime.eventGroups()}）
-     * @return ContractEvent 列表，每个事件组中的每个 bus 一个条目
+     * @param eventGroups event groups registered at runtime, from {@code IPluginRuntime.eventGroups()}
+     * @return one ContractEvent per bus in each event group
      */
     public static List<NormativeApiContract.ContractEvent> extractEvents(Collection<EventGroup> eventGroups) {
         List<NormativeApiContract.ContractEvent> result = new ArrayList<>();
@@ -40,7 +42,7 @@ public final class EventContractReflector {
             for (var entry : group.viewBuses().entrySet()) {
                 String eventName = entry.getKey();
                 var holder = entry.getValue();
-                // 取任意 ScriptType 的 bus（bus 实例不随 ScriptType 变化）
+                // Take the bus of any ScriptType; the bus instance is the same for every ScriptType
                 EventBusJS<?, ?> bus = null;
                 for (ScriptType st : ScriptType.values()) {
                     bus = holder.getBus(st);
@@ -68,17 +70,18 @@ public final class EventContractReflector {
                 ? NormativeApiContract.Dispatch.BY_ID
                 : NormativeApiContract.Dispatch.PLAIN;
 
-        // dispatch key type：从 DispatchEventBus 反射 keyType（当前固定为 string）
+        // Dispatch key type: reflect keyType from DispatchEventBus (currently always string)
         String dispatchKeyType = null;
         if (bus.canDispatch() && bus.bus() instanceof DispatchEventBus<?, ?> dispatchBus) {
             Class<?> keyClass = dispatchBus.dispatchKey().keyType();
-            // 脚本侧注册键永远是字符串 id（由 JSTypeAdapter 转换），故声明 string
+            // The registration key on the script side is always a string id, converted by JSTypeAdapter, so
+            // declare string
             dispatchKeyType = "string";
         }
 
         Boolean cancellable = bus.canCancel();
 
-        // payload：从事件类型反射 public 零参 getter 作为字段
+        // Payload: reflect the public no-arg getters of the event type into fields
         List<NormativeApiContract.ContractEventField> payload = reflectPayload(bus.eventType());
 
         return new NormativeApiContract.ContractEvent(
@@ -86,10 +89,11 @@ public final class EventContractReflector {
     }
 
     /**
-     * 反射事件类的 public 零参 getter，产出 payload 字段列表。
+     * Reflects the public no-arg getters of an event class into its payload fields.
      *
-     * <p>所有字段标为 NATIVE（值是平台原生对象），因为反射无法判断跨平台可移植性。
-     * 字段名从 getXxx/isXxx 推导（如 getMessage → message）。
+     * <p>Every field is marked NATIVE because its value is a platform object and reflection cannot
+     * tell whether it is portable across platforms. The field name comes from the getter, so
+     * getMessage becomes message.
      */
     private static List<NormativeApiContract.ContractEventField> reflectPayload(Class<?> eventType) {
         List<NormativeApiContract.ContractEventField> fields = new ArrayList<>();
@@ -99,7 +103,7 @@ public final class EventContractReflector {
             if (method.getReturnType() == void.class) continue;
             if (method.isBridge() || method.isSynthetic()) continue;
             String name = method.getName();
-            // 跳过 neko$ 方法（mixin 注入的，不是原生事件字段）
+            // Skip neko$ methods: they are added by mixins and are not native event fields
             if (name.startsWith("neko$")) continue;
             if (name.startsWith("get") && name.length() > 3) {
                 String field = Character.toLowerCase(name.charAt(3)) + name.substring(4);

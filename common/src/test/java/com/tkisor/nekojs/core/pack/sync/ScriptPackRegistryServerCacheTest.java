@@ -18,8 +18,10 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * SERVER_CACHE 作用域激活/卸载测试：强制启用（manifest 默认值与状态文件均不适用）、
- * 前缀段 {@code serverpacks/<id>/}、与 GLOBAL/WORLD 并入 enabledPacks 的顺序。
+ * SERVER_CACHE scope activation and unload tests: server cache packs are force-enabled (neither
+ * the manifest default nor the state file applies), live under the
+ * {@code serverpacks/<id>/} prefix, and merge into enabledPacks after the GLOBAL and WORLD
+ * packs.
  */
 class ScriptPackRegistryServerCacheTest {
 
@@ -41,7 +43,8 @@ class ScriptPackRegistryServerCacheTest {
 
     @Test
     void serverCachePacksAreForceEnabled() throws Exception {
-        // manifest enabled=false + 状态文件 disabled：服务器缓存包仍强制启用
+        // The manifest says enabled=false and the state file says disabled, yet a server cache pack is
+        // still force-enabled.
         Path pack = pack(bucketDir, "remote_pack", "{\"id\": \"remote_pack\", \"enabled\": false}");
         Files.writeString(pack.resolve(".neko_pack.state.json"), "{\"enabled\": false}");
 
@@ -67,7 +70,7 @@ class ScriptPackRegistryServerCacheTest {
 
         assertEquals(
             List.of("g_pack", "s_pack"),
-            registry.enabledPacks().stream().map(ScriptPack::id).toList()); // GLOBAL 在前、SERVER_CACHE 在后
+            registry.enabledPacks().stream().map(ScriptPack::id).toList()); // GLOBAL packs first, SERVER_CACHE packs after.
     }
 
     @Test

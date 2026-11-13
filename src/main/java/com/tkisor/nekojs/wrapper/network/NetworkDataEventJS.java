@@ -5,13 +5,15 @@ import net.minecraft.server.level.ServerPlayer;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * 脚本网络事件对象：脚本通过 {@link com.tkisor.nekojs.bindings.event.NetworkEvents} 接收对端发来的
- * {@link com.tkisor.nekojs.network.NekoScriptPayload}。
+ * Script network event object: scripts receive the {@link com.tkisor.nekojs.network.NekoScriptPayload} sent by the
+ * other side through {@link com.tkisor.nekojs.bindings.event.NetworkEvents}.
  *
  * <ul>
- *   <li>{@code channel}：脚本自定义的通道名，与发送侧 {@code Network.sendToServer(channel, data)} 一致。</li>
- *   <li>{@code data}：载荷，{@link CompoundTag}。脚本可读写 NBT。</li>
- *   <li>{@code player}：SERVER 端是发送该包的玩家；CLIENT 端为 {@code null}（包来自服务端）。</li>
+ *   <li>{@code channel}: the script-defined channel name, matching the sending side
+ *       {@code Network.sendToServer(channel, data)}.</li>
+ *   <li>{@code data}: the payload, a {@link CompoundTag}. Scripts can read and write NBT.</li>
+ *   <li>{@code player}: the player who sent the packet on the SERVER side; {@code null} on the CLIENT side
+ *       (the packet came from the server).</li>
  * </ul>
  */
 public final class NetworkDataEventJS {

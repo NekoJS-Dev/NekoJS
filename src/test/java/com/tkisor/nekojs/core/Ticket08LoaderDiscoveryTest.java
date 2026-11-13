@@ -31,15 +31,14 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Ticket 08 node-scope discovery evidence: the external addon fixture jar is
- * discovered on this node through both loader-shaped inputs — the annotation /
- * mod-metadata scan (what FML performs over a jar in the mods directory) and the
- * {@code fabric.mod.json} {@code nekojs} entrypoint list (what FabricLoader
- * reads) — each resolved in a dedicated class loader and handed to the
- * production registration seam {@link NekoJSBasePluginManager#registerClass}.
+ * Discovery evidence that a node loads a plugin from an external addon jar through both
+ * loader-shaped inputs: the annotation and mod-metadata scan (what FML performs over a jar in the
+ * mods directory) and the {@code fabric.mod.json} {@code nekojs} entrypoint list (what
+ * FabricLoader reads). Each is resolved in a dedicated class loader and handed to the production
+ * registration path {@link NekoJSBasePluginManager#registerClass}.
  *
- * <p>The fixture classes are never on this node's test class path: discovery is
- * only faked if the engine can already see them without the jar.
+ * <p>The fixture classes are never on this node's test class path, so discovery would only be fake
+ * if the engine could already see them without the jar.
  */
 class Ticket08LoaderDiscoveryTest {
 
@@ -219,7 +218,7 @@ class Ticket08LoaderDiscoveryTest {
         }
     }
 
-    /** Swap of the manager's static registry (its documented private test seam). */
+    /** Swaps the manager's static registry (documented as a private test hook). */
     private static final class ManagerReset implements AutoCloseable {
         private final Object entries;
         private final Object sorted;

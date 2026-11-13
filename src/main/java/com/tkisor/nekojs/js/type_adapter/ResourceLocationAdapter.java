@@ -12,45 +12,47 @@ import com.tkisor.nekojs.api.data.NekoId;
 import net.minecraft.resources.Identifier;
 
 /^*
- * Identifier 适配器。无命名空间的 string 用 {@link NekoJS#MODID} 作为默认命名空间
- * （保留旧实现行为）。识别但非法的输入（如 tryParse 失败）抛 {@link ValueConversionException}。
- ^/
+ * Adapter for Identifier. A string without a namespace uses {@link NekoJS#MODID} as the default
+ * namespace. An input that is recognized but invalid (for example a failed tryParse) throws
+ * {@link ValueConversionException}.
+^/
 public class ResourceLocationAdapter extends AbstractJSTypeAdapter<Identifier> {
 
-    private static final String DEFAULT_NAMESPACE = NekoJS.MODID;
+private static final String DEFAULT_NAMESPACE = NekoJS.MODID;
 
-    @Override
-    public Class<Identifier> getTargetClass() {
-        return Identifier.class;
-    }
-
-    @Override
-    public List<AdapterInputShape> inputShapes() {
-        return List.of(
-                self(),
-                string(),
-                host(NekoId.class));
-    }
-
-    @Override
-    protected Identifier fromString(String s) {
-        if (s.contains(":")) {
-            // 1.21.1: Identifier.parse 在非法时直接抛异常；先 tryParse 做 null 检查统一错误。
-            Identifier parsed = Identifier.tryParse(s);
-            if (parsed == null) {
-                throw new ValueConversionException(Identifier.class, "valid resource location string", s,
-                    "invalid resource location: " + s);
-            }
-            return parsed;
-        }
-        return Identifier.fromNamespaceAndPath(DEFAULT_NAMESPACE, s);
-    }
-
-    @Override
-    protected Identifier fromHostObject(Object host) {
-        if (host instanceof Identifier location) return location;
-        if (host instanceof NekoId id) return Identifier.fromNamespaceAndPath(id.namespace(), id.path());
-        return null;
-    }
+@Override
+public Class<Identifier> getTargetClass() {
+return Identifier.class;
 }
-*///?}
+
+@Override
+public List<AdapterInputShape> inputShapes() {
+return List.of(
+self(),
+string(),
+host(NekoId.class));
+}
+
+@Override
+protected Identifier fromString(String s) {
+if (s.contains(":")) {
+// 1.21.1: Identifier.parse throws on invalid input; tryParse first so one null check
+// reports a uniform error.
+Identifier parsed = Identifier.tryParse(s);
+if (parsed == null) {
+throw new ValueConversionException(Identifier.class, "valid resource location string", s,
+"invalid resource location: " + s);
+}
+return parsed;
+}
+return Identifier.fromNamespaceAndPath(DEFAULT_NAMESPACE, s);
+}
+
+@Override
+protected Identifier fromHostObject(Object host) {
+if (host instanceof Identifier location) return location;
+if (host instanceof NekoId id) return Identifier.fromNamespaceAndPath(id.namespace(), id.path());
+return null;
+}
+}
+ *///?}

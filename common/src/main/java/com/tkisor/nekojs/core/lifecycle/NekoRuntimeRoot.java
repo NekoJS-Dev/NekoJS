@@ -24,19 +24,21 @@ import java.util.Map;
 import java.util.Objects;
 
 /**
- * 平台 composition root 的返回对象，由平台入口（mod entry）持有。
+ * Platform composition root, held by the platform entry point (mod entry).
  *
- * <p>内部持有完整对象图，但默认对 platform 暴露 lifecycle API，而不是暴露宽对象图 getter。
- * 公开 surface 优先是 {@link #reload(ScriptType)}、{@link #reloadFile(ScriptType, Path)}、
- * {@link #runTests()}、{@link #errors()}、{@link #close()} 这类命令式 lifecycle API。
+ * <p>Holds the complete object graph, but exposes lifecycle APIs to the platform by default
+ * instead of providing getters for the entire object graph. The public surface area prioritizes
+ * imperative lifecycle APIs such as {@link #reload(ScriptType)},
+ * {@link #reloadFile(ScriptType, Path)}, {@link #runTests()}, {@link #errors()}, and {@link #close()}.
  *
  * <ul>
- *   <li>不提供全局 {@code get()} / {@code current()}。</li>
- *   <li>只由 platform mod entry、command/reload/shutdown lifecycle 边界持有。</li>
- *   <li>不要把 root 继续往下传给普通业务类。</li>
+ *   <li>Does not provide global {@code get()} or {@code current()} methods.</li>
+ *   <li>Should only be held by the platform mod entry and within lifecycle boundaries
+ *       like command, reload, or shutdown.</li>
+ *   <li>Do not propagate the root to general business classes.</li>
  * </ul>
  *
- * <p>{@link #close()} 顺序：script managers → event bridge / listeners → resources。
+ * <p>{@link #close()} order: script managers -> event bridge / listeners -> resources.
  */
 public final class NekoRuntimeRoot implements AutoCloseable {
 
@@ -53,10 +55,11 @@ public final class NekoRuntimeRoot implements AutoCloseable {
     private volatile com.tkisor.nekojs.authoring.AuthoringRuntime authoringRuntime;
     private com.tkisor.nekojs.core.ui.BuiltinUiRuntime builtinUi;
     /**
-     * root 拥有的 prepared 模块缓存（票 11 W3）：模块 cache/session 生命周期归属。
-     * 与 sandbox factory（module host / filesystem）共享同一实例；跨普通 reload、
-     * server stop、切换世界保留（按 ScriptType 分区清理）；由 {@link #closeSilently()}
-     * 全清释放。无任何 static 状态——新的独立 root / 测试 runner 从空开始，互不可见。
+     * Root-owned prepared module cache that owns the module cache and session lifetime. It is the
+     * same instance the sandbox factory uses (module host and filesystem) and survives normal
+     * reloads, server stops and world switches (partitioned and cleared by {@link ScriptType}). It is
+     * completely cleared and released by {@link #closeSilently()}. It holds no static state; new,
+     * independent roots and test runners start from an empty state and are invisible to each other.
      */
     private final com.tkisor.nekojs.core.module.NekoModulePipelineCache preparationCache;
     private final NekoTrustContext trustContext;
@@ -65,27 +68,29 @@ public final class NekoRuntimeRoot implements AutoCloseable {
     private boolean closeInProgress;
     private final java.util.Set<ScriptType> packTypes = java.util.concurrent.ConcurrentHashMap.newKeySet();
     /**
-     * root 拥有的受管 global/shared 状态域（票 10）：按 {@link ScriptType} 的私有 backing
-     * store + 显式共享 store（工作名 shared）。跨普通 reload、server stop、切换世界保留；
-     * 由 {@link #closeSilently()} 释放；generation close 只失效该 generation 的 guest 值。
-     * 无任何 static 状态——新的独立 root / 测试 runner 从空开始，互不可见。
+     * Root-owned managed global and shared state: a private backing store per {@link ScriptType} plus
+     * an explicitly shared store (named shared). It survives normal reloads, server stops and world
+     * switches and is released by {@link #closeSilently()}; closing a generation only invalidates the
+     * guest values of that generation. It holds no static state; new, independent roots and test
+     * runners start from an empty state and are invisible to each other.
      */
     private final com.tkisor.nekojs.core.state.GlobalStateStores globalState =
             new com.tkisor.nekojs.core.state.GlobalStateStores();
     /**
-     * root 拥有的候选域收集器注册表（票 39）：领域收集器（如 Item/Block modification 的
-     * domain owner）由平台装配注册进 root，reload 事务的 DOMAIN_PLAN 阶段经各
-     * {@link ScriptManager} 消费（见 {@code CandidateDomainCollector}）。按引用与
-     * manager 共享（注册晚于 manager 创建也可见）；读取只发生在 reload 的 owner thread
-     * 临界区。root close 时对 AutoCloseable 收集器逐一 close（基线恢复等清理——独立测试
-     * root 不互相污染，AC5）。
+     * Root-owned registry of candidate domain collectors. The platform assembles the domain collectors
+     * (for example the owner of Item/Block modification) and registers them into the root. The
+     * DOMAIN_PLAN phase of a reload transaction consumes them through each {@link ScriptManager} (see
+     * {@code CandidateDomainCollector}). Managers share the list by reference, so registrations made
+     * after a manager is created are visible too; reads happen only inside the reload owner thread's
+     * critical section. When the root closes, it closes each AutoCloseable collector individually, so
+     * baseline restoration works and independent test roots do not pollute each other.
      */
     private final java.util.List<com.tkisor.nekojs.core.lifecycle.CandidateDomainCollector> domainCollectors =
             new java.util.concurrent.CopyOnWriteArrayList<>();
 
     /**
-     * 生产装配入口（票 11 W3）：与 sandbox factory 共享同一个 prepared 缓存实例
-     * （见 {@code NekoRuntimeAssembly}）。
+     * Production assembly entry point. It shares the same prepared cache instance with the sandbox
+     * factory (see {@code NekoRuntimeAssembly}).
      */
     public NekoRuntimeRoot(
             NekoCoreContext core,
@@ -169,7 +174,7 @@ public final class NekoRuntimeRoot implements AutoCloseable {
     /** Invalidates owner-thread callbacks before script teardown starts. */
     public boolean isAuthoringControlActive() { return !authoringStopping; }
 
-    /** 本 root 的 prepared cache，仅供同包生命周期诊断；reload/失效经各 manager 入口。 */
+    /** Prepared cache for this root, for lifecycle diagnosis within the same package; reload/invalidation goes through each manager entry point. */
     com.tkisor.nekojs.core.module.NekoModulePipelineCache preparationCache() {
         return preparationCache;
     }
@@ -198,15 +203,19 @@ public final class NekoRuntimeRoot implements AutoCloseable {
         } finally { if (packClosePending && !packs.isOwnerOperation()) closeSilently(); }
     }
 
-    /** 本 root 的受管 global/shared 状态域（Java 侧「其他 writer」与测试观察 seam）。 */
+    /**
+     * Managed global and shared state for this root. Java-side code can write through it and tests
+     * can observe it.
+     */
     public com.tkisor.nekojs.core.state.GlobalStateStores globalState() {
         return globalState;
     }
 
     /**
-     * 注册候选域收集器（票 39，平台装配期一次）：收集器实例持有领域自有状态（如
-     * Item/Block modification 的基线），由 root 按生命周期归类持有——不是新的 runtime
-     * owner，也不新增公开 Modification Runtime。重复注册同一收集器被拒绝。
+     * Registers a candidate domain collector. Call this once during platform assembly. The collector
+     * holds domain-specific state, such as Item/Block modification baselines.
+     * The root owns it and groups it by lifecycle; it is not a new runtime owner and does not add a
+     * public Modification Runtime. Registering the same collector twice throws.
      */
     public void registerDomainCollector(com.tkisor.nekojs.core.lifecycle.CandidateDomainCollector collector) {
         if (collector == null) throw new NullPointerException("collector");
@@ -216,12 +225,12 @@ public final class NekoRuntimeRoot implements AutoCloseable {
         domainCollectors.add(collector);
     }
 
-    /** 已注册的候选域收集器（只读视图；诊断/测试观察 seam）。 */
+    /** Registered candidate domain collectors, as a read-only view for diagnosis and tests. */
     public java.util.List<com.tkisor.nekojs.core.lifecycle.CandidateDomainCollector> domainCollectors() {
         return java.util.List.copyOf(domainCollectors);
     }
 
-    /** 按 domain 标识查找收集器（平台侧收口入口：server 启动收集等；不存在返回 null）。 */
+    /** Find a collector by domain identifier (platform-side entry point: server startup collection, etc.; returns null if not found). */
     public com.tkisor.nekojs.core.lifecycle.CandidateDomainCollector domainCollector(String domain) {
         for (var collector : domainCollectors) {
             if (collector.domain().equals(domain)) return collector;
@@ -393,11 +402,12 @@ public final class NekoRuntimeRoot implements AutoCloseable {
     }
 
     /**
-     * 事务式完整 reload：候选 generation 全部阶段通过后经单一 commit 点切换（工单 06）。
+     * Reloads everything as a transaction. It switches through a single commit point only after every
+     * stage of the candidate generation has passed.
      *
-     * <p>失败时抛 {@link NekoReloadException}，其 {@link NekoReloadException#report()}
-     * 携带结构化失败结果（generation / phase / source location / owner / domain）；
-     * 候选 generation 的全部资源已随失败关闭，active 原样可用。
+     * <p>On failure it throws {@link NekoReloadException}, and {@link NekoReloadException#report()}
+     * carries a structured result: generation, phase, source location, owner and domain. The candidate
+     * generation is closed on failure and the active generation stays available.
      */
     public ReloadResult reload(ScriptType type) {
         ScriptManager manager = scriptManagerOf(type);
@@ -410,9 +420,10 @@ public final class NekoRuntimeRoot implements AutoCloseable {
                     : ReloadResult.success(type, manager.generationId());
         }
         manager.reloadScripts();
-        // STARTUP 的重载路径是 reset+load 非事务语义（不可逆平台注册未被域 Adapter 证明
-        // 可回滚，显式 restart/unsupported 边界，见 ScriptManager#reloadScripts 的 STARTUP
-        // 分支警告）——结果中显式标记，不宣称候选/commit 事务成功。
+        // The STARTUP reload path uses reset+load and is not transactional. Domain adapters have not proven
+        // that the platform registrations it makes can be rolled back, so this is an explicit
+        // restart/unsupported case (see the STARTUP branch warning in ScriptManager#reloadScripts). Results
+        // mark it explicitly and do not claim candidate/commit transaction success.
         return type == ScriptType.STARTUP
                 ? ReloadResult.successNonTransactional(type, manager.generationId(), ReloadPhase.STARTUP)
                 : ReloadResult.success(type, manager.generationId());
@@ -557,23 +568,25 @@ public final class NekoRuntimeRoot implements AutoCloseable {
                 if (first == null) first = t;
                 else first.addSuppressed(t);
             }
-            // 票 11：root 最终关闭释放 prepared 模块缓存（server stop/切世界/reload 不清空；
-            // 按类型清理走各 manager 的 fullReloadCleanup，此处释放 owner 持有的全部条目）。
+            // The final root close releases the prepared module cache. Server stop, world switch and reload
+            // leave it alone; each type's cleanup goes through its manager's fullReloadCleanup instead, so this
+            // call releases every entry the owner holds.
             try {
                 preparationCache.close();
             } catch (Throwable t) {
                 if (first == null) first = t;
                 else first.addSuppressed(t);
             }
-            // 票 10：root 最终关闭释放 global/shared 状态域（server stop/切世界不清空；此处释放）。
+            // The final root close releases the global/shared state domain. Server stop and world switch leave
+            // it alone.
             try {
                 globalState.closeAll();
             } catch (Throwable t) {
                 if (first == null) first = t;
                 else first.addSuppressed(t);
             }
-            // 票 39：root 拥有的候选域收集器逐一关闭（Item/Block modification 基线恢复等
-            // 领域清理）——独立测试 root 各自从干净基线开始，不互相污染（AC5）。
+            // Close each root-owned candidate domain collector separately. This restores Item/Block
+            // modification baselines, so independent test roots each start clean and do not pollute one another.
             for (com.tkisor.nekojs.core.lifecycle.CandidateDomainCollector collector : domainCollectors) {
                 if (!(collector instanceof AutoCloseable closeable)) continue;
                 try {
@@ -604,18 +617,21 @@ public final class NekoRuntimeRoot implements AutoCloseable {
     }
 
     /**
-     * reload 结果（工单 06 阶段结果契约）。
+     * Result of a reload.
      *
-     * @param type           reload 的脚本类型
-     * @param success        是否成功
-     * @param error          失败原因（成功为 null；失败经由 {@link NekoReloadException} 抛出时
-     *                       该字段与 report.error() 同源）
-     * @param generation     成功后的 generation 序号 / 失败候选的 generation 序号
-     * @param phase          结果阶段：成功为 COMMIT；STARTUP 非事务重载为 STARTUP（显式
-     *                       restart/unsupported 边界）；单文件重载为 FILE
-     * @param sourceLocation 失败脚本位置（{@code server/foo.js} 风格；阶段级失败或成功为 null）。
-     *                       审查 A2：非候选路径（{@link #reloadFile}）此前把 source location
-     *                       算出来却丢掉，AC3 要求的「失败结果含 source location」在该路径不成立
+     * @param type           Script type that was reloaded
+     * @param success        Whether the reload succeeded
+     * @param error          Why it failed; null on success. When thrown through {@link NekoReloadException},
+     *                       this field matches report.error()
+     * @param generation     Generation sequence number after success, or the sequence number of the failed
+     *                       candidate
+     * @param phase          Stage the result came from: COMMIT for success; STARTUP for the
+     *                       non-transactional startup reload, which needs an explicit restart; FILE for a
+     *                       single-file reload
+     * @param sourceLocation Location of the failed script ({@code server/foo.js} style); null for
+     *                       stage-level failures and for success. Non-candidate paths such as
+     *                       {@link #reloadFile} used to compute this location and drop it, so their
+     *                       failures did not carry a source location
      */
     public record ReloadResult(ScriptType type, boolean success, Throwable error, long generation,
                                ReloadPhase phase, String sourceLocation) {
@@ -628,33 +644,36 @@ public final class NekoRuntimeRoot implements AutoCloseable {
         }
 
         /**
-         * 结果是否来自非事务路径（{@link ReloadPhase#STARTUP} 的 reset+load、{@link ReloadPhase#FILE}
-         * 的单文件重载）：这些路径<strong>不</strong>宣称候选 + commit 事务成功。
+         * Returns whether the result comes from a non-transactional path: reset+load for
+         * {@link ReloadPhase#STARTUP}, single-file reload for {@link ReloadPhase#FILE}. Those paths do
+         * <strong>not</strong> claim candidate + commit transaction success.
          *
-         * <p>STARTUP 的不可逆平台注册（物品/方块/实体）未被域 Adapter 证明可回滚，因此该路径
-         * 的调用方必须显式要求 loader restart 才能取得干净的 STARTUP 状态（AC6）；本谓词是
-         * 入口给外部调用方的显式判定面，避免只读 {@link #success()} 时把非事务路径当作事务提交。
+         * <p>Domain adapters have not proven that the irreversible STARTUP platform registrations
+         * (items/blocks/entities) can be rolled back, so a caller of this path must explicitly request a
+         * loader restart to get a clean STARTUP state. The predicate gives external callers an explicit
+         * decision point, so they do not mistake a non-transactional path for a committed transaction when
+         * they only read {@link #success()}.
          */
         public boolean nonTransactional() {
             return phase == ReloadPhase.STARTUP || phase == ReloadPhase.FILE;
         }
 
-        /** STARTUP 非事务重载：调用方应显式要求 loader restart（不可逆平台注册不回滚）。 */
+        /** STARTUP non-transactional reload: caller should explicitly request a loader restart (irreversible platform registrations do not rollback). */
         public boolean requiresLoaderRestart() {
             return phase == ReloadPhase.STARTUP;
         }
 
-        /** STARTUP reset+load 重载的显式非事务结果（不宣称候选/commit 事务成功）。 */
+        /** Explicit non-transactional result for STARTUP reset+load reload (does not claim candidate/commit transaction success). */
         public static ReloadResult successNonTransactional(ScriptType type, long generation, ReloadPhase phase) {
             return new ReloadResult(type, true, null, generation, phase, null);
         }
 
         /**
-         * 非候选路径（{@link ReloadPhase#FILE}）的失败结果，携带失败脚本位置。
+         * Failure result for non-candidate paths ({@link ReloadPhase#FILE}), carries the failed script location.
          *
-         * <p>原有的 {@code success(type)} / {@code failure(type, error)} 两个重载已删除
-         * （审查 A2）：前者返回 {@code phase=COMMIT} + {@code generation=-1} 自相矛盾，
-         * 二者都没有调用方，属死码。
+         * <p>The original {@code success(type)} / {@code failure(type, error)} overloads have been removed
+         * (Review A2): the former returned a contradictory {@code phase=COMMIT} + {@code generation=-1},
+         * and neither had any callers, so they were dead code.
          */
         public static ReloadResult failure(ScriptType type, long generation, ReloadPhase phase,
                                            String sourceLocation, Throwable error) {
@@ -689,9 +708,8 @@ public final class NekoRuntimeRoot implements AutoCloseable {
         }
 
         /**
-         * Frozen diagnostic records of this snapshot (ticket 30), delegating to each error's
-         * single frozen record. Only reads the already-recorded public error set; no second
-         * facts source is created.
+         * Frozen diagnostic records for this snapshot, each delegating to the single frozen record of its
+         * error. Reads only the public error set already recorded and creates no second source of facts.
          */
         public List<ScriptDiagnosticRecord> records() {
             return errors.stream().map(ScriptError::diagnostic).toList();

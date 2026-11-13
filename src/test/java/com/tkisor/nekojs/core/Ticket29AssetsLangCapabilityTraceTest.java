@@ -32,27 +32,27 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Ticket 29 AC8 capability source-trace fixture for the assets/lang surfaces: pins, per node,
- * what actually exists so the platform differences are recorded facts instead of silent gaps —
+ * Source trace for the assets and lang surfaces: records, per node, what actually exists so the
+ * platform differences are documented facts instead of silent gaps.
  *
  * <ul>
- *   <li><b>event surface</b>: the five-node ticket-33 golden rows are read back (ordinary tests
- *       only read the golden, never update it): every NeoForge node carries
- *       {@code ClientEvents.generateAssets} and {@code ClientEvents.lang}; both fabric nodes
- *       carry neither (documented unavailable, no silent parity);</li>
+ *   <li><b>event surface</b>: the five-node golden rows are read back (ordinary tests only read the
+ *       golden, never update it). Every NeoForge node carries
+ *       {@code ClientEvents.generateAssets} and {@code ClientEvents.lang}; both fabric nodes carry
+ *       neither, which is documented as unavailable rather than silently matched;</li>
  *   <li><b>typed {@code Assets} binding</b>: the only production registration line sits inside a
- *       {@code >=26} guard inside the NeoForge-only core plugin, so 1.21.1 evaluates it
- *       away — the binding is absent on 1.21.1 while both events remain (asserted at runtime by
- *       this fixture's 26.x leg and its 1.21.1 companion), and no fabric source tree registers
- *       the binding or bridges either event;</li>
- *   <li><b>runtime pins on the executing node</b>: this 26.x-shared fixture asserts the binding
- *       and both buses resolve through the production paths; its 1.21.1 node-local companion
- *       ({@code versions/1.21.1/src/test/.../Ticket29AssetsAbsentOn1211Test}) asserts the
- *       binding is absent there while both buses stay.</li>
+ *       {@code >=26} guard in the NeoForge-only core plugin, so 1.21.1 evaluates it away. The
+ *       binding is absent on 1.21.1 while both events remain (asserted at runtime by this fixture's
+ *       26.x leg and its 1.21.1 companion), and no fabric source tree registers the binding or
+ *       bridges either event;</li>
+ *   <li><b>runtime pins on the executing node</b>: this 26.x-shared fixture asserts the binding and
+ *       both buses resolve through the production paths; its 1.21.1 node-local companion
+ *       ({@code versions/1.21.1/src/test/.../Ticket29AssetsAbsentOn1211Test}) asserts the binding
+ *       is absent there while both buses stay.</li>
  * </ul>
  *
  * <p>This fixture records the existing differences; it does not widen or narrow any platform
- * surface (fabric parity for assets/lang stays with its owners, tickets 31/32).
+ * surface (fabric parity for assets and lang keeps its own owners).
  */
 class Ticket29AssetsLangCapabilityTraceTest {
 

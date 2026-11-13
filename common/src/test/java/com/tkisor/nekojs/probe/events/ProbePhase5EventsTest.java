@@ -13,12 +13,12 @@ import java.util.Map;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * Phase 5 三个 {@code probe.*} 事件的核心逻辑单测：assign_type 的 IR 应用、add_global/snippets 收集、
- * 以及全局类型的 TS 渲染。
+ * Tests for the three {@code probe.*} events: applying assign_type to the IR, collecting add_global and snippets,
+ * and rendering global types to TS.
  */
 class ProbePhase5EventsTest {
 
-    /** 含一个返回 java.io.File（SYMBOL）的实例方法，供 assign_type 重定向。 */
+    /** Has one instance method that returns java.io.File (a SYMBOL), so assign_type can retarget it. */
     public static class AssignSample {
         public java.io.File obtain() { return null; }
     }
@@ -31,7 +31,7 @@ class ProbePhase5EventsTest {
     @Test
     void assignType_applyToOverridesSymbolSlotsAndMarksMutated() {
         TypeDecl d = new TypeReflector().reflect(AssignSample.class);
-        // 应用前：obtain 返回 $File（SYMBOL，经 sourceType→TypeConverter 渲染）
+        // Before applying: obtain returns $File, a SYMBOL rendered through sourceType and TypeConverter
         String before = tsRenderer.render(d);
         assertTrue(before.contains("obtain()"), "method present before: " + before);
 
@@ -40,7 +40,7 @@ class ProbePhase5EventsTest {
         assertTrue(count >= 1, "at least one slot reassigned");
         assertTrue(d.mutated, "decl must be marked mutated so TS re-renders it");
 
-        // 应用后：obtain 的返回槽 overridden → renderRef(primitive "string") → "string"
+        // After applying: obtain's return slot is overridden and renders as the primitive "string"
         String after = tsRenderer.render(d);
         assertTrue(after.contains("obtain(): string"),
                 "reassigned return type should render as string: " + after);
@@ -75,7 +75,7 @@ class ProbePhase5EventsTest {
         assertEquals("MyFlag", globals.get(0).name());
         assertEquals(ApiTypeRef.Kind.PRIMITIVE, globals.get(0).type().kind());
         assertEquals(ApiTypeRef.Kind.SYMBOL, globals.get(1).type().kind());
-        // TS 渲染：primitive→bool 字面、symbol→$Name
+        // TS rendering: a primitive renders as a literal such as bool, a symbol renders as $Name
         assertEquals("boolean", TypeScriptClassRenderer.renderTypeRef(globals.get(0).type()));
         assertEquals("$Helper", TypeScriptClassRenderer.renderTypeRef(globals.get(1).type()));
     }

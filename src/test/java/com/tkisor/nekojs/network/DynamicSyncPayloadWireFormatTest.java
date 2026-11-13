@@ -21,18 +21,16 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Ticket 21 platform wiring wire golden (an addition under the ticket 17 AC2 discipline,
- * not a change to it): pins the id, codec and wire format of the dynamic registry
- * batch-transaction payload {@code nekojs:dynamic_registry_sync} from day one — the body
- * is a single UTF-8 JSON string (varint length + bytes), with the JSON itself produced by
- * common's {@code DynamicSyncWireCodec} (bodies asserted separately).
+ * Wire golden for the dynamic registry batch-transaction payload: it pins the id, codec and
+ * wire format of {@code nekojs:dynamic_registry_sync}. The body is a single UTF-8 JSON string
+ * (varint length + bytes), and the JSON itself comes from common's
+ * {@code DynamicSyncWireCodec} (its bodies are asserted separately).
  *
- * <p>The golden constants are measured encode output from the 26.1.2 active node (the
- * capture run is archived in this ticket's evidence directory). The test compiles and
- * runs only on nodes with the dynamic registry face (26.x NeoForge); 1.21.1/fabric nodes
- * have no such payload class (explicit-subset discipline). Any change to the payload id,
- * field order or JSON shape turns this test red — a managed change must go through the
- * wire migration table and the fixture gate.
+ * <p>The golden constants are measured encode output from the 26.1.2 active node. The test
+ * compiles and runs only on nodes that have the dynamic registry payload class (26.x
+ * NeoForge); 1.21.1 and fabric nodes have no such class. Any change to the payload id, field
+ * order or JSON shape turns this test red; an intended change must go through the wire
+ * migration table and the fixture gate.
  */
 class DynamicSyncPayloadWireFormatTest {
 

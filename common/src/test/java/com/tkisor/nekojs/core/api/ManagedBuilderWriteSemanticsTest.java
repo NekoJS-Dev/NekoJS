@@ -27,32 +27,37 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * AC6（ticket 09）代表性受管 Builder fixture（NBT compound builder）：
+ * Covers the writes of a representative managed Builder fixture, the NBT compound builder:
  * <ul>
- *   <li>显式 setter（{@code putString/putInt/...}）与类型化通用写入（{@code put(key, NbtValue)}）
- *       走同一条校验/规范化路径，产生相同 {@code build()} 结果（同一写入语义）；</li>
- *   <li>{@code build()} 产物是 final identity（不可变快照），后续 builder 变更不回写；</li>
- *   <li>只读成员（NbtEntry 访问器）在契约中只承诺访问器符号，无 setter 符号；</li>
- *   <li>builder 创建（{@code NBT.compound}）是契约承诺，manifest/TS declaration 同步派生。</li>
+ *   <li>explicit setters ({@code putString/putInt/...}) and the generic typed write
+ *       ({@code put(key, NbtValue)}) take the same validation and normalization path and produce
+ *       the same {@code build()} result;</li>
+ *   <li>the {@code build()} result is a final immutable snapshot; later builder changes do not
+ *       write back into it;</li>
+ *   <li>read-only members (the NbtEntry accessors) only promise accessor symbols in the contract,
+ *       never setter symbols;</li>
+ *   <li>builder creation ({@code NBT.compound}) is part of the contract, and the manifest and TS
+ *       declaration derive from it.</li>
  * </ul>
  *
- * <p>Graal 对 host object 的天然 JavaBean property assignment 行为<b>不作为承诺</b>
- * （spec 04），因此本 fixture 不为 property 写法建立契约；公开等价性以显式 setter
- * 与类型化 put 的 runtime fixture 为准。
+ * <p>Graal's built-in JavaBean property assignment on host objects is not a commitment, so this
+ * fixture does not pin a contract for property writes. The public equivalence is covered by the
+ * runtime fixture that uses explicit setters and typed put.
  */
 class ManagedBuilderWriteSemanticsTest {
 
     private static final URI CODE_SOURCE = URI.create("file:///test-nekojs-builder.jar");
 
-    /** AC6 runtime fixture：真实 Graal 执行里，受管 Builder 的脚本端 property assignment
-     *  写的是 **public 字段**（现役形状，与 {@code ItemBuilder.maxStackSize} 一致——
-     *  `b.maxStackSize = 16` 即宿主字段写）。fixture 把这条路径钉死：Graal 升级若改变
-     *  字段写行为，这里会先红。
+    /** Runtime fixture for the managed Builder write path. Under real Graal execution, a script
+     *  property assignment writes the **public field** of the managed Builder, the current shape,
+     *  like {@code ItemBuilder.maxStackSize}: `b.maxStackSize = 16` is a host field write. The
+     *  fixture pins that path, so a Graal upgrade that changes field writes fails here first.
      *
-     *  <p>实测（Graal 25.x，2026-09-12）：private 字段 + 裸 bean setter 的形状，
-     *  {@code p.maxStackSize = 16} **静默不生效**（不抛错、不触 setter）——这就是
-     *  "Graal 天然 Bean 行为不作为承诺"的实证。setter 等价分发由受管 Builder 机制
-     *  （票 15/39，ADR-0005 修订）实现，不依赖该行为。</p>
+     *  <p>Measured on Graal 25.x (2026-09-12): with a private field plus a bare bean setter,
+     *  {@code p.maxStackSize = 16} **silently does nothing** (no error, the setter is not called).
+     *  That is why Graal's natural bean behavior is not a commitment. Setter-equivalent dispatch
+     *  is implemented by the managed Builder mechanism (ADR-0005 revision) and does not rely on
+     *  it.</p>
      */
     @Test
     void propertyAssignmentWritesPublicFieldThroughGraalRuntime() {
@@ -73,7 +78,7 @@ class ManagedBuilderWriteSemanticsTest {
         }
     }
 
-    /** 代表性受管 Builder 形状（public field，与 ItemBuilder 同构；只有字段，无 setter）。 */
+    /** Representative managed Builder shape: public fields only, no setters, same structure as ItemBuilder. */
     public static final class FieldSemanticsBuilder {
         public int maxStackSize = 64;
         public String rarity = "common";
@@ -90,7 +95,7 @@ class ManagedBuilderWriteSemanticsTest {
         assertEquals(viaSetter.build(), viaTypedPut.build(),
                 "explicit setter and typed put must normalize to the identical compound value");
 
-        // 嵌套 compound 与列表同样单路径规范化
+        // Nested compounds and lists go through the same single normalization path
         CompoundTagBuilderJS nestedSetter = new CompoundTagBuilderJS();
         nestedSetter.putCompound("inner", new CompoundTagBuilderJS().putString("a", "b"))
                 .putList("items", List.of(NbtValue.intValue(1), NbtValue.intValue(2)));
@@ -123,7 +128,7 @@ class ManagedBuilderWriteSemanticsTest {
         assertTrue(contractIds.stream().noneMatch(id -> id.startsWith("member:NbtEntry.set")
                         || id.startsWith("member:NbtEntry.with") || id.startsWith("member:NbtEntry.clear")),
                 "read-only members must not gain setter symbols in the contract");
-        // NbtEntry 是只读 record：访问器即全部公开成员
+        // NbtEntry is a read-only record: its accessors are its only public members
         for (var method : NbtEntry.class.getDeclaredMethods()) {
             if (method.isSynthetic() || method.isBridge()) continue;
             assertTrue(java.lang.reflect.Modifier.isPublic(method.getModifiers()),

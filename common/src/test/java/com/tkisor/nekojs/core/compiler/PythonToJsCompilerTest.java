@@ -244,9 +244,10 @@ class PythonToJsCompilerTest {
 
     @Test
     void classBodyAssignBecomesInstanceField() throws Exception {
-        // class C: x = 5 → ES2022 instance class field（类体里 var/普通语句非法）。Python 的
-        // 类属性以 self 读写为主（self.total += 1 是实例语义），static 字段对 this.x 不可见，
-        // 曾让所有 self 访问得到 undefined/NaN——降级为实例字段。
+        // class C: x = 5 becomes an ES2022 instance class field; var and plain statements are invalid in a
+        // class body. Python reads and writes class attributes mainly through self (self.total += 1 is
+        // instance semantics), and a static field is invisible to this.x, so self access would yield
+        // undefined or NaN. The emitter therefore uses an instance field.
         String js = py("class C:\n    x = 5");
         assertTrue(js.contains(" x = 5;"), "class-body assign → instance field: " + js);
         assertFalse(js.contains("static x"), "class attribute must not be static: " + js);
@@ -607,15 +608,16 @@ class PythonToJsCompilerTest {
 
     @Test
     void isinstanceBuiltinTypes() throws Exception {
-        // isinstance(x, int/str/list/...) 旧实现发射 x instanceof str（JS 无此全局 → 运行时
-        // ReferenceError），现在路由到类型探针 prelude（__nekoPyInt/...）。语义取舍（务实处理，
-        // 见 emitter 的 TYPE_PRELUDE 注释）：bool 视作 int（Python 的子类关系，
-        // isinstance(True, int) 为 True）；一切 number 视作 float（int/float 同为 JS number，
-        // 5 与 5.0 不可区分）；list 与 tuple 同为数组、set 与 frozenset 同为 Set。
+        // isinstance(x, int/str/list/...) routes to the type probes in the prelude (__nekoPyInt/...) instead
+        // of emitting x instanceof str, which throws ReferenceError because JS has no such global.
+        // Semantic trade-offs, documented in the emitter's TYPE_PRELUDE comment: bool counts as int
+        // (Python makes bool an int subclass, so isinstance(True, int) is True); every number counts as
+        // float (int and float are both JS number, so 5 and 5.0 are indistinguishable); list and tuple
+        // are both arrays, and set and frozenset are both Set.
         assertTrue(evalBool("isinstance(1, int)"));
-        assertTrue(evalBool("isinstance(True, int)"));       // Python: bool 是 int 的子类
+        assertTrue(evalBool("isinstance(True, int)"));       // Python: bool is a subclass of int
         assertTrue(evalBool("isinstance(1.5, float)"));
-        assertTrue(evalBool("isinstance(5, float)"));        // int/float 同为 JS number
+        assertTrue(evalBool("isinstance(5, float)"));        // int and float are both JS number
         assertTrue(evalBool("isinstance('a', str)"));
         assertTrue(evalBool("isinstance(True, bool)"));
         assertTrue(evalBool("isinstance([1], list)"));
@@ -634,9 +636,11 @@ class PythonToJsCompilerTest {
         assertFalse(evalBool("isinstance([1], dict)"));
         assertFalse(evalBool("isinstance({'a': 1}, set)"));
         assertFalse(evalBool("isinstance({1, 2}, dict)"));
-        // 用户类实例不是 dict（探针按 constructor === Object 判定对象字面量）
+        // An instance of a user class is not a dict; the probe checks constructor === Object to recognize an
+        // object literal
         assertFalse(evalBool("class C:\n    pass\nisinstance(C(), dict)"));
-        // 探针按需发射：只有类型位置引用内建类型名才注入（普通用户类 isinstance 不拉起 prelude）
+        // Probes are emitted on demand: they are injected only when a type position references a built-in
+        // type name, so isinstance with a user class does not pull in the prelude
         String js = py("isinstance(x, str)");
         assertTrue(js.contains("__nekoPyStr"), "builtin type isinstance routes to a probe: " + js);
         assertFalse(py("class C:\n    pass\nisinstance(C(), C)").contains("__nekoPyStr"),
@@ -645,11 +649,13 @@ class PythonToJsCompilerTest {
 
     @Test
     void isinstanceTupleMixed() throws Exception {
-        // (int, str) 元组链：析取链上每个名字各自路由（int → 探针，str → 探针）
+        // An (int, str) tuple: each name in the disjunction routes on its own (int to its probe, str to its
+        // probe)
         assertTrue(evalBool("isinstance(5, (int, str))"));
         assertTrue(evalBool("isinstance('a', (int, str))"));
-        assertFalse(evalBool("isinstance(1.5, (int, str))"));   // 非整数、非字符串
-        // 混合异常类 + 内建类型名：__nekoExcIs 精确类路径与探针在同一析取链共存
+        assertFalse(evalBool("isinstance(1.5, (int, str))"));   // Neither an integer nor a string
+// Mixed exception class and built-in type name: the exact class-path check __nekoExcIs and the
+// probe share one disjunction
         String mixed = """
                 try:
                     raise ValueError('boom')
@@ -1366,14 +1372,16 @@ class PythonToJsCompilerTest {
 
     @Test
     void chainedMembershipRoutesThroughNekoIn() throws Exception {
-        // a in b in c → (a in b) && (b in c)：链式第二段成员判断同样必须经 __nekoIn（旧实现发射
-        // 裸 JS `in` —— 对字符串/字典右操作数是运行时 TypeError，且不走 dict 键的 hasOwnProperty 语义）。
+        // a in b in c becomes (a in b) && (b in c). The second membership test in the chain must go through
+        // __nekoIn too: a bare JS `in` throws TypeError for a string or dict right operand at runtime
+        // and skips the hasOwnProperty semantics for dict keys.
         String js = py("'a' in 'abc' in ['abc']");
         assertTrue(js.contains("__nekoIn(\"a\", \"abc\")"), "首段 in 必须经 __nekoIn: " + js);
         assertTrue(js.contains("__nekoIn(\"abc\", [\"abc\"])"), "链式第二段 in 必须也经 __nekoIn: " + js);
-        assertTrue(evalBool("'a' in 'abc' in ['abc']"));   // 两段都为真
-        assertFalse(evalBool("'z' in 'abc' in ['abc']"));  // 首段为假 → 短路为 False
-        // dict 形式：x in d1 in d2 → (x in d1) && (d1 in d2)，两段都走 __nekoIn 的 dict 键判断
+        assertTrue(evalBool("'a' in 'abc' in ['abc']"));   // Both segments are true
+        assertFalse(evalBool("'z' in 'abc' in ['abc']"));  // The first segment is false, so the chain short-circuits to False
+// Dict form: x in d1 in d2 becomes (x in d1) && (d1 in d2), and both segments use the dict key
+// check in __nekoIn
         assertFalse(evalBool("'a' in {'a': 1} in {'a': 1}"));
     }
 
@@ -1543,8 +1551,9 @@ class PythonToJsCompilerTest {
 
     @Test
     void listConcatenation() throws Exception {
-        // [1,2] + [3] → [1,2,3]：JS 的 + 会把两个数组静默串成 "1,23"，必须经 __nekoAdd 拼接；
-        // xs += ys 走同一助手；[0]*2 + [1] 让重复与拼接助手链式混用。
+        // [1,2] + [3] gives [1,2,3]. JS + silently joins two arrays into "1,23", so concatenation must go
+        // through __nekoAdd; xs += ys uses the same helper, and [0]*2 + [1] mixes repetition with the
+        // concatenation helper in one chain.
         assertEquals("[1, 2, 3]", evalString("str([1, 2] + [3])"));
         String aug = """
                 xs = [1, 2]
@@ -1560,22 +1569,23 @@ class PythonToJsCompilerTest {
 
     @Test
     void stringConcatIsLegal() throws Exception {
-        // str + str 在 Python 里合法且就是拼接——助手必须放行（str+str → a + b）。
+        // str + str is legal in Python and means concatenation, so the helper must allow it; str+str emits
+        // a + b.
         assertEquals("ab", evalString("'a' + 'b'"));
         assertEquals("ab3", evalString("'a' + 'b' + '3'"));
-        // f-string 的插值体是解析层模板，其中的 + 照常工作
+        // The interpolation body of an f-string is a template at the parse layer, so `+` inside it works as usual.
         assertEquals("xab!", evalString("f\"x{'a' + 'b'}!\""));
     }
 
     @Test
     void mixedStringPlusThrows() throws Exception {
-        // 'a' + 5 / 5 + 'a' 按 Python 抛 TypeError（JS 的 + 会静默隐式转换成 'a5'/'5a'），
-        // 抛出的是异常 prelude 的 TypeError 类 → except TypeError 精确捕获。
+        // 'a' + 5 and 5 + 'a' raise TypeError as in Python; JS + would silently coerce them to 'a5'/'5a'.
+        // The error is the TypeError class from the exception prelude, so except TypeError catches it exactly.
         assertEquals("caught", evalString("try:\n    x = 'a' + 5\nexcept TypeError:\n    'caught'"));
         assertEquals("caught", evalString("try:\n    x = 5 + 'a'\nexcept TypeError:\n    'caught'"));
-        // 混合 += 同路
+        // Mixed += takes the same path.
         assertEquals("caught", evalString("s = 'a'\ntry:\n    s += 5\nexcept TypeError:\n    'caught'"));
-        // 类型精确：except ValueError 不匹配 TypeError → 重抛给外层
+        // Type matching is exact: except ValueError does not match TypeError, so the error is rethrown to the outer handler.
         assertEquals("right", evalString("""
                 try:
                     try:
@@ -1589,11 +1599,12 @@ class PythonToJsCompilerTest {
 
     @Test
     void numericAddUnaffected() throws Exception {
-        // 纯数值加法 / += 数值路径语义不变
+        // Plain numeric addition and numeric += keep their semantics.
         assertEquals(3, evalInt("1 + 2"));
         assertEquals(3.5, evalDouble("1.5 + 2"), 0.0);
         assertEquals(7, evalInt("n = 3\nn += 4\nn"));
-        // 按需注入（needsAdd 预扫描）：用了 + 的模块发射助手；没用 + 的模块不发射
+        // The helper is injected on demand (the needsAdd pre-scan): a module that uses + emits the helper, one that does
+        // not use + does not.
         String withAdd = py("1 + 2");
         assertTrue(withAdd.contains("__nekoAdd"), "a module using + needs the add helper: " + withAdd);
         String noAdd = py("2 * 3");
@@ -1712,8 +1723,8 @@ class PythonToJsCompilerTest {
 
     @Test
     void raiseBareUserClassIsInstantiated() throws Exception {
-        // raise Cls ≡ raise Cls()：裸用户类名必须实例化后抛出（旧实现 throw MyError 抛出类对象
-        // 本身，except MyError 的 instanceof 永远不匹配 → 未捕获崩溃）。
+        // raise Cls is the same as raise Cls(): a bare user class name is instantiated before it is thrown.
+        // Throwing the class object itself never matches the instanceof check in except MyError, so the error escapes.
         String src = """
                 class MyError(Exception):
                     pass
@@ -1725,7 +1736,8 @@ class PythonToJsCompilerTest {
         String js = py(src);
         assertTrue(js.contains("throw new MyError();"), "bare raise must instantiate the class: " + js);
         assertEquals("caught", evalString(src));
-        // 函数体内先于类定义发射的 raise 也要实例化（类名在预扫描登记）
+        // A raise emitted inside a function body before the class definition is instantiated too; the class name is
+        // registered during the pre-scan.
         assertEquals("late", evalString("""
                 def boom():
                     raise MyError
@@ -1740,8 +1752,8 @@ class PythonToJsCompilerTest {
 
     @Test
     void raiseAliasedExceptionClassIsInstantiated() throws Exception {
-        // VE = ValueError; raise VE('boom') → throw new VE("boom")（旧实现无 new 调 class →
-        // 运行时 TypeError）；裸别名 raise VE 同样按 raise VE() 实例化。
+        // With VE = ValueError, raise VE('boom') becomes throw new VE("boom"); calling the class without new raises
+        // a TypeError at runtime. A bare alias raise VE is instantiated as well, the same as raise VE().
         String src = """
                 VE = ValueError
                 try:
@@ -1765,8 +1777,9 @@ class PythonToJsCompilerTest {
 
     @Test
     void filterNoneFiltersByTruthiness() throws Exception {
-        // filter(None, seq) 按元素本身的 Python 真值过滤（旧实现 .filter(null) → 运行时
-        // TypeError：null 不是函数）。0 / [] 为假，'a' / 1 / [2] 为真。
+        // filter(None, seq) filters by the Python truthiness of each element.
+        // Passing null to .filter would raise a TypeError at runtime because null is not a function.
+        // 0 and [] are falsy; 'a', 1 and [2] are truthy.
         String src = """
                 kept = list(filter(None, [0, [], 'a', 1, [2]]))
                 str(len(kept)) + kept[0] + str(kept[1]) + str(kept[2][0])
@@ -1778,17 +1791,17 @@ class PythonToJsCompilerTest {
 
     @Test
     void filterPredicateUsesPythonTruthiness() throws Exception {
-        // 谓词返回值同样按 Python 真值判定：lambda x: x 返回 [] 为假、[1] 为真。
+        // The predicate return value is judged by Python truthiness too: lambda x: x returns [] (falsy) and [1] (truthy).
         assertEquals(1, evalInt("len(list(filter(lambda x: x, [[], [1]])))"));
         assertEquals(1, evalInt("list(filter(lambda x: x, [[], [1]]))[0][0]"));
-        // 普通谓词保持原语义（回归钉）
+        // A plain predicate keeps its original meaning (regression guard).
         assertEquals(2, evalInt("len(list(filter(lambda x: x > 1, [1, 2, 3])))"));
     }
 
     @Test
     void userClassSortMethodNotHijacked() throws Exception {
-        // 用户类自己的 sort 不能被注入比较器实参（旧实现把 comparator 当第一个实参传入 →
-        // b.sort() 返回的是比较器函数而非 None）。
+        // A user class's own sort must not receive the injected comparator argument; otherwise b.sort() returns the
+        // comparator function instead of None.
         String src = """
                 class Box:
                     def sort(self, key=None):
@@ -1799,28 +1812,30 @@ class PythonToJsCompilerTest {
         String js = py(src);
         assertTrue(js.contains("Array.isArray(b)"), "bare-name receiver gets a runtime guard: " + js);
         assertTrue(evalBool(src));
-        // 构造调用接收者（静态可判定）与带实参调用 → 原生直传
+        // A constructor-call receiver (statically decidable) and a call with arguments pass through directly.
         assertEquals(7, evalInt("class Box:\n    def sort(self, key=None):\n        return key\nBox().sort(7)"));
         assertEquals(3, evalInt("class Box:\n    def sort(self, key=None):\n        return key\nb = Box()\nb.sort(3)"));
     }
 
     @Test
     void bareListSortStillNumericAware() throws Exception {
-        // 回归钉：数组接收者仍注入数值比较器（JS 默认字典序会把 [10,2,1] 排成 [1,10,2]）。
-        assertEquals("[1, 2, 10]", evalString("str([10, 2, 1].sort())"));          // 字面量接收者
+        // Regression guard: an array receiver still gets the numeric comparator injected, because JS default sort is
+        // lexicographic and would order [10, 2, 1] as [1, 10, 2].
+        assertEquals("[1, 2, 10]", evalString("str([10, 2, 1].sort())"));          // Literal receiver.
         String src = """
                 xs = [10, 2, 1]
                 xs.sort()
                 str(xs)
                 """;
-        assertEquals("[1, 2, 10]", evalString(src));                              // 名字接收者（运行时探测）
+        assertEquals("[1, 2, 10]", evalString(src));                              // Name receiver, checked at runtime.
     }
 
     @Test
     void userClassListAndStrMethodsNotHijacked() throws Exception {
-        // pop（sort 之后的同类缺口）：用户类保有自己的 pop——0 参时数组降级与原生调用同形
-        // （obj.pop()，天然放行）；带索引时旧实现无条件发射 splice → 运行时 TypeError，
-        // 现在裸名字接收者运行时探测（Array.isArray + 无自有 pop）放行原生调用。
+        // pop is the next gap after sort: a user class keeps its own pop. With zero arguments the array fallback and
+        // the native call have the same shape (obj.pop()), so it passes through naturally. With an index, an
+        // unconditional splice raises a TypeError at runtime; a bare-name receiver is instead checked at runtime
+        // (Array.isArray and no own pop), so the native call passes through.
         assertEquals("marker", evalString("""
                 class Box:
                     def pop(self):
@@ -1838,20 +1853,21 @@ class PythonToJsCompilerTest {
         String js = py(indexed);
         assertTrue(js.contains("Array.isArray(b)"), "bare-name receiver gets a runtime guard: " + js);
         assertEquals(20, evalInt(indexed));
-        // 同款防护的兄弟方法：copy/insert/remove（JS 原生数组自带 → rtArrayDispatch）与
-        // index/count（JS 原生没有同名方法 → rtDispatch 的 typeof 探测）。
+        // The sibling methods get the same guard: copy/insert/remove exist on JS arrays, so they go through
+        // rtArrayDispatch; index/count do not, so they go through the typeof check in rtDispatch.
         assertEquals("copied", evalString("class Box:\n    def copy(self):\n        return 'copied'\nb = Box()\nb.copy()"));
         assertEquals(5, evalInt("class Box:\n    def insert(self, i, v):\n        return v\nb = Box()\nb.insert(0, 5)"));
         assertEquals("gone", evalString("class Box:\n    def remove(self, v):\n        return 'gone'\nb = Box()\nb.remove(3)"));
         assertEquals(2, evalInt("class Box:\n    def index(self, v):\n        return 2\nb = Box()\nb.index('x')"));
         assertEquals(3, evalInt("class Box:\n    def count(self, v):\n        return 3\nb = Box()\nb.count('x')"));
-        // 构造调用接收者（静态可判定）→ 原生直传
+        // A constructor-call receiver (statically decidable) passes through directly.
         assertEquals(7, evalInt("class Box:\n    def pop(self, i):\n        return i\nBox().pop(7)"));
     }
 
     @Test
     void bareListAndStrMethodsStillNativeSemantics() throws Exception {
-        // 回归钉：数组/字符串接收者仍走各自的降级映射（探测的数组 / 非用户分支）。
+        // Regression guard: array and string receivers still take their own fallback mapping, the array and non-user
+        // branches of the check.
         assertEquals(3, evalInt("""
                 xs = [1, 2, 3]
                 xs.pop()
@@ -1874,7 +1890,7 @@ class PythonToJsCompilerTest {
                 xs.remove(2)
                 str(xs)
                 """));
-        assertEquals(1, evalInt("[5, 6, 7].index(6)"));   // 字面量接收者不探测，直接映射
+        assertEquals(1, evalInt("[5, 6, 7].index(6)"));   // A literal receiver is not checked at runtime; it maps directly.
         assertEquals(2, evalInt("""
                 s = 'banana'
                 s.count('an')
@@ -1887,8 +1903,8 @@ class PythonToJsCompilerTest {
 
     @Test
     void moduloByZeroRaisesZeroDivisionError() throws Exception {
-        // Python: 7 % 0 → ZeroDivisionError（JS 静默 NaN）；__nekoMod 现在显式抛出，
-        // 且 needsMod 必须连带发射异常 prelude（ZeroDivisionError 类）。
+        // Python raises ZeroDivisionError for 7 % 0 where JS silently yields NaN. __nekoMod throws it explicitly, and
+        // needsMod must also emit the exception prelude with the ZeroDivisionError class.
         String src = """
                 try:
                     x = 7 % 0
@@ -1900,12 +1916,12 @@ class PythonToJsCompilerTest {
         assertTrue(js.contains("class ZeroDivisionError extends ArithmeticError"),
                 "needsMod must pull in the exception prelude: " + js);
         assertEquals("caught", evalString(src));
-        assertEquals(1, evalInt("(-7) % 2"));   // 回归：非零取模语义不变
+        assertEquals(1, evalInt("(-7) % 2"));   // Regression: modulo by a non-zero value keeps its semantics.
     }
 
     @Test
     void divisionByZeroRaisesZeroDivisionError() throws Exception {
-        // 1/0、1//0、/=、//=、divmod(1, 0) 全部按 Python 抛 ZeroDivisionError（JS 静默 Infinity）。
+        // 1/0, 1//0, /=, //= and divmod(1, 0) all raise ZeroDivisionError as in Python, where JS silently yields Infinity.
         assertEquals("div", evalString("try:\n    x = 1 / 0\nexcept ZeroDivisionError:\n    'div'"));
         assertEquals("floordiv", evalString("try:\n    x = 1 // 0\nexcept ZeroDivisionError:\n    'floordiv'"));
         assertEquals("augdiv", evalString("x = 1\ntry:\n    x /= 0\nexcept ZeroDivisionError:\n    'augdiv'"));
@@ -1915,15 +1931,16 @@ class PythonToJsCompilerTest {
         assertTrue(js.contains("__nekoDiv"), "true division must route through __nekoDiv: " + js);
         js = py("1 // 0");
         assertTrue(js.contains("__nekoFloorDiv"), "floor division must route through __nekoFloorDiv: " + js);
-        // 非零除法语义不变（回归钉）
+        // Division by a non-zero value keeps its semantics (regression guard).
         assertEquals(4, evalInt("8 / 2"));
         assertEquals(3, evalInt("7 // 2"));
     }
 
     @Test
     void elifConditionErrorReportsElifLine() {
-        // elif 头部（条件）里的发射期错误必须报 elif 所在行，而不是外层 if 的行
-        //（parser 现在为糖改写出的嵌套 If 登记 srcLines，emitter 的内联 writeIf 同步 curLine）。
+        // An emit-time error in an elif header (the condition) must report the elif line, not the line of the enclosing if.
+        // The parser records srcLines for the nested If it rewrites the sugar into, and the emitter's inline
+        // writeIf keeps curLine in sync.
         String src = """
                 x = 1
                 if x == 2:
@@ -1934,7 +1951,7 @@ class PythonToJsCompilerTest {
         IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () -> py(src));
         assertTrue(ex.getMessage().contains("python source line 4"),
                 "elif condition error must report the elif line: " + ex.getMessage());
-        // elif 体内语句的行号本来就各自登记（parseSuite → parseStatements）——钉住该行为
+        // Statements in an elif body record their own line numbers (parseSuite to parseStatements). This pins that behavior.
         ex = assertThrows(IllegalArgumentException.class, () -> py("x = 1\nif x:\n    pass\nelif x:\n    del x\n"));
         assertTrue(ex.getMessage().contains("python source line 5"),
                 "elif body error must report the body line: " + ex.getMessage());
@@ -1942,7 +1959,7 @@ class PythonToJsCompilerTest {
 
     @Test
     void elifHeaderGetsSourceMapMapping() throws Exception {
-        // 内联的 `} else if` 生成行现在有 source map 映射，指回 elif 头部的 Python 行。
+        // The generated inline `} else if` line has a source map entry that points back to the Python line of the elif header.
         var result = compiler.compileDetailed(Path.of("test.py"),
                 "x = 1\nif x:\n    y = 1\nelif x == 2:\n    y = 2\ny\n");
         var obj = com.google.gson.JsonParser.parseString(result.sourceMap()).getAsJsonObject();
@@ -2100,7 +2117,8 @@ class PythonToJsCompilerTest {
 
     @Test
     void userClassReplaceSplitZfillNotHijacked() throws Exception {
-        // 静态可判定的用户类接收者（C().m）必须放行用户方法，不能在新支持的 arity 下被降级映射。
+        // A statically known user-class receiver (C().m) must call the user method and must not be routed to the
+        // fallback mapping at any supported argument count.
         assertEquals("user", evalString("""
                 class C:
                     def replace(self, old, rep, count=2):
@@ -2319,31 +2337,33 @@ class PythonToJsCompilerTest {
         assertEquals(5, evalInt("def get_x(**new):\n    return new['x']\nget_x(x=5)"));
     }
 
-    // ---- 六条 Python 语义修复 ----
+    // ---- Six Python semantics fixes ----
 
     @Test
     void percentFormattingOnStrings() throws Exception {
-        // "%s=%d" % (k, v)：曾静默走数值取模得 NaN
+        // "%s=%d" % (k, v) formats the string; a numeric modulo would silently produce NaN.
         assertEquals("a=1", evalString("'a=%d' % 1"));
         assertEquals("x and y", evalString("'%s and %s' % ('x', 'y')"));
         assertEquals("3.14", evalString("'%.2f' % 3.14159"));
         assertEquals("100%", evalString("'100%%' % ()"));
         assertEquals("  42", evalString("'%4d' % 42"));
         assertEquals("ff", evalString("'%x' % 255"));
-        // 数值取模不受影响
+        // Numeric modulo is unaffected.
         assertEquals(1, evalInt("-7 % 2"));
     }
 
     @Test
     void stringJoinIsPythonOrder() throws Exception {
-        // sep.join(iterable)：接收者是分隔符、实参是可迭代对象——曾编成 sep.join(...) 的 JS 调用
+        // sep.join(iterable): the receiver is the separator and the argument is the iterable, so it must not be emitted
+        // as a plain JS sep.join(...) call.
         assertEquals("a,b,c", evalString("','.join(['a', 'b', 'c'])"));
         assertEquals("abc", evalString("''.join(['a', 'b', 'c'])"));
     }
 
     @Test
     void classAttributeReadableThroughSelf() throws Exception {
-        // 类属性以 self 读写（self.total += 1 是实例语义）——曾编成 static 字段，self 访问 NaN
+        // Class attributes are read and written through self, so self.total += 1 uses instance semantics. Compiling
+        // them as static fields would make access through self return NaN.
         assertEquals(1, evalInt("""
                 class Counter:
                     total = 0
@@ -2357,7 +2377,8 @@ class PythonToJsCompilerTest {
 
     @Test
     void dictGetMissingKeyIsNoneForIsCheck() throws Exception {
-        // d.get(k) 缺失键返回 None（is None 成立）——曾编成裸索引得 undefined，is None 失效
+        // d.get(k) returns None for a missing key, so is None holds. Compiling it as a bare index would yield
+        // undefined and break is None.
         assertEquals("True", evalString("d = {'a': 1}\nstr(d.get('missing') is None)"));
         assertEquals("False", evalString("d = {'a': 1}\nstr(d.get('a') is None)"));
         assertEquals("fallback", evalString("d = {}\nstr(d.get('k', 'fallback'))"));
@@ -2365,7 +2386,8 @@ class PythonToJsCompilerTest {
 
     @Test
     void strUsesPythonSpellings() throws Exception {
-        // str()/print() 的 Python 拼写：None/True/False、数组元素递归——曾输出 JS 拼写
+        // str() and print() use Python spellings: None/True/False, with array elements formatted recursively.
+        // JS spellings would be wrong.
         assertEquals("None", evalString("str(None)"));
         assertEquals("True", evalString("str(True)"));
         assertEquals("[1, None, True]", evalString("str([1, None, True])"));
@@ -2374,7 +2396,8 @@ class PythonToJsCompilerTest {
 
     @Test
     void nestedDefInsideMethodKeepsSelf() throws Exception {
-        // 方法内嵌套 def 经闭包引用外层 self——曾发成 function 重绑 this，self 变 undefined
+        // A def nested in a method refers to the outer self through the closure. Emitting it as a function would
+        // rebind this and leave self undefined.
         assertEquals(20, evalInt("""
                 class C:
                     def __init__(self):

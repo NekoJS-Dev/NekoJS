@@ -15,20 +15,22 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 /**
- * 方块随机 tick 注入：在 {@code BlockBehaviour.BlockStateBase.randomTick} HEAD 触发
- * {@link RandomTickEvent}（脚本侧 {@code BlockEvents.randomTick}）。
+ * Injects the block random tick: fires {@link RandomTickEvent} (script side
+ * {@code BlockEvents.randomTick}) at the HEAD of {@code BlockBehaviour.BlockStateBase.randomTick}.
  *
- * <p>注入点必须在 BlockStateBase 漏斗，不能在 {@code BlockBehaviour} 接口 default
- * randomTick：ServerLevel 对随机 tick 区段内每个位置虚分派
- * {@code BlockState.randomTick(level, pos, random)}（即 BlockStateBase.randomTick），
- * 由它再分派到具体方块覆写；原版所有随机 tick 方块都覆写了 4 参 randomTick（如草方块
- * SpreadingSnowyDirtBlock），接口 default（空体）对它们永不执行——旧注入点对原版随机
- * tick 方块不可达（ticket 24 D5）。
+ * <p>The injection point must be BlockStateBase, not the default randomTick of the
+ * {@code BlockBehaviour} interface. ServerLevel virtually dispatches
+ * {@code BlockState.randomTick(level, pos, random)}, which is BlockStateBase.randomTick, for every
+ * position in a random tick section, and that method dispatches on to the concrete block override.
+ * Every vanilla random tick block overrides the four-argument randomTick (grass, for example, is
+ * SpreadingSnowyDirtBlock), so the empty interface default never runs for them and an injection
+ * there is unreachable for vanilla blocks.
  *
- * <p>ServerLevel 调用本漏斗时不逐方块检查 {@code isRandomlyTicking()}（区段内任意位置
- * 都会进来，非 tick 方块靠空方法体兜底），因此这里守卫 {@code isRandomlyTicking()} 以
- * 维持文档语义：仅自然随机 tick 的方块触发（对标原版 / KubeJS 语义）。无监听器时零
- * 事件对象（randomTick 高频，性能守卫）。
+ * <p>When ServerLevel calls this entry point it does not check {@code isRandomlyTicking()} per block:
+ * any position in the section gets here and non-ticking blocks fall through to an empty body. The
+ * guard on {@code isRandomlyTicking()} here keeps the documented behavior, so only blocks that
+ * naturally random tick fire, matching vanilla and KubeJS. With no listeners no event object is
+ * created, because randomTick runs very often.
  */
 @Mixin(BlockBehaviour.BlockStateBase.class)
 public abstract class BlockBehaviourMixin {

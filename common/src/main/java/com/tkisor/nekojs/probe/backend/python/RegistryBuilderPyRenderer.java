@@ -7,17 +7,20 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
- * typed Builder 契约条目 → Python 声明（ticket 15，AC4/AC9）。
- * 输入是 {@link RegistryBuilderSurfaceEntry}——与 TS 侧
- * {@code RegistryBuilderTsRenderer} 同一条目列表，成员语义两侧一致。
- * 成员名保持 JS 面 verbatim（{@code maxStackSize}/{@code setMaxStackSize}）。
- * {@link PythonProbeBackend} 与 contract/golden 测试共用本渲染器。
+ * Renders typed Builder contract entries into Python declarations.
+ * Input is a {@link RegistryBuilderSurfaceEntry}, the same entry list the TS side
+ * {@code RegistryBuilderTsRenderer} consumes, so member semantics match on both sides.
+ * Member names stay verbatim to the JS side ({@code maxStackSize}/{@code setMaxStackSize}).
+ * {@link PythonProbeBackend} and the contract/golden tests share this renderer.
  */
 public final class RegistryBuilderPyRenderer {
 
     private RegistryBuilderPyRenderer() {}
 
-    /** 渲染 {@code nekojs/_registry_builders/__init__.pyi} 内容；空列表返回空串。 */
+    /**
+     * Renders the content of {@code nekojs/_registry_builders/__init__.pyi}; returns an empty string for an empty
+     * list.
+     */
     public static String render(List<RegistryBuilderSurfaceEntry> entries) {
         if (entries == null || entries.isEmpty()) {
             return "";

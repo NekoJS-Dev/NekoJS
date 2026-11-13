@@ -6,15 +6,17 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
 
 /**
- * {@link PlayPacketDispatcher} 的装配点（与 {@code Platform} / {@code Diagnostics} 同形：
- * 平台在初始化时 {@link #install}，业务侧 {@link #get} 取用）。
+ * Installation point for {@link PlayPacketDispatcher}, shaped like {@code Platform} and
+ * {@code Diagnostics}: a platform calls {@link #install} at init and business code gets the
+ * dispatcher with {@link #get}.
  *
- * <p>未装配时用 {@link #NOOP}：全部发送静默丢弃，仅首次记一条 WARN——既不打断脚本，
- * 也不让"某个平台忘了装配"变成完全无声的故障。
+ * <p>Before installation {@link #NOOP} is used: every send is dropped silently and only the first
+ * one logs a WARN. That way nothing interrupts scripts, and a platform that forgets to install does
+ * not fail completely silently.
  */
 public final class PlayPacketDispatchers {
 
-    /** 未装配时的兜底实现：丢弃并首次告警。 */
+    /** Fallback used before installation: drops the send and logs a warning once. */
     public static final PlayPacketDispatcher NOOP = new PlayPacketDispatcher() {
         @Override
         public void sendToPlayer(ServerPlayer player, CustomPacketPayload payload) {

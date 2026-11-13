@@ -8,14 +8,16 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 
 /**
- * 玩家右键物品事件（{@code ItemEvents.rightClicked}）的加载器中立载荷。
+ * Loader-neutral payload for the player right-click item event
+ * ({@code ItemEvents.rightClicked}).
  *
- * <p>NeoForge 侧直传原生 {@code PlayerInteractEvent.RightClickItem}（成员同形：
- * getPlayer/getItemStack/getHand/level）；fabric 侧由 {@code FabricItemEventBindings} 从
- * {@code UseItemCallback} 转换（itemStack 从 {@code player.getItemInHand(hand)} 取）。
+ * <p>NeoForge passes its native {@code PlayerInteractEvent.RightClickItem} straight through
+ * (same members: getPlayer/getItemStack/getHand/level); fabric converts
+ * {@code UseItemCallback} in {@code FabricItemEventBindings}, taking the itemStack from
+ * {@code player.getItemInHand(hand)}.
  *
- * <p>可取消：监听器返回 {@code true} 时，NeoForge 侧取消原生事件，fabric 侧回调返回
- * {@code CONSUME}（跳过后续处理）。
+ * <p>Cancellable: when a listener returns {@code true}, NeoForge cancels the native event and
+ * fabric returns {@code CONSUME} from the callback, which skips the remaining handling.
  */
 @Doc("Fired when a player right-clicks while holding an item (ItemEvents.rightClicked).")
 @Doc("Return true to consume the interaction.")

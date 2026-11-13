@@ -26,8 +26,9 @@ public final class IngredientAdapter implements JSTypeAdapter<Ingredient> {
     public List<AdapterInputShape> inputShapes() {
         return List.of(
                 self(),
-                // 逐个字符串语法单列（而不是一个裸 string）：裸 string 会吞掉联合里的字面量补全，
-                // 导致原料位置完全没有 id 提示；模板字面量类型不会
+                // Each string form is listed separately instead of one bare string: a bare string absorbs the
+                // literal completions in the union, so ingredient positions get no id hints at all;
+                // template literal types do not
                 registry("Item"),
                 template("#", registryTag("Item")),
                 template("@", namespace()),

@@ -19,13 +19,13 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Command-tree shape for the ticket-20 smoke fixes: the trust address argument accepts
- * host:port input (F1) and the bare /nekojs root executes a usage fallback instead of
- * brigadier's "Unknown or incomplete command" (F3). register() touches Commands.LEVEL_GAMEMASTERS,
- * whose class init needs bootstrapped vanilla registries (26.x bare JVMs cannot); runs that
- * cannot initialize Commands skip here, while parse behavior itself stays covered by
- * {@link AddressArgumentTest}, which needs no Minecraft classes. Same null-root construction
- * caveat as {@link NekoJSCommandsEditorRemovalTest}.
+ * Command tree shape: the trust address argument accepts host:port input, and the bare /nekojs
+ * root runs a usage fallback instead of brigadier's "Unknown or incomplete command". The
+ * {@code register()} call touches {@code Commands.LEVEL_GAMEMASTERS}, whose class init needs
+ * bootstrapped vanilla registries, which a bare 26.x JVM cannot provide; runs that cannot
+ * initialize {@code Commands} skip here. Parse behavior itself stays covered by
+ * {@link AddressArgumentTest}, which needs no Minecraft classes. Passes a null root for the same
+ * reason as {@link NekoJSCommandsEditorRemovalTest}.
  */
 class NekoJSCommandsTrustArgumentAndUsageTest {
 

@@ -38,15 +38,15 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * CJS/ESM 模块装载宿主（Module Resolution/Cache 的执行委托面）。
+ * CJS/ESM module loading host (delegation layer for module resolution and caching).
  *
- * <p>W3 显式注入：prepared 缓存经构造器传入（生产与 {@link NekoRuntimeRoot} 持有的
- * {@link NekoModulePipelineCache} 为同一实例；旧构造器自建隔离实例，仅供测试/工具）。
- * 路径解析失败包成 {@link NekoModuleError}（RESOLVE/Module Resolution-Cache），
- * ESM link 失败统一包成 LINK（原始诊断保留为 cause），宿主与 guest 装载失败包成
- * EXECUTE（原始异常保留为 cause）。平台 callback 不进入本层（见
- * {@code ModulePipelineIsolationTest}）；Graal Context 由执行环境构造并传入，
- * 本层不创建 Context、不决定 HostAccess。
+ * <p>W3 explicit injection: Prepared cache is passed via constructor (the production instance is the same as the one held by {@link NekoRuntimeRoot}'s
+ * {@link NekoModulePipelineCache} instance; the legacy constructor creates an isolated instance for testing/tools).
+ * Path resolution failures are wrapped in {@link NekoModuleError} (RESOLVE/Module Resolution-Cache),
+ * ESM link failures are unified as LINK (original diagnostics are preserved as the cause), and host or guest loading failures are wrapped in
+ * EXECUTE (original exceptions are preserved as the cause). Platform callbacks do not enter this layer (see
+ * {@link ModulePipelineIsolationTest}); the Graal Context is constructed and passed by the execution environment.
+ * This layer does not create the Context or determine HostAccess.
  */
 public final class NekoScriptModuleLoaderHost {
     private static final Pattern STACK_LOCATION = Pattern.compile(
@@ -80,9 +80,9 @@ public final class NekoScriptModuleLoaderHost {
     private int cjsBodyLineOffset;
 
     /**
-     * 生产装配入口：与 runtime owner 共享 prepared 缓存实例。
+     * Production assembly entry point: Shares the prepared cache instance with the runtime owner.
      *
-     * @param preparationCache {@code NekoRuntimeRoot} 持有的缓存（模块 session 生命周期归属）
+     * @param preparationCache The cache held by {@link NekoRuntimeRoot} (module session lifecycle ownership).
      */
     public NekoScriptModuleLoaderHost(Context context, NekoModuleResolver resolver,
                                        NekoModulePipelineCache preparationCache) {
@@ -119,8 +119,8 @@ public final class NekoScriptModuleLoaderHost {
         esmRewriter.registerApiModule(id, names);
     }
 
-    // ======== Graal interop shell：@CalledByDynamicCode 方法供 internal/script-loader.js 通过 GraalVM interop 调用 ========
-    // 这些是 interop shell 入口，内部委托给协作者（EsmModuleLifecycle / CjsModuleLoader）。
+    // ======== Graal interop shell: @CalledByDynamicCode methods for invocation by internal/script-loader.js via GraalVM interop ========
+    // These are interop shell entry points, which delegate internally to collaborators (EsmModuleLifecycle or CjsModuleLoader).
 
     @CalledByDynamicCode
     public void configure(Value executor, Value moduleFactory, Value specialResolver, Value jsonParser) {
@@ -149,9 +149,9 @@ public final class NekoScriptModuleLoaderHost {
         }
     }
 
-    // ---- ESM namespace 回调: 由 captureNamespaceSync/Async 中动态拼接的 JS 字符串调用 ----
-    // 调用代码如: "globalThis.__nekoScriptModuleLoaderHost.completeEsmNamespace(...)"
-    // 见 captureNamespaceSync/Async 方法中的 context.eval() 字符串拼接。
+    // ---- ESM namespace callback: Invoked by JS strings dynamically concatenated in captureNamespaceSync/Async ----
+    // Invocation code example: "globalThis.__nekoScriptModuleLoaderHost.completeEsmNamespace(...)"
+    // See the context.eval() string concatenation in the captureNamespaceSync/Async methods.
 
     @CalledByDynamicCode
     public void captureEsmNamespace(String moduleId, Value namespace) {
@@ -185,7 +185,7 @@ public final class NekoScriptModuleLoaderHost {
         esmRecordCache.failNamespace(moduleId, revision, staged == null ? toThrowable(failure) : staged);
     }
 
-    // ---- 入口加载: JS bridge 调用，也由 ScriptManager 通过 Java 间接调用 ----
+    // ---- Entry point loading: JS bridge invocation, also indirectly called by ScriptManager via Java ----
 
     @CalledByDynamicCode
     public Object loadEntry(String entryPath) throws IOException {
@@ -217,19 +217,19 @@ public final class NekoScriptModuleLoaderHost {
     }
 
     public String resolveToString(String parentPath, String specifier) throws IOException {
-        // require.resolve 语义：bare 未命中直接报错（见 NekoModuleResolver.resolveForRequire）
+        // require.resolve semantics: Direct error on bare module miss (see NekoModuleResolver.resolveForRequire)
         NekoResolvedModule resolved = resolveChildForRequire(parentPath, specifier);
         return resolved.special() ? resolved.specifier() : resolved.id();
     }
 
-    // ---- import.meta 解析: NekoNativeEsmSourceRewriter 生成替换代码时引用 ----
+    // ---- import.meta resolution: Referenced when NekoNativeEsmSourceRewriter generates replacement code ----
 
     @CalledByDynamicCode
     public String resolveImportMeta(String parentPath, String specifier) throws IOException {
         return resolveNativeImport(parentPath, specifier);
     }
 
-    // ---- 缓存与依赖管理: JS bridge + Java 调用 ----
+    // ---- Caching and dependency management: JS bridge and Java calls ----
 
     @CalledByDynamicCode
     public void clearCache() {
@@ -251,8 +251,8 @@ public final class NekoScriptModuleLoaderHost {
     }
 
     /**
-     * 路径解析统一收口：resolver 的原始错误包成 RESOLVE 阶段错误（owner Module
-     * Resolution/Cache），消息文本保持不变；已是阶段错误的透传。
+     * Path resolution consolidation point: Original resolver errors are wrapped as RESOLVE phase errors (owner Module
+     * Resolution/Cache) while preserving the message text; already-wrapped phase errors are passed through.
      */
     private NekoResolvedModule resolveEntryPath(String entryPath) throws IOException {
         return resolveWithStage(null, entryPath, () -> resolver.resolveEntry(entryPath));
@@ -301,7 +301,7 @@ public final class NekoScriptModuleLoaderHost {
         invalidateModules(dependencyGraph.dependencyModules(resolved.id()), true);
     }
 
-    // ---- Native ESM import/export: JS bridge __nekoNativeImport 和 NekoNativeEsmSourceRewriter 生成代码调用 ----
+    // ---- Native ESM import/export: Invoked by JS bridge __nekoNativeImport and code generated by NekoNativeEsmSourceRewriter ----
 
     @CalledByDynamicCode
     public Object nativeImport(String parentPath, String specifier) throws IOException {
@@ -359,7 +359,7 @@ public final class NekoScriptModuleLoaderHost {
         }
     }
 
-    // ======== 以下为私有实现 ========
+    // ======== Private implementation below ========
 
     private void invalidateModules(List<String> moduleIds, boolean removeGraphNodes) {
         reloadCoordinator.invalidateModules(moduleIds, removeGraphNodes);
@@ -454,8 +454,8 @@ public final class NekoScriptModuleLoaderHost {
         }
         if (cached != null) moduleCache.remove(resolved.id());
         ModuleState module = newModuleState(resolved.id(), prepared.cacheKey());
-        // Node 循环 require 语义：执行前先入缓存，循环方拿到的是执行中模块的「部分 exports」；
-        // 若执行后才入缓存，A↔B 互引会无限重入直至 StackOverflowError。失败时移除以免半初始化模块驻留。
+        // Node circular require semantics: Cache before execution, so circular callers get "partial exports" of the module under execution;
+        // If cached after execution, circular references (A↔B) would infinite-loop until a StackOverflowError. Remove upon failure to avoid retaining partially initialized modules.
         moduleCache.put(resolved.id(), module);
         try {
             executeScriptModule(resolved, module, prepared);
@@ -557,7 +557,7 @@ public final class NekoScriptModuleLoaderHost {
         return new int[]{mapped.line, Math.max(1, mapped.column)};
     }
 
-    /** Convert the guest boundary failure into one diagnostic carrying authored location and identity. */
+    /** Turns the failure from the guest into one diagnostic that carries the authored location and identity. */
     private NekoModuleError executionError(NekoResolvedModule resolved, NekoPreparedModule prepared,
                                             RuntimeException failure) {
         return executionError(resolved, prepared, failure, 0);
@@ -828,7 +828,7 @@ public final class NekoScriptModuleLoaderHost {
             }
             if (current instanceof PolyglotException polyglot && polyglot.isHostException()
                     && polyglot.asHostException() instanceof NekoModuleError stagedHost) {
-                // A nested host-thread failure that crossed the guest boundary keeps its stage and
+                // A nested host-thread failure that crossed into the guest keeps its stage and
                 // authored location; re-classifying it would lose the failing child's identity.
                 return stagedHost;
             }
@@ -837,13 +837,13 @@ public final class NekoScriptModuleLoaderHost {
     }
 
     /**
-     * CJS 模块由 script-loader.js 的 {@code new Function} 编译：语法错误的 SourceSection
-     * 指向编译调用点（internal/script-loader.js 内部帧），用户文件内的真实行列丢失。
-     * 用 {@link Context#parse} 以用户文件名重解析同一份代码取回位置，包成
-     * {@link NekoEsmLinkException} 诊断（ScriptError 对该异常渲染 位置 path:line:col 与代码片段）。
-     * 返回 null 表示保持原异常：链上已有 ESM 诊断（嵌套 require 已在内层定位）、
-     * 无语法错误、或重解析取不到位置。位置基于 prepared.code()：纯 JS 与磁盘文件一致；
-     * 经变换的语言（JSX 等）行列对应编译产物。
+     * CJS modules are compiled by script-loader.js's {@code new Function}: The SourceSection for syntax errors
+     * points to the compilation call site (internal/script-loader.js internal frame), losing the true line and column in the user file.
+     * Re-parse the same code with the user filename using {@link Context#parse} to retrieve the position, and wrap it in
+     * {@link NekoEsmLinkException} diagnosis (ScriptError renders the position path:line:col and the code snippet for this exception).
+     * Return null to maintain the original exception: Either an ESM diagnosis already exists in the chain (nested require
+     * located in inner layers), there are no syntax errors, or the position cannot be retrieved from re-parsing. The position
+     * is based on prepared.code(): Pure JS matches the disk file; transformed languages (JSX, etc.) correlate lines/columns to the compilation artifact.
      */
     private IOException withSyntaxLocation(NekoResolvedModule resolved, NekoPreparedModule prepared, RuntimeException failure) {
         if (resolved.special() || hasEsmDiagnostic(failure)) {
@@ -878,7 +878,7 @@ public final class NekoScriptModuleLoaderHost {
         } catch (RuntimeException ignored) {
             return null;
         }
-        // 重解析通过：new Function 体与顶层 script 解析语义差异（如顶层 return），保留原异常
+        // Re-parsing successful: Retain the original exception due to semantic differences between new Function body and top-level script parsing (e.g., top-level return).
         return null;
     }
 
@@ -900,7 +900,7 @@ public final class NekoScriptModuleLoaderHost {
         return null;
     }
 
-    // ======== 以下 ESM/CJS 加载 + 栈映射委托给 EsmModuleLifecycle / 内部逻辑 ========
+    // ======== ESM/CJS loading and stack mapping below, delegated to EsmModuleLifecycle / internal logic ========
 
     private Object loadEsmModule(NekoResolvedModule resolved, NekoPreparedModule prepared) throws IOException {
         try {

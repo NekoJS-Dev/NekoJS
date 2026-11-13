@@ -12,26 +12,29 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 /**
- * 玩家维度切换事件（{@code PlayerEvents.changedDimension}）的 fabric 钩子。
+ * Fabric hook for the player dimension change event ({@code PlayerEvents.changedDimension}).
  *
- * <p><b>26.1.2 方法名修正：{@code ServerPlayer#changeDimension(ServerLevel)} /
- * ({@code ResourceKey}) 已不存在</b>——维度切换统一在
- * {@code ServerPlayer#teleport(TeleportTransition)} 内完成，NeoForge 26.1.2 的
- * {@code PlayerChangedDimensionEvent} 也改在该方法成功路径末尾触发（userdev 补丁实证：
- * {...teleportSpectators...; firePlayerChangedDimensionEvent(this, lastDimension,
- * transition.newLevel().dimension()); return this;}）。fabric 对齐同一点。
+ * <p><b>26.1.2 changed the method name: {@code ServerPlayer#changeDimension(ServerLevel)} /
+ * ({@code ResourceKey}) no longer exists.</b> Dimension changes now all happen inside
+ * {@code ServerPlayer#teleport(TeleportTransition)}, and NeoForge 26.1.2 fires
+ * {@code PlayerChangedDimensionEvent} at the end of that method's success path (checked against
+ * the userdev patch: {...teleportSpectators...; firePlayerChangedDimensionEvent(this,
+ * lastDimension, transition.newLevel().dimension()); return this;}). Fabric hooks the same point.
  *
- * <p>注入点（javap -c minecraft-merged-deobf-26.1.2 实证）：
+ * <p>Injection point (checked with javap -c on minecraft-merged-deobf-26.1.2):
  * <ul>
- *   <li>{@code teleport(TeleportTransition)ServerPlayer}（真实方法，注意同签名的
- *       {@code Entity teleport(...)} 协变桥方法并存，选择器必须带返回类型）。</li>
- *   <li>成功路径 {@code return this}，提前退出 {@code if (isRemoved()) return null}——
- *       TAIL + {@code cir.getReturnValue() != null} 即「成功」判定。</li>
+ *   <li>{@code teleport(TeleportTransition)ServerPlayer} is the real method; a covariant bridge
+ *       {@code Entity teleport(...)} with the same signature exists alongside it, so the selector
+ *       must include the return type.</li>
+ *   <li>The success path is {@code return this}; the early exit is
+ *       {@code if (isRemoved()) return null}. So TAIL plus
+ *       {@code cir.getReturnValue() != null} is the success test.</li>
  * </ul>
- * HEAD 捕获 {@code this.level().dimension()}（进入方法时玩家还在旧维度——偏移 0 处尚未移动）；
- * TAIL 取 {@code this.level().dimension()} 即新维度。与 NeoForge 一致不做 from==to 过滤
- * （teleport(TeleportTransition) 只在维度传送/传送门路径被调用；NeoForge 也不过滤）。
- * defaultRequire=1：方法被重构时硬失败。
+ * HEAD captures {@code this.level().dimension()} (the player is still in the old dimension when the
+ * method starts; nothing has moved at offset 0); TAIL reads {@code this.level().dimension()} as the
+ * new dimension. Like NeoForge, no from==to filtering is done
+ * (teleport(TeleportTransition) is only called from dimension teleport and portal paths, and
+ * NeoForge does not filter either). defaultRequire=1 fails hard if the method is refactored.
  */
 @Mixin(ServerPlayer.class)
 public abstract class ServerPlayerDimensionMixin {

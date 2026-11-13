@@ -47,13 +47,13 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Ticket 08: the real external addon chain — jar discovery through the production
- * seam, contribution via the existing Point/Hook model, frozen-product consumption
- * through both an Extension Handle and the script-visible binding, bootstrap-once
- * survival across an ordinary script reload, and generation-token invalidation.
+ * The real external addon chain: jar discovery through the production path, contribution through
+ * the existing Point/Hook model, reading the frozen product through both an Extension Handle and
+ * the script-visible binding, survival of a bootstrap-once plugin across an ordinary script reload,
+ * and generation-token invalidation.
  *
- * <p>All fixture classes live in a dedicated {@link URLClassLoader} world over the
- * test-only addon jar; nothing here instantiates the addon internally.
+ * <p>All fixture classes live in a dedicated {@link URLClassLoader} over the test-only addon jar;
+ * nothing here instantiates the addon directly.
  */
 class Ticket08ExternalAddonChainTest {
 
@@ -63,7 +63,7 @@ class Ticket08ExternalAddonChainTest {
     }
 
     // =====================================================================================
-    // Discovery: jar/mods-dir shape and fabric.mod.json shape through the production seam
+    // Discovery: jar/mods-dir shape and fabric.mod.json shape through the production path
     // =====================================================================================
 
     @Test
@@ -208,7 +208,7 @@ class Ticket08ExternalAddonChainTest {
     }
 
     // =====================================================================================
-    // Handle read boundaries and accumulator sealing
+    // Handle read limits and accumulator sealing
     // =====================================================================================
 
     @Test
@@ -252,8 +252,8 @@ class Ticket08ExternalAddonChainTest {
                     () -> ExternalAddonFixture.call(accumulator, "add", "late"));
             assertTrue(sealed.getMessage().contains("sealed"),
                     "post-finish collection must be rejected: " + sealed.getMessage());
-            // published result keeps the frozen snapshot: registry freeze, accumulator seal and
-            // result publication are three distinct boundaries
+            // The published result keeps the frozen snapshot: registry freeze, accumulator seal and
+            // result publication are three separate steps
             assertEquals(List.of("primary", "secondary"),
                     ExternalAddonFixture.call(
                             runtime.extensionProduct("exampleaddon:greetings", Object.class), "greetings"));

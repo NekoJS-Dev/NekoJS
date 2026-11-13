@@ -55,7 +55,7 @@ class MutableComponentSpecTest {
             if (!method.getName().startsWith("neko$")) continue;
             assertTrue(method.isDefault(),
                 method.getName() + " should be default (sentinel)");
-            // 调用哨兵 default 体应抛 UnsupportedOperationException（或被反射包裹）
+            // Calling the sentinel default body must throw UnsupportedOperationException (or the reflection wrapper of it)
             Throwable root = null;
             try {
                 invokeDefault(method, instance);
@@ -69,7 +69,7 @@ class MutableComponentSpecTest {
     }
 
     private static void invokeDefault(java.lang.reflect.Method m, Object instance) throws Throwable {
-        // default 方法的反射调用：构造正确的参数数组
+        // Reflective call of a default method: build the argument array with the right types
         Object[] args = new Object[m.getParameterCount()];
         for (int i = 0; i < args.length; i++) {
             Class<?> t = m.getParameterTypes()[i];

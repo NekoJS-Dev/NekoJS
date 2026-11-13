@@ -16,13 +16,15 @@ import java.nio.file.StandardCopyOption;
 import java.util.Objects;
 
 /**
- * 数据/资产生成事件的对象（{@code generateData} / {@code generateAssets}）。
+ * Event object for data and asset generation ({@code generateData} / {@code generateAssets}).
  *
- * <p>脚本通过 {@code event.json(path, obj)} 把 JSON 写入 NekoJS 的磁盘 pack 目录
- * （{@code <gameDir>/nekojs/data} 或 {@code <gameDir>/nekojs/assets}），该目录已由
- * {@code NekoJSPackLoader} 注册为 datapack / resource pack，懒读磁盘保证 reload 时序正确。
+ * <p>Scripts call {@code event.json(path, obj)} to write JSON into NekoJS's on-disk pack directory
+ * ({@code <gameDir>/nekojs/data} or {@code <gameDir>/nekojs/assets}). {@code NekoJSPackLoader}
+ * registers that directory as a datapack or resource pack and reads it lazily from disk, so the
+ * reload timing stays correct.
  *
- * <p>写盘使用 sibling temp + atomic move，避免 reload 中途读到半写的文件。
+ * <p>Writes use a sibling temp file plus an atomic move, so a reload never reads a half-written
+ * file.
  */
 @Doc("Event object for generateData/generateAssets; writes files into NekoJS's disk pack directory.")
 public final class DataGeneratorJS {
@@ -49,12 +51,12 @@ public final class DataGeneratorJS {
     private boolean sealed;
     private Path sealedReadRoot;
 
-    /** 以根目录构造（阶段为空字符串）。 */
+    /** Creates a generator for the given pack root; the stage is an empty string. */
     public DataGeneratorJS(Path root) {
         this(root, "");
     }
 
-    /** 以根目录与阶段名构造。 */
+    /** Creates a generator for the given pack root and stage name. */
     public DataGeneratorJS(Path root, String stage) {
         this.root = Objects.requireNonNull(root, "root");
         this.stage = stage == null ? "" : stage;
@@ -76,36 +78,36 @@ public final class DataGeneratorJS {
         this.sealedReadRoot = publishedRoot;
     }
 
-    /** 当前生成阶段（如 {@code after_mods}）；未指定时为空字符串。 */
+    /** The current generation stage (for example {@code after_mods}); an empty string when none was given. */
     @Doc("Returns the generation stage this event belongs to.")
     @Return("stage name such as 'after_mods', or empty string when unspecified")
     public String getStage() {
         return stage;
     }
 
-    /** 写入 JSON 文件；{@code value} 为 JS 对象（自动序列化）或 JSON 字符串。 */
+    /** Writes a JSON file; {@code value} is a JS object (serialized automatically) or a JSON string. */
     @Doc("Writes a JSON file; the value may be a JS object (auto-serialized) or a JSON string.")
     @Param(name = "path", value = "relative path inside the pack root; must not escape it")
     @Param(name = "value", value = "JS object, JS array, or JSON string")
     public void json(String path, Object value) {
-        // JS null/undefined arrive as Java null; a literal "null" file is never what a script
-        // author wants, so reject at the boundary instead of serializing downstream garbage.
+        // JS null and undefined arrive as Java null. A literal "null" file is never what a script
+        // author wants, so reject here instead of letting the serializer write garbage.
         if (value == null) {
             throw new IllegalArgumentException(
                     "value must not be null or undefined (path: " + path
                             + "); pass a JS object, JS array, or a JSON string");
         }
-        // A String argument is the pre-encoded JSON-string form and is written verbatim;
-        // structural validation stays with the generation batch. All other shapes go through
-        // the shared host-value conversion: on the real engine, script objects arrive as
-        // Map/List host proxies, never as Value (ticket 23 D-B).
+        // A String argument is the pre-encoded JSON-string form and is written verbatim; structural
+        // validation stays with the generation batch. All other shapes go through the shared
+        // host-value conversion: on the real engine, script objects arrive as Map/List host
+        // proxies, never as Value.
         String content = value instanceof String text
                 ? text
                 : JsonObjectAdapter.convertHostValueToJson(value).toString();
         write(path, content);
     }
 
-    /** 写入纯文本文件。 */
+    /** Writes a plain text file. */
     @Doc("Writes plain text to a file.")
     @Param(name = "path", value = "relative path inside the pack root; must not escape it")
     @Param(name = "content", value = "text content to write; must not be null")
@@ -113,7 +115,7 @@ public final class DataGeneratorJS {
         write(path, Objects.requireNonNull(content, "content"));
     }
 
-    /** 写入纯文本文件（{@code text} 的别名）。 */
+    /** Writes a plain text file; an alias of {@code text}. */
     @Doc("Writes plain text to a file; alias of text(path, content).")
     @Param(name = "path", value = "relative path inside the pack root; must not escape it")
     @Param(name = "content", value = "text content to write; must not be null")
@@ -121,7 +123,7 @@ public final class DataGeneratorJS {
         text(path, content);
     }
 
-    /** 读取已生成的 JSON（不存在时返回 null）。 */
+    /** Reads back a generated JSON file; returns null when it does not exist. */
     @Doc("Reads back a previously generated JSON file.")
     @Param(name = "path", value = "relative path inside the pack root")
     @Return("parsed JSON, or null when the file is missing, unreadable, or invalid")
@@ -188,7 +190,10 @@ public final class DataGeneratorJS {
         }
     }
 
-    /** 包内可见：同包的 {@link AssetGeneratorJS} 二进制写盘复用同一包含性校验（不绕过）。 */
+    /**
+     * Package-private: {@link AssetGeneratorJS} in the same package reuses this containment check
+     * for binary writes, so it cannot be bypassed.
+     */
     Path resolve(String path) {
         Path relative = Path.of(path).normalize();
         if (relative.isAbsolute() || relative.startsWith("..")) {

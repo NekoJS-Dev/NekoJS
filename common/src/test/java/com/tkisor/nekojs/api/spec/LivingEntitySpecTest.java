@@ -21,7 +21,8 @@ class LivingEntitySpecTest {
 
     @Test
     void ambiguousMethodsExcludedFromSpec() {
-        // getHealth / setHealth / getMaxHealth / heal / getMainHandItem 因两平台原生同名碰撞而不在 spec 中
+        // getHealth, setHealth, getMaxHealth, heal and getMainHandItem are not in the spec: they collide with
+        // native methods of the same name on both platforms
         assertThrows(NoSuchMethodException.class,
             () -> LivingEntitySpec.class.getMethod("neko$getHealth"));
         assertThrows(NoSuchMethodException.class,

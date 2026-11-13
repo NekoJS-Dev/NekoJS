@@ -65,7 +65,7 @@ public final class ScriptEventRegistry {
         return groups;
     }
 
-    /** 当前全部动态脚本事件定义（快照副本；catalog/probe 只读消费）。 */
+    /** All current dynamic script event definitions, as a copied snapshot for read-only catalog and probe consumers. */
     public static synchronized List<ScriptEventDefinition> definitions() {
         return List.copyOf(DEFINITIONS.values());
     }
@@ -89,7 +89,10 @@ public final class ScriptEventRegistry {
         }
     }
 
-    /** 按 scriptId 前缀清理动态事件监听器（脚本包整体卸载用）。 */
+    /**
+     * Removes the dynamic event listeners whose script id starts with {@code scriptIdPrefix}.
+     * Used when a whole script pack is unloaded.
+     */
     public static synchronized void clearListenersByPrefix(ScriptType type, String scriptIdPrefix) {
         if (scriptIdPrefix == null || scriptIdPrefix.isBlank()) {
             return;
@@ -167,7 +170,10 @@ public final class ScriptEventRegistry {
         definitions.forEach(ScriptEventDefinition::unregister);
     }
 
-    /** 按 sourceScriptId 前缀清理动态事件定义（脚本包整体卸载用）。 */
+    /**
+     * Removes the dynamic event definitions whose sourceScriptId starts with
+     * {@code sourceScriptIdPrefix}. Used when a whole script pack is unloaded.
+     */
     public static synchronized void clearDefinitionsByPrefix(ScriptType targetType, String sourceScriptIdPrefix) {
         if (sourceScriptIdPrefix == null || sourceScriptIdPrefix.isBlank()) {
             return;

@@ -29,13 +29,13 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Predicate;
 
 /**
- * JS 侧事件总线句柄：包装 {@link EventBus} 并实现 {@link ProxyExecutable}，
- * 脚本通过直接调用总线对象（形如 {@code ServerEvents.tickPre(...)}）注册监听器。
+ * JavaScript event bus handle that wraps {@link EventBus} and implements {@link ProxyExecutable}.
+ * Scripts register listeners by directly invoking the bus object (e.g. {@code ServerEvents.tickPre(...)}).
  *
- * <p>监听器以 Graal {@link Value} 透传保存，在 post 事件的线程上执行（通常为游戏主线程）。
- * 每个监听器 token 按注册脚本的 {@link ScriptType} 与 scriptId 记账，供脚本 reload 时
- * 按类型或按脚本反注册。可取消总线的监听器返回 {@code true} 表示取消事件；dispatch
- * 总线按 key 定向分发。
+ * <p>Listeners are stored as Graal {@link Value} instances and executed on the posting thread (typically
+ * the main game thread). Each listener token is tracked by the registering script's {@link ScriptType} and
+ * scriptId for cleanup during script reload. On cancellable buses, returning {@code true} cancels the event.
+ * Dispatch buses route events by key.
  *
  * @author ZZZank
  */
@@ -48,26 +48,26 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
     }
 
     /**
-     * 设置外部可取消性判定，供 {@link #of(Class)} 工厂决定是否默认创建可取消总线。
-     * 传 {@code null} 等价于「一律不可取消」。
+     * Sets the external cancellability predicate used by {@link #of(Class)} to decide whether to create
+     * a cancellable bus by default. Passing {@code null} treats all events as non-cancellable.
      */
     public static void setExternalCancellabilityPredicate(Predicate<Class<?>> predicate) {
         externalCancellabilityPredicate = predicate == null ? c -> false : predicate;
     }
 
-    /** 创建事件总线，可取消性由 {@link #eventCancellability(Class)} 判定。 */
+    /** Creates an event bus whose cancellability is determined by {@link #eventCancellability(Class)}. */
     public static <E, K> EventBusJS<E, K> of(Class<E> eventType) {
         return of(eventType, eventCancellability(eventType));
     }
 
-    /** 创建事件总线，显式指定是否可取消（不支持按 key 分发）。 */
+    /** Creates an event bus with explicit cancellability (non-dispatching). */
     public static <E, K> EventBusJS<E, K> of(Class<E> eventType, boolean cancellable) {
         return of(eventType, cancellable, null);
     }
 
     /**
-     * 创建事件总线，显式指定是否可取消与可选的分发 key 描述。
-     * 提供 {@code dispatchKey} 时返回可按 key 定向分发的总线，post 时须携带 key。
+     * Creates an event bus with explicit cancellability and an optional dispatch key descriptor.
+     * When {@code dispatchKey} is provided, returns a bus that dispatches by key.
      */
     public static <E, K> EventBusJS<E, K> of(
         Class<E> eventType,
@@ -87,7 +87,7 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
         return new EventBusJS<>(bus);
     }
 
-    /** 查询事件类当前的可取消性（未设置外部 predicate 时一律不可取消）。 */
+    /** Checks whether an event class is cancellable (returns false if no external predicate is set). */
     public static boolean eventCancellability(Class<?> c) {
         return externalCancellabilityPredicate.test(c);
     }
@@ -96,10 +96,9 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
     private final ThreadLocal<Boolean> collectionDispatch = new ThreadLocal<>();
     private final ThreadLocal<boolean[]> checkedDispatch = new ThreadLocal<>();
     /**
-     * 按 ScriptType 分桶的 JS 侧监听器镜像。注册（脚本加载线程）与 {@link #hasListeners()}
-     * 迭代（probe 等）可能并发，必须用并发 Map；内层 List 用 CopyOnWriteArrayList
-     * （读多写少，见 {@link #execute}）。此前的非同步 EnumMap 存在并发写丢失 / 迭代
-     * 期间结构修改的问题。
+     * Script listener tokens bucketed by ScriptType. Uses a ConcurrentHashMap and CopyOnWriteArrayList
+     * to safely support concurrent registrations from script loading threads alongside iterations from
+     * probe callers.
      */
     private final Map<ScriptType, List<ScriptEventListenerToken<EVENT>>> tokensByType;
     /**
@@ -113,28 +112,27 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
     private String groupName;
     private String eventName;
 
-    /** 以底层 bus 构建句柄；{@code bus} 不可为 {@code null}。 */
+    /** Constructs a handle wrapping the underlying bus. {@code bus} must not be null. */
     public EventBusJS(EventBus<EVENT> bus) {
         this.bus = Objects.requireNonNull(bus);
         this.tokensByType = new ConcurrentHashMap<>();
     }
 
-    /** 底层总线是否可取消（监听器返回 {@code true} 即取消事件）。 */
+    /** Returns whether the underlying bus is cancellable. */
     public boolean canCancel() {
         return bus instanceof CancellableEventBus<?>;
     }
 
-    /** 底层总线是否支持按 key 定向分发（即 {@link #post(Object, Object)} 可用）。 */
+    /** Returns whether the underlying bus supports key-based dispatching. */
     public boolean canDispatch() {
         return bus instanceof DispatchEventBus<?, ?>;
     }
 
     /**
-     * 是否有至少一个监听器已注册。供 probe 等高开销事件发射器在无监听器时跳过
-     * 事件对象构建与 IR 反射（见 {@code TypeScriptProbeBackend} 的「仅有监听器时构建 IR」策略）。
+     * Returns whether at least one listener is registered. Allows probe and other expensive event
+     * emitters to skip event object construction and reflection when no listeners exist.
      *
-     * <p>{@link #tokensByType} 是 JS 侧注册的镜像；为防绕过 {@link #execute} 的直接 Java 注册
-     * （如测试、bridge 代码）失同步，再兜底检查底层 bus 是否为空。
+     * <p>Checks both the JavaScript token mirror and the underlying bus to account for direct Java listeners.
      */
     public boolean hasListeners() {
         for (List<ScriptEventListenerToken<EVENT>> list : tokensByType.values()) {
@@ -143,40 +141,40 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
         return bus instanceof com.tkisor.nekojs.eventbus.EventBusBase<?, ?> base && !base.isEmpty();
     }
 
-    /** 底层 Java 侧总线，供平台 bridge 直接注册/反注册 Java 监听器（绕过 JS 记账）。 */
+    /** Returns the underlying Java event bus. */
     public EventBus<EVENT> bus() {
         return bus;
     }
 
-    /** 本总线承载的事件类型。 */
+    /** Returns the event class handled by this bus. */
     public Class<EVENT> eventType() {
         return bus.eventType();
     }
 
-    /** 设置组名/事件名元数据；由 {@link EventGroup#add} 在注册时调用，脚本侧不应手动改动。 */
+    /** Sets group and event name metadata. Called during registration; scripts should not call this. */
     public void metadata(String groupName, String eventName) {
         this.groupName = groupName;
         this.eventName = eventName;
     }
 
-    /** 事件组名（如 "PlayerEvents"），由 {@link EventGroup#add} 在注册时设置。 */
+    /** Returns the event group name (e.g. "PlayerEvents"). */
     public String groupName() {
         return groupName;
     }
 
-    /** 事件名（如 "chat"），由 {@link EventGroup#add} 在注册时设置。 */
+    /** Returns the event name (e.g. "chat"). */
     public String eventName() {
         return eventName;
     }
 
-    /** 注册时绑定的 {@link ScriptType}；未绑定前为 {@code null}。仅作不可变守卫，不用于监听器过滤。 */
+    /** Returns the bound {@link ScriptType}, or {@code null} if not yet bound. */
     public ScriptType scriptType() {
         return scriptType;
     }
 
     /**
-     * 绑定 {@link ScriptType}；对已绑定的总线绑定不同值会抛 {@link IllegalStateException}
-     * （同一总线不得跨 ScriptType 复用）。见 {@link #scriptType} 字段注释：该值不参与监听器分桶。
+     * Binds this bus to a {@link ScriptType}. Throws {@link IllegalStateException} if already bound to
+     * a different type.
      */
     public void scriptType(ScriptType scriptType) {
         if (this.scriptType != null && this.scriptType != scriptType) {
@@ -185,7 +183,7 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
         this.scriptType = Objects.requireNonNull(scriptType, "scriptType");
     }
 
-    /** 反注册指定 {@link ScriptType} 下已注册的全部 JS 监听器（脚本 reload 清理用）。 */
+    /** Unregisters all JavaScript listeners for the specified {@link ScriptType}. */
     public void clearTokens(ScriptType type) {
         List<ScriptEventListenerToken<EVENT>> tokens = tokensByType.remove(type);
         if (tokens == null) return;
@@ -194,13 +192,13 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
         }
     }
 
-    /** 反注册指定 {@link ScriptType} 下、由指定 {@code scriptId} 注册的 JS 监听器；{@code scriptId} 为 {@code null} 或空白时不做任何事。 */
+    /** Unregisters the JS listener registered by the specified {@code scriptId} under the given {@link ScriptType}. Does nothing if {@code scriptId} is {@code null} or blank. */
     public void clearTokens(ScriptType type, String scriptId) {
         if (scriptId == null || scriptId.isBlank()) return;
-        // 空桶移除必须与注册（computeIfAbsent + add）对同一 key 原子：ConcurrentHashMap.compute
-        // 持有 bin 锁，computeIfAbsent 同 key 无法插入执行。若像此前那样「removeIf 判空后再
-        // remove(type)」，并发注册可能恰好把新 token 加入正被移除的列表：底层 bus.listen 仍生效
-        // 而镜像丢失该条目，之后 clearTokens(type) 永远无法再反注册它 → 监听器永久泄漏。
+        // Empty bucket removal must be atomic with registration (computeIfAbsent + add) for the same key: ConcurrentHashMap.compute
+        // holds the bin lock, preventing concurrent insertions during computeIfAbsent. If we used the previous approach of 'removeIf(isEmpty) then'
+        // remove(type)', a concurrent registration could add a new token to a list being removed. The underlying bus.listen would still take effect,
+        // but our mirror would lose the entry, making subsequent clearTokens(type) calls unable to unregister it, leading to permanent listener leaks.
         List<ScriptEventListenerToken<EVENT>> removed = new ArrayList<>();
         tokensByType.compute(type, (ignored, tokens) -> {
             if (tokens == null) return null;
@@ -213,22 +211,22 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
                     kept.add(token);
                 }
             }
-            if (removed.isEmpty()) return tokens; // 无匹配：保持原列表不动
-            // 返回 null 即原子移除空桶；非空则换成新的 CopyOnWriteArrayList（保留并发读语义）
+            if (removed.isEmpty()) return tokens; // No match: leave original list unchanged.
+            // Returning null atomically removes the empty bucket; otherwise, replace with a new CopyOnWriteArrayList (preserving concurrent read semantics).
             return kept == null ? null : new CopyOnWriteArrayList<>(kept);
         });
-        // bus.unregister 必须在 compute 之外执行：不得在持有 map bin 锁时产生
-        // 可能重入本 map（或 bus）的副作用
+        // bus.unregister must be performed outside of compute: must not trigger side effects
+        // that could re-enter this map (or bus) while holding the map bin lock.
         for (ScriptEventListenerToken<EVENT> token : removed) {
             bus.unregister(token.token());
         }
     }
 
     /**
-     * 按 scriptId 前缀反注册监听器：清理所有 id 以 {@code scriptIdPrefix} 开头的脚本注册的
-     * JS 监听器。用于脚本包（尤其 WORLD 包）整体卸载——包内脚本 id 统一携带
-     * {@code packs/<id>/} / {@code worldpacks/<id>/} 前缀（见 ScriptPack#idPathPrefix）。
-     * 并发约束与 {@link #clearTokens(ScriptType, String)} 相同（compute 原子分桶）。
+     * Unregisters listeners by scriptId prefix: clears all JS listeners registered by scripts whose id starts
+     * with {@code scriptIdPrefix}. Used for bulk unloading of script packs (especially WORLD packs)—
+     * pack script IDs carry a {@code packs/<id>/} or {@code worldpacks/<id>/} prefix (see ScriptPack#idPathPrefix).
+     * Concurrent constraints are the same as {@link #clearTokens(ScriptType, String)} (compute atomic bucketing).
      */
     public void clearTokensByPrefix(ScriptType type, String scriptIdPrefix) {
         if (scriptIdPrefix == null || scriptIdPrefix.isBlank()) return;
@@ -305,11 +303,11 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
         }
     }
 
-    // bus 的运行时类型由 of() 工厂按 dispatchKey 决定，canDispatch() 已保证是 DispatchEventBus；
-    // 此处只是擦除层面的泛型收窄
+    // The runtime type of the bus is determined by the of() factory based on dispatchKey; canDispatch()
+    // ensures it is a DispatchEventBus. This is just generic narrowing via erasure.
     /**
-     * 按 key 向 dispatch 总线投递事件；总线不支持定向分发时抛 {@link IllegalStateException}。
-     * 返回事件是否被取消；监听器异常同 {@link #post(Object)} 被捕获记录。
+     * Posts an event to the dispatch bus using a key. Throws {@link IllegalStateException} if the bus
+     * does not support directional dispatch. Returns whether the event was cancelled. Listener exceptions
      */
     @SuppressWarnings("unchecked")
     public boolean post(EVENT event, KEY key) {
@@ -329,7 +327,7 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
         throw new IllegalStateException("This bus is not dispatchable");
     }
 
-    /** 已注册监听的定向 key 集合；非 dispatch 总线返回空集。 */
+    /** Returns the set of registered keys. Returns an empty set for non-dispatch buses. */
     @SuppressWarnings("unchecked")
     public Set<KEY> registeredKeys() {
         if (canDispatch()) {
@@ -339,23 +337,24 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
     }
 
     /**
-     * {@link ProxyExecutable} 入口：脚本直接调用总线对象即注册监听器，注册成功返回 {@code true}。
-     * 支持的调用形态：
+     * {@link ProxyExecutable} entry point: scripts register listeners by directly invoking the bus object.
+     * Returns {@code true} if registration succeeds. Supported call shapes:
      * <ul>
-     *   <li>{@code bus(listener)} —— 普通监听，NORMAL 优先级</li>
-     *   <li>{@code bus(priority, listener)} —— 首参为优先级名
-     *       （HIGHEST/HIGH/NORMAL/LOW/LOWEST，大小写不敏感）</li>
-     *   <li>{@code bus(key, listener)} / {@code bus(priority, key, listener)} ——
-     *       dispatch 总线按 key 定向注册</li>
+     *   <li>{@code bus(listener)} — Standard listener, NORMAL priority</li>
+     *   <li>{@code bus(priority, listener)} — First argument is the priority name
+     *       (HIGHEST/HIGH/NORMAL/LOW/LOWEST, case-insensitive)</li>
+     *   <li>{@code bus(key, listener)} / {@code bus(priority, key, listener)} —
+     *       Directional registration by key for dispatch buses</li>
      * </ul>
-     * 可取消总线的监听器返回 {@code true} 表示取消事件；参数形态非法（缺 listener 等）抛
-     * {@link IllegalArgumentException}。监听器随所属脚本 reload 自动反注册。
+     * For cancellable buses, the listener returns {@code true} to cancel the event. Throws
+     * {@link IllegalArgumentException} for invalid arguments (e.g., missing listener). Listeners are
      *
-     * <p>candidate generation（工单 06）：注册来源 Context 属于构建中的候选环境时，
-     * 注册<strong>不</strong>立即挂上底层 bus（生产路由 commit 前不可见），而是作为
-     * {@link PendingListener} 交给所属 {@code ScriptManager} 收集；候选全部阶段通过后
-     * 在 commit 点统一 {@link PendingListener#activate()}。候选失败时挂起注册随候选
-     * generation 一并丢弃，active 监听器不受影响。
+     * <p>Candidate generation: when the registration context is a candidate environment still
+     * being built, the registration is <strong>not</strong> applied to the underlying bus right
+     * away, so it stays invisible until commit. The {@code ScriptManager} collects it as a
+     * {@link PendingListener} instead. Once all candidate stages pass, it is applied at the commit
+     * point through {@link PendingListener#activate()}. If candidate generation fails, the pending
+     * registrations are discarded and the listeners that are already active stay unaffected.
      */
     @Override
     public Object execute(Value... args) {
@@ -405,7 +404,7 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
         String scriptId = ScriptContextRegistry.currentScriptIdOf(listener.getContext());
         PendingListener pending = new PendingListener(this, priority, listener, key, type, scriptId);
         if (ScriptManager.collectPendingListener(listener.getContext(), pending)) {
-            // candidate generation：挂起注册，commit 时激活（见类注释）
+            // Candidate generation: suspend registration, activate on commit (see class comment)
             return true;
         }
         pending.activate();
@@ -451,13 +450,13 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
     }
 
     /**
-     * 一次脚本监听器注册的完整描述：candidate phase 由 {@code ScriptManager} 收集，
-     * commit 点统一 {@link #activate()}。挂起状态不触碰底层 bus 与 type 分桶 mirror，
-     * 因此 candidate 监听器对生产路由完全不可见（{@link #hasListeners()} 为 false）。
+     * A complete description of a script listener registration: collected by {@code ScriptManager} during
+     * the candidate phase, then activated at the commit point via {@link #activate()}. Pending registrations
+     * do not touch the underlying bus or type-bucketing mirror, making candidate listeners completely invisible
      *
-     * <p>审查 A1：commit 点必须不可失败——{@link #activate()} 期间会抛的工作
-     * （dispatch key 的 {@code Value.as(keyType)} 转换）经 {@link #prepareForActivation()}
-     * 前移到候选阶段完成，候选期失败因此走候选丢弃路径而不是留下半激活 generation。
+     * <p>Review A1: The commit point must not fail—tasks that might throw during {@link #activate()} (e.g.,
+     * {@code Value.as(keyType)} conversion for a dispatch key) are moved to the candidate phase completion
+     * via {@link #prepareForActivation()}. If the candidate phase fails, it follows the candidate discard path
      */
     public static final class PendingListener {
         private final EventBusJS<?, ?> owner;
@@ -467,9 +466,9 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
         private final ScriptType type;
         private final String scriptId;
 
-        /** {@link #prepareForActivation()} 解析出的可直接挂载 key（未预备时为 null）。 */
+        /** Key parsed by {@link #prepareForActivation()} that can be mounted directly (null if not prepared). */
         private Object resolvedKey;
-        /** 是否已预备：true 时 {@link #activate()} 不再做任何 Value → Java key 转换。 */
+        /** Whether prepared: when true, {@link #activate()} performs no further Value → Java key conversion. */
         private boolean prepared;
         /** The token is retained so a failed commit can remove a partially activated listener. */
         private EventListenerToken<?> activatedToken;
@@ -484,21 +483,23 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
             this.scriptId = scriptId;
         }
 
-        /** 所属总线（候选收集派发按总线筛出本候选的挂起注册，票 39）。 */
+        /** Associated bus. The candidate collector uses it to pick the pending registrations that belong
+         * to this bus. */
         public EventBusJS<?, ?> owner() {
             return owner;
         }
 
-        /** 注册优先级（候选收集派发按 priority 稳定排序，与 EventBusBase 编译快照同序）。 */
+        /** Registration priority (candidate collector sorts stably by priority, following the EventBusBase compilation snapshot order). */
         public byte priority() {
             return priority;
         }
 
         /**
-         * 候选收集派发（票 39 DOMAIN_PLAN 阶段）：在当前线程（owner thread）直接执行
-         * 监听器回调——与生产分发同款 scriptId 切换 + 回调深度标记，但异常<b>向上传播</b>
-         * （调用方让候选失败或记进领域计划），不走「错误记录不失败」的生产语义。
-         * 不触碰底层 bus 与 mirror（挂起注册保持未激活）。
+         * Runs the listener for candidate collection. The listener callback runs directly on the
+         * owner thread, with the same scriptId switch and callback depth marking as production
+         * dispatch, but exceptions <b>propagate upwards</b>, so the candidate fails or the error is
+         * recorded in the domain plan. This bypasses the production rule of "log the error and keep
+         * going". The underlying bus is not touched; the listener is only called.
          */
         public void executeForCollection(Object event) {
             Context context = listener.getContext();
@@ -512,47 +513,47 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
             }
         }
 
-        /** 注册来源的 {@link ScriptType}（dispatch mirror 分桶键）。 */
+        /** {@link ScriptType} of the registration source (dispatch mirror bucketing key). */
         public ScriptType type() {
             return type;
         }
 
-        /** 注册来源脚本 id（mirror 记账与按脚本清理用；也是候选期失败结果的 source 归因键）。 */
+        /** Registration source script id (used for mirror bookkeeping and script-based cleanup; also the source attribution key for candidate failure results). */
         public String scriptId() {
             return scriptId;
         }
 
-        /** 注册目标总线（候选域收集器按总线筛选本域挂起监听器用，票 16）。 */
+        /** The bus this listener registers on. Pending listeners are filtered per bus when they are collected. */
         public EventBusJS<?, ?> ownerBus() {
             return owner;
         }
 
-        /** 监听器 guest 函数（候选域收集器在候选期执行收集回调用，票 16；同 owner thread）。 */
+        /** The listener guest function. Collection callbacks run it on the owner thread. */
         public Value listenerValue() {
             return listener;
         }
 
         /**
-         * 候选期预备：把 commit 点会抛的工作（dispatch key → Java key 的转换）前移。
+         * Candidate phase preparation: Moves work that might throw at the commit point (dispatch key → Java key conversion) forward.
          *
-         * <p>必须在 commit 之前、且<strong>不在 JS 调用帧内</strong>调用（本仓库由
-         * {@code ScriptManager} 的候选 EVENT_PLAN 阶段调用）：转换失败时异常直接冒泡到
-         * 事务式 reload 的候选失败路径，不会被 {@code ScriptExecutor.executeEntry} 的
-         * 「脚本级错误不失败 reload」语义吞掉。幂等；非候选注册路径不调用，保持
-         * {@link #activate()} 内的原位转换（行为不变）。
+         * <p>Must be called before commit and <strong>not within a JS call frame</strong> (in this repository, called by the
+         * {@code ScriptManager} during the candidate EVENT_PLAN phase): exceptions during conversion bubble directly to the
+         * transactional reload's candidate failure path, bypassing the "script-level error does not fail reload" semantics
+         * of {@code ScriptExecutor.executeEntry}. Idempotent; not called on non-candidate registration paths to maintain
+         * in-place conversion within {@link #activate()} (behavior unchanged).
          */
         public void prepareForActivation() {
             owner.preparePending(this);
         }
 
         /**
-         * 激活：构建分发闭包、挂上底层 bus 并记入 type 分桶 mirror。
-         * 只在 commit 点（或非候选注册路径）调用；重复 activate 会造成双重注册。
+         * Activation: Builds the dispatch closure, attaches to the underlying bus, and records it in the type-bucketing mirror.
+         * Called only at the commit point (or on non-candidate registration paths); repeated activate calls will cause double registration.
          *
-         * <p>已预备（{@link #prepareForActivation()}）的挂起注册在此<strong>不会</strong>
-         * 抛：key 转换已在候选期完成，剩余操作只有 {@code bus.listen(...)}（CopyOnWriteArrayList
-         * 添加 + 编译快照失效）与 mirror 的 {@code ConcurrentHashMap.compute}，二者均无
-         * 条件性抛出路径。
+         * <p>Pending registrations already prepared via {@link #prepareForActivation()} will <strong>not</strong>
+         * throw here: key conversion is already completed in the candidate phase, and the remaining operations are only
+         * {@code bus.listen(...)} (CopyOnWriteArrayList addition + compilation snapshot invalidation) and the mirror's
+         * {@code ConcurrentHashMap.compute}, both of which have no conditional throwing paths.
          */
         public void activate() {
             owner.activatePending(this);
@@ -661,8 +662,8 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
     }
 
     /**
-     * 候选期预备（见 {@link PendingListener#prepareForActivation()}）：只解析 dispatch key，
-     * 不触碰底层 bus 与 mirror（候选监听器在 commit 前对生产路由仍完全不可见）。
+     * Candidate phase preparation (see {@link PendingListener#prepareForActivation()}): only parses the dispatch key,
+     * does not touch the underlying bus or mirror (candidate listeners remain completely invisible to the production route before commit).
      */
     @SuppressWarnings({"unchecked", "rawtypes"})
     private void preparePending(PendingListener pending) {
@@ -670,7 +671,7 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
         Object resolved = null;
         if (canDispatch() && pending.key != null) {
             var dispatchBus = (DispatchEventBus<EVENT, KEY>) this.bus;
-            // 非法/不可转换的 key 在此抛出（候选期）：ClassCastException / 转换失败
+            // Invalid/unconvertible keys throw here (candidate phase): ClassCastException / conversion failure.
             resolved = pending.key.as(dispatchBus.dispatchKey().keyType());
         }
         pending.resolvedKey = resolved;
@@ -688,8 +689,8 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
         try {
             if (dispatch) {
                 var dispatchBus = (DispatchEventBus<EVENT, KEY>) this.bus;
-                // 已预备：用候选期解析好的 key（commit 点不可再抛，审查 A1）；未预备（非候选注册
-                // 路径）：保持原位转换，行为与改造前一致。
+                // Already prepared: use the key parsed during the candidate phase (cannot throw at commit point, Review A1);
+                // if not prepared (non-candidate registration path): keep in-place conversion, behavior identical to before refactoring.
                 KEY dispatchKey = pending.prepared
                         ? (KEY) pending.resolvedKey
                         : (pending.key == null ? null : pending.key.as(dispatchBus.dispatchKey().keyType()));
@@ -708,7 +709,7 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
                 token = self.register(priority, listener);
             }
             EventListenerToken<EVENT> activated = token;
-            // 注册整体放在 compute 内，避免清理与镜像添加之间产生孤儿 token。
+            // The entire registration is placed within compute to avoid orphan tokens between cleanup and mirror addition.
             this.tokensByType.compute(pending.type, (ignored, tokens) -> {
                 List<ScriptEventListenerToken<EVENT>> list =
                         tokens == null ? new CopyOnWriteArrayList<>() : tokens;
@@ -779,12 +780,12 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
                 return;
             }
             try {
-                // 票 07 线程契约：生产分发的序列化不再走 Context 私有 monitor（旧路线已删，
-                // 见 register() 尾注）——分发只发生在 owner thread（SERVER=tick、CLIENT=render、
-                // 网络 receiver 先 hop 再分发），与 owner 上的 lifecycle 天然同线程串行；
-                // 跨线程并发进入由 Graal 单线程约束兜底（探针：concurrent eval 被拒绝）。
-                // 回调执行体做回调深度标记：期间同线程的 lifecycle 请求被调度门明确拒绝
-                // （不递归、不同步等待自身）。
+                // Dispatch happens only on the owner thread (SERVER = tick, CLIENT = render; a network
+                // receiver hands the event over first, then dispatches), so dispatch and lifecycle changes
+                // on that thread are serialized naturally. Cross-thread concurrency is covered by Graal's
+                // single-thread rule: a concurrent eval is rejected. Listener callbacks record their
+                // nesting depth, and a lifecycle request on the same thread is rejected outright - no
+                // recursion, no waiting on the current thread.
                 String previousScriptId = ScriptContextRegistry.switchCurrentScriptId(context, scriptId);
                 ScriptManager.noteCallbackEnter();
                 try {
@@ -796,8 +797,8 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
             } catch (Throwable e) {
                 if (e instanceof InterruptedException) Thread.currentThread().interrupt();
                 if (e instanceof Error) throw (Error) e;
-                // 语句上限关闭 Context 的 kill 在稳态下只能从回调路径发现（入口早已执行完）：
-                // 上报所属 ScriptManager，使其在下次取用时自动重建环境，而不是静默死亡
+                // When a Context is closed by a statement limit, the kill can only be discovered from the callback path
+                // (as the entry point has already finished): report to the ScriptManager so it can automatically rebuild
                 ScriptManager.reportContextKilled(context, e);
                 propagateCollectionFailure(e);
                 recordListenerError(context, type, scriptId, "normal", null, event, e);
@@ -813,12 +814,12 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
 
         return bus.listen(priority, event -> {
             if (skipDeadContext(context)) {
-                // Context 已被 Graal 关闭（语句上限等）：跳过分发，避免每次事件在死环境上报错刷屏
+                // Context already closed by Graal (e.g., statement limit): skip dispatch to avoid repetitive error logs on a dead environment.
                 return false;
             }
             try {
-                // 票 07 线程契约：同 register()——owner-thread 分发 + 回调深度标记，
-                // Context 私有 monitor 旧路线已删（见 register() 尾注）。
+                // Threading rules are the same as in register(): dispatch on the owner thread, plus
+                // callback depth marking.
                 String previousScriptId = ScriptContextRegistry.switchCurrentScriptId(context, scriptId);
                 ScriptManager.noteCallbackEnter();
                 try {
@@ -835,7 +836,7 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
                 propagateCollectionFailure(e);
                 recordListenerError(context, type, scriptId, "cancellable", null, event, e);
             }
-            return false; // 出错时默认不取消事件
+            return false; // Default: do not cancel event on error
         });
     }
 
@@ -850,12 +851,12 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
                 priority,
                 event -> {
                     if (skipDeadContext(context)) {
-                        // Context 已被 Graal 关闭（语句上限等）：跳过分发，避免每次事件在死环境上报错刷屏
+                        // Context already closed by Graal (e.g., statement limit): skip dispatch to avoid repetitive error logs on a dead environment.
                         return;
                     }
                     try {
-                        // 票 07 线程契约：同 register()——owner-thread 分发 + 回调深度标记，
-                        // Context 私有 monitor 旧路线已删（见 register() 尾注）。
+                        // Threading rules are the same as in register(): dispatch on the owner thread, plus
+                        // callback depth marking.
                         String previousScriptId = ScriptContextRegistry.switchCurrentScriptId(context, scriptId);
                         ScriptManager.noteCallbackEnter();
                         try {
@@ -888,12 +889,12 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
                 priority,
                 event -> {
                     if (skipDeadContext(context)) {
-                        // Context 已被 Graal 关闭（语句上限等）：跳过分发，避免每次事件在死环境上报错刷屏
+                        // Context already closed by Graal (e.g., statement limit): skip dispatch to avoid repetitive error logs on a dead environment.
                         return false;
                     }
                     try {
-                        // 票 07 线程契约：同 register()——owner-thread 分发 + 回调深度标记，
-                        // Context 私有 monitor 旧路线已删（见 register() 尾注）。
+                        // Threading rules are the same as in register(): dispatch on the owner thread, plus
+                        // callback depth marking.
                         String previousScriptId = ScriptContextRegistry.switchCurrentScriptId(context, scriptId);
                         ScriptManager.noteCallbackEnter();
                         try {
@@ -912,7 +913,7 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
                         propagateCollectionFailure(e);
                         recordListenerError(context, type, scriptId, "dispatchCancellable", key, event, e);
                     }
-                    return false; // 出错时默认不取消事件
+                    return false; // Default: do not cancel event on error
                 }
         );
     }

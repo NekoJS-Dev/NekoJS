@@ -13,11 +13,11 @@ import java.util.function.Consumer;
 import java.util.function.ToIntFunction;
 
 /**
- * Mutable property view handed to {@code BlockEvents.modification} callbacks
- * (ticket 39 起：纯声明缓冲——收集期只记录待写属性，live Block/BlockState 由
- * commit 点的平台 Adapter 应用，见 {@code ModificationDomainOwner})。
+ * Mutable property view handed to {@code BlockEvents.modification} callbacks.
+ * During collection this view only buffers pending property overrides; {@code ModificationDomainOwner}
+ * applies them to live {@link Block} and {@link BlockState} instances at commit time.
  *
- * <h2>JS API（property 写与显式 setter 经 {@link ModificationViewSurface} 同一 setter）</h2>
+ * <h2>JS API (property writes and explicit setters share the same setter via {@link ModificationViewSurface})</h2>
  * <pre>
  * BlockEvents.modification(event {@code ->} {
  *   event.modify('minecraft:stone', block {@code ->} {
@@ -63,10 +63,10 @@ import java.util.function.ToIntFunction;
  */
 public class BlockModificationJS implements graal.graalvm.polyglot.proxy.ProxyObject {
 
-    /** 脚本面成员目录/值装配引擎（putMember 与显式 setter 同一 Method seam，AC8）。 */
+    /** Dispatches script property accesses and method calls to the same Java accessors. */
     private final ModificationViewSurface surface = ModificationViewSurface.of(this);
 
-    // ---- ProxyObject：property 写与显式 setter 分发到同一 Java setter ----
+    // ---- ProxyObject: property writes and explicit setters share the same Java setter ----
 
     @Override
     public Object getMember(String name) {
@@ -93,18 +93,18 @@ public class BlockModificationJS implements graal.graalvm.polyglot.proxy.ProxyOb
         return surface.removeMember(name);
     }
 
-    // BlockBehaviour$Properties（声明源）：六个属性字段
+    // BlockBehaviour$Properties (declared source): six property fields
     private static final Field PROPS_DESTROY_TIME = field(BlockBehaviour.Properties.class, "destroyTime");
     private static final Field PROPS_EXPLOSION_RESISTANCE = field(BlockBehaviour.Properties.class, "explosionResistance");
     private static final Field PROPS_LIGHT_EMISSION = field(BlockBehaviour.Properties.class, "lightEmission");
     private static final Field PROPS_REQUIRES_TOOL = field(BlockBehaviour.Properties.class, "requiresCorrectToolForDrops");
     private static final Field PROPS_FRICTION = field(BlockBehaviour.Properties.class, "friction");
     private static final Field PROPS_JUMP_FACTOR = field(BlockBehaviour.Properties.class, "jumpFactor");
-    // BlockBehaviour（Block 实例）：构造时从 Properties 拷出的只读副本，公开 getter 的实际数据源
+    // BlockBehaviour (Block instance): final copies read by public Block getters
     private static final Field BLOCK_EXPLOSION_RESISTANCE = field(BlockBehaviour.class, "explosionResistance");
     private static final Field BLOCK_FRICTION = field(BlockBehaviour.class, "friction");
     private static final Field BLOCK_JUMP_FACTOR = field(BlockBehaviour.class, "jumpFactor");
-    // BlockStateBase（每个 BlockState）：构造时从 Properties 拷出的只读副本，state 公开 getter 的实际数据源
+    // BlockStateBase (each BlockState): final copies read by public BlockState getters
     private static final Field STATE_DESTROY_SPEED = field(BlockBehaviour.BlockStateBase.class, "destroySpeed");
     private static final Field STATE_LIGHT_EMISSION = field(BlockBehaviour.BlockStateBase.class, "lightEmission");
     private static final Field STATE_REQUIRES_TOOL = field(BlockBehaviour.BlockStateBase.class, "requiresCorrectToolForDrops");
@@ -145,7 +145,7 @@ public class BlockModificationJS implements graal.graalvm.polyglot.proxy.ProxyOb
      */
     @Doc("Current blast resistance of the block.")
     @Return("the current resistance: the pending change if set, otherwise the block's live value")
-    // NeoForge 标记了带爆炸上下文的重载（更灵敏），读“当前值”无需上下文，保守保留无参版
+    // NeoForge deprecates the no-arg getter in favor of the explosion-context overload; reading the base value needs no context.
     @SuppressWarnings("deprecation")
     public float getResistance() {
         return resistance != null ? resistance : block.getExplosionResistance();
@@ -163,7 +163,7 @@ public class BlockModificationJS implements graal.graalvm.polyglot.proxy.ProxyOb
      */
     @Doc("Current light emission of the block (0..15).")
     @Return("the current light level: the pending change if set, otherwise the block's live value")
-    // NeoForge 标记了带 (BlockGetter, BlockPos) 的重载，读“当前值”无需光照上下文，保守保留无参版
+    // NeoForge deprecates the no-arg getter in favor of the (BlockGetter, BlockPos) overload; reading the base value needs no level context.
     @SuppressWarnings("deprecation")
     public int getLightLevel() {
         return lightLevel != null ? lightLevel : block.defaultBlockState().getLightEmission();
@@ -224,9 +224,9 @@ public class BlockModificationJS implements graal.graalvm.polyglot.proxy.ProxyOb
     }
 
     /**
-     * 本视图的规范化声明值（ticket 39 候选计划载体）：只含被显式设置的属性。
-     * 取值范围校验由 {@code ModificationDomainOwner} 在联合预检（STATE_PLAN）完成
-     *（{@link #applyTo(Block)} 内的 validate 保留为 Adapter 应用期的第二道防线）。
+     * Returns the normalized map of properties explicitly set on this view.
+     * {@code ModificationDomainOwner} validates value ranges during {@code STATE_PLAN} preflight,
+     * and {@link #applyTo(Block)} repeats {@link #validate()} before mutating the block.
      */
     java.util.Map<String, Object> normalizedProperties() {
         java.util.Map<String, Object> properties = new java.util.LinkedHashMap<>();
@@ -273,8 +273,9 @@ public class BlockModificationJS implements graal.graalvm.polyglot.proxy.ProxyOb
     }
 
     /**
-     * 校验取值范围：hardness/resistance {@code >= 0}、lightLevel {@code 0..15}、
-     * friction {@code 0..1}。不合法值在应用期（而非赋值期）抛出，与物品版一致。
+     * Validates property ranges: hardness and resistance {@code >= 0}, lightLevel {@code 0..15},
+     * and friction {@code 0..1}. Invalid values fail at preflight/apply time rather than on setter
+     * assignment, matching {@link ItemModificationJS}.
      */
     private void validate() {
         if (hardness != null && hardness < 0) {
@@ -292,8 +293,9 @@ public class BlockModificationJS implements graal.graalvm.polyglot.proxy.ProxyOb
     }
 
     /**
-     * 六个属性的原始值快照（restore 路径依据）。光照保存原始
-     * {@code ToIntFunction<BlockState>}（个别方块按 state 給不同光照），其余为标量。
+     * Snapshot of a block's original six properties used when restoring baselines. Light emission
+     * keeps the original {@code ToIntFunction<BlockState>} because some blocks vary light by state;
+     * the remaining fields are scalars.
      */
     record PropertySnapshot(
             float destroyTime,
@@ -314,7 +316,7 @@ public class BlockModificationJS implements graal.graalvm.polyglot.proxy.ProxyOb
                     getFloat(PROPS_JUMP_FACTOR, props));
         }
 
-        /** 把快照值完整写回 Properties 副本、Block 副本与全部 BlockState 副本。 */
+        /** Writes all snapshot values back to {@code Properties}, the {@link Block}, and every {@link BlockState}. */
         void applyTo(Block block) {
             BlockBehaviour.Properties props = block.properties();
             setFloat(PROPS_DESTROY_TIME, props, destroyTime);
@@ -332,7 +334,7 @@ public class BlockModificationJS implements graal.graalvm.polyglot.proxy.ProxyOb
         }
     }
 
-    // ---- 反射读写（26.x 字段名在 26.1.2 与 26.2.0 已核对一致；改名时 field() 会显式失败）----
+    // ---- Reflection helpers (field names match across 26.1.2 and 26.2.0; field() fails fast if mappings change) ----
 
     private static Field field(Class<?> type, String name) {
         try {
@@ -370,7 +372,7 @@ public class BlockModificationJS implements graal.graalvm.polyglot.proxy.ProxyOb
         }
     }
 
-    /** 用常量光照函数覆盖 Properties.lightEmission（与 vanilla {@code lightLevel(int)} 同构）。 */
+    /** Replaces {@code Properties.lightEmission} with a constant light function, matching vanilla {@code lightLevel(int)}. */
     private static void setLightFunction(BlockBehaviour.Properties props, int level) {
         setLightFunctionRaw(props, state -> level);
     }

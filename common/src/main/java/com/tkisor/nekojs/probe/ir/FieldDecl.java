@@ -4,13 +4,14 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * 字段声明 IR（mutable）。涵盖普通字段、静态常量、枚举常量（{@code isEnumConstant}）。
+ * Field declaration IR (mutable). Covers regular fields, static constants and enum constants
+ * ({@code isEnumConstant}).
  */
 public final class FieldDecl {
     /** Distinguishes reflected fields from authored synthetic properties during backend projection. */
     java.lang.reflect.Field sourceField;
     public String name;
-    public String renameTo;        // null = 用 name
+    public String renameTo;        // null = use name
     public TypeSlot type;
     public boolean isStatic;
     public boolean isFinal;
@@ -23,7 +24,7 @@ public final class FieldDecl {
         this.type = type;
     }
 
-    /** 渲染时使用的名字（renameTo 优先）。 */
+    /** The name used when rendering (renameTo takes precedence). */
     public String effectiveName() {
         return renameTo != null ? renameTo : name;
     }

@@ -28,7 +28,7 @@ import java.util.Set;
 public final class NekoNativeEsmSourceRewriter {
     private final NekoModuleResolver resolver;
     private final NekoEsmVirtualModuleRegistry virtualModules;
-    /** 传递依赖准备缓存（W3 显式注入，语义同 {@link NekoEsmLinker}）。 */
+    /** Preparation cache shared with transitive dependencies; the caller injects it, as in {@link NekoEsmLinker}. */
     private final NekoModulePipelineCache preparationCache;
     private final SourceMapRegistry sourceMaps;
     private final java.util.Map<String, Set<String>> apiExports = new java.util.LinkedHashMap<>();
@@ -287,9 +287,10 @@ public final class NekoNativeEsmSourceRewriter {
     }
 
     /**
-     * 带命名导出的特殊模块合成源：{@code import { jsx, Fragment } from 'nekojs/jsx-runtime'}
-     * 这类编译器注入的命名导入需要静态 export 名（GraalJS 的 ESM 在 parse 期解析导出名），
-     * 默认的 syntheticObjectModuleUri 只提供 default/namespace。
+     * Synthesizes a special module source that also has named exports. Compiler-injected named
+     * imports such as {@code import { jsx, Fragment } from 'nekojs/jsx-runtime'} need static export
+     * names because GraalJS resolves them at parse time, while syntheticObjectModuleUri only
+     * provides default and namespace.
      */
     public java.net.URI syntheticNamedModuleUri(String specifier, String... exportNames) {
         StringBuilder source = new StringBuilder();

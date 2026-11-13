@@ -7,7 +7,7 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-/** 错误面板只读契约：fullDetails 快照与被动刷新标志必须原样穿过 wire。 */
+/** The error panel is read-only: the fullDetails snapshot and the passive-refresh flag must cross the wire unchanged. */
 class ShowErrorListPacketReadOnlyContractTest {
 
     @Test

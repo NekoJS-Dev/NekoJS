@@ -4,7 +4,7 @@ import lombok.Getter;
 import net.minecraft.server.MinecraftServer;
 
 /**
- * 服务端 tick 事件的中立 payload（tickPre / tickPost 共用；成员 {@code event.server}）。
+ * Loader-neutral payload for server tick events (shared by tickPre / tickPost; the member is {@code event.server}).
  */
 public class ServerTickEventJS {
 

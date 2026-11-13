@@ -15,12 +15,12 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Ticket 42 generation semantics for JSX UI roots, tested at the Minecraft-free seam:
- * {@link UiRootLifecycle} for the epoch state machine and {@link GenerationGlobals} for the
- * per-generation root registry. The real-client smoke flows (reload success/failure, old
- * Screen close, stale event invalidation, active UI retention) map one-to-one onto the
- * scenarios below; running them against a live client requires the registered Minecraft
- * smoke environment and is not exercised here.
+ * Generation semantics for JSX UI roots, tested without Minecraft: {@link UiRootLifecycle} for the
+ * epoch state machine and {@link GenerationGlobals} for the per-generation root registry. The
+ * real-client smoke flows (reload success and failure, closing the old Screen, stale event
+ * invalidation, keeping the active UI) map one-to-one onto the scenarios below. Running them
+ * against a live client needs the registered Minecraft smoke environment, so this class does not
+ * run them.
  */
 class Ticket42UiGenerationLifecycleTest {
 

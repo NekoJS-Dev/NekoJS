@@ -9,30 +9,33 @@ import net.minecraft.world.level.Explosion;
 import net.minecraft.world.phys.Vec3;
 
 /**
- * 爆炸事件（{@code LevelEvents.explosionStart} / {@code explosionDetonate}，及
- * {@code beforeExplosion} / {@code afterExplosion} 历史别名）的**加载器中立**载荷。
+ * Loader-neutral payload for explosion events ({@code LevelEvents.explosionStart} /
+ * {@code explosionDetonate}, plus the aliases {@code beforeExplosion} / {@code afterExplosion}).
  *
- * <p>成员名对齐 NeoForge 26.x {@code ExplosionEvent}：{@code event.level} /
- * {@code event.explosion}（NeoForge 的 {@code getLevel()} / {@code getExplosion()}，
- * 其中 {@link Explosion} 是 26.x 原版**接口**，加载器无关）。便利 getter
- * {@code center/radius/sourceEntity/player/indirectSourceEntity} 直接读
- * {@code explosion} 的公共接口成员（{@code center()}/{@code radius()}/
- * {@code getDirectSourceEntity()}/{@code getIndirectSourceEntity()}）。
+ * <p>The member names follow NeoForge 26.x {@code ExplosionEvent}: {@code event.level} /
+ * {@code event.explosion} (NeoForge's {@code getLevel()} / {@code getExplosion()}, where
+ * {@link Explosion} is a 26.x vanilla <b>interface</b> and therefore loader-independent). The
+ * convenience getters {@code center/radius/sourceEntity/player/indirectSourceEntity} read the
+ * public interface members of {@code explosion} directly ({@code center()} /
+ * {@code radius()} / {@code getDirectSourceEntity()} / {@code getIndirectSourceEntity()}).
  *
- * <p>可取消：仅 {@code explosionStart} 可取消（NeoForge {@code ExplosionEvent.Start}
- * 语义——取消则整场爆炸不结算；fabric 侧由 {@code MixinServerExplosion} 在
- * {@code ServerExplosion#explode()} 入口拦截）。{@code explosionDetonate} 通知型。
+ * <p>Cancellable: only {@code explosionStart} can be cancelled (the NeoForge
+ * {@code ExplosionEvent.Start} semantics: cancelled, the whole explosion is not applied;
+ * fabric intercepts it at the {@code ServerExplosion#explode()} entry in
+ * {@code MixinServerExplosion}). {@code explosionDetonate} is notification only.
  *
- * <p>fabric 实现说明：{@code MixinServerExplosion} 在 {@code ServerLevel#explode}
- * 构造的 {@code ServerExplosion#explode()} 前后投递，仅服务端（26.x 客户端爆炸逻辑
- * 走 {@code ClientLevel#explode} 的独立实现与 {@code ClientboundExplodePacket}，
- * 不经本类）。
+ * <p>fabric implementation: {@code MixinServerExplosion} posts before and after the
+ * {@code ServerExplosion#explode()} that {@code ServerLevel#explode} constructs, and only on
+ * the server (in 26.x the client explosion logic uses the separate
+ * {@code ClientLevel#explode} implementation and {@code ClientboundExplodePacket}, which do
+ * not go through this class).
  *
- * <p>**刻意不含 affectedBlocks / affectedEntities**：NeoForge 26.x 的
- * {@code ExplosionEvent.Detonate} 暴露 getAffectedBlocks()/getAffectedEntities()，
- * 但 26.x 原版 {@code ServerExplosion} 不保存这两份列表（javap 实证：只有
- * {@code explode()} 返回受影响方块数、getHitPlayers()、isSmall()，爆炸位置列表
- * 只在方法栈上临时计算）——中立载荷找不到数据源，不硬造。
+ * <p><b>Deliberately no affectedBlocks / affectedEntities</b>: NeoForge 26.x
+ * {@code ExplosionEvent.Detonate} exposes getAffectedBlocks()/getAffectedEntities(), but the
+ * 26.x vanilla {@code ServerExplosion} does not keep either list (javap-verified:
+ * it only has the affected block count returned by {@code explode()}, getHitPlayers() and
+ * isSmall(), and the explosion positions are computed temporarily on the method stack), so the
+ * payload has no data source and does not invent one.
  */
 @Doc("Fired around an explosion (LevelEvents.explosionStart / explosionDetonate).")
 @Getter

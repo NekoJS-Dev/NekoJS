@@ -9,30 +9,30 @@ import com.tkisor.nekojs.core.module.esm.NekoEsmLinkException;
 import com.tkisor.nekojs.core.fs.ScriptPathProvider;
 
 /**
- * 语言模块管线的阶段错误：Preparation / Resolution-Cache / Execution 三个逻辑 Module
- * 与 Pack Trust 授权门在各自 seam 抛出的可区分错误。
+ * Phase errors for the language module pipeline: Preparation, Resolution-Cache, and Execution logical modules
+ * and the distinguishable errors thrown by the Pack Trust gate.
  *
- * <p>票据 11（语言模块管线）要求准备失败、resolve/link 失败、缓存失败和执行失败可区分
- * owner 与阶段，且错误不延迟成无来源的 Graal 异常。本类型是该区分的载体：
+ * <p>Preparation, resolve/link, cache, and execution failures must each name their owner and stage, and must
+ * not degrade into a source-less Graal exception. This type carries that distinction:
  * <ul>
- *   <li>{@link Stage#PREPARE}：{@code Script Preparation}（含 {@code Pack Trust} 授权拒绝，
- *       见 {@link #OWNER_PACK_TRUST}）；</li>
- *   <li>{@link Stage#RESOLVE}：{@code Module Resolution/Cache} 的路径解析失败；</li>
- *   <li>{@link Stage#LINK}：ESM link 失败统一为本类型，原始
- *      {@link com.tkisor.nekojs.core.module.esm.NekoEsmLinkException} 保留为 cause；</li>
- *   <li>{@link Stage#CACHE}：prepared 缓存自身的源码快照/读写失败；</li>
- *   <li>{@link Stage#EXECUTE}：{@code Script Execution Environment} 侧的宿主装载失败，
- *       包括 guest 运行时异常（原异常保留为 cause）。</li>
+ *   <li>{@link Stage#PREPARE}: {@code Script Preparation} (including a {@code Pack Trust} authorization rejection,
+ *       see {@link #OWNER_PACK_TRUST});</li>
+ *   <li>{@link Stage#RESOLVE}: path resolution failure for {@code Module Resolution/Cache};</li>
+ *   <li>{@link Stage#LINK}: ESM link failures are reported as this type, with the original
+ *      {@link com.tkisor.nekojs.core.module.esm.NekoEsmLinkException} kept as the cause;</li>
+ *   <li>{@link Stage#CACHE}: source snapshot read/write failure for the prepared cache;</li>
+ *   <li>{@link Stage#EXECUTE}: host loading failure in the {@code Script Execution Environment},
+ *       including guest runtime exceptions (original exception kept as the cause).</li>
  * </ul>
  *
- * <p>继承 {@link IOException} 以保持既有调用者（{@code throws IOException}）的兼容性；
- * {@link #getMessage()} 保持原始消息文本（既有 {@code contains/startsWith} 断言不受影响），
- * 阶段归因经 {@link #stage()} / {@link #owner()} / {@link #detail()} 观察。
+ * <p>Extends {@link IOException} so existing callers ({@code throws IOException}) keep working.
+ * {@link #getMessage()} keeps the original message text (existing {@code contains}/{@code startsWith} assertions are unaffected);
+ * the stage attribution is available through {@link #stage()}, {@link #owner()}, and {@link #detail()}.
  */
 public class NekoModuleError extends IOException {
     private static final long serialVersionUID = 1L;
 
-    /** 失败阶段。 */
+    /** The stage where the failure occurred. */
     public enum Stage {
         PREPARE,
         RESOLVE,
@@ -41,13 +41,13 @@ public class NekoModuleError extends IOException {
         EXECUTE
     }
 
-    /** Preparation 的 owner 名（规格 06 逻辑 Module 名）。 */
+    /** Logical module name for Preparation errors. */
     public static final String OWNER_PREPARATION = "Script Preparation";
-    /** Resolution/Cache 的 owner 名（规格 06 逻辑 Module 名）。 */
+    /** Logical module name for Resolution and Cache errors. */
     public static final String OWNER_RESOLUTION_CACHE = "Module Resolution/Cache";
-    /** Execution Environment 的 owner 名（规格 06 逻辑 Module 名）。 */
+    /** Logical module name for Execution Environment errors. */
     public static final String OWNER_EXECUTION = "Script Execution Environment";
-    /** Pack Trust 授权门的 owner 名：拒绝发生在准备门禁处，阶段仍记为 PREPARE。 */
+    /** Owner name for Pack Trust authorization errors (failures occur at the preparation gate, but stage remains PREPARE). */
     public static final String OWNER_PACK_TRUST = "Pack Trust";
 
     private final Stage stage;
@@ -77,7 +77,7 @@ public class NekoModuleError extends IOException {
         this(stage, owner, sourcePath, moduleId, message, null);
     }
 
-    /** 准备失败（编译/转译/语言插件错误，原始位置保留在 cause 链与消息中）。 */
+    /** Preparation failure (compilation, translation, or language plugin error; original location is in the cause chain). */
     public static NekoModuleError prepare(String sourcePath, String languageId,
                                           com.tkisor.nekojs.core.compiler.NekoModuleMode mode,
                                           String message, Throwable cause) {
@@ -87,8 +87,9 @@ public class NekoModuleError extends IOException {
     }
 
     /**
-     * 准备失败（带 authored 行列）：语言前端已知精确位置时发布为可观察字段，
-     * 不再只留在格式化消息里。行列为 {@code -1} 表示未知。
+     * Preparation failure including authored location (line/column).
+     * When the language frontend knows the precise location, it is exposed as a field
+     * rather than just inside the message. -1 indicates an unknown location.
      */
     public static NekoModuleError prepare(String sourcePath, String languageId,
                                           com.tkisor.nekojs.core.compiler.NekoModuleMode mode,
@@ -98,7 +99,7 @@ public class NekoModuleError extends IOException {
                 sourceLine, sourceColumn, detail + " [language=" + languageId + ", mode=" + mode + "]", cause);
     }
 
-    /** 授权拒绝：远端未显式授权或凭证与文件不匹配，语言边界仍可见（携带 language/mode）。 */
+    /** Authorization rejected: file not explicitly authorized or credential mismatch; visible at the language boundary. */
     public static NekoModuleError denied(String sourcePath, String languageId,
                                          com.tkisor.nekojs.core.compiler.NekoModuleMode mode,
                                          NekoTrustApprovedSource approval, String reason) {
@@ -109,19 +110,19 @@ public class NekoModuleError extends IOException {
                         + ", language=" + languageId + ", mode=" + mode + "]");
     }
 
-    /** 路径解析失败（包装 resolver 的原始错误，消息文本保持不变）。 */
+    /** Path resolution failure (wraps the original resolver error; message remains unchanged). */
     public static NekoModuleError resolve(String parentPath, String specifier, IOException cause) {
         String message = cause == null ? "Cannot resolve module: " + specifier : cause.getMessage();
         return new NekoModuleError(Stage.RESOLVE, OWNER_RESOLUTION_CACHE, parentPath, specifier,
                 message, cause);
     }
 
-    /** 缓存自身失败（源码快照读取等；管线抛出的 PREPARE 错误原样透传，不重标为 CACHE）。 */
+    /** Cache failure (e.g., source snapshot read); preparation errors from the pipeline pass through, they are not re-marked as CACHE. */
     public static NekoModuleError cache(String sourcePath, String message, Throwable cause) {
         return new NekoModuleError(Stage.CACHE, OWNER_RESOLUTION_CACHE, sourcePath, null, message, cause);
     }
 
-    /** 执行环境宿主失败（executor/factory 不可用、模块装载宿主错误；guest 异常不经此包装）。 */
+    /** Execution host failure (executor or factory unavailable, module load host error; guest exceptions are not wrapped). */
     public static NekoModuleError execute(String moduleId, String message, Throwable cause) {
         return new NekoModuleError(Stage.EXECUTE, OWNER_EXECUTION, null, moduleId, message, cause);
     }
@@ -150,12 +151,12 @@ public class NekoModuleError extends IOException {
         return owner;
     }
 
-    /** 失败关联的源码位置（prepare/cache 为文件路径；resolve 为父模块路径；execute 为 null）。 */
+    /** Source location of the failure (file path for prepare/cache; parent module path for resolve; null for execute). */
     public String sourcePath() {
         return sourcePath;
     }
 
-    /** 失败关联的模块身份（resolve 为 specifier；execute 为模块 id；其余为 null）。 */
+    /** Module identity for the failure (specifier for resolve; module ID for execute; otherwise null). */
     public String moduleId() {
         return moduleId;
     }
@@ -170,7 +171,7 @@ public class NekoModuleError extends IOException {
         return sourceColumn;
     }
 
-    /** 含阶段/owner/位置/身份的完整归因行（日志与 Closure 证据用；getMessage 保持原始文本）。 */
+    /** Full attribution line including stage, owner, location, and identity for logging; {@link #getMessage()} retains the original text. */
     public String detail() {
         StringBuilder detail = new StringBuilder("[").append(stage).append('/').append(owner).append("] ");
         detail.append(getMessage());

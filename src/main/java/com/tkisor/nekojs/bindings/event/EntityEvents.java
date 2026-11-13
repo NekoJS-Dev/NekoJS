@@ -19,14 +19,18 @@ import net.neoforged.neoforge.event.tick.EntityTickEvent;
 
 import java.util.function.Function;
 
-/** 实体/生物事件组（server 脚本）：伤害、死亡、掉落、tick、进出维度与使用物品等，按实体类型或物品定向。 */
+/**
+ * Entity and mob event group (server scripts): damage, death, drops, tick, changing dimension and
+ * item use, targeted by entity type or by item.
+ */
 public interface EntityEvents {
     EventGroup GROUP = EventGroup.of("EntityEvents");
 
-    // damagePre：LivingDamageEvent.Pre 不实现 ICancellableEvent（21.1.227/26.1.2.71/
-    // 26.2.0.57 一致），predicate 走默认会把总线冻成不可取消——脚本 return true 静默
-    // no-op（ticket 24 D4）。显式建可取消总线，取消由 FORGE_BRIDGE 映射为 setNewDamage(0)
-    //（伤害归零，原生伤害链仍走完：damagePost 仍以 0 伤害触发）。
+    // damagePre: LivingDamageEvent.Pre does not implement ICancellableEvent (the same in 21.1.227,
+    // 26.1.2.71 and 26.2.0.57). The default predicate path would freeze the bus as
+    // non-cancellable, so a script returning true would silently do nothing. This bus is created
+    // cancellable explicitly, and FORGE_BRIDGE maps a cancellation to setNewDamage(0): damage drops
+    // to 0 while the native damage chain still runs, so damagePost still fires with 0 damage.
     EventBusJS<LivingDamageEvent.Pre, EntityType<?>> DAMAGE_PRE =
             GROUP.add("damagePre", ScriptType.SERVER, EventBusJS.of(
                     LivingDamageEvent.Pre.class, true, dispatchByEntity(LivingDamageEvent::getEntity)));
@@ -69,14 +73,15 @@ public interface EntityEvents {
     }
 
     EventBusForgeBridge FORGE_BRIDGE = EventBusForgeBridge.create(NeoForge.EVENT_BUS)
-            // 取消 = setNewDamage(0)：原生 Pre 无 ICancellableEvent 取消面，伤害归零即取消
+            // Cancelling means setNewDamage(0): the native Pre event has no cancellation, so zeroing the damage is the cancel.
             .bindCancellable(DAMAGE_PRE, event -> event.setNewDamage(0))
             .bind(DAMAGE_POST)
             .bind(DEATH)
             .bind(DROPS)
             .bind(FINALIZE_SPAWN)
-            // EntityTick/EntityJoinLevel/LeaveLevel 双逻辑侧触发：SERVER 总线只投递服务端实例
-            // （客户端实体 tick/join 在 Render 线程，进入 SERVER Context 会被拒绝）
+            // EntityTick, EntityJoinLevel and LeaveLevel fire on both logical sides: the SERVER bus delivers
+            // only server instances (client entity tick and join run on the Render thread, and entering
+            // the SERVER Context there is rejected).
             .bind(TICK_Pre, e -> !e.getEntity().level().isClientSide())
             .bind(TICK_Post, e -> !e.getEntity().level().isClientSide())
             .bind(JOIN_LEVEL, e -> !e.getEntity().level().isClientSide())

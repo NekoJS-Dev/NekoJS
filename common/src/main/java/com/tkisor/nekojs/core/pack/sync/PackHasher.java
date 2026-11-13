@@ -15,23 +15,28 @@ import java.util.List;
 import java.util.stream.Stream;
 
 /**
- * 包哈希（SHA-256）：{@code manifest.json 原始字节 + 0x00} 之后按相对路径排序追加
- * {@code 相对路径 + 0x00 + 文件字节 + 0x00}。服务端gather与客户端落盘重扫使用同一实现，
- * 作为 bundle 完整性自检（写盘后从盘重读重算必须与预期一致）。
+ * Pack hash (SHA-256): the raw {@code manifest.json} bytes and a 0x00, then every file in
+ * relative-path order as {@code relative path + 0x00 + file bytes + 0x00}. The server gathering a
+ * pack and the client rescanning what it wrote to disk use the same implementation, so the hash
+ * works as a bundle integrity self-check: after writing, read the files back from disk, recompute,
+ * and the result must match the expected hash.
  *
- * <p>参与哈希的内容目录：四个脚本目录 + {@code assets/} + {@code data/}
- * （包形态约定）。{@code .neko_pack.state.json} 等状态文件
- * 不参与——它们不属于分发内容。
+ * <p>Content directories included in the hash: the four script directories plus {@code assets/} and
+ * {@code data/}, as the pack layout defines. State files such as {@code .neko_pack.state.json} are
+ * excluded because they are not distributed content.
  */
 public final class PackHasher {
 
-    /** 包内容目录（哈希与 bundle 分发范围）。 */
+    /** Pack content directories (hash and bundle distribution scope). */
     public static final List<String> CONTENT_DIRS = List.of(
         "startup_scripts", "server_scripts", "client_scripts", "test_scripts", "assets", "data");
 
     private PackHasher() {}
 
-    /** 计算磁盘包目录的哈希：manifest 字节 + 内容文件。目录缺 manifest 时抛出。 */
+    /**
+     * Computes the hash of a pack directory on disk: manifest bytes plus the content files. Throws when
+     * the directory has no manifest.
+     */
     public static String hashPackDir(Path packDir) {
         return hash(readManifestBytes(packDir), readContentFiles(packDir));
     }
@@ -48,7 +53,10 @@ public final class PackHasher {
         }
     }
 
-    /** 读取包目录下全部内容文件（相对路径以 {@code /} 分隔、按路径排序）。 */
+    /**
+     * Reads every content file under a pack directory. Relative paths use {@code /} and are sorted by
+     * path.
+     */
     public static List<PackContentFile> readContentFiles(Path packDir) {
         List<PackContentFile> files = new ArrayList<>();
         for (String dir : CONTENT_DIRS) {
@@ -73,7 +81,7 @@ public final class PackHasher {
         return files;
     }
 
-    /** 哈希：manifest 字节 + 按路径排序的文件流，元素间以 0x00 分隔。 */
+    /** Hash: the manifest bytes then the files in path order, with 0x00 between elements. */
     public static String hash(byte[] manifestBytes, List<PackContentFile> files) {
         MessageDigest digest = sha256();
         digest.update(manifestBytes);

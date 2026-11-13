@@ -25,10 +25,10 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Ticket 30 reload-boundary guard: the frozen diagnostic record of an error keeps the
- * generation it was recorded under. Old active error history must never be re-attributed to a
- * new candidate generation, and candidate errors must stay staged (never masquerading as the
- * active generation's errors) until the commit point publishes them.
+ * The frozen diagnostic record of an error keeps the generation it was recorded under. Error
+ * history of the old active generation is never re-attributed to a new candidate generation, and
+ * candidate errors stay staged, never masquerading as the active generation's errors, until the
+ * commit point publishes them.
  */
 class ScriptDiagnosticGenerationTest {
 

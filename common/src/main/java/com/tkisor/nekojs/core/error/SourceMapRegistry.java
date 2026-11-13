@@ -21,7 +21,7 @@ public final class SourceMapRegistry implements NekoSourceMapView {
     private static final String VLQ_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
     private static final int MAPPING_ENTRY_WIDTH = 5;
     private final Map<String, NormalizedSourceMap> mappings = new ConcurrentHashMap<>();
-    /** Cache key of the prepared module that registered each source map (ticket 30). */
+    /** Cache key of the prepared module that registered each source map. */
     private final Map<String, String> revisions = new ConcurrentHashMap<>();
     private final Path root;
     private final boolean caseInsensitive;
@@ -56,9 +56,9 @@ public final class SourceMapRegistry implements NekoSourceMapView {
     }
 
     /**
-     * Register a source map together with the cache key of the prepared module that produced
-     * it (ticket 30): mapped diagnostics can then retain which prepared revision the position
-     * was mapped through. A null/blank revision registers the map without revision info.
+     * Registers a source map together with the cache key of the prepared module that produced it, so
+     * mapped diagnostics can keep which prepared revision the position was mapped through. A
+     * null or blank revision registers the map without revision info.
      */
     public void register(String scriptPath, String sourceMapJson, int prependedLineCount, String cacheKey) {
         if (scriptPath == null) return;
@@ -122,11 +122,12 @@ public final class SourceMapRegistry implements NekoSourceMapView {
     }
 
     /**
-     * 仅清空指定 {@link ScriptType} 的 source map：脚本根目录遵循 {@code <name>_scripts}
-     * 命名约定，keys 均为 root-relative 路径（如 {@code server_scripts/foo.ts}），
-     * 按该前缀过滤即可。与 runtime-owned prepared 缓存的分区清理
-     * （见 {@code NekoModulePipelineCache#clear(ScriptType)}）配套，
-     * 避免单机单类型 reload 误清其它类型的 Python/TS 映射。
+     * Clears only the source maps of the given {@link ScriptType}. Script roots follow the
+     * {@code <name>_scripts} naming convention and keys are root-relative paths such as
+     * {@code server_scripts/foo.ts}, so filtering by that prefix is enough. This pairs with the
+     * partitioned clear of the runtime-owned prepared cache (see
+     * {@code NekoModulePipelineCache#clear(ScriptType)}): a single-type reload on a singleplayer
+     * server must not wipe the Python or TS mappings of other types.
      */
     public void clearByScriptType(ScriptType type) {
         if (type == null) return;
@@ -151,7 +152,7 @@ public final class SourceMapRegistry implements NekoSourceMapView {
         });
     }
 
-    /** Cache key of the prepared module that registered the map for this generated path (ticket 30). */
+    /** Cache key of the prepared module that registered the map for this generated path. */
     @Override
     public String mappedCacheRevision(String scriptPath) {
         if (scriptPath == null || revisions.isEmpty()) return null;

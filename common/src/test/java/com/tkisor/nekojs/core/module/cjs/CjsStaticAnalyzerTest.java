@@ -9,8 +9,8 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * {@link CjsStaticAnalyzer} 单测：CJS 静态分析（字面量依赖提取、导出形状、__esModule、
- * 影子 require、字符串/注释/正则干扰）。
+ * Tests {@link CjsStaticAnalyzer} static analysis of CJS: literal dependency extraction, export
+ * shape, __esModule, shadowed require, and noise from strings, comments and regular expressions.
  */
 class CjsStaticAnalyzerTest {
 
@@ -77,7 +77,7 @@ class CjsStaticAnalyzerTest {
     void detectsEsmInteropMarker() {
         assertTrue(CjsStaticAnalyzer.analyze("exports.__esModule = true;").hasEsmInteropMarker());
         assertTrue(CjsStaticAnalyzer.analyze("module.exports.__esModule = true;").hasEsmInteropMarker());
-        // 普通成员赋值不算互操作标记
+        // A plain member assignment is not an interop marker.
         assertFalse(CjsStaticAnalyzer.analyze("exports.__esModule = 42;").hasEsmInteropMarker());
     }
 

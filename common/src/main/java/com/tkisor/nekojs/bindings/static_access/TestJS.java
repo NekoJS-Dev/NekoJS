@@ -9,14 +9,15 @@ import graal.graalvm.polyglot.Value;
 import java.util.Objects;
 
 /**
- * TEST 脚本类型的轻量断言工具：通过即计数并打日志，失败抛 {@link AssertionError}。
+ * Small assertion helper for TEST scripts: a passing assertion is counted and logged, a failing
+ * one throws {@link AssertionError}.
  */
 @Doc("Tiny assertion harness for test scripts; failures throw AssertionError.")
 public final class TestJS {
     private int passed;
     private int failed;
 
-    /** 记录一条通过的断言并打日志。 */
+    /** Records a passed assertion and logs it. */
     @Doc("Records a passed assertion and logs it.")
     @Param(name = "message", value = "optional label shown in the log; null/blank renders as empty")
     @Return("this, for chaining")
@@ -26,7 +27,7 @@ public final class TestJS {
         return this;
     }
 
-    /** 记录失败并抛出 {@link AssertionError}。 */
+    /** Records a failure and throws {@link AssertionError}. */
     @Doc("Records a failure and throws an AssertionError; never returns normally.")
     @Param(name = "message", value = "failure message; a default text is used when null/blank")
     public TestJS fail(String message) {
@@ -34,7 +35,7 @@ public final class TestJS {
         throw new AssertionError(message == null || message.isBlank() ? "Test assertion failed" : message);
     }
 
-    /** 断言为真，失败时抛错。 */
+    /** Asserts that the condition is true; throws when it is not. */
     @Doc("Asserts that the condition is true; throws on failure.")
     @Param(name = "condition", value = "condition expected to be true")
     @Param(name = "message", value = "label used in the pass log and the failure error")
@@ -43,7 +44,7 @@ public final class TestJS {
         return condition ? pass(message) : fail(message);
     }
 
-    /** 断言为假，失败时抛错。 */
+    /** Asserts that the condition is false; throws when it is not. */
     @Doc("Asserts that the condition is false; throws on failure.")
     @Param(name = "condition", value = "condition expected to be false")
     @Param(name = "message", value = "label used in the pass log and the failure error")
@@ -52,7 +53,7 @@ public final class TestJS {
         return assertTrue(!condition, message);
     }
 
-    /** 断言两值相等（{@link Objects#equals} 语义）。 */
+    /** Asserts that two values are equal ({@link Objects#equals} semantics). */
     @Doc("Asserts that expected and actual are equal (Objects.equals semantics).")
     @Param(name = "expected", value = "expected value")
     @Param(name = "actual", value = "actual value")
@@ -65,7 +66,7 @@ public final class TestJS {
         return fail(formatMessage(message, "Expected " + expected + " but got " + actual));
     }
 
-    /** 断言非 null。 */
+    /** Asserts that the value is not null. */
     @Doc("Asserts that the value is not null; throws on failure.")
     @Param(name = "value", value = "value expected to be non-null")
     @Param(name = "message", value = "label used in the pass log and the failure error")
@@ -74,7 +75,7 @@ public final class TestJS {
         return assertTrue(value != null, message);
     }
 
-    /** 断言给定 JS 函数执行时抛出异常。 */
+    /** Asserts that the given JS function throws when executed. */
     @Doc("Runs the given JS function and asserts that it throws.")
     @Param(name = "callback", value = "JS function expected to throw when executed with no arguments")
     @Param(name = "message", value = "optional label prepended to the failure error")
@@ -92,7 +93,7 @@ public final class TestJS {
         return fail(formatMessage(message, "Expected function to throw"));
     }
 
-    /** 打一条 SECTION 日志用于分组。 */
+    /** Logs a SECTION line, used to group the assertions that follow. */
     @Doc("Logs a section header to group the assertions that follow.")
     @Param(name = "name", value = "section name shown in the log")
     @Return("this, for chaining")
@@ -101,7 +102,7 @@ public final class TestJS {
         return this;
     }
 
-    /** 打一条通过/失败计数的汇总日志。 */
+    /** Logs a summary line with the passed and failed counts. */
     @Doc("Logs the current passed/failed counts as a summary.")
     @Return("this, for chaining")
     public TestJS summary() {
@@ -109,14 +110,14 @@ public final class TestJS {
         return this;
     }
 
-    /** 已通过的断言数。 */
+    /** Number of assertions that have passed. */
     @Doc("Number of assertions passed so far.")
     @Return("count of passed assertions")
     public int passed() {
         return passed;
     }
 
-    /** 已失败的断言数。 */
+    /** Number of assertions that have failed. */
     @Doc("Number of assertions failed so far.")
     @Return("count of failed assertions")
     public int failed() {

@@ -1,5 +1,5 @@
-// 26.x 实现，本文件不应再出现版本守卫。1.21.1 的实现是 versions/1.21.1/src 下的同名文件，
-// 改本文件行为时须同步它。
+// 26.x implementation; no version guard should appear in this file again. The 1.21.1 implementation is the
+// file of the same name under versions/1.21.1/src, so changing this file's behavior means updating it too.
 //? if neoforge {
 package com.tkisor.nekojs.wrapper.fluid;
 
@@ -36,19 +36,20 @@ import java.util.regex.Pattern;
 public final class FluidResolver {
     private FluidResolver() {}
 
-    /** 26.x 的 DefaultedRegistry 没有 asLookup()；从 vanilla RegistryAccess 取 lookup。 */
+    /** The 26.x DefaultedRegistry has no asLookup(); the lookup comes from the vanilla RegistryAccess. */
     private static final HolderLookup.RegistryLookup<Fluid> FLUID_LOOKUP =
         RegistryAccess.fromRegistryOfRegistries(BuiltInRegistries.REGISTRY).lookupOrThrow(Registries.FLUID);
 
     /**
-     * 脚本提供的 regex 源串 → 预编译 Pattern 缓存。{@code /regex/} 语法与 {@code {regex: ...}}
-     * 的模式串来自脚本（非编译期常量，无法 hoist 成 static final）；Pattern 不可变且线程安全，
-     * 按源串去重可在重复解析同一批配方时省去逐次编译。规模以脚本中不同 regex 数为上界。
-     * 非法 regex 抛 PatternSyntaxException，不缓存（与原行为一致）。
+     * Script-supplied regex source -> precompiled Pattern cache. The {@code /regex/} syntax and the {@code {regex: ...}}
+     * pattern string come from scripts (not compile-time constants, so they cannot be hoisted into a static final);
+     * a Pattern is immutable and thread-safe, so deduplicating by source string skips recompiling when the same
+     * batch of recipes is parsed repeatedly. The size is bounded by the number of distinct regexes in the scripts.
+     * An invalid regex throws PatternSyntaxException and is not cached.
      */
     private static final Map<String, Pattern> REGEX_CACHE = new ConcurrentHashMap<>();
 
-    /** {@code replaceFirst("^#", "")} 的常量模式：parseFluidInput 每次调用都要编译一次。 */
+    /** Constant pattern for {@code replaceFirst("^#", "")}: parseFluidInput would otherwise compile it on every call. */
     private static final Pattern LEADING_HASH = Pattern.compile("^#");
 
     private static Pattern compiledRegex(String regex) {
@@ -60,7 +61,7 @@ public final class FluidResolver {
         return cached;
     }
 
-    // ===================== FluidStack（具体 stack，无 tag/通配/命名空间/正则）=====================
+    // ===================== FluidStack (a concrete stack: no tag/wildcard/namespace/regex) =====================
 
     public static FluidStack stackFromString(String raw) {
         String s = normalizeRaw(raw);
@@ -80,7 +81,7 @@ public final class FluidResolver {
 
     public static FluidStack stackFromFluid(Fluid fluid, int amount) {
         if (fluid == Fluids.EMPTY || amount <= 0) return FluidStack.EMPTY;
-        // builtInRegistryHolder 已废弃：从注册表 wrap 等价 holder
+        // builtInRegistryHolder is deprecated: wrap an equivalent holder from the registry
         return new FluidStack(BuiltInRegistries.FLUID.wrapAsHolder(fluid), amount);
     }
 
@@ -256,7 +257,7 @@ public final class FluidResolver {
         return new SizedFluidIngredient(ingredient, amount);
     }
 
-    // ===================== 旧 combine（FluidIngredientJS 仍在用，保持兼容）=====================
+    // ===================== Legacy combine (FluidIngredientJS still uses it; kept compatible) =====================
 
     public static FluidIngredient combine(List<FluidIngredient> alternatives) {
         List<FluidIngredient> present = alternatives.stream().filter(i -> i != null).toList();
@@ -278,7 +279,7 @@ public final class FluidResolver {
         return FluidIngredient.of(set.toArray(Fluid[]::new));
     }
 
-    // ===================== 内部 helper =====================
+    // ===================== Internal helpers =====================
 
     private static FluidIngredient ingredientOfHolders(HolderSet<Fluid> holders) {
         Fluid[] fluids = holders.stream().map(Holder::value).toArray(Fluid[]::new);
@@ -360,10 +361,11 @@ public final class FluidResolver {
     }
 
     /**
-     * 26.x 的 FluidIngredient 抽象类暴露的匹配栈枚举方法名（{@code getMatchingStacks}）。
-     * 若 API 实际命名不同由编译错误驱动调整（保留此处以便定位）。
+     * Name of the matching-stack enumeration method the 26.x FluidIngredient abstract class exposes
+     * ({@code getMatchingStacks}). If the API is actually named differently, a compile error drives the fix; the
+     * name stays here so it is easy to locate.
      */
-    @SuppressWarnings("unchecked") // 反射调用的返回类型无法静态校验，调用方按 FluidStack 语义使用
+    @SuppressWarnings("unchecked") // A reflective call's return type cannot be checked statically; the caller treats it as FluidStack semantics
     private static List<FluidStack> matchingStacks(FluidIngredient fi) {
         try {
             return (List<FluidStack>) FluidIngredient.class.getMethod("getMatchingStacks").invoke(fi);

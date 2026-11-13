@@ -4,37 +4,40 @@ import com.tkisor.nekojs.api.NekoJSPlugin;
 import com.tkisor.nekojs.probe.ProbeBackendRegistry;
 
 /**
- * 内置扩展点 {@code nekojs:probe_backends}（ADR-0001 自包含 Point 文件）。
+ * Built-in extension point {@code nekojs:probe_backends}.
  *
- * <p>累积器即 {@link ProbeBackendRegistry} 本身（registry-as-accumulator 形态）；
- * finisher 负责装配收尾：{@code lock()}（冲突 fail-fast + 密封）与全局单例注入——
- * 完整 reload 的二次 bootstrap 会整体替换单例而非崩溃。merge 策略声明为
- * {@link MergePolicy#failFast}（同一 {@code (languageId, name)} 在 lock 时报冲突，
- * 与 registry 内建语义一致）。
+ * <p>The accumulator is the {@link ProbeBackendRegistry} itself. The finisher assembles the
+ * result: it calls {@code lock()}, which fails fast on conflicts and seals the registry, then
+ * installs the global singleton. A second bootstrap during a full reload replaces that
+ * singleton instead of crashing. The merge policy is {@link MergePolicy#failFast}: two entries
+ * with the same {@code (languageId, name)} conflict at lock time, which matches the registry's
+ * own rule.
  */
 public final class ProbeBackendsPoint {
 
-    /** 扩展点 id（observable 契约）。 */
+    /** Extension point id. */
     public static final String ID = "nekojs:probe_backends";
 
     private ProbeBackendsPoint() {
     }
 
-    /** 显式声明形态（与直接覆写 NekoJSPlugin 对应钩子等价收集）：插件被 {@code nekojs:probe_backends} 扩展点收集。 */
+    /** Explicit declaration form: the plugin is collected by the {@code nekojs:probe_backends} extension point, the
+     * same result as overriding the matching NekoJSPlugin hook directly. */
     public interface Contributor extends NekoJSPlugin {
 
         /**
-         * 注册 probe backend（按 {@code (languageId, name)} 二维登记）。
+         * Registers a probe backend, keyed by {@code (languageId, name)}.
          *
-         * <p>内置 backend（TypeScript {@code .d.ts} 与 Python {@code .pyi}）由
-         * {@code NekoProbeBuiltinPlugin} 经本方法注册——与第三方走同一路径。
-         * 第三方可注册其他语言的 backend，或为已有语言提供替代 backend（不同 {@code name}）。
-         * 同一 {@code (语言, 名字)} 在 bootstrap 结束（lock）时报冲突。
+         * <p>The built-in backends (TypeScript {@code .d.ts} and Python {@code .pyi}) are registered by
+         * {@code NekoProbeBuiltinPlugin} through this method, the same path a third party uses. A third
+         * party can register a backend for another language, or provide an alternative backend for an
+         * existing language under a different {@code name}. Two entries with the same language and name
+         * conflict when bootstrap ends and the registry locks.
          */
         void registerProbeBackends(ProbeBackendRegistry registry);
     }
 
-    /** 扩展点定义（由 {@link NekoBuiltinPointsPlugin} 清单注册）。 */
+    /** The extension point definition, registered from the {@link NekoBuiltinPointsPlugin} list. */
     public static final NekoPluginExtensionPoint<NekoJSPlugin, ProbeBackendRegistry, ProbeBackendRegistry> POINT =
             NekoPluginExtensionPoint.<NekoJSPlugin, ProbeBackendRegistry, ProbeBackendRegistry>builder(ID, NekoJSPlugin.class)
                     .merge(MergePolicy.failFast())

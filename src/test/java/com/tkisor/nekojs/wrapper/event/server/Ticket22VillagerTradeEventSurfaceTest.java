@@ -37,14 +37,14 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Ticket 22 event-surface fixture: the villager trade sub-events live on the <b>existing</b>
- * {@code ServerEvents} group (one declaration per bus, no second event bus), their payloads stay
- * the shared common types on every node, and a node without a trade registry adapter answers an
- * explicit <i>unavailable</i> instead of a silent no-op.
+ * Villager trade event-surface fixture: the trade sub-events live on the <b>existing</b>
+ * {@code ServerEvents} group (one declaration per bus, no second event bus), their payloads
+ * stay the shared common types on every node, and a node without a trade registry adapter
+ * answers an explicit <i>unavailable</i> instead of a silent no-op.
  *
- * <p>The catalog assertions need no vanilla registry (bus metadata only), so they really run on
- * all five nodes; the adapter-level assertions are gated by {@link VanillaRegistryProbe} where
- * they would need Minecraft class initialization.
+ * <p>The catalog assertions need no vanilla registry (bus metadata only), so they really run
+ * on all five nodes; the adapter-level assertions are gated by {@link VanillaRegistryProbe}
+ * where they would need Minecraft class initialization.
  */
 class Ticket22VillagerTradeEventSurfaceTest {
 

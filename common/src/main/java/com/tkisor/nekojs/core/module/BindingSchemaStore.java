@@ -8,10 +8,10 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 
 /**
- * Runtime-owner mutable binding-schema store. Package-private on purpose:
- * {@link NekoModulePipelineCache} is the only component that may install active
- * views or drive candidate transactions. Everything crossing the API boundary is
- * an immutable {@link ScriptBindingSchema.View} / {@link ScriptBindingSchema.Snapshot}.
+ * Mutable binding-schema store owned by the runtime. Package-private:
+ * {@link NekoModulePipelineCache} is the only component allowed to install active
+ * views or drive candidate transactions. All data crossing the API boundary is
+ * an immutable {@link ScriptBindingSchema.View} or {@link ScriptBindingSchema.Snapshot}.
  */
 final class BindingSchemaStore {
     private final Map<ScriptType, ScriptBindingSchema.View> active = new ConcurrentHashMap<>();

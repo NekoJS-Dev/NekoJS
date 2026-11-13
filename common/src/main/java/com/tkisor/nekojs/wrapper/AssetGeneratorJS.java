@@ -21,44 +21,46 @@ import java.util.zip.CRC32;
 import java.util.zip.Deflater;
 
 /**
- * 类型化资产生成绑定（绑定名 {@code Assets}）。
+ * Typed asset generation binding (bound name {@code Assets}).
  *
- * <p>提供 KubeJS 风格的 {@code blockState} / {@code blockModel} / {@code itemModel} /
- * {@code texture} 快捷方法，把模型/方块状态/占位贴图写入 NekoJS 的磁盘资源包目录
- * {@code <gameDir>/nekojs/assets}（与 {@code generateAssets} 事件的 {@link DataGeneratorJS}
- * 同一目录），该目录由 {@code NekoJSPackLoader} 注册为 resource pack，懒读磁盘保证
- * reload 时序正确——脚本加载期写入的文件在下一次资源 reload 生效。
+ * <p>Provides KubeJS-style {@code blockState} / {@code blockModel} / {@code itemModel} /
+ * {@code texture} shortcuts, writing models/block states/textures to the NekoJS disk resource pack directory
+ * {@code <gameDir>/nekojs/assets} (same directory as {@link DataGeneratorJS} for the {@code generateAssets} event),
+ * registered by {@code NekoJSPackLoader} as a resource pack. Lazy reading ensures
+ * correct reload timing; files written during script loading take effect on the next resource reload.
  *
- * <p>JSON 写盘复用组合的 {@link DataGeneratorJS}（路径包含性校验 + 容量上限 + 原子写）；
- * 二进制写盘（PNG）走同一 {@link DataGeneratorJS#resolve} 校验，不绕过任何检查。
+ * <p>JSON writing reuses {@link DataGeneratorJS} (path containment check + capacity limits + atomic write);
+ * binary writing (PNG) follows the same {@link DataGeneratorJS#resolve} check without bypassing any validations.
  */
 @Doc("Typed asset generators (Assets.blockState/blockModel/itemModel/texture) writing into NekoJS's assets pack.")
 public final class AssetGeneratorJS {
-    /** 资源 id 的命名空间合法字符（与原版 resource location 一致：小写字母/数字/下划线/点/横线）。 */
+    /** Valid characters for the resource ID namespace (consistent with vanilla resource locations: lowercase letters/numbers/underscores/dots/hyphens). */
     private static final Pattern VALID_NAMESPACE = Pattern.compile("[a-z0-9_.-]+");
-    /** 资源 id 的路径合法字符（额外允许 {@code /} 子目录）。 */
+    /** Valid characters for the resource ID path (additionally allowing {@code /} subdirectories). */
     private static final Pattern VALID_PATH = Pattern.compile("[a-z0-9/._-]+");
-    /** 占位贴图边长（像素）。 */
+    /** Side length of the placeholder texture in pixels. */
     private static final int PLACEHOLDER_TEXTURE_SIZE = 16;
 
     private final DataGeneratorJS generator;
 
-    /** 以 NekoJS 默认资源包根（{@code <gameDir>/nekojs/assets}）构造。 */
+    /** Creates a generator rooted at NekoJS's default resource pack ({@code <gameDir>/nekojs/assets}). */
     public AssetGeneratorJS() {
         this(NekoJSPaths.get().assets());
     }
 
-    /** 以指定资源包根构造（测试用）。 */
+    /** Creates a generator rooted at the given resource pack root (used by tests). */
     public AssetGeneratorJS(Path assetsRoot) {
         this.generator = new DataGeneratorJS(assetsRoot);
     }
 
     /**
-     * 写方块状态 JSON 到 {@code assets/<ns>/blockstates/<path>.json}。
+     * Writes a blockstate JSON to {@code assets/<ns>/blockstates/<path>.json}.
      *
-     * <p>第二参数为对象时必须且只能含 {@code variants}（对象）或 {@code multipart}（数组）之一；
-     * 为纯字符串（非 {@code '{'} 开头）时视为单个空 variant 的模型 id 简写，等价于
-     * {@code { variants: { '': { model: <字符串> } } }}（模型 id 原样使用，不做前缀补全）。
+     * <p>When the second argument is an object it must contain exactly one of {@code variants}
+     * (object) or {@code multipart} (array). A plain string that does not start with {@code '{'} is
+     * shorthand for a single empty variant holding a model id, equivalent to
+     * {@code { variants: { '': { model: <string> } } }}; the model id is used as is, with no prefix
+     * added.
      */
     @Doc("Writes a blockstate JSON to assets/<ns>/blockstates/<path>.json.")
     @Param(name = "id", value = "block id such as 'mymod:my_block'; plain 'foo' defaults to namespace 'minecraft'; path may contain '/' subdirectories")
@@ -86,10 +88,11 @@ public final class AssetGeneratorJS {
     }
 
     /**
-     * 写方块模型 JSON 到 {@code assets/<ns>/models/block/<path>.json}。
+     * Writes a block model JSON to {@code assets/<ns>/models/block/<path>.json}.
      *
-     * <p>{@code textures} 映射的字符串值在**既不含 {@code :} 也不含 {@code /}** 时自动补全为
-     * {@code <ns>:block/<值>}，其余值（含命名空间或已带目录）原样保留。
+     * <p>A string value in the {@code textures} map that contains neither {@code :} nor {@code /}
+     * is expanded to {@code <ns>:block/<value>}. Any other value (one with a namespace or a
+     * directory) is kept as is.
      */
     @Doc("Writes a block model JSON to assets/<ns>/models/block/<path>.json.")
     @Param(name = "id", value = "block id; plain 'foo' defaults to namespace 'minecraft'; path may contain '/' subdirectories written under models/block/")
@@ -99,10 +102,10 @@ public final class AssetGeneratorJS {
     }
 
     /**
-     * 写物品模型 JSON 到 {@code assets/<ns>/models/item/<path>.json}。
+     * Writes an item model JSON to {@code assets/<ns>/models/item/<path>.json}.
      *
-     * <p>{@code textures} 映射的字符串值在**既不含 {@code :} 也不含 {@code /}** 时自动补全为
-     * {@code <ns>:item/<值>}，其余值原样保留。
+     * <p>A string value in the {@code textures} map that contains neither {@code :} nor {@code /}
+     * is expanded to {@code <ns>:item/<value>}. Any other value is kept as is.
      */
     @Doc("Writes an item model JSON to assets/<ns>/models/item/<path>.json.")
     @Param(name = "id", value = "item id; plain 'foo' defaults to namespace 'minecraft'; path may contain '/' subdirectories written under models/item/")
@@ -112,12 +115,14 @@ public final class AssetGeneratorJS {
     }
 
     /**
-     * 写 16x16 洋红色占位贴图 PNG 到 {@code assets/<ns>/textures/<kind>/<path>.png}。
+     * Writes a 16x16 magenta placeholder texture PNG to
+     * {@code assets/<ns>/textures/<kind>/<path>.png}.
      *
-     * <p>id 路径已含 {@code /}（如 {@code mymod:block/my_block}）时原样落到
-     * {@code textures/<path>.png}；不含时默认补 {@code block/} 前缀（可用
-     * {@link #texture(String, String)} 显式指定 kind）。占位图仅用于让模型引用不缺贴图，
-     * 实际外观请用资源包或后续覆盖写入替换。
+     * <p>If the id path already contains {@code /} (for example {@code mymod:block/my_block}), the
+     * file lands at {@code textures/<path>.png} as is; otherwise {@code block/} is added as the
+     * default prefix. Use {@link #texture(String, String)} to pick the kind explicitly. The
+     * placeholder only makes sure a model reference has a texture; replace it with a resource pack
+     * or a later overwrite for the real look.
      */
     @Doc("Writes a 16x16 magenta placeholder PNG for the texture id.")
     @Param(name = "id", value = "texture id; a path containing '/' (e.g. 'mymod:block/my_block') is used as-is under textures/, otherwise it defaults to textures/block/")
@@ -125,7 +130,10 @@ public final class AssetGeneratorJS {
         texture(id, null);
     }
 
-    /** 同 {@link #texture(String)}，显式指定 {@code block} / {@code item} 子目录（要求 id 路径不含 {@code /}）。 */
+    /**
+     * Like {@link #texture(String)}, but picks the {@code block} or {@code item} subdirectory
+     * explicitly; the id path must not contain {@code /}.
+     */
     @Doc("Writes a 16x16 magenta placeholder PNG under textures/<kind>/; kind is 'block' or 'item'.")
     @Param(name = "id", value = "texture id whose path must NOT contain '/' when kind is given")
     @Param(name = "kind", value = "'block' or 'item'; overrides the default 'block' directory")
@@ -147,9 +155,9 @@ public final class AssetGeneratorJS {
                 placeholderPng(PLACEHOLDER_TEXTURE_SIZE));
     }
 
-    /* ================= 模型写入 ================= */
+    /* ================= Model writes ================= */
 
-    /** blockModel/itemModel 共用：转换、贴图简写补全、按 kind 落盘。 */
+    /** Shared by blockModel and itemModel: convert, expand texture shorthands, write under the given kind. */
     private void writeModel(String id, Value model, String kind) {
         ParsedId parsed = parseId(id);
         JsonObject json = asJsonObject(model, kind + "Model '" + id + "'");
@@ -158,9 +166,10 @@ public final class AssetGeneratorJS {
     }
 
     /**
-     * 贴图简写补全：{@code textures} 映射里**既不含 {@code :} 也不含 {@code /}** 的字符串值
-     * 补全为 {@code <ns>:<kind>/<值>}（如 {@code 'my_tex'} → {@code 'mymod:block/my_tex'}）。
-     * 非字符串值（如 26.x 的对象形式贴图引用）原样保留。
+     * Expands texture shorthands. A string value in the {@code textures} map that contains neither
+     * {@code :} nor {@code /} becomes {@code <ns>:<kind>/<value>} (for example {@code 'my_tex'} →
+     * {@code 'mymod:block/my_tex'}). Non-string values, such as the object-form texture references
+     * of 26.x, are kept as is.
      */
     private static void applyTextureShorthand(JsonObject model, String namespace, String kind) {
         JsonElement texturesElement = model.get("textures");
@@ -186,9 +195,12 @@ public final class AssetGeneratorJS {
         }
     }
 
-    /* ================= 值转换 ================= */
+    /* ================= Value conversion ================= */
 
-    /** 转为 JSON 对象；graal Value 自动序列化，字符串按 JSON 解析（失败则报错）。 */
+    /**
+     * Converts the value to a JSON object: a Graal Value is serialized, and a string is parsed as
+     * JSON (a parse failure throws).
+     */
     private static JsonObject asJsonObject(Value value, String what) {
         JsonElement element = toJsonElement(value, what);
         if (!element.isJsonObject()) {
@@ -198,10 +210,11 @@ public final class AssetGeneratorJS {
     }
 
     private static JsonElement toJsonElement(Value value, String what) {
-        // 参数类型取 Value 而非 Object：GraalJS 对 Value 参数按原样传入（对象/数组/字符串零歧义）；
-        // Object 参数在部分映射路径下会被提前 toString 成 "[object Object]"（真机 gametest 复现）
+        // The parameter is a Value rather than an Object: GraalJS passes Value arguments through as they
+        // are, so objects, arrays and strings are unambiguous. An Object parameter is turned into
+        // "[object Object]" early on some mapping paths (reproduced in a gametest on a real instance).
         if (value.isHostObject() && value.asHostObject() instanceof JsonElement element) {
-            // Java 侧调用（Value.asValue(JsonObject)）直通
+            // A Java-side call (Value.asValue(JsonObject)) passes straight through
             return element;
         }
         if (value.isString()) {
@@ -214,17 +227,20 @@ public final class AssetGeneratorJS {
         return JsonObjectAdapter.convertValueToJson(value);
     }
 
-    /* ================= id 解析 ================= */
+    /* ================= Id parsing ================= */
 
-    /** 已解析的资源 id：命名空间 + 路径（路径可含子目录）。 */
+    /** A parsed resource id: namespace plus path, where the path may contain subdirectories. */
     private record ParsedId(String namespace, String path) {
-        /** 包内相对路径：{@code <ns>/<folder>/<path><suffix>}。 */
+        /** The path inside the pack: {@code <ns>/<folder>/<path><suffix>}. */
         String file(String folder, String suffix) {
             return namespace() + "/" + folder + "/" + path() + suffix;
         }
     }
 
-    /** 解析并校验资源 id：{@code 'foo'} → {@code minecraft:foo}；命名空间/路径只允许小写合法字符。 */
+    /**
+     * Parses and validates a resource id: {@code 'foo'} → {@code minecraft:foo}. The namespace and
+     * the path accept only valid lowercase characters.
+     */
     private static ParsedId parseId(String id) {
         if (id == null) {
             throw new IllegalArgumentException("id must not be null");
@@ -255,11 +271,12 @@ public final class AssetGeneratorJS {
         return new ParsedId(namespace, path);
     }
 
-    /* ================= 二进制写盘（与 DataGeneratorJS 同一校验） ================= */
+    /* ================= Binary writes (same validation as DataGeneratorJS) ================= */
 
     /**
-     * 二进制写盘：路径校验复用组合的 {@link DataGeneratorJS#resolve}（同一
-     * NekoJSPaths 包含性检查），写盘沿用 sibling temp + atomic move 与单文件容量上限。
+     * Writes binary data. Path validation reuses the composed {@link DataGeneratorJS#resolve} (the
+     * same NekoJSPaths containment check), and the write uses a sibling temp file plus an atomic
+     * move, with the same per-file size limit.
      */
     private void writeBytes(String path, byte[] bytes) {
         if (bytes.length > DataGeneratorJS.MAX_GENERATED_FILE_BYTES) {
@@ -289,11 +306,12 @@ public final class AssetGeneratorJS {
         }
     }
 
-    /* ================= 占位 PNG 构造（纯 JDK） ================= */
+    /* ================= Placeholder PNG construction (plain JDK) ================= */
 
     /**
-     * 生成 {@code size x size} 的洋红色占位 PNG（8-bit truecolor RGB）。
-     * PNG 块结构用 {@link CRC32} + {@link Deflater} 程序化构造，无需 MC/图像库。
+     * Builds a {@code size x size} magenta placeholder PNG (8-bit truecolor RGB). The PNG chunks are
+     * built by hand with {@link CRC32} and {@link Deflater}, so no Minecraft or image library is
+     * needed.
      */
     private static byte[] placeholderPng(int size) {
         byte[] ihdr = new byte[13];
@@ -301,7 +319,7 @@ public final class AssetGeneratorJS {
         putInt(ihdr, 4, size);
         ihdr[8] = 8; // bit depth
         ihdr[9] = 2; // color type: truecolor RGB
-        // ihdr[10..12] 保持 0：压缩/滤波/隔行均为默认
+// ihdr[10..12] stays 0: compression, filter and interlace all use their defaults
 
         byte[] scanlines = new byte[size * (1 + size * 3)];
         for (int row = 0; row < size; row++) {
@@ -323,7 +341,7 @@ public final class AssetGeneratorJS {
         return out.toByteArray();
     }
 
-    /** 写一个 PNG 块：长度 + 类型 + 数据 + CRC32（覆盖类型与数据）。 */
+    /** Writes one PNG chunk: length, type, data and a CRC32 over the type and the data. */
     private static void pngChunk(ByteArrayOutputStream out, String type, byte[] data) {
         byte[] typeBytes = type.getBytes(StandardCharsets.US_ASCII);
         writeInt(out, data.length);

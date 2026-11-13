@@ -5,11 +5,11 @@ import java.nio.file.Path;
 import java.util.Optional;
 
 /**
- * Common {@link UiResourceResolver} over the NekoJS disk pack root
- * ({@code <gameDir>/nekojs}; ids resolve under its {@code assets/<namespace>/...} tree,
- * the same tree ticket 29's {@code Assets} binding writes to). Resolution is disk-level:
- * an in-memory pack reload is not observed here — the vanilla resource stack governs
- * texture availability once the version owner wires texture blitting.
+ * {@link UiResourceResolver} over the NekoJS disk pack root ({@code <gameDir>/nekojs}).
+ * Ids resolve under its {@code assets/<namespace>/...} tree, the same tree the
+ * {@code Assets} binding writes to. Resolution reads the disk only: an in-memory pack
+ * reload is not observed here, and the vanilla resource stack decides whether a texture
+ * is available once the version owner wires texture blitting.
  */
 public final class DiskPackUiResourceResolver implements UiResourceResolver {
     private final Path packRoot;

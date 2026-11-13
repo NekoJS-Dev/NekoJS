@@ -1,6 +1,7 @@
 //? if neoforge {
-// 版本差异全部走 compat 门面，本文件零版本守卫：错误面板屏幕访问走 McClientCompat，
-// dist 判定、OP 权限、脚本 payload 注册走 McPlatformCompat。
+// All version differences go through the compat facade, so this file has no version guards: error
+// panel screen access goes through McClientCompat, and the dist check, OP permission and script
+// payload registration go through McPlatformCompat.
 package com.tkisor.nekojs.network;
 
 import com.tkisor.nekojs.NekoJS;
@@ -25,40 +26,44 @@ public class NekoJSNetwork {
     public static void register(final RegisterPayloadHandlersEvent event) {
         final PayloadRegistrar registrar = event.registrar("1");
 
-        // play 阶段发送面的中立通道：业务代码只依赖 PlayPacketDispatcher
+        // Neutral send channel for the play phase: business code only depends on PlayPacketDispatcher.
         PlayPacketDispatchers.install(new NeoForgePlayPacketDispatcher());
 
-        // 基础功能包
+        // Basic feature packets
         registrar.playToClient(ShowErrorListPacket.TYPE, ShowErrorListPacket.STREAM_CODEC, NekoJSNetwork::handleShowErrorListOnClient);
 
-        // PData 同步包
+        // PData sync packet
         registrar.playToClient(PDataSyncPacket.TYPE, PDataSyncPacket.STREAM_CODEC, NekoJSNetwork::handlePDataSyncOnClient);
 
-        // ClientData 键值同步包（ClientData.sync / clientData.get，服务端→客户端单向）
+        // ClientData key/value sync packet (ClientData.sync / clientData.get, server to client only)
         registrar.playToClient(ClientDataSyncPacket.TYPE, ClientDataSyncPacket.STREAM_CODEC, ClientDataMessageHandler::handleOnClient);
 
-        // 脚本自定义网络通道包（Network.sendToServer / sendToPlayer / sendToAllPlayers）
-        // 同一个 payload type 只能注册一次（NeoForge 26 按 type 去重）；注册形状的版本差异
-        //（26.x 4 参 / 1.21.1 3 参 + flow 判别）下沉进 McPlatformCompat 实现。
+        // Script-defined network channel packets (Network.sendToServer / sendToPlayer / sendToAllPlayers).
+        // A payload type can only be registered once (NeoForge 26 deduplicates by type). The version
+        // difference in registration shape (4 args on 26.x, 3 args plus a flow discriminator on 1.21.1)
+        // lives in the McPlatformCompat implementations.
         McPlatformCompat.get().registerScriptPayload(registrar);
 
-        // Dynamic Registry 批事务同步包（票 21 平台接线）：同一 RegisterPayloadHandlersEvent /
-        // 同一 channel "1" 的第 7 个 payload 类型（双向）——只在带动态注册面的节点由 compat
-        // 实现真正注册（Nf261/Nf262），其余节点保持票 17 冻结的显式子集（默认空实现）。
+        // Dynamic Registry batch transaction sync packet: the 7th payload type (bidirectional) on the same
+        // RegisterPayloadHandlersEvent and the same channel "1". Only nodes with dynamic registry support
+        // register it in the compat implementations (Nf261/Nf262); the other nodes keep the explicit
+        // payload subset, and the default implementation registers nothing.
         McPlatformCompat.get().registerDynamicSyncPayload(registrar);
 
-        // 多人脚本包分发：配置阶段 payload（S2C）——服务器在 PackSyncConfigurationTask
-        // （RegisterConfigurationTasksEvent 官方入口，免 mixin）中推送哈希清单 + bundle。
+        // Multiplayer script pack distribution: configuration-phase payloads (S2C). The server pushes the
+        // hash list and the bundle from PackSyncConfigurationTask, which hooks the official
+        // RegisterConfigurationTasksEvent entry point and needs no mixin.
         registrar.configurationToClient(PackHashListPayload.TYPE, PackHashListPayload.STREAM_CODEC, PackSyncMessageHandler::handleHashListOnClient);
         registrar.configurationToClient(PackBundlePayload.TYPE, PackBundlePayload.STREAM_CODEC, PackSyncMessageHandler::handleBundleOnClient);
 
-        // 客户端接线：包分发触发 CLIENT 脚本重载的钩子 + 断线卸载远端包
+        // Client-side wiring: the hook that makes pack distribution trigger a CLIENT script reload, plus
+        // unloading remote packs on disconnect.
         if (McPlatformCompat.get().isClientDist()) {
             PackSyncClientConnections.install();
         }
     }
 
-    /** 配置阶段任务注册（每个玩家连接一次；packSync 关闭时零任务注册）。 */
+    /** Registers the configuration-phase task, once per player connection. When packSync is off, no task is registered. */
     @SubscribeEvent
     public static void registerConfigurationTasks(final net.neoforged.neoforge.network.event.RegisterConfigurationTasksEvent event) {
         PackSyncConfigurationTask.register(event);

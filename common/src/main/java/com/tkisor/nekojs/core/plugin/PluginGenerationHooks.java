@@ -18,11 +18,14 @@ import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
 /**
- * 平台层在资源 reload 时对全部插件触发 generateData / generateAssets / generateLang
- * （直调型钩子：default 空实现，覆写即生效，无需任何注册/实现声明）。
+ * The platform layer fires generateData, generateAssets and generateLang on every plugin
+ * during a resource reload. These hooks are called directly: they have empty default
+ * implementations, and overriding one is all a plugin does; no registration or interface
+ * declaration is needed.
  *
- * <p>插件 hook 先于脚本事件触发，与脚本共享同一 generator 实例（KubeJS 对齐）。
- * 单个插件异常被 try/catch 隔离，不中断其他插件。
+ * <p>Plugin hooks fire before the script events and share the same generator instance with
+ * them, matching KubeJS. Each plugin call is wrapped in try/catch, so one failing plugin does
+ * not interrupt the others.
  */
 public final class PluginGenerationHooks {
     private PluginGenerationHooks() {}
@@ -32,22 +35,22 @@ public final class PluginGenerationHooks {
     }
 
     /**
-     * Ticket 23 aggregation: the plugin {@code generateData} hook and the script
-     * {@code ServerEvents.generateData} event run through ONE data generation path —
-     * same candidate collection, generation, publish and read-back
-     * ({@link DataGenerationBatch}). Plugins fire first (per-plugin contributor tagging and
-     * exception isolation, KubeJS-aligned), then {@code scriptEvent} runs (the platform
-     * adapter posts the script event with the stage as dispatch key), then the batch is
-     * validated and atomically published.
+     * Runs the plugin {@code generateData} hook and the script
+     * {@code ServerEvents.generateData} event through one data generation path: the same
+     * candidate collection, generation, publish and read-back ({@link DataGenerationBatch}).
+     * Plugins fire first, with per-plugin contributor tagging and exception isolation, matching
+     * KubeJS; then {@code scriptEvent} runs, and the platform adapter posts the script event with
+     * the stage as dispatch key; then the batch is validated and atomically published.
      *
-     * <p>Failure semantics: a throwing plugin is isolated (error log names the plugin class)
-     * and does not block the batch; if {@code scriptEvent} itself throws (production script
-     * listener errors are recorded by the event bus instead), or validation/publish fails,
-     * nothing is published, the previous active data is retained, and the candidate area is
-     * kept for diagnostics until the next batch for the same stage opens.
+     * <p>Failure behavior: a plugin that throws is isolated (the error log names the plugin
+     * class) and does not block the batch. If {@code scriptEvent} itself throws (production
+     * script listener errors are recorded by the event bus instead), or validation or publish
+     * fails, nothing is published, the previously active data stays in place, and the candidate
+     * area is kept for diagnostics until the next batch for the same stage opens.
      *
      * @param dataRoot   pack-visible data root (e.g. {@code <gameDir>/nekojs/data})
-     * @param stage      generation stage (dispatch key of the script event, e.g. {@code after_mods})
+     * @param stage      generation stage, used as the dispatch key of the script event
+     *                   (e.g. {@code after_mods})
      * @param scriptEvent posts the script event with the batch's shared generator
      */
     public static DataGenerationBatch.PublishResult runGenerateData(
@@ -80,28 +83,37 @@ public final class PluginGenerationHooks {
     }
 
     /**
-     * 解析本轮要生成的语言集合：插件 {@link NekoJSPlugin#generatedLangs()} 声明与脚本
-     * keyed listener 的语言取并集，按字典序返回。
+     * Works out the languages to generate this round: the union of the languages declared by
+     * plugins through {@link NekoJSPlugin#generatedLangs()} and the languages of the script
+     * keyed listeners, returned in lexicographic order.
      *
-     * <p>脚本语言由调用方经 {@code scriptRegisteredLangs} 传入（{@code ClientEvents.LANG
-     * .registeredKeys()}）：事件总线是 MC-facing 类型，本类所在的 common 不能引用它——
-     * 平台 Adapter 负责取键，本类只做合并、校验与排序。{@code null} 明确定义为「本节点没有
-     * 脚本语言监听器」这一合法状态（非缺失），按空集参与并集；插件侧的 {@code null} 声明则相反，
-     * 是违规（见下）。
+     * <p>The caller passes the script languages in {@code scriptRegisteredLangs} (from
+     * {@code ClientEvents.LANG
+     * .registeredKeys()}). The event bus is an MC-facing type and this
+     * class lives in common, which cannot reference it, so the platform adapter takes the keys
+     * and this class only merges, checks and sorts them. {@code null} explicitly means "this
+     * node has no script language listeners"; that is a legal state, not a missing value, and
+     * it joins the union as the empty set. A {@code null} declaration on the plugin side is
+     * the opposite: it is a violation (see below).
      *
-     * <p>确定性顺序是契约的一部分：{@code registeredKeys()} 来自 {@code Set.copyOf}，顺序不保证，
-     * 而逐语言写入的先后可被观察（诊断顺序、同 key 覆盖的最终值），故用 {@link TreeSet} 归一。
+     * <p>The deterministic order is part of the contract: {@code registeredKeys()} comes from
+     * {@code Set.copyOf}, which does not guarantee order, while the write order per language is
+     * observable (diagnostic order, and the final value when the same key is overridden), so a
+     * {@link TreeSet} normalizes it.
      *
-     * <p>默认 {@code en_us} 来自 {@link NekoJSPlugin#generatedLangs()} 的 default 实现，
-     * 因此没有任何脚本 listener 时插件回调照常触发，不会被隐式门控跳过。
+     * <p>The default {@code en_us} comes from the default implementation of
+     * {@link NekoJSPlugin#generatedLangs()}, so plugin callbacks still fire when no script
+     * listener exists and are not silently gated away.
      *
-     * <p>判据来自 {@link LangGeneratorJS#isValidLangCode(String)}——与写入阶段的检查同源，
-     * 故预检通过的语言不会被 {@code writeTo} 以另一套规则拒绝。
+     * <p>The check uses {@link LangGeneratorJS#isValidLangCode(String)}, the same rule as the
+     * write phase, so a language that passes this precheck is not rejected by {@code writeTo}
+     * under different rules.
      *
-     * <p>校验在返回<b>之前</b>完整完成：任一非法语言代码使整批拒绝
-     * （{@link IllegalStateException}，消息含 owner 与非法 code），调用方不得写入任何语言文件。
-     * 单个插件的 {@code generatedLangs()} 抛异常只作废该插件的声明（记 error 日志）并继续，
-     * 不污染其他插件与其他语言。
+     * <p>Validation completes <b>before</b> this method returns: any invalid language code
+     * rejects the whole batch ({@link IllegalStateException}, with the owner and the invalid
+     * code in the message), and the caller must not write any language file. If one plugin's
+     * {@code generatedLangs()} throws, only that plugin's declaration is dropped (an error is
+     * logged) and processing continues, leaving other plugins and languages untouched.
      */
     public static List<String> resolveGeneratedLangs(Collection<String> scriptRegisteredLangs) {
         TreeSet<String> langs = new TreeSet<>();
@@ -148,7 +160,8 @@ public final class PluginGenerationHooks {
         return List.copyOf(langs);
     }
 
-    /** 全员触发 + 异常隔离的公共形状：钩子名进日志、env 定 logger、generator 类型参数化。 */
+    /** Shared shape for firing on every plugin with exception isolation: the hook name goes into
+     * the log, the environment picks the logger, and the generator type is a parameter. */
     private static <G> void fire(String hook, ScriptType env, G generator,
             BiConsumer<NekoJSPlugin, G> call) {
         for (NekoJSPlugin plugin : NekoJSBasePluginManager.getPlugins()) {

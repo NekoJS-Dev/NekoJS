@@ -1,5 +1,5 @@
-// 1.21.1 实现，与版本树 src/ 下的同名 26.x 文件成对。内容等于那份文件在本节点求值后的形态。
-// 26.x 侧行为变更时须同步本文件。
+// 1.21.1 implementation. It pairs with the same-named 26.x file under src/ in the version
+// tree: this file is that file evaluated for this node. Keep them in sync when 26.x changes.
 package com.tkisor.nekojs.client.render;
 
 import com.tkisor.nekojs.api.ui.UiColor;
@@ -10,15 +10,16 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
 
 /**
- * {@code ClientEvents.hudRender} 回调上下文（26.x 的 {@link GuiGraphics}
- * 渲染状态模型）：携带 partialTick 与缩放后屏幕尺寸，并提供常用绘制助手
- * （移植自 Katton 的 HUD draw helpers，命名对齐 {@code PainterJS}；
- * {@code drawText}/{@code fillRect}/{@code drawTexture} 为任务规格别名）。
+ * Context of the {@code ClientEvents.hudRender} callback (26.x's {@link GuiGraphics} render
+ * state model). It carries the partial tick and the scaled screen size, and offers the common
+ * draw helpers (ported from Katton's HUD draw helpers, named to match {@code PainterJS};
+ * {@code drawText}/{@code fillRect}/{@code drawTexture} are aliases).
  *
- * <p>颜色参数为 ARGB（如 {@code 0x80FF0000} = 半透明红），以 {@link Number} 接收并按
- * uint32 读位（{@link UiColor#argbBits}）：脚本字面量 {@code 0xFF......} 是 ≥ 2³¹ 的
- * 无符号数，直接落入 Java {@code int} 参数会被引擎饱和成 {@code 0x7FFFFFFF}（半透明白，
- * 缺陷 D6，与 {@code PainterJS} 同一治理）。
+ * <p>Color parameters are ARGB (for example {@code 0x80FF0000} is half-transparent red). They
+ * arrive as {@link Number} and are read as uint32 bits ({@link UiColor#argbBits}): a script
+ * literal {@code 0xFF......} is an unsigned value of at least 2^31, and passing it straight to
+ * a Java {@code int} parameter makes the engine saturate it to {@code 0x7FFFFFFF}
+ * (half-transparent white). {@code PainterJS} handles it the same way.
  */
 public class HudRenderContextJS {
     private final GuiGraphics graphics;
@@ -32,39 +33,42 @@ public class HudRenderContextJS {
         this.partialTick = partialTick;
     }
 
-    /** 当前渲染帧的部分插值（0~1），用于平滑动画。 */
+    /** Fraction of the current render frame (0 to 1) applied to smooth animation. */
     public float getPartialTick() {
         return partialTick;
     }
 
-    /** 屏幕宽度（GUI 缩放后）。 */
+    /** Screen width after GUI scaling. */
     public int getWidth() {
         return Minecraft.getInstance().getWindow().getGuiScaledWidth();
     }
 
-    /** 屏幕高度（GUI 缩放后）。 */
+    /** Screen height after GUI scaling. */
     public int getHeight() {
         return Minecraft.getInstance().getWindow().getGuiScaledHeight();
     }
 
-    /** 原始图形对象（26.x {@link GuiGraphics}），供脚本直接调用未包装的能力。 */
+    /** Raw graphics object (26.x {@link GuiGraphics}) for calling unwrapped methods directly. */
     public GuiGraphics graphics() {
         return graphics;
     }
 
-    /** 设置默认颜色（ARGB，{@link Number} 收值按 uint32 读位），供省略颜色参数的绘制方法使用。 */
+    /**
+     * Sets the default color (ARGB, {@link Number} read as uint32 bits) used by draw methods that
+     * omit the color argument.
+     */
     public HudRenderContextJS color(Number color) {
         this.currentColor = UiColor.argbBits(color);
         return this;
     }
 
-    /** 重置默认颜色为不透明白。 */
+    /** Resets the default color to opaque white. */
     public HudRenderContextJS resetColor() {
         this.currentColor = 0xFFFFFFFF;
         return this;
     }
 
-    /** 文本（左对齐）。 */
+    /** Draws text, left aligned. */
     public HudRenderContextJS text(String text, int x, int y) {
         graphics.drawString(font, text, x, y, currentColor);
         return this;
@@ -75,12 +79,12 @@ public class HudRenderContextJS {
         return this;
     }
 
-    /** 任务规格别名：{@link #text(String, int, int, Number)}。 */
+    /** Alias for {@link #text(String, int, int, Number)}. */
     public HudRenderContextJS drawText(String text, int x, int y, Number color) {
         return text(text, x, y, color);
     }
 
-    /** 文本（水平居中）。 */
+    /** Draws text, centered horizontally. */
     public HudRenderContextJS centerText(String text, int x, int y) {
         graphics.drawCenteredString(font, text, x, y, currentColor);
         return this;
@@ -91,7 +95,7 @@ public class HudRenderContextJS {
         return this;
     }
 
-    /** 实心矩形（宽高语义）。 */
+    /** Filled rectangle, sized by width and height. */
     public HudRenderContextJS rect(int x, int y, int width, int height) {
         graphics.fill(x, y, x + width, y + height, currentColor);
         return this;
@@ -102,12 +106,12 @@ public class HudRenderContextJS {
         return this;
     }
 
-    /** 任务规格别名：{@link #rect(int, int, int, int, Number)}。 */
+    /** Alias for {@link #rect(int, int, int, int, Number)}. */
     public HudRenderContextJS fillRect(int x, int y, int width, int height, Number color) {
         return rect(x, y, width, height, color);
     }
 
-    /** 1px 矩形边框。 */
+    /** 1px rectangle outline. */
     public HudRenderContextJS outline(int x, int y, int width, int height) {
         return outline(x, y, width, height, currentColor);
     }
@@ -121,7 +125,7 @@ public class HudRenderContextJS {
         return this;
     }
 
-    /** 垂直渐变矩形。 */
+    /** Vertical gradient rectangle. */
     public HudRenderContextJS gradient(int x, int y, int width, int height, Number colorTop, Number colorBottom) {
         graphics.fillGradient(x, y, x + width, y + height,
                 UiColor.argbBits(colorTop), UiColor.argbBits(colorBottom));
@@ -129,7 +133,8 @@ public class HudRenderContextJS {
     }
 
     /**
-     * 贴图（完整纹理 id，如 {@code 'minecraft:textures/gui/icons.png'}），u/v 为纹理内偏移。
+     * Draws a texture. The id is the full texture id, such as
+     * {@code 'minecraft:textures/gui/icons.png'}; u/v are offsets inside the texture.
      */
     public HudRenderContextJS texture(String textureId, int x, int y, int width, int height, int u, int v) {
         return texture(textureId, x, y, width, height, u, v, 256, 256);
@@ -152,24 +157,24 @@ public class HudRenderContextJS {
         return this;
     }
 
-    /** 贴图（整张纹理，u/v 为 0）。 */
+    /** Draws the whole texture, with u and v at 0. */
     public HudRenderContextJS texture(String textureId, int x, int y, int width, int height) {
         graphics.blit(ResourceLocation.parse(textureId), x, y, 0, 0, width, height);
         return this;
     }
 
-    /** 任务规格别名：{@link #texture(String, int, int, int, int, int, int)}。 */
+    /** Alias for {@link #texture(String, int, int, int, int, int, int)}. */
     public HudRenderContextJS drawTexture(String textureId, int x, int y, int width, int height, int u, int v) {
         return texture(textureId, x, y, width, height, u, v);
     }
 
-    /** 物品图标（{@code Item.of('minecraft:diamond')}）。 */
+    /** Draws an item icon, for example {@code Item.of('minecraft:diamond')}. */
     public HudRenderContextJS item(ItemStack stack, int x, int y) {
         graphics.renderItem(stack, x, y);
         return this;
     }
 
-    /** 裁剪：后续绘制限制在矩形区域内。 */
+    /** Clips later drawing to the given rectangle. */
     public HudRenderContextJS scissor(int x, int y, int width, int height) {
         graphics.enableScissor(x, y, x + width, y + height);
         return this;

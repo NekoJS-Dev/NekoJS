@@ -1,5 +1,5 @@
-// 26.x 实现，本文件不应再出现版本守卫。1.21.1 的实现是 versions/1.21.1/src 下的同名文件，
-// 改本文件行为时须同步它。
+// 26.x implementation; this file should no longer contain version guards. The 1.21.1 implementation is in the
+// file of the same name under versions/1.21.1/src. Keep it synchronized when changing this file's behavior.
 package com.tkisor.nekojs.util.selector;
 
 import net.minecraft.commands.arguments.selector.EntitySelector;
@@ -21,16 +21,16 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 
 /**
- * 程序化 {@link EntitySelector} 流式构建器（移植自 Katton 的 EntitySelectorBuilder，
- * 语义镜像 {@link EntitySelectorParser}：±1 AABB padding、顺序选择器、距离函数、
- * 经 min/max 的谓词、limit 等），经全局绑定 {@code EntitySelectors} 暴露给脚本。
+ * Programmatic {@link EntitySelector} builder (ported from Katton's EntitySelectorBuilder,
+ * mirroring {@link EntitySelectorParser} semantics: ±1 AABB padding, order selectors, distance functions,
+ * predicate min/max bounds, limits, etc.), exposed to scripts via {@code EntitySelectors}.
  *
- * <p>26.1 与 26.2 的 {@code MinMaxBounds} 包名不同（criterion / predicates），
- * 距离范围与构造经 {@link EntitySelectorFactory} 反射桥接，两版本共用本类；
- * 1.21.1 镜像直接静态构建。
+ * <p>26.1 and 26.2 have different {@code MinMaxBounds} package names (criterion / predicates).
+ * Distance ranges and construction are bridged via reflection in {@link EntitySelectorFactory}; both versions share this class.
+ * 1.21.1 is statically constructed.
  *
- * <p>未覆盖（v1 后续项）：scores / advancements / NBT / loot predicate 过滤。
- * 构建的 selector {@code usesSelector=false}，不触发原版的 selector 权限校验。
+ * <p>Uncovered (v1 items): scores / advancements / NBT / loot predicate filtering.
+ * The built selector has {@code usesSelector=false} and does not trigger vanilla selector permission checks.
  */
 public class EntitySelectorBuilderJS {
 
@@ -49,18 +49,16 @@ public class EntitySelectorBuilderJS {
     private EntityType<?> type;
 
     /**
-     * 实体类型过滤（如 {@code 'minecraft:cow'}）；inverse 为 true 时反选
-     * （镜像原版 {@code type=!cow}：反选走谓词，ctor type 保持 null）。
+     * Filters by entity type (e.g., {@code 'minecraft:cow'}); if {@code inverse} is true, excludes the type.
+     * (Mirrors vanilla {@code type=!cow}: exclusion uses a predicate, the constructor's {@code type} stays null).
      *
-     * <p><b>工单 25 判定（双轴审查，2026-09-12）：本方法只按玩家类型调整作用域位，
-     * 非玩家类型<b>不</b>切作用域。</b>因此基座为玩家集合时
-     * {@code create(b => b.type('minecraft:cow'))} 命中 0（只有 {@code allEntities()}
-     * 一类实体基座才看得到 cow）。「显式实体类型过滤是否应切作用域」是<b>公开选择器
-     * 作用域语义变更</b>，超出工单 25「建立 fixture」的授权（项目纪律：公开语义变更
-     * 先回决策），故本票<b>钉住现状</b>。
+     * <p>This method only adjusts the scope bit for a player type; a non-player type does <b>not</b> change the
+     * scope. So when the base is a player set, {@code create(b => b.type('minecraft:cow'))} finds nothing,
+     * because only {@code allEntities()} base sets can see cows. Letting explicit entity type filtering change
+     * the scope would change public selector semantics, so the behavior stays as it is.
      *
-     * <p>需要实体作用域时的取证路径：用实体基座预设（{@link #allEntities()}、
-     * {@link #nearestEntity()}、{@link #randomEntity()}）再叠加类型/tag 过滤。
+     * <p>When entity scope is needed, start from an entity base preset ({@link #allEntities()},
+     * {@link #nearestEntity()}, {@link #randomEntity()}) and then apply type/tag filtering.
      */
     public EntitySelectorBuilderJS type(String entityTypeId, boolean inverse) {
         EntityType<?> resolved = entityType(entityTypeId);
@@ -78,17 +76,17 @@ public class EntitySelectorBuilderJS {
         return this;
     }
 
-    /** 实体类型过滤（正选）。 */
+    /** Filters by entity type (positive match). */
     public EntitySelectorBuilderJS type(String entityTypeId) {
         return type(entityTypeId, false);
     }
 
     /**
-     * 按实体 tag 过滤（如 {@code 'minecraft:skeletons'}）；inverse 为 true 时反选。
+     * Filters by entity tag (e.g., {@code 'minecraft:skeletons'}); if {@code inverse} is true, excludes the tag.
      *
-     * <p>工单 25 判定（双轴审查）：与 {@link #type} 同款——<b>不</b>切作用域位。
-     * 已知 tag 只在基座集合上求值；未知 tag 的行为见
-     * {@link EntitySelectorsJS#resolveEntityTypeTag} 的 characterization。
+     * <p>Like {@link #type}, it does <b>not</b> change the scope bit. A known tag is only evaluated against the
+     * base set; for what happens with an unknown tag, see
+     * {@link EntitySelectorsJS#resolveEntityTypeTag}.
      */
     public EntitySelectorBuilderJS typeTag(String tagId, boolean inverse) {
         var tag = EntitySelectorsJS.resolveEntityTypeTag(tagId);
@@ -96,18 +94,18 @@ public class EntitySelectorBuilderJS {
         return this;
     }
 
-    /** 按实体 tag 过滤（正选）。 */
+    /** Filters by entity tag (positive match). */
     public EntitySelectorBuilderJS typeTag(String tagId) {
         return typeTag(tagId, false);
     }
 
-    /** 只选存活实体。 */
+    /** Selects only living entities. */
     public EntitySelectorBuilderJS isAlive() {
         predicates.add(Entity::isAlive);
         return this;
     }
 
-    /** 体积选区锚点（对应原版 {@code x=} 参数）；会启用世界限定。 */
+    /** Volume selection anchor (corresponds to vanilla {@code x=} parameter); enables world restriction. */
     public EntitySelectorBuilderJS x(double x) {
         this.x = x;
         this.worldLimited = true;
@@ -126,7 +124,7 @@ public class EntitySelectorBuilderJS {
         return this;
     }
 
-    /** 体积选区尺寸（对应原版 {@code dx=} 参数，负值向下扩展）；会启用世界限定。 */
+    /** Volume selection size (corresponds to vanilla {@code dx=} parameter, negative values extend downwards); enables world restriction. */
     public EntitySelectorBuilderJS dx(double deltaX) {
         this.deltaX = deltaX;
         this.worldLimited = true;
@@ -145,7 +143,7 @@ public class EntitySelectorBuilderJS {
         return this;
     }
 
-    /** 距离区间（从锚点量到目标脚底欧氏距离）；会启用世界限定。 */
+    /** Distance range (Euclidean distance from anchor to target's feet); enables world restriction. */
     public EntitySelectorBuilderJS distance(double minDistance, double maxDistance) {
         if (minDistance < 0 || maxDistance < 0) {
             throw new IllegalArgumentException("EntitySelectors.distance: distance cannot be negative");
@@ -158,7 +156,7 @@ public class EntitySelectorBuilderJS {
         return this;
     }
 
-    /** 距离上限（{@code distance(0, max)}）。 */
+    /** Distance upper bound ({@code distance(0, max)}). */
     public EntitySelectorBuilderJS distanceBelow(double maxDistance) {
         if (maxDistance < 0) {
             throw new IllegalArgumentException("EntitySelectors.distanceBelow: distance cannot be negative");
@@ -168,7 +166,7 @@ public class EntitySelectorBuilderJS {
         return this;
     }
 
-    /** 距离下限。 */
+    /** Distance lower bound. */
     public EntitySelectorBuilderJS distanceAbove(double minDistance) {
         if (minDistance < 0) {
             throw new IllegalArgumentException("EntitySelectors.distanceAbove: distance cannot be negative");
@@ -178,7 +176,7 @@ public class EntitySelectorBuilderJS {
         return this;
     }
 
-    /** 按名称过滤（scoreboard 名）；inverse 为 true 时反选。 */
+    /** Filters by name (scoreboard name); if {@code inverse} is true, excludes the name. */
     public EntitySelectorBuilderJS name(String name, boolean inverse) {
         predicates.add(entity -> entity.getScoreboardName().equals(name) != inverse);
         return this;
@@ -188,7 +186,7 @@ public class EntitySelectorBuilderJS {
         return name(name, false);
     }
 
-    /** 按游戏模式过滤（{@code survival|creative|adventure|spectator}）；天然排除非玩家。 */
+    /** Filters by game mode ({@code survival|creative|adventure|spectator}); naturally excludes non-players. */
     public EntitySelectorBuilderJS gamemode(String gamemodeName, boolean inverse) {
         GameType gamemode = GameType.byName(gamemodeName.toLowerCase(Locale.ROOT));
         if (gamemode == GameType.DEFAULT_MODE && !"survival".equalsIgnoreCase(gamemodeName)) {
@@ -208,7 +206,7 @@ public class EntitySelectorBuilderJS {
         return gamemode(gamemodeName, false);
     }
 
-    /** 按计分板队伍过滤；inverse 为 true 时反选。 */
+    /** Filters by scoreboard team; if {@code inverse} is true, excludes the team. */
     public EntitySelectorBuilderJS team(String team, boolean inverse) {
         predicates.add(entity -> {
             var entityTeam = entity.getTeam();
@@ -222,7 +220,7 @@ public class EntitySelectorBuilderJS {
         return team(team, false);
     }
 
-    /** 按实体标签（scoreboard tag）过滤；空串匹配「无标签」；inverse 为 true 时反选。 */
+    /** Filters by entity scoreboard tag; empty string matches "no tag"; if {@code inverse} is true, excludes the tag. */
     public EntitySelectorBuilderJS tag(String tag, boolean inverse) {
         predicates.add(entity -> {
             var tags = entity.entityTags();
@@ -235,7 +233,7 @@ public class EntitySelectorBuilderJS {
         return tag(tag, false);
     }
 
-    /** 按经验等级过滤；天然排除非玩家。 */
+    /** Filters by experience level; naturally excludes non-players. */
     public EntitySelectorBuilderJS level(int minLevel, int maxLevel) {
         if (minLevel < 0 || maxLevel < 0) {
             throw new IllegalArgumentException("EntitySelectors.level: level cannot be negative");
@@ -251,7 +249,7 @@ public class EntitySelectorBuilderJS {
         return this;
     }
 
-    /** 结果数量上限（&ge;1）。 */
+    /** Maximum result count ({@code >=1}). */
     public EntitySelectorBuilderJS limit(int limit) {
         if (limit < 1) {
             throw new IllegalArgumentException("EntitySelectors.limit: limit must be at least 1");
@@ -260,34 +258,34 @@ public class EntitySelectorBuilderJS {
         return this;
     }
 
-    /** 顺序：任意（默认，找到即截断，最快）。 */
+    /** Order: arbitrary (default, stops at first match, fastest). */
     public EntitySelectorBuilderJS orderArbitrary() {
         this.order = EntitySelector.ORDER_ARBITRARY;
         return this;
     }
 
-    /** 顺序：最近优先。 */
+    /** Order: nearest first. */
     public EntitySelectorBuilderJS orderNearest() {
         this.order = EntitySelectorParser.ORDER_NEAREST;
         return this;
     }
 
-    /** 顺序：最远优先。 */
+    /** Order: farthest first. */
     public EntitySelectorBuilderJS orderFurthest() {
         this.order = EntitySelectorParser.ORDER_FURTHEST;
         return this;
     }
 
-    /** 顺序：随机。 */
+    /** Order: random. */
     public EntitySelectorBuilderJS orderRandom() {
         this.order = EntitySelectorParser.ORDER_RANDOM;
         return this;
     }
 
     /**
-     * 构建 {@link EntitySelector}。AABB / 距离函数语义镜像
-     * {@code EntitySelectorParser#create()}：体积参数（dx/dy/dz）走 ±1 padding
-     * 的 AABB；仅距离上限时以锚点为中心生成 {@code 2d+1} 盒。
+     * Constructs an {@link EntitySelector}. AABB / distance function semantics mirror
+     * {@code EntitySelectorParser#create()}: volume parameters (dx/dy/dz) use ±1 AABB padding;
+     * only distance upper bound generates a {@code 2d+1} box centered at the anchor.
      */
     public EntitySelector create() {
         AABB aabb;
@@ -303,7 +301,7 @@ public class EntitySelectorBuilderJS {
                     deltaY == null ? 0.0 : deltaY,
                     deltaZ == null ? 0.0 : deltaZ);
         }
-        // 未设置 x/y/z 时位置函数为恒等（find 传入的锚点原样生效）
+        // When x/y/z are not set, the position function is the identity (the anchor passed to 'find' is used as-is).
         Function<Vec3, Vec3> position;
         if (x != null || y != null || z != null) {
             position = vec3 -> new Vec3(
@@ -325,7 +323,7 @@ public class EntitySelectorBuilderJS {
                 type);
     }
 
-    /** 镜像 {@code EntitySelectorParser#createAabb()}：负 delta 向下扩展，正向 +1 padding。 */
+    /** Mirrors {@code EntitySelectorParser#createAabb()}: negative delta extends downwards, positive adds +1 padding. */
     private static AABB createAabb(double d, double e, double f) {
         boolean negX = d < 0.0;
         boolean negY = e < 0.0;
@@ -340,9 +338,9 @@ public class EntitySelectorBuilderJS {
     }
 
     /**
-     * 按 id 解析实体类型（缺省 {@code minecraft:} 命名空间）。
-     * 26.2 移除了 {@code EntityType.byString}，统一走注册表查询（与
-     * {@code GoalRegistry} 一致），26.1 / 26.2 / 1.21.1 通用。
+     * Resolves entity type by ID (defaults to {@code minecraft:} namespace).
+     * 26.2 removed {@code EntityType.byString}; uses registry lookup instead (consistent with
+     * {@code GoalRegistry}), applicable to 26.1 / 26.2 / 1.21.1.
      */
     private static EntityType<?> entityType(String entityTypeId) {
         String normalized = entityTypeId.indexOf(':') >= 0 ? entityTypeId : "minecraft:" + entityTypeId;
@@ -351,7 +349,7 @@ public class EntitySelectorBuilderJS {
                 .orElseThrow(() -> new IllegalArgumentException("EntitySelectors.type: unknown entity type: " + entityTypeId));
     }
 
-    /** 是否为玩家类型（26.2 无 {@code EntityType.PLAYER} 常量，经注册表比较）。 */
+    /** Checks if the type is a player (26.2 has no {@code EntityType.PLAYER} constant; uses registry comparison). */
     private static boolean isPlayerType(EntityType<?> resolved) {
         EntityType<?> player = BuiltInRegistries.ENTITY_TYPE
                 .getOptional(Identifier.parse("minecraft:player"))
@@ -359,7 +357,7 @@ public class EntitySelectorBuilderJS {
         return resolved == player;
     }
 
-    /** 全部玩家（{@code @a}）。 */
+    /** All players ({@code @a}). */
     public static EntitySelectorBuilderJS allPlayers() {
         var builder = new EntitySelectorBuilderJS();
         builder.maxResults = Integer.MAX_VALUE;
@@ -367,7 +365,7 @@ public class EntitySelectorBuilderJS {
         return builder.type("minecraft:player");
     }
 
-    /** 全部实体（含玩家，{@code @e}）。 */
+    /** All entities (including players, {@code @e}). */
     public static EntitySelectorBuilderJS allEntities() {
         var builder = new EntitySelectorBuilderJS();
         builder.maxResults = Integer.MAX_VALUE;
@@ -375,7 +373,7 @@ public class EntitySelectorBuilderJS {
         return builder;
     }
 
-    /** 最近的玩家（{@code @p}，配合锚点排序）。 */
+    /** Nearest player ({@code @p}, used with anchor sorting). */
     public static EntitySelectorBuilderJS nearestPlayer() {
         var builder = new EntitySelectorBuilderJS();
         builder.maxResults = 1;
@@ -383,7 +381,7 @@ public class EntitySelectorBuilderJS {
         return builder.orderNearest().type("minecraft:player");
     }
 
-    /** 最近的实体（含玩家）。 */
+    /** Nearest entity (including players). */
     public static EntitySelectorBuilderJS nearestEntity() {
         var builder = new EntitySelectorBuilderJS();
         builder.maxResults = 1;
@@ -391,7 +389,7 @@ public class EntitySelectorBuilderJS {
         return builder.orderNearest();
     }
 
-    /** 随机玩家（{@code @r}）。 */
+    /** Random player ({@code @r}). */
     public static EntitySelectorBuilderJS randomPlayer() {
         var builder = new EntitySelectorBuilderJS();
         builder.maxResults = 1;
@@ -399,7 +397,7 @@ public class EntitySelectorBuilderJS {
         return builder.orderRandom().type("minecraft:player");
     }
 
-    /** 随机实体（含玩家）。 */
+    /** Random entity (including players). */
     public static EntitySelectorBuilderJS randomEntity() {
         var builder = new EntitySelectorBuilderJS();
         builder.maxResults = 1;

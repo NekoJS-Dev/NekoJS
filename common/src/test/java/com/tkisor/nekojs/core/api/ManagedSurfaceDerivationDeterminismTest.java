@@ -30,12 +30,12 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * AC2/AC5（ticket 09）：同一契约输入重复生成 manifest 与 Probe TypeScript declaration
- * 的结果<b>逐字节稳定</b>，且产物成员与 runtime member（契约反射符号）一一对应
- * （成员名、签名、owner/module 归属 parity）。
+ * Generating the manifest and the Probe TypeScript declaration twice from the same contract
+ * input produces byte-identical results, and the generated members match the runtime members
+ * (the reflected contract symbols) one to one: name, signature and owner/module attribution.
  *
- * <p>本测试<b>只读</b>既有 golden（写 golden 由显式 regenerate 负责），所有重复生成都在
- * 内存中完成，不触碰任何基线文件。
+ * <p>The test only reads existing golden files; writing them is a separate explicit regenerate
+ * step. Every repeated generation runs in memory and touches no baseline file.
  */
 class ManagedSurfaceDerivationDeterminismTest {
 
@@ -69,9 +69,10 @@ class ManagedSurfaceDerivationDeterminismTest {
     }
 
     /**
-     * AC5 parity：TS declaration 的成员集合必须恰好等于契约（runtime member）集合——
-     * 每个 member:Owner.member 渲染进 interface $Owner，每个 global:X 渲染为 const X，
-     * 不得多出（未承诺成员）也不得遗漏（漏声明的 runtime 成员）。
+     * Member parity: the TS declaration member set must equal the contract (runtime member) set.
+     * Each member:Owner.member renders into interface $Owner and each global:X renders as
+     * const X. Nothing extra (unpromised members) and nothing missing (runtime members whose
+     * declaration is absent).
      */
     @Test
     void tsDeclarationMembersHaveRuntimeParity() {
@@ -79,7 +80,7 @@ class ManagedSurfaceDerivationDeterminismTest {
         String ts = new ManagedApiDeclarationGenerator()
                 .generate(Map.of(ScriptType.SERVER, resolvedSnapshot()), ScriptType.SERVER);
 
-        // owner → member names（来自契约/runtime member）
+        // owner -> member names (taken from the contract/runtime members)
         Map<String, List<String>> owners = new LinkedHashMap<>();
         List<String> globalNames = new ArrayList<>();
         for (ApiSymbol symbol : symbols) {
@@ -95,7 +96,7 @@ class ManagedSurfaceDerivationDeterminismTest {
             }
         }
 
-        // 产物侧：interface $Owner 块内的成员名 + const 全局名
+        // Generated side: member names inside each interface $Owner block plus the global const names
         Map<String, List<String>> renderedOwners = extractInterfaceMembers(ts);
         assertEquals(owners.keySet(), renderedOwners.keySet(),
                 "rendered owner interfaces must match contract member owners exactly (module/owner attribution)");
@@ -111,7 +112,7 @@ class ManagedSurfaceDerivationDeterminismTest {
                 "rendered globals must match contract global symbols exactly");
     }
 
-    /** TS declaration 中每个契约签名必须出现（签名 anchor parity）。 */
+    /** Every contract signature must appear in the TS declaration (signature anchor parity). */
     @Test
     void tsDeclarationRendersEveryContractSignature() {
         List<ApiSymbol> symbols = resolvedSurfaceSymbols();
@@ -164,7 +165,7 @@ class ManagedSurfaceDerivationDeterminismTest {
         return new ManagedApiDeclarationGenerator().generate(managedApis, scriptType);
     }
 
-    /** 从 interface $Owner { ... } 块提取成员名（方法名）。 */
+    /** Extracts member (method) names from the interface $Owner { ... } blocks. */
     private static Map<String, List<String>> extractInterfaceMembers(String ts) {
         Map<String, List<String>> result = new LinkedHashMap<>();
         Matcher matcher = Pattern.compile("    interface \\$(\\w+) \\{").matcher(ts);

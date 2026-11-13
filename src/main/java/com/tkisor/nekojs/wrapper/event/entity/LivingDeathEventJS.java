@@ -5,8 +5,9 @@ import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.LivingEntity;
 
 /**
- * 生物死亡事件的中立 payload（fabric 桥首用；成员 {@code event.entity} /
- * {@code event.source}，与 NeoForge 原生 LivingDeathEvent 的 getEntity/getSource 同形）。
+ * Loader-neutral payload for the living entity death event (first used by the fabric bridge;
+ * members {@code event.entity} / {@code event.source}, the same shape as NeoForge native
+ * LivingDeathEvent's getEntity/getSource).
  */
 public class LivingDeathEventJS {
 

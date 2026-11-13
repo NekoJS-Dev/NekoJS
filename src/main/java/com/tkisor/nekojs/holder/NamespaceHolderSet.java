@@ -1,5 +1,6 @@
-// 26.x 实现，本文件不应再出现版本守卫。1.21.1 的实现是 versions/1.21.1/src 下的同名文件，
-// 改本文件行为时须同步它。
+// 26.x implementation; this file must not contain version guards again. The 1.21.1
+// implementation is the same-named file under versions/1.21.1/src, so keep it in sync when
+// this file's behavior changes.
 package com.tkisor.nekojs.holder;
 
 import com.mojang.datafixers.util.Either;
@@ -12,9 +13,9 @@ import java.util.Optional;
 import java.util.stream.Stream;
 
 /**
- * 按注册表命名空间过滤的惰性 HolderSet（对应 {@code @mod} 语法）。
- * {@link #contents()} 首次调用时遍历 registry 并按 namespace 过滤，结果缓存。
- * 仅用于运行时匹配，未注册 codec（不进 recipe JSON）。
+ * Lazy HolderSet that filters a registry by namespace (the {@code @mod} syntax). The first
+ * {@link #contents()} call walks the registry, filters by namespace and caches the result.
+ * Used for runtime matching only; no codec is registered, so it never appears in recipe JSON.
  */
 public final class NamespaceHolderSet<T> extends HolderSet.ListBacked<T> {
     private final HolderLookup.RegistryLookup<T> lookup;

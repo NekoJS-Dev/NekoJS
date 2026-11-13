@@ -33,20 +33,23 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Ticket 25 declaration/Probe parity fixture（09 deterministic fixture 模式在查询域的落地）：
- *
- * <p>runtime classes（{@code EntitySelectorsJS}/{@code EntitySelectorBuilderJS}/neoforge 上的
- * {@code DataMapJS}）复刻生产链路：ProbeCoordinator BFS 的种子类 → {@link TypeReflector}
- * 反射为共享 IR → 真实 TS/Python probe backend 渲染（产物只写 {@code @TempDir}，不触碰
- * 任何 golden）。断言：
+ * Declaration/Probe parity fixture for the query bindings. It replays the production path on the
+ * runtime classes ({@code EntitySelectorsJS}/{@code EntitySelectorBuilderJS}, plus {@code DataMapJS} on
+ * neoforge): the seed classes of the ProbeCoordinator BFS are reflected by {@link TypeReflector} into
+ * the shared IR and rendered by the real TS and Python probe backends. Output goes only to
+ * {@code @TempDir} and never touches a golden file. The assertions are:
  * <ol>
- *   <li>同一输入重复生成整棵树逐字节一致（确定性，09 AC2 模式）；</li>
- *   <li>每个 runtime public member（名单由反射派生，非手写）都出现在 TS 与 Python 产物中
- *       （行级锚定，避免单字母方法的子串误匹配）；不存在的名字不出现（phantom 负样本）。</li>
+ *   <li>generating the whole tree twice from the same input gives byte-identical output
+ *       (determinism);</li>
+ *   <li>every runtime public member, with the list derived by reflection rather than written by hand,
+ *       appears in both the TS and the Python output (anchored per line, so a one-letter method name
+ *       cannot match as a substring); a name that does not exist never appears (phantom negative
+ *       sample).</li>
  * </ol>
  *
- * <p>裸 JVM 约束：类经 initialize=false 加载（不触发 MC 注册表类初始化链）；
- * {@code DataMapJS} 仅在 neoforge 类路径上纳入（fabric 节点自动缺席）。
+ * <p>Bare-JVM constraint: classes load with initialize=false, so the MC registry class initialization
+ * chain never runs. {@code DataMapJS} is included only on the neoforge class path; fabric nodes lack
+ * it.
  */
 class QueryToolDeclarationParityTest {
 
@@ -62,11 +65,12 @@ class QueryToolDeclarationParityTest {
     Path tempC;
 
     QueryToolDeclarationParityTest() {
-        // 根测试树的最小 Platform 注入（Platform.init 自带防御：已初始化则不动）
+        // Minimal Platform injection for the shared test tree. Platform.init is defensive: it does
+        // nothing when Platform is already initialized.
         try {
             Platform.init(new StubPlatform());
         } catch (RuntimeException ignored) {
-            // 其它测试已初始化过 Platform
+            // Another test already initialized Platform.
         }
     }
 
@@ -96,7 +100,7 @@ class QueryToolDeclarationParityTest {
         assertMembersPresent(first, runtimeMethodNames());
     }
 
-    // ---- generation（复刻生产派生链路）----
+    // ---- Generation (replays the production derivation chain) ----
 
     private Map<String, String> generate(String language, Path outputDir) throws IOException {
         List<Class<?>> collected = collectedClasses();
@@ -135,9 +139,10 @@ class QueryToolDeclarationParityTest {
         return tree;
     }
 
-    // ---- member parity（runtime 反射派生，行级锚定）----
+    // ---- Member parity (derived from runtime reflection, anchored per line) ----
 
-    /** 种子类的 runtime public member 名单（与 generate 同一 collectedClasses 派生）。 */
+    /** The runtime public member names of the seed classes, derived from the same collectedClasses as
+     * generate. */
     private static List<String> runtimeMethodNames() {
         List<String> names = new ArrayList<>();
         for (Class<?> cls : collectedClasses()) {
@@ -153,7 +158,8 @@ class QueryToolDeclarationParityTest {
     }
 
     private static void assertMembersPresent(Map<String, String> tree, List<String> memberNames) {
-        // 只看声明文件（.d.ts / .pyi），按行锚定：TS 成员行以 name( 开头；Python 以 def name( 开头
+        // Only declaration files (.d.ts / .pyi) are scanned, anchored per line: a TS member line starts
+        // with name( and a Python one with def name(.
         List<String> lines = new ArrayList<>();
         for (Map.Entry<String, String> entry : tree.entrySet()) {
             String key = entry.getKey();
@@ -168,7 +174,7 @@ class QueryToolDeclarationParityTest {
             boolean present = lines.stream().anyMatch(line ->
                     line.startsWith(name + "(")
                             || line.startsWith("def " + name + "(")
-                            // Python getter 语义：isXxx/getXxx 渲染为 @property def xxx
+                            // Python getter semantics: isXxx/getXxx render as @property def xxx
                             || line.startsWith("def " + dePrefixed(name) + "("));
             assertTrue(present, "runtime member missing from declaration: " + name);
         }
@@ -188,7 +194,8 @@ class QueryToolDeclarationParityTest {
 
     // ---- helpers ----
 
-    /** 生产 probe 的种子类（本域的 script-facing 面）；DataMapJS 仅 neoforge 类路径存在。 */
+    /** The seed classes of the production probe, the script-facing classes of this domain; DataMapJS
+     * exists only on the neoforge class path. */
     private static List<Class<?>> collectedClasses() {
         List<Class<?>> collected = new ArrayList<>();
         for (String name : new String[]{
@@ -204,7 +211,8 @@ class QueryToolDeclarationParityTest {
         return collected;
     }
 
-    /** 裸 JVM 安全加载（initialize=false）：反射不触发 MC 注册表类初始化。 */
+    /** Loads a class safely on a bare JVM (initialize=false), so reflection does not trigger MC registry
+     * class initialization. */
     private static Class<?> load(String name) {
         try {
             return Class.forName(name, false, QueryToolDeclarationParityTest.class.getClassLoader());

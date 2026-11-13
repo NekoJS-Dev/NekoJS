@@ -1,18 +1,21 @@
 package com.tkisor.nekojs.api.capability;
 
 /**
- * 契约能力的三态结论（ticket 09 AC4）：与 spec 04 的能力词汇一一对应。
+ * The three-state result for a contract capability.
  *
  * <ul>
- *   <li>{@link #SUPPORTED}：能力在声明条件下完全可用；</li>
- *   <li>{@link #PARTIAL}：能力在声明条件下部分可用（差异见契约 docs）；</li>
- *   <li>{@link #UNAVAILABLE}：能力在声明条件下不可用——必须显式记录并拒绝/降级，
- *       不得静默 no-op（{@code CapabilityResolver} 会以 {@code DECLARED_UNAVAILABLE}
- *       显式报告，即使存在看似可用的 provider）。</li>
+ *   <li>{@link #SUPPORTED}: the capability is fully available under the declared conditions;</li>
+ *   <li>{@link #PARTIAL}: the capability is partly available under the declared conditions (the
+ *       contract docs describe the differences);</li>
+ *   <li>{@link #UNAVAILABLE}: the capability is not available under the declared conditions and
+ *       must be recorded explicitly and rejected or degraded, never silently no-op'd
+ *       ({@code CapabilityResolver} reports it as {@code DECLARED_UNAVAILABLE}, even when a
+ *       provider looks usable).</li>
  * </ul>
  *
- * <p>声明与真实外部行为一致由 contract fixture 守护：SUPPORTED/PARTIAL 声明必须在
- * 声明条件内可解析出 provider，否则解析结果同样显式落 {@code unavailable}（不激活）。
+ * <p>Contract fixtures keep the declaration in line with real external behavior: a SUPPORTED or
+ * PARTIAL declaration must resolve to a provider under its declared conditions, otherwise the
+ * result also lands in {@code unavailable} and nothing is activated.
  */
 public enum CapabilityStatus {
     SUPPORTED,

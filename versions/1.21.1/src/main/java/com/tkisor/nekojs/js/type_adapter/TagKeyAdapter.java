@@ -1,5 +1,6 @@
-// 1.21.1 实现，与版本树 src/ 下的同名 26.x 文件成对。内容等于那份文件在本节点求值后的形态。
-// 26.x 侧行为变更时须同步本文件。
+// 1.21.1 implementation, paired with the same-named 26.x file under the version tree's src/. The content
+// is what that file becomes once evaluated for this node. Keep this file in sync when the 26.x behavior
+// changes.
 package com.tkisor.nekojs.js.type_adapter;
 
 import com.tkisor.nekojs.api.AdapterInputShape;
@@ -14,12 +15,13 @@ import net.minecraft.tags.TagKey;
 import graal.graalvm.polyglot.Value;
 import java.util.Map;
 
-// TagKey 是泛型类（TagKey<T>），此处只承载 raw 类型（JSTypeAdapter<T> 的 T 无法表达通配符，
-// getTargetClass 需返回 Class<TagKey>）；raw 用法集中在 REGISTRY_MAP 查表与 TagKey.create
+// TagKey is a generic class (TagKey<T>), so only the raw type appears here: the T of JSTypeAdapter<T>
+// cannot express a wildcard, and getTargetClass must return Class<TagKey>. The raw usage is limited to
+// the REGISTRY_MAP lookups and TagKey.create.
 @SuppressWarnings("rawtypes")
 public class TagKeyAdapter implements JSTypeAdapter<TagKey> {
 
-    // B2: immutable map + 去掉 mutable static 块
+    // Immutable map, so no mutable static initializer block is needed.
     private static final Map<String, ResourceKey<?>> REGISTRY_MAP = Map.of(
         "item", Registries.ITEM,
         "block", Registries.BLOCK,
@@ -60,13 +62,13 @@ public class TagKeyAdapter implements JSTypeAdapter<TagKey> {
         if (value.isString()) {
             String str = value.asString();
             if (str.startsWith("#")) {
-                str = str.substring(1); // 忽略 # 前缀
+                str = str.substring(1); // The leading # is dropped here.
             }
 
-            // 检查是否包含注册表前缀，例如 "block|minecraft:logs"
+            // Check for a registry prefix such as "block|minecraft:logs".
             if (str.contains("|")) {
                 String[] parts = str.split("\\|", 2);
-                // 校验拆分结果（必须在赋值之前，否则 "block|" 会抛 AIOOBE）
+                // Validate the split result before assigning; otherwise "block|" would throw an AIOOBE.
                 if (parts.length < 2 || parts[0].isBlank() || parts[1].isBlank()) {
                     throw new ValueConversionException(TagKey.class, "'registry|tag' string", str,
                         "malformed format, expected '<registry>|<tag>'");
@@ -77,7 +79,7 @@ public class TagKeyAdapter implements JSTypeAdapter<TagKey> {
                 tagPath = str;
             }
         }
-        // === 解析 JS 对象 ===
+        // === Parse a JS object ===
         else if (value.hasMembers()) {
             if (value.hasMember("type")) {
                 registryName = value.getMember("type").asString();
@@ -88,17 +90,17 @@ public class TagKeyAdapter implements JSTypeAdapter<TagKey> {
             }
         }
 
-        // === 组装 TagKey ===
+        // === Assemble the TagKey ===
         ResourceKey registryKey = REGISTRY_MAP.getOrDefault(registryName, Registries.ITEM);
         ResourceLocation id = ResourceLocation.tryParse(tagPath);
 
         if (id == null) {
-            // B9: 英文信息 + 统一异常
+            // English message, thrown as the same exception type used elsewhere.
             throw new ValueConversionException(TagKey.class, "valid tag id", tagPath,
                 "invalid tag identifier: " + tagPath);
         }
 
-        // 强转并创建 TagKey
+        // Cast the raw registry key and create the TagKey.
         return TagKey.create(registryKey, id);
     }
 }

@@ -11,9 +11,10 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * {@link NekoJsxCompiler#compileJsx} 的 lowering 正确性测试。
- * 覆盖 classic runtime 输出形态、HTML 实体解码、命名空间标签、泛型组件、子元素处理等。
- * 运行时合法性（factory 调用可被 graaljs eval）由游戏内端到端验证。
+ * Tests that {@link NekoJsxCompiler#compileJsx} lowers JSX correctly. Covers the shape of the
+ * classic runtime output, HTML entity decoding, namespaced tags, generic components and child
+ * handling. Whether the result is valid at runtime (the factory calls can be evaluated by graaljs)
+ * is verified end to end in game.
  */
 class NekoJsxCompilerTest {
 
@@ -40,9 +41,10 @@ class NekoJsxCompilerTest {
 
     @Test
     void decodesHtmlEntitiesInText() {
-        // JSX 文本里的 HTML 实体须解码（&amp;→&, &lt;→<, &gt;→>, &#39;→', &quot;→"）
+        // HTML entities in JSX text must be decoded (&amp; to &, &lt; to <, &gt; to >, &#39; to
+        // ', &quot; to ")
         String out = compile("const el = <p>A &amp; B &lt; C &gt; D</p>");
-        // 解码后文本应是 "A & B < C > D"
+        // After decoding, the text should be "A & B < C > D"
         assertTrue(out.contains("A & B"), "&amp; 须解码为 &: " + out);
         assertTrue(out.contains("B < C"), "&lt; 须解码为 <: " + out);
         assertTrue(out.contains("C > D"), "&gt; 须解码为 >: " + out);
@@ -53,7 +55,8 @@ class NekoJsxCompilerTest {
     @Test
     void decodesNumericAndQuoteEntities() {
         String out = compile("const el = <p>it&#39;s &quot;ok&quot;</p>");
-        // &#39; 解码为 '，因整体被包进单引号字符串，' 会被转义成 \'
+        // &#39; decodes to ', which is escaped as \' because the whole text is wrapped in a
+        // single-quoted string
         assertFalse(out.contains("&#39;"), "&#39; 须解码（不再残留实体）: " + out);
         assertTrue(out.contains("\\'s "), "&#39; 解码为 '（字符串内转义为 \\') : " + out);
         assertTrue(out.contains("\"ok\""), "&quot; 须解码为 \": " + out);
@@ -61,7 +64,7 @@ class NekoJsxCompilerTest {
 
     @Test
     void decodesEntitiesInStringAttributeValues() {
-        // 与 React/TS 的 JSX 语义一致：字符串属性值里的实体须解码（曾钉住"原样保留"的非 React 行为）
+        // Matches React/TS JSX semantics: entities inside a string attribute value must be decoded.
         String out = compile("const el = <a title=\"A &amp; B\"/>");
         assertFalse(out.contains("&amp;"), "&amp; 须解码为 &: " + out);
         assertTrue(out.contains("'A & B'"), "解码后的值须以转义后的 JS 字符串字面量出现: " + out);
@@ -69,7 +72,7 @@ class NekoJsxCompilerTest {
 
     @Test
     void multiLineStringAttributeProducesValidJsLiteral() {
-        // 多行属性值：换行必须转义为 \n——原样拷贝会产出非法 JS 字符串字面量
+        // Multi-line attribute value: a newline must be escaped as \n, since copying it verbatim yields an invalid JS string literal
         String out = compile("const el = <a title=\"line1\nline2\"/>");
         assertTrue(out.contains("line1\\nline2"), "换行须转义: " + out);
         CompilerExecutionAssertions.parse(out);
@@ -77,14 +80,14 @@ class NekoJsxCompilerTest {
 
     @Test
     void keepsSingleSpaceBetweenElementsOnSameLine() {
-        // React 规则：同一行内元素间的空格是有效内容（曾与换行一起被 trim 掉）
+        // React rule: a space between elements on the same line is real content.
         String out = compile("const el = <p><b>Hi</b> <i>There</i></p>");
         assertTrue(out.contains(", ' ', "), "元素间单空格须保留为文本子节点: " + out);
     }
 
     @Test
     void removesWhitespaceRunsThatSpanNewlines() {
-        // React 规则：跨换行的空白 run（换行相邻标签）删除；行中文本间换行折叠为单空格
+        // React rule: a whitespace run spanning a newline (a newline next to a tag) is removed; a newline between text on the same line collapses to one space
         String out = compile("const el = <p>\n  hello\n  world\n</p>");
         assertTrue(out.contains("'hello world'"), "行间换行折叠为单空格: " + out);
     }
@@ -106,7 +109,7 @@ class NekoJsxCompilerTest {
 
     @Test
     void preservesNamespaceTagNames() {
-        // 命名空间标签 <svg:rect/> —— 名称整段作为字符串传给 factory。
+        // Namespace tag <svg:rect/>: the whole name goes to the factory as one string.
         String out = compile("const el = <svg:rect xlink:href=\"#shape\"/>");
         assertTrue(out.contains("'svg:rect'"), "命名空间标签须作字符串字面量: " + out);
         assertTrue(out.contains("'xlink:href': '#shape'"), "命名空间属性须使用合法属性键（转义字面量）: " + out);
@@ -118,8 +121,8 @@ class NekoJsxCompilerTest {
 
     @Test
     void preservesGenericComponentSyntaxInTsx() {
-        // 泛型组件 <Foo<number>/> —— TSX：JSX 层把 Foo 透传，泛型 <number> 由 TS 擦除阶段处理
-        // 这里测 compileTsx 的完整输出：Foo 保留为组件引用，<number> 被擦除
+        // Generic component <Foo<number>/> in TSX: the JSX layer passes Foo through and the TS erasure stage handles <number>
+        // This tests the full compileTsx output: Foo stays as the component reference and <number> is erased
         String src = "const el = <Foo<number>/>";
         String out = NekoJsxCompiler.compileTsx(Path.of("test.tsx"), src).code();
         assertTrue(out.contains("Foo"), "组件名 Foo 须保留: " + out);
@@ -238,7 +241,7 @@ class NekoJsxCompilerTest {
 
     @Test
     void automaticRuntimeEmitsJsxCallAndImport() {
-        // 自动 runtime：输出 jsx(type, props, key) 调用，并在文件头注入 import { jsx, Fragment }
+        // Automatic runtime: emits jsx(type, props, key) calls and injects import { jsx, Fragment } at the top of the file
         String src = "const el = <div class=\"x\">hi</div>";
         String out = NekoJsxCompiler.compileJsx(Path.of("test.jsx"), src, true).code();
         assertTrue(out.contains("import { jsx"), "自动 runtime 须注入 jsx import: " + out);
@@ -249,7 +252,7 @@ class NekoJsxCompilerTest {
 
     @Test
     void automaticRuntimeFragmentUsesFragmentImport() {
-        // 自动 runtime 下 Fragment 是类型值：jsx(Fragment, { children: ... })
+        // Under the automatic runtime Fragment is the type value: jsx(Fragment, { children: ... })
         String out = NekoJsxCompiler.compileJsx(Path.of("test.jsx"), "const f = <>x</>", true).code();
         assertTrue(out.contains("import {"), "须有 import: " + out);
         assertTrue(out.contains("Fragment"), "Fragment 须在 import 中: " + out);
@@ -259,7 +262,7 @@ class NekoJsxCompilerTest {
 
     @Test
     void classicRuntimeRemainsDefault() {
-        // 不传 automatic（默认 false）：仍是 classic __nekoJsxFactory
+        // Without automatic (false by default) it stays the classic __nekoJsxFactory
         String out = compile("const el = <div/>");
         assertTrue(out.contains("__nekoJsxFactory("), "默认仍是 classic runtime: " + out);
         assertFalse(out.contains("import { jsx"), "默认不应注入 jsx import: " + out);

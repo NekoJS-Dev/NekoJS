@@ -3,16 +3,14 @@ package com.tkisor.nekojs.core.posteffect;
 import java.util.List;
 
 /**
- * Platform side of the post-effect declaration lifecycle (ticket 28): the seam between the
- * Minecraft-free candidate plan and the Adapter that owns the live client renderer and its
- * resources.
+ * Platform side of the post-effect declaration lifecycle. It sits between the Minecraft-free
+ * candidate plan and the Adapter that owns the live client renderer and its resources.
  *
- * <p>The plan calls {@link #preflight(List)} during the candidate's joint preflight
- * (STATE_PLAN) and {@link #apply(List)} exactly once from the single commit point. Neither
- * method may mount a production callback for the candidate generation before the commit
- * point: {@code preflight} validates only, and {@code apply} replaces the whole active
- * generation atomically (installs + retires), cleaning up the previous generation's
- * listeners and resources.
+ * <p>The plan calls {@link #preflight(List)} during the candidate's joint preflight (STATE_PLAN)
+ * and {@link #apply(List)} exactly once from the single commit point. Neither method may mount a
+ * production callback for the candidate generation before the commit point: {@code preflight}
+ * only validates, and {@code apply} replaces the whole active generation atomically (installs
+ * and retires), cleaning up the previous generation's listeners and resources.
  */
 public interface PostEffectApplier {
 

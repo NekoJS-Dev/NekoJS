@@ -8,23 +8,24 @@ import net.minecraft.world.level.LevelAccessor;
 import net.minecraft.world.level.block.state.BlockState;
 
 /**
- * 方块被破坏事件（{@code BlockEvents.broken}）的**加载器中立**载荷。
+ * Loader-neutral payload for the block-broken event ({@code BlockEvents.broken}).
  *
- * <p>SPI 样板：这个类只用原版 MC 类型，所以三个 NeoForge 节点、fabric、forge 都能共用。
- * 各加载器在自己的绑定点把原生事件转换成本类（NeoForge 侧见
- * {@code BlockEvents.FORGE_BRIDGE} 的 {@code bindTransformed}）。
+ * <p>This class only uses vanilla MC types, so the three NeoForge nodes, fabric and forge all
+ * share it. Each loader converts its native event into this class at its own binding point; the
+ * NeoForge side does it with {@code bindTransformed} on {@code BlockEvents.FORGE_BRIDGE}.
  *
- * <p>为什么值得这么做：原先 {@code BlockEvents.BROKEN} 直接把 NeoForge 的事件类
- * 暴露给脚本（26.x 是 {@code BreakBlockEvent}、1.21.1 是 {@code BlockEvent.BreakEvent}），
- * 于是 ① 脚本 API 随 MC 版本变形 ② fabric 根本没有对应类 ③ 公共 API 声明处需要版本守卫。
- * 换成中立载荷后三个问题一起消失。
+ * <p>The neutral payload is what makes this workable: exposing the NeoForge event class directly
+ * would make the script API change with the MC version (26.x has {@code BreakBlockEvent}, 1.21.1
+ * has {@code BlockEvent.BreakEvent}), fabric has no matching class at all, and the public API
+ * declarations would need version guards. All three problems go away with this payload.
  *
  * <p>Listeners returning {@code true} cancel the native break through the loader bridge.
  * This payload does not retain the native event or expose loader types.
  *
- * <p>**刻意不含掉落经验**：1.21.1 的 {@code BlockEvent.BreakEvent} 有 {@code getExpToDrop()}，
- * 26.x 的 {@code BreakBlockEvent} **删掉了**这个 API。设计中立载荷会迫使这类**数据层面**的
- * 真实版本差异浮出水面——与其在某一版伪造 0，不如不暴露（要用就走版本守卫的扩展面）。
+ * <p>It deliberately has no drop-experience value: 1.21.1's {@code BlockEvent.BreakEvent} has
+ * {@code getExpToDrop()}, while 26.x's {@code BreakBlockEvent} removed that API. A neutral
+ * payload surfaces this real version difference at the data level; rather than faking 0 on one
+ * version, the value is not exposed (use the version-guarded extension surface when you need it).
  */
 @Doc("Fired when a block is broken (BlockEvents.broken). Listeners are dispatched by block id.")
 @Doc("Return true to cancel the break.")

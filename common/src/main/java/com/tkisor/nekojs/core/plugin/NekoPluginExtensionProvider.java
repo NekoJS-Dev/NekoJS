@@ -3,51 +3,61 @@ package com.tkisor.nekojs.core.plugin;
 import com.tkisor.nekojs.api.NekoJSPlugin;
 
 /**
- * 扩展点提供者：让第三方插件定义自己的收集扩展点，与内置扩展点同批工作。
+ * Lets third-party plugins define their own collection points, which run in the same batch as
+ * the built-in ones.
  *
- * <p>同时实现 {@link NekoJSPlugin} 与本接口的插件，会在 bootstrap 的扩展点注册阶段收到一次
- * {@link #registerPluginExtensionPoints} 回调，借此向 {@link NekoPluginExtensionRegistry}
- * 注册任意数量的 {@link NekoPluginExtensionPoint}（注册返回
- * {@link NekoPluginExtensionHandle}，bootstrap 完成后可凭它取回该点的 finisher 产物）。
- * 注册完成后（registry freeze），每个扩展点——内置与自定义一视同仁——都会按点优先执行序
- * 对本次 bootstrap 的<b>所有</b>插件逐个收集，包括定义该扩展点的插件自己。
+ * <p>A plugin that implements both {@link NekoJSPlugin} and this interface receives one
+ * {@link #registerPluginExtensionPoints} callback during the extension point registration
+ * phase of a bootstrap. There it registers any number of {@link NekoPluginExtensionPoint}
+ * instances with the {@link NekoPluginExtensionRegistry}; each registration returns a
+ * {@link NekoPluginExtensionHandle} that fetches the point's finisher product once the
+ * bootstrap completes. After registration ends (the registry freezes), every point, built-in
+ * or custom, collects from <b>all</b> plugins of this bootstrap one point at a time in
+ * point-first execution order, including the plugin that defined it.
  *
- * <p><b>生命周期：</b>注册窗口只在 {@link NekoPluginBootstrap} 的扩展点注册阶段开放：
- * bootstrap 先注册 14 个内置扩展点（{@code nekojs:script_compilers} … {@code nekojs:probe_backends}），
- * 再按插件列表顺序回调各 provider，然后 freeze。窗口随本次 bootstrap 关闭，
- * freeze 后再调用 {@link NekoPluginExtensionRegistry#register} 会抛出 {@link IllegalStateException}。
+ * <p><b>Lifetime:</b> the registration window is open only during the extension point
+ * registration phase of {@link NekoPluginBootstrap}. The bootstrap registers the 14 built-in
+ * points first ({@code nekojs:script_compilers} … {@code nekojs:probe_backends}), then calls
+ * each provider in plugin list order, then freezes. The window closes with that bootstrap;
+ * calling {@link NekoPluginExtensionRegistry#register} after the freeze throws
+ * {@link IllegalStateException}.
  *
- * <p><b>id 冲突：</b>扩展点 id 在同一次 bootstrap 内全局唯一——自定义 id 之间、
- * 以及自定义 id 与内置 {@code nekojs:*} id 冲突都在注册时立即抛出 {@link IllegalArgumentException}，
- * fail-fast 终止整个 bootstrap。
+ * <p><b>Id conflicts:</b> an extension point id is unique within one bootstrap. A duplicate
+ * between two custom ids, or between a custom id and a built-in {@code nekojs:*} id, throws
+ * {@link IllegalArgumentException} at registration, and the fail-fast rule aborts the whole
+ * bootstrap.
  *
- * <p><b>点优先执行序：</b>freeze 后按「扩展点 × 插件」逐点收集：每个扩展点依次
- * initializer 建累积器 → 按插件列表序（生产入口为 {@code @RegisterNekoJSPlugin}
- * priority 降序）遍历 collector → finisher 产不可变产物 → 发布（bootstrap context、
- * 注册句柄与结果容器）→ 下一个扩展点（扩展点按注册顺序，内置在前、自定义在后）。
- * 因此<b>扩展点间依赖 = 在 initializer / collector 里引用先注册点的产物</b>
- * （{@link NekoPluginExtensionContext#result}）：后注册点收集任意插件时，
- * 先注册点已经 finish，产物可直接取用。
+ * <p><b>Point-first execution order:</b> after the freeze the bootstrap collects point by
+ * point and plugin by plugin. For each point the initializer builds the accumulator, the
+ * collectors run in plugin list order (the production entry point sorts plugins by
+ * {@code @RegisterNekoJSPlugin} priority, highest first), the finisher produces an immutable
+ * product, the product is published (bootstrap context, handle and result containers), and
+ * the next point starts; points run in registration order, built-ins first, custom ones after.
+ * A point therefore depends on another by using that earlier point's product in its
+ * initializer or collector ({@link NekoPluginExtensionContext#result}): when the later point
+ * collects any plugin, the earlier one has already finished and its product is available.
  *
- * <p><b>与固有钩子的关系：</b>{@link NekoJSPlugin} 的固有钩子（{@code registerScriptCompilers}、
- * {@code registerBinding}、{@code registerEvents} 等 14 项）并非另一条特殊通道——它们就是
- * 同一机制下注册的内置扩展点（见 {@code BuiltinPluginExtensionPoints}）。
- * 第三方经本接口注册的扩展点与这些固有钩子地位完全平等、同批收集。
+ * <p><b>Relation to the built-in hooks:</b> the 14 built-in {@link NekoJSPlugin} hooks
+ * ({@code registerScriptCompilers}, {@code registerBinding}, {@code registerEvents} and so on)
+ * are not a separate channel; they are extension points registered by this same mechanism
+ * (see {@code BuiltinPluginExtensionPoints}). Points registered through this interface have
+ * the same standing and are collected in the same batch.
  */
 public interface NekoPluginExtensionProvider extends NekoJSPlugin {
 
     /**
-     * 向 bootstrap 注册本插件定义的扩展点。
+     * Registers the extension points this plugin defines with the bootstrap.
      *
-     * <p>仅在扩展点注册阶段被调用一次；此阶段内经
-     * {@link NekoPluginExtensionRegistry#register} 注册的扩展点会在 freeze 后
-     * 按点优先执行序对所有插件逐个收集（含本插件），注册返回的
-     * {@link NekoPluginExtensionHandle} 在该点 finish 后可取回产物。
-     * 窗口关闭后再注册抛出 {@link IllegalStateException}，
-     * id 重复抛出 {@link IllegalArgumentException}。
+     * <p>Called once, only during the extension point registration phase. Points registered
+     * through {@link NekoPluginExtensionRegistry#register} in this phase are collected from
+     * every plugin (including this one) after the freeze, in point-first execution order, and
+     * the returned {@link NekoPluginExtensionHandle} fetches the product once the point
+     * finishes. Registering after the window closes throws {@link IllegalStateException}; a
+     * duplicate id throws {@link IllegalArgumentException}.
      *
-     * @param registry bootstrap 提供的注册器（仅本回调期间可写），
-     *                 {@code register} 返回的句柄可在 bootstrap 完成后取回产物
+     * @param registry the registrar supplied by the bootstrap (writable only during this
+     *                 callback); the handle returned by {@code register} fetches the product
+     *                 after the bootstrap completes
      */
     void registerPluginExtensionPoints(NekoPluginExtensionRegistry registry);
 }

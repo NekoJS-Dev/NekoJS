@@ -6,20 +6,21 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.Level;
 
 /**
- * 实体 tick 事件（{@code EntityEvents.tickPre / tickPost}）的**加载器中立**载荷。
+ * Loader-neutral payload for the entity tick event ({@code EntityEvents.tickPre / tickPost}).
  *
- * <p>成员对齐 NeoForge 原生 {@code EntityTickEvent}（getEntity / getLevel）。fabric 侧
- * 没有 per-entity tick 现成回调（fabric-api 5.0.2 的 entity-events-v1
- * 仅 Elytra/Sleep/Combat/Living 伤害死亡转换，javap 实证），由
- * {@code FabricEntityEventBindingsV2} + {@code MixinEntityTick} 从
- * {@code Entity#tick} 的 HEAD/TAIL 转换（HEAD 传调用前、TAIL 传调用后）。
+ * <p>The members match NeoForge native {@code EntityTickEvent} (getEntity / getLevel). fabric
+ * has no ready per-entity tick callback (in fabric-api 5.0.2, entity-events-v1 only converts
+ * Elytra/Sleep/Combat/Living damage and death, as javap shows), so
+ * {@code FabricEntityEventBindingsV2} + {@code MixinEntityTick} convert the HEAD and TAIL of
+ * {@code Entity#tick} (HEAD posts before the call, TAIL after it).
  *
- * <p><b>开销与覆盖说明</b>：{@code Entity#tick} 每 tick 每实体都会执行，总线
- * 内部以 {@code hasListeners()} 短路（无监听器时零 payload 构建）；覆写了
- * {@code tick()} 且未调 {@code super.tick()} 的实体不会触达（个别
- * 实体类型，见 {@code MixinEntityTick} javadoc）。
+ * <p><b>Cost and coverage</b>: {@code Entity#tick} runs for every entity every tick, and the
+ * bus short-circuits on {@code hasListeners()} (no payload is built when nothing is
+ * listening). Entities that override {@code tick()} without calling {@code super.tick()} never
+ * reach it (a few entity types; see the {@code MixinEntityTick} javadoc).
  *
- * <p>不可取消；SERVER 总线只投递服务端实例（mixin 侧过滤客户端）。
+ * <p>Not cancellable; the SERVER bus only posts server-side instances (the mixin filters the
+ * client).
  */
 @Doc("Fired before / after each entity's tick (EntityEvents.tickPre / tickPost). Dispatched by entity type.")
 @Doc("Not cancellable. Server-side instances only. High-frequency: use carefully.")

@@ -31,29 +31,27 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Ticket 29 AC3 readback fixture for the script-facing asset members: drives
- * {@code Assets.blockState/blockModel/itemModel/texture} from real GraalJS script code
- * (the same host-method boundary production scripts go through — the members take
- * {@code Value} parameters, so JS object/array/string arguments must survive the
- * polyglot conversion exactly), then reads the produced files back from disk and pins
- * the deterministic outputs:
+ * Readback test for the script-facing asset members: drives
+ * {@code Assets.blockState/blockModel/itemModel/texture} from real GraalJS script code, the same
+ * host-method path production scripts go through (the members take {@code Value} parameters, so
+ * JS object/array/string arguments must survive the polyglot conversion exactly), then reads the
+ * produced files back from disk and pins the deterministic outputs:
  *
  * <ul>
- *   <li>JSON structure per member, including parameter normalization (plain-string
- *       model shorthand, JSON-string input), default namespace/path completion
- *       ({@code plain_block} -> {@code minecraft:plain_block}, texture {@code block/}
- *       default, texture shorthand {@code my_tex} -> {@code <ns>:block/my_tex});</li>
- *   <li>the placeholder PNG's exact identity: signature, 16x16 8-bit truecolor IHDR,
- *       chunk order and CRCs, and the full decompressed magenta pixel payload (with a
- *       SHA-256 content constant). The zlib-compressed IDAT bytes themselves are
- *       {@code java.util.zip.Deflater} (native zlib) output — stable within one JVM
- *       build, but not a cross-build contract — so the pinned identity is the
- *       zlib-independent structure above plus byte-equality of independently written
+ *   <li>JSON structure per member, including parameter normalization (plain-string model
+ *       shorthand, JSON-string input) and default namespace/path completion
+ *       ({@code plain_block} -> {@code minecraft:plain_block}, texture {@code block/} default,
+ *       texture shorthand {@code my_tex} -> {@code <ns>:block/my_tex});</li>
+ *   <li>the placeholder PNG's exact identity: signature, 16x16 8-bit truecolor IHDR, chunk order
+ *       and CRCs, and the full decompressed magenta pixel payload (with a SHA-256 content
+ *       constant). The zlib-compressed IDAT bytes are output of {@code java.util.zip.Deflater}
+ *       (native zlib), stable within one JVM build but not across builds, so the pinned identity
+ *       is the zlib-independent structure above plus byte-equality of independently written
  *       placeholders (per-run determinism), not a whole-file hash.</li>
  * </ul>
  *
- * <p>Golden files are deliberately not introduced: readback assertions pin the same
- * determinism without a second artifact to keep in sync.
+ * <p>No golden files are used: the readback assertions pin the same determinism without a second
+ * artifact to keep in sync.
  */
 class Ticket29AssetsReadbackFixtureTest {
 

@@ -1,5 +1,6 @@
-// 1.21.1 实现，与版本树 src/ 下的同名 26.x 文件成对。内容等于那份文件在本节点求值后的形态。
-// 26.x 侧行为变更时须同步本文件。
+// 1.21.1 implementation, paired with the file of the same name under the version tree's src/
+// that targets 26.x. Its content equals that file as evaluated for this node.
+// Update this file when behavior changes on the 26.x side.
 package com.tkisor.nekojs.api.inject;
 
 import com.tkisor.nekojs.api.annotation.HideFromJS;
@@ -132,13 +133,15 @@ public interface ItemStackExtension extends ItemStackSpec {
     }
 
     default boolean neko$hasEnchantment(Holder<Enchantment> enchantment, int level) {
-        // getEnchantmentLevel：NeoForge 游戏逻辑查附魔等级（getEnchantments 已废弃）
+        // getEnchantmentLevel: the NeoForge gameplay path for reading an enchantment level.
+        // getEnchantments is deprecated.
         return self().getEnchantmentLevel(enchantment) >= level;
     }
 
     default Ingredient neko$asIngredient() {
         if (self().getComponentsPatch().isEmpty()) {
-            // builtInRegistryHolder 已废弃：从注册表 wrap 等价 holder（26.x 的 ItemStack 无 getItemHolder）
+            // builtInRegistryHolder is deprecated, so wrap an equivalent holder from the registry.
+            // The 26.x ItemStack has no getItemHolder.
             return Ingredient.of(self().getItem());
         }
         return neko$weakNBT();

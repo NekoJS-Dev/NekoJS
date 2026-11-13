@@ -9,15 +9,17 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
 
 /**
- * 玩家获得进度事件（{@code PlayerEvents.advancement}）的加载器中立载荷。
+ * Loader-neutral payload for the player advancement event ({@code PlayerEvents.advancement}).
  *
- * <p>对齐 NeoForge {@code AdvancementEvent.AdvancementEarnEvent} 的 getter 形态：
- * {@code event.advancement}（AdvancementHolder）；另附 {@code id}（注册名 Identifier）
- * 与 {@code displayName}（展示标题，无 display 的进度为 null）两个便捷成员。
+ * <p>The getters follow NeoForge {@code AdvancementEvent.AdvancementEarnEvent}:
+ * {@code event.advancement} (AdvancementHolder), plus two convenience members, {@code id} (the
+ * registration name as an Identifier) and {@code displayName} (the display title, null for an
+ * advancement without a display).
  *
- * <p>触发语义与 NeoForge 一致：{@code PlayerAdvancements#award} 中某进度从「未完成」
- * 变为「完成」（{@code !wasDone && progress.isDone()}）且该进度带 display 时触发一次
- * （内部无 display 的进度不触发，与 NeoForge 的 ifPresent 语义相同）。
+ * <p>The trigger follows NeoForge: in {@code PlayerAdvancements#award} it fires once when an
+ * advancement turns from not done to done ({@code !wasDone && progress.isDone()}) and that
+ * advancement has a display. Advancements without a display never fire, the same as NeoForge's
+ * ifPresent behavior.
  */
 @Doc("Fired when a player earns an advancement (PlayerEvents.advancement).")
 @Doc("event.advancement is the AdvancementHolder; event.id its Identifier; event.displayName the title or null.")

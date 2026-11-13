@@ -10,13 +10,13 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * {@link HolderAdapter} 的纯逻辑路径（无 FML/注册表 bootstrap 也能跑）：
- * 非法 id 的带上下文报错与非 Holder 宿主对象的拒绝。
+ * Pure logic paths of {@link HolderAdapter} that run without FML or a registry bootstrap: an
+ * invalid id reports an error with context, and non-Holder host objects are rejected.
  *
- * <p>注意 {@code AbstractJSTypeAdapter.test()} 对字符串直接委托 {@code fromString}，
- * 所以合法 id 的形状判定与跨注册表解析（唯一命中/歧义/未命中）都依赖注册表内容——
- * 裸 JUnit 无 FML Loader 无法 bootstrap（ModDev unitTest 支持是后续工作），由
- * in-game 验证覆盖。
+ * <p>{@code AbstractJSTypeAdapter.test()} delegates strings straight to {@code fromString}, so both
+ * the shape check for a valid id and cross-registry resolution (single hit, ambiguous, no hit)
+ * depend on registry contents. Bare JUnit has no FML loader and cannot bootstrap, so in-game
+ * verification covers those.
  */
 class HolderAdapterTest {
 

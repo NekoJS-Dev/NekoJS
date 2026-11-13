@@ -5,8 +5,9 @@ import com.tkisor.nekojs.api.annotation.Return;
 import net.minecraft.client.gui.screens.Screen;
 
 /**
- * {@code ClientEvents.screenRender} 事件对象：当前打开界面（Screen）渲染后的绘制
- * 上下文——{@code painter} 与 hud 同款绘制 API，另带界面与鼠标信息。
+ * Event object for {@code ClientEvents.screenRender}: the drawing context after the currently
+ * open Screen renders. Its {@code painter} has the same drawing API as the hud event and the
+ * object also carries the screen and mouse position.
  */
 @Doc("Event fired after the currently open screen renders (ClientEvents.screenRender).")
 @Doc("Carries a painter with the same drawing API as the hud event, plus screen and mouse info.")
@@ -23,35 +24,35 @@ public class ScreenRenderEventJS {
         this.mouseY = mouseY;
     }
 
-    /** 绘制器（与 {@code ClientEvents.hud} 同款 API，含 partialTick）。 */
+    /** The painter; same API as {@code ClientEvents.hud}, including partialTick. */
     @Doc("Gets the drawing helper for this frame.")
     @Return("a PainterJS with the same API as the hud event painter")
     public PainterJS getPainter() {
         return painter;
     }
 
-    /** 当前打开的界面对象。 */
+    /** The screen that is currently open. */
     @Doc("Gets the screen currently being rendered.")
     @Return("the rendered Screen instance; covers any screen, including title and pause screens")
     public Screen getScreen() {
         return screen;
     }
 
-    /** 界面标题（如 {@code 'Chest'}）。 */
+    /** The screen title (for example {@code 'Chest'}). */
     @Doc("Gets the displayed title of the open screen.")
     @Return("the title as plain text, e.g. 'Chest'")
     public String getScreenTitle() {
         return screen.getTitle().getString();
     }
 
-    /** 鼠标 X 坐标（GUI 缩放后坐标）。 */
+    /** Mouse X in GUI-scaled coordinates. */
     @Doc("Gets the mouse X position.")
     @Return("mouse X in GUI-scaled coordinates")
     public int getMouseX() {
         return mouseX;
     }
 
-    /** 鼠标 Y 坐标（GUI 缩放后坐标）。 */
+    /** Mouse Y in GUI-scaled coordinates. */
     @Doc("Gets the mouse Y position.")
     @Return("mouse Y in GUI-scaled coordinates")
     public int getMouseY() {

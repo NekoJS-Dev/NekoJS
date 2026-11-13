@@ -13,21 +13,24 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 /**
- * 方块放置事件（{@code BlockEvents.placed} / {@code entityPlaced}）的 fabric 挂点：
- * {@code EnderMan$EndermanLeaveBlockGoal#canPlaceBlock} 的 HEAD。
+ * Fabric hook for the block placement events ({@code BlockEvents.placed} /
+ * {@code BlockEvents.entityPlaced}): the HEAD of
+ * {@code EnderMan$EndermanLeaveBlockGoal#canPlaceBlock}.
  *
- * <p>注入点选型（javap 实证 minecraft-merged-deobf-26.1.2）：原版在 {@code tick()}
- * 里随机选点后调 {@code canPlaceBlock(level, pos, carried, targetState, belowState,
- * below)}（唯一调用方），全部上下文都在声明参数里——比在 tick 的
- * {@code Level.setBlock} INVOKE 点 + LocalCapture 捕获局部变量干净得多。
- * 取消 = {@code cir.setReturnValue(false)} → {@code tick} 里 {@code &&} 短路，
- * {@code setBlock} 不执行、末影人保留手中方块——与 NeoForge 26.1.2 补丁
- * （{@code EventHooks.onBlockPlace} 返回 true 跳过放置）语义一致。
+ * <p>Why this point (checked with javap on minecraft-merged-deobf-26.1.2): vanilla picks a
+ * random position in {@code tick()} and then calls
+ * {@code canPlaceBlock(level, pos, carried, targetState, belowState, below)}, its only caller,
+ * so all the context is in the declared parameters. That is much simpler than hooking the
+ * {@code Level.setBlock} INVOKE point in tick and capturing locals. Cancelling means
+ * {@code cir.setReturnValue(false)}, so the {@code &&} in {@code tick} short-circuits,
+ * {@code setBlock} does not run and the enderman keeps the block in hand. This matches the
+ * NeoForge 26.1.2 patch, where {@code EventHooks.onBlockPlace} returning true skips placement.
  *
- * <p>26.x 平台事实：NeoForge 侧 {@code BlockEvent.EntityPlaceEvent} 的唯一 post 点
- * 就是本方法同位次（补丁源码 {@code EventHooks.onBlockPlace}，BlockItem/
- * FallingBlockEntity/WitherBoss 均无挂点）——两平台本事件都只在末影人放置时触发，
- * 一次放置双总线投递（placed + entityPlaced）。
+ * <p>Platform fact for 26.x: the only post point of {@code BlockEvent.EntityPlaceEvent} on
+ * NeoForge is this same place (the patch source is {@code EventHooks.onBlockPlace};
+ * BlockItem, FallingBlockEntity and WitherBoss have no hook). On both platforms this event
+ * fires only when an enderman places a block, and one placement posts on both buses (placed and
+ * entityPlaced).
  */
 @Mixin(targets = "net.minecraft.world.entity.monster.EnderMan$EndermanLeaveBlockGoal")
 public abstract class MixinEndermanLeaveBlockGoal {

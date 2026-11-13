@@ -1,6 +1,6 @@
 //? if neoforge {
-// 本文件保留的版本守卫都是真差异：KeyBindEvents / Assets / IdentifierAdapter 是 26.x 独有
-// 符号，TriState 在 26.x 挪到了 net.minecraft.util（1.21.1 在 neoforge 的 common util）。
+// Version guards retained in this file are true differences: KeyBindEvents / Assets / IdentifierAdapter are 26.x-unique
+// symbols; TriState moved to net.minecraft.util in 26.x (1.21.1 is in neoforge common util).
 package com.tkisor.nekojs.core;
 
 import com.mojang.blaze3d.platform.InputConstants;
@@ -140,10 +140,10 @@ public class NekoJSCorePlugin implements NekoJSPlugin, com.tkisor.nekojs.core.pl
                 new com.tkisor.nekojs.bindings.static_access.NativeBridgeJS()), expose -> expose.stable());
         registry.register(com.tkisor.nekojs.api.data.Binding.of("Item",
                 new com.tkisor.nekojs.bindings.static_access.ItemJS()), expose -> expose.versioned());
-        // 同名原版类组合绑定（与下方 Item/Block 代理委托同模式）：工厂方法走 helper，
-        // 其余成员委托同名 vanilla/NeoForge 类的静态成员（如 Ingredient.empty、
-        // Capabilities.ItemHandler.BLOCK）。Binding.of 的 valueType 声明 helper 类型供
-        // preflight/probe 反射（代理动态成员反射不到）。
+        // Same-name vanilla class combination binding (same pattern as Item/Block proxy delegation below): factory methods go to helper,
+        // other members delegate to static members of the same-name vanilla/NeoForge classes (e.g., Ingredient.empty,
+        // Capabilities.ItemHandler.BLOCK). Binding.of's valueType declares helper type for
+        // preflight/probe reflection (dynamic members of the proxy cannot be reflected).
         registry.register(Binding.of("Ingredient", new DelegatingBinding(new IngredientFactory(),
                 net.minecraft.world.item.crafting.Ingredient.class,
                 Set.of("of", "item", "tag", "any", "all", "not")), IngredientFactory.class));
@@ -166,7 +166,7 @@ public class NekoJSCorePlugin implements NekoJSPlugin, com.tkisor.nekojs.core.pl
         registry.register("StringUtils", new StringUtilsJS());
         registry.register("Time", new TimeJS());
         registry.register("Utils", new UtilsJS());
-        // 数学/图标/伤害/粒子：KJS wrapper 面对齐（JavaMath 直接绑 java.lang.Math）
+        // Math/Icons/Damage/Particles: KJS wrapper alignment (JavaMath directly bound to java.lang.Math)
         registry.register("JavaMath", Math.class);
         registry.register("KMath", KMathJS.class);
         registry.register("TextIcons", TextIcons.class);
@@ -179,11 +179,11 @@ public class NekoJSCorePlugin implements NekoJSPlugin, com.tkisor.nekojs.core.pl
                 net.minecraft.core.particles.ParticleOptions.class,
                 Set.of("of")),
                 ParticleOptionsJS.class));
-        // NeoForge data map 快捷查询（其余 map 经 Registry.get(...).dataMapValue(...)）。
-        // ticket 25 修复：必须注册**实例**——class binding（StaticClass）不暴露 instance 方法，
-        // 脚本侧 DataMap.furnaceFuel 拿到 `typeof === 'undefined'`，调用即
-        // `Unknown identifier: furnaceFuel`。
-        // DataMapJS 无状态，单例实例即查询面。
+        // Quick query for NeoForge data maps (other maps via Registry.get(...).dataMapValue(...)).
+        // Register an **instance**, not the class: class binding (StaticClass) does not expose
+        // instance methods, so script-side `DataMap.furnaceFuel` is `typeof === 'undefined'`
+        // and calling it reports `Unknown identifier: furnaceFuel`.
+        // DataMapJS has no state, so one singleton instance serves the queries.
         registry.register("DataMap", new DataMapJS());
         // NativeEventsJS implements Binding so its close() (→ clear()) runs on STARTUP
         // reload, unregistering the previous round's native NeoForge event listeners
@@ -197,22 +197,23 @@ public class NekoJSCorePlugin implements NekoJSPlugin, com.tkisor.nekojs.core.pl
         registry.register("TriState", TriState.class);
 //?}
         registry.register("Network", NetworkJS.class);
-        // 服务端→客户端键值推送（客户端侧只读视图 clientData 由 common 内置插件注册）
+        // Server→client key-value push (client-side read-only view clientData registered by common built-in plugin)
         registry.register("ClientData", ClientDataSyncJS.class);
-        // 类型化资产生成（KubeJS 风格 blockState/blockModel/itemModel/texture），写入
-        // <gameDir>/nekojs/assets 资源包，与 generateAssets 事件同目录，reload 时懒读生效
+        // Typed asset generation (KubeJS style blockState/blockModel/itemModel/texture), written to
+        // <gameDir>/nekojs/assets resource pack, in same directory as generateAssets event, takes effect on reload (lazy read)
 //? if >=26 {
         registry.register("Assets", new AssetGeneratorJS());
 //?}
-        // （global/shared 不在此注册：票 10 起由 ScriptEnvironmentFactory 为每个 generation
-        // 安装 root 拥有的视图——按 ScriptType 私有 store + 显式 shared 入口，不再是进程级共享 Map）
+// (global/shared is not registered here: ScriptEnvironmentFactory installs root-owned
+// views per generation—a private store per ScriptType plus an explicit shared entry,
+// instead of one process-level shared Map)
         registry.register("ItemStack", ItemStack.class);
         registry.register("Items", Items.class);
-        // 全局 Item 是 ProxyObject 代理委托（of/empty/id/idOf 走 ItemJS，其余委托 MC Item 类）。
-        // 代理的动态成员 Java 反射不到，preflight 会误报 "has no member 'of'"，
-        // 故用 Binding.of(name, value, valueType) 显式声明 valueType=ItemJS。
+        // Global Item is ProxyObject proxy delegation (of/empty/id/idOf via ItemJS, others delegate to MC Item class).
+        // Proxy dynamic members cannot be reflected in Java, preflight would falsely report "has no member 'of'",
+        // so Binding.of(name, value, valueType) is used to explicitly declare valueType=ItemJS.
         registry.register(Binding.of("Item", new DelegatingBinding(itemHelper, Item.class, Set.of("id", "idOf", "of", "empty")), ItemJS.class));
-        // 全局 Block 同样走代理委托（id/idOf 走 BlockJS，其余委托 MC Block 类）。
+        // Global Block also uses proxy delegation (id/idOf via BlockJS, others delegate to MC Block class).
         BlockJS blockHelper = new BlockJS();
         registry.register(Binding.of("Block", new DelegatingBinding(blockHelper, net.minecraft.world.level.block.Block.class, Set.of("id", "idOf")), BlockJS.class));
         registry.register("BlockPos", BlockPos.class);
@@ -274,7 +275,7 @@ public class NekoJSCorePlugin implements NekoJSPlugin, com.tkisor.nekojs.core.pl
         registry.register(new CompoundTagAdapter());
         registry.register(new TagKeyAdapter());
         registry.register(new ItemAdapter());
-        // alias：ItemLike 参数复用 Item 适配器的输入形状（id 字符串等），值转成 Item 后 asItem 适配
+        // alias: ItemLike arguments reuse Item adapter input shapes (id string etc.), converted to Item then asItem-adapted
         registry.registerAlias(ItemLike.class, Item.class, Item::asItem);
         registry.register(new MobEffectAdapter());
         registry.register(new PotionAdapter());
@@ -282,20 +283,20 @@ public class NekoJSCorePlugin implements NekoJSPlugin, com.tkisor.nekojs.core.pl
         registry.register(new ParticleTypeAdapter());
         registry.register(new BlockEntityTypeAdapter());
         registry.register(new CreativeModeTabAdapter());
-        // Codec 兜底适配器示范（precedence=LOWEST）：任意 JS 值 -> JsonElement -> codec.parse(JsonOps)
+        // Codec fallback adapter example (precedence=LOWEST): arbitrary JS value -> JsonElement -> codec.parse(JsonOps)
         TypeAdapterDsl.registerCodec(registry, Fireworks.class, Fireworks.CODEC);
-        // 自动注册表适配器兜底：vanilla 注册表类型里没手写适配器的（Fluid、Attribute、
-        // VillagerProfession 等）动态补 SimpleRegistryBasedAdapter，字符串 id 直通。
-        // Registries（ResourceKey holder）与 BuiltInRegistries（Registry holder）覆盖同一批
-        // vanilla 类型，去重集合保证只注册一次；mod 注册表经插件贡献额外 holder 类
+        // Automatic registry adapter fallback: for vanilla registry types without hand-written adapters (Fluid, Attribute,
+        // VillagerProfession etc.) dynamically supplement SimpleRegistryBasedAdapter, string IDs pass through.
+        // Registries (ResourceKey holder) and BuiltInRegistries (Registry holder) cover the same batch of
+        // vanilla types, de-duplicated set guarantees only one registration; mod registry contributes additional holder classes via plugins
         RegistryAutoAdapterScanner.installInto(registry, List.of(BuiltInRegistries.class, Registries.class));
     }
 
     @Override
     public void registerRecipeNamespaces(RecipeNamespaceRegister registry) {
 //        registry.registerSchema();
-        // RecipeEventJS 是拆分对（版本树里的 26.x 版 + versions/1.21.1 的 1.21.1 版），两时代 FQCN
-        // 相同——统一走 FQN，无需按时代切换 import/简单名。
+        // RecipeEventJS is a split pair (26.x version in version tree + 1.21.1 version in versions/1.21.1), two eras of FQCN
+        // are identical—unified via FQN, no need to switch import/simple names by era.
         registry.register(new RecipeNamespaceEntry("minecraft", e -> new MinecraftRecipeHandler((com.tkisor.nekojs.wrapper.event.server.RecipeEventJS) e), MinecraftRecipeHandler.class));
     }
 

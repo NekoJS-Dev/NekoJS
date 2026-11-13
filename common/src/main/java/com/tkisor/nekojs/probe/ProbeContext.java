@@ -14,26 +14,32 @@ import java.util.List;
 import java.util.concurrent.ExecutorService;
 
 /**
- * 传给 {@link ProbeBackend#generate(ProbeContext)} 的共享上下文。
+ * Shared context passed to {@link ProbeBackend#generate(ProbeContext)}.
  *
- * <p>由 {@link ProbeCoordinator} 在跑完一次共享收集后构造，对每个选中的 backend 各传一份
- * （仅 {@link #languageId()} / {@link #languageDir()} 不同）。
+ * <p>{@link ProbeCoordinator} builds it after the shared collection pass and passes one copy to
+ * each selected backend; only {@link #languageId()} and {@link #languageDir()} differ.
  *
- * <p>Phase 2 起会追加 {@code ir()}（{@code List<TypeDecl>}）暴露语言中性的声明 IR；
- * Phase 1 暂不包含。
+ * <p>{@code ir()} ({@code List<TypeDecl>}) will expose the language-neutral declaration IR. It is
+ * not available yet.
  */
 public interface ProbeContext {
 
-    /** catalog 快照（事件、绑定、适配器、配方命名空间、注册表类型、managed API 等）。 */
+    /**
+     * Catalog snapshot: events, bindings, adapters, recipe namespaces, registry types, managed
+     * APIs and more.
+     */
     NekoScriptCatalogSnapshot snapshot();
 
-    /** 共享反射闭包收集到的、已按 {@link ProbeConfig} 包过滤的类（Phase 1 仍是 {@code Class<?>} 列表）。 */
+    /**
+     * Classes found by the shared reflection closure, already filtered by the {@link ProbeConfig}
+     * package rules. The list still holds {@code Class<?>} entries.
+     */
     List<Class<?>> collectedClasses();
 
-    /** 已加载的 probe 配置。 */
+    /** Loaded probe configuration. */
     ProbeConfig config();
 
-    /** 路径单例。 */
+    /** The shared paths instance. */
     NekoJSPaths paths();
 
     /** Captured AI destinations, independent of the declaration output directory. */
@@ -50,35 +56,39 @@ public interface ProbeContext {
         }
     }
 
-    /** 当前 backend 的目标语言 id。 */
+    /** Language id that the current backend targets. */
     String languageId();
 
-    /** 当前 backend 的输出目录（= {@link ProbeBackend#outputDir}）。 */
+    /** Output directory of the current backend, i.e. {@link ProbeBackend#outputDir}. */
     Path languageDir();
 
     /**
-     * 共享的类型声明 IR（Phase 2+）。当任一选中 backend 的 {@link ProbeBackend#requiresIr} 为 true、
-     * 或 {@code probe.modify_type}/{@code probe.assign_type} 有监听器时，由 {@link ProbeCoordinator}
-     * 构建并在触发事件后填入（已含脚本编辑与类型重定向）；否则为 {@code null}（TS 走旧路径）。不可变。
+     * Shared type declaration IR. {@link ProbeCoordinator} builds it and fills it in after the
+     * events fire when any selected backend has {@link ProbeBackend#requiresIr} set to true, or
+     * when {@code probe.modify_type}/{@code probe.assign_type} has listeners; it already contains
+     * the script edits and type redirections. It is {@code null} otherwise (TS then takes the old
+     * path) and is immutable.
      */
     List<TypeDecl> ir();
 
     /**
-     * {@code probe.add_global} 与 {@code probe.snippets} 收集的结果（Phase 5）。永不为 null（无监听器时为 empty）。
+     * Result collected from {@code probe.add_global} and {@code probe.snippets}. Never null; it is
+     * empty when neither event has listeners.
      */
     ProbeOverrides overrides();
 
     /**
-     * 本次 probe 的共享线程池（由 {@link ProbeCoordinator} 创建，IR 反射构建与各 backend **内部**的
-     * 并行渲染共用；整个 probe 运行只有这一个池。注意：backend 之间由协调器**串行**调度——线程池
-     * 不承诺 backend 间并行）。直接构造 {@code ProbeContext.Of} 的测试为 null，
-     * backend 自行创建并负责关闭。默认 null。
+     * Shared thread pool for this probe run. {@link ProbeCoordinator} creates it, and the IR
+     * reflection build and the parallel rendering inside each backend share it; one run uses one
+     * pool. Backends are scheduled serially by the coordinator, so the pool does not promise
+     * parallelism between backends. Tests that construct {@code ProbeContext.Of} directly get
+     * {@code null} and the backend creates and closes its own pool. Defaults to {@code null}.
      */
     default ExecutorService sharedPool() {
         return null;
     }
 
-    /** 简单不可变实现。 */
+    /** Simple immutable implementation. */
     record Of(
             NekoScriptCatalogSnapshot snapshot,
             List<Class<?>> collectedClasses,
@@ -121,7 +131,7 @@ public interface ProbeContext {
                     null);
         }
 
-        /** 8 参便利构造（sharedPool = null，兼容旧调用方）。 */
+        /** Convenience constructor taking 8 arguments; leaves sharedPool null for older callers. */
         public Of(NekoScriptCatalogSnapshot snapshot,
                   List<Class<?>> collectedClasses,
                   ProbeConfig config,
@@ -133,7 +143,7 @@ public interface ProbeContext {
             this(snapshot, collectedClasses, config, paths, languageId, languageDir, ir, overrides, null);
         }
 
-        /** 7 参便利构造（overrides = empty）。 */
+        /** Convenience constructor taking 7 arguments; uses empty overrides. */
         public Of(NekoScriptCatalogSnapshot snapshot,
                   List<Class<?>> collectedClasses,
                   ProbeConfig config,
@@ -144,7 +154,10 @@ public interface ProbeContext {
             this(snapshot, collectedClasses, config, paths, languageId, languageDir, ir, ProbeOverrides.empty(), null);
         }
 
-        /** 6 参便利构造（ir = null, overrides = empty），兼容旧调用方。 */
+        /**
+         * Convenience constructor taking 6 arguments; leaves ir null, uses empty overrides and
+         * keeps older callers working.
+         */
         public Of(NekoScriptCatalogSnapshot snapshot,
                   List<Class<?>> collectedClasses,
                   ProbeConfig config,

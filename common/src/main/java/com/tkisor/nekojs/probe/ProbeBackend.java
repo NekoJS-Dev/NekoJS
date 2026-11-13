@@ -10,65 +10,79 @@ import java.util.Map;
 import java.util.Optional;
 
 /**
- * 单语言的 probe 产物生成器。每个 backend 负责把共享的 catalog + 收集到的类渲染成**一种**目标语言
- * （如 {@code "typescript"} → {@code .d.ts}，{@code "python"} → {@code .pyi}）。
+ * Generates probe output for one language. Each backend renders the shared catalog plus the
+ * collected classes into <b>one</b> target language, for example {@code "typescript"} to
+ * {@code .d.ts} or {@code "python"} to {@code .pyi}.
  *
- * <p>多个 backend 共享 {@link ProbeCoordinator} 跑的一次反射收集与 IR；每个 backend 自管自己的
- * 输出目录（{@link #outputDir}），互不干扰。
+ * <p>Several backends share the reflection collection and IR that {@link ProbeCoordinator} runs
+ * once. Each backend manages its own output directory ({@link #outputDir}) and they do not
+ * interfere.
  *
- * <p><b>实现契约（预发布重构简化）</b>：实现只需提供 {@link #render}——把产物渲染进内存
- * （相对输出目录的路径 → UTF-8 文本），**不触碰磁盘**；落盘/陈旧文件清理/路径越界校验
- * 由 {@link #generate} 默认实现统一负责（经 {@link ProbeOutputCommitter}）。需要完全自管输出的
- * 第三方 backend 仍可覆盖 {@code generate}，但不推荐——提交语义（备份/恢复/残留清理）容易写错。
+ * <p><b>Implementation contract</b>: an implementation only provides {@link #render}, which
+ * renders the output into memory (path relative to the output directory to UTF-8 text) and
+ * <b>never touches the disk</b>. Writing files, cleaning stale files and checking paths stay
+ * inside the output directory belong to the default {@link #generate}, which goes through
+ * {@link ProbeOutputCommitter}. A third-party backend that needs full control can still override
+ * {@code generate}, but that is discouraged: the commit semantics (backup/restore/leftover
+ * cleanup) are easy to get wrong.
  *
- * <p>实现要求：线程安全、幂等、不阻塞主线程过久。
+ * <p>Implementations must be thread-safe, idempotent and must not block the main thread for long.
  */
 public interface ProbeBackend {
 
-    /** 目标语言 id，如 {@code "typescript"} / {@code "python"}。应与 {@code ScriptCompilerRegistry} 注册的语言 id 对齐。 */
+    /** Target language id, such as {@code "typescript"} / {@code "python"}. Should match the
+     * language id registered with {@code ScriptCompilerRegistry}. */
     String languageId();
 
-    /** backend 名字（同一语言内唯一），如 {@code "builtin"}；用于命令指定与冲突报告。 */
+    /** Backend name, unique within its language, such as {@code "builtin"}; used to select a
+     * backend from commands and in conflict reports. */
     String name();
 
-    /** 同语言多 backend 时的默认优先级（高者先；默认 0）。 */
+    /** Default priority when several backends serve the same language (higher wins; default 0). */
     default int priority() {
         return 0;
     }
 
     /**
-     * 是否需要共享的类型声明 IR（{@code List<TypeDecl>}）。TS 与 Python 内置 backend 均返回
-     * true（IR 是唯一渲染源，由 {@link ProbeCoordinator} 统一反射构建）；第三方 backend 若
-     * 有独立的类声明来源可返回 false。默认 false。
+     * Whether the backend needs the shared type declaration IR ({@code List<TypeDecl>}). The
+     * built-in TypeScript and Python backends both return true, because the IR is the only render
+     * source and {@link ProbeCoordinator} builds it through one reflection pass. A third-party
+     * backend with its own source of class declarations may return false. Defaults to false.
      */
     default boolean requiresIr() {
         return false;
     }
 
     /**
-     * 生成产物后，向各脚本目录的编辑器配置贡献/合并片段（TS→jsconfig 的 {@code paths}、
-     * Python→pyrightconfig 的 {@code extraPaths}）。由 {@link ProbeCoordinator} 在所有 backend
-     * 生成完毕、外部基础配置（WorkspaceGenerator）写入后统一调用一次。默认空。
+     * Contributes and merges editor configuration fragments into each script directory after
+     * generation (TypeScript to {@code paths} of jsconfig, Python to {@code extraPaths} of
+     * pyrightconfig). {@link ProbeCoordinator} calls it once, after all backends have generated
+     * and the external base configuration (WorkspaceGenerator) has been written. Empty by default.
      *
-     * <p>实现应通过 {@code contributor} 的 {@code merge*} 方法贡献，用 backend 自己的
-     * {@link ProbeContext#languageDir()}（真实输出目录）计算相对路径，确保编辑器配置始终指向最新产物。
+     * <p>An implementation should contribute through the {@code merge*} methods of
+     * {@code contributor} and compute relative paths from its own
+     * {@link ProbeContext#languageDir()} (the real output directory), so the editor configuration
+     * always points at the newest output.
      */
     default void contributeEditorConfig(EditorConfigContributor contributor, ProbeContext ctx) {
     }
 
     /**
-     * 删除本 backend 管理的编辑器配置文件（{@code /nekojs probe reset_config} 用）。
-     * 只删 backend 整体拥有的文件（jsconfig/pyrightconfig/snippets），不碰
-     * {@code .vscode/settings.json} 这类与用户共享的文件（其贡献键由下次 contribute 幂等校正）。
-     * 删除后由 {@code WorkspaceGenerator.createWorkspaceConfigs()} 重建出厂基础配置，
-     * 再经 {@link #contributeEditorConfig} 合并出完整配置。默认空。
+     * Deletes the editor configuration files this backend manages (used by
+     * {@code /nekojs probe reset_config}). It deletes only files the backend owns entirely
+     * (jsconfig/pyrightconfig/snippets) and leaves files shared with the user such as
+     * {@code .vscode/settings.json} alone; the contribution keys there are corrected idempotently
+     * by the next contribute. After the deletion,
+     * {@code WorkspaceGenerator.createWorkspaceConfigs()} rebuilds the factory base configuration
+     * and {@link #contributeEditorConfig} merges it into the full configuration. Empty by default.
      */
     default void resetEditorConfig(NekoJSPaths paths) {
     }
 
     /**
-     * 本 backend 的输出目录：优先取 {@code [languages.<languageId>].outputDir}，缺省回退 {@code <baseDir>/<languageId>}；
-     * backend 可整体覆盖以自定义布局。
+     * Output directory of this backend: prefers {@code [languages.<languageId>].outputDir} and
+     * falls back to {@code <baseDir>/<languageId>}. A backend may override it entirely to use a
+     * different layout.
      */
     default Path outputDir(NekoJSPaths paths, ProbeConfig config) {
         String dir = config.language(languageId())
@@ -78,19 +92,23 @@ public interface ProbeBackend {
     }
 
     /**
-     * 渲染产物到内存：返回「相对输出目录的路径（{@code '/'} 分隔，如 {@code "@package/net/minecraft/index.d.ts"}）
-     * → UTF-8 文本内容」。实现不得触碰磁盘——落盘与原子提交由 {@link #generate} 默认实现统一负责。
+     * Renders the output into memory: returns a map from path relative to the output directory
+     * ({@code '/'} separated, e.g. {@code "@package/net/minecraft/index.d.ts"}) to UTF-8 text.
+     * Implementations must not touch the disk; writing files and committing them atomically
+     * belong to the default {@link #generate}.
      *
-     * <p>前置条件不满足（如缺少共享 IR）时直接抛异常，默认 generate 会转为失败结果（旧输出保持不变）。
+     * <p>Throws when a precondition is not met (such as a missing shared IR); the default
+     * generate turns that into a failure result and the previous output stays unchanged.
      */
     Map<String, String> render(ProbeContext ctx);
 
     /**
-     * {@link #render} + 落盘（默认实现）：渲染到内存 → 校验相对路径 →
-     * {@link ProbeOutputCommitter#commitInPlace} 逐文件就地同步。渲染失败时不触盘；
-     * 某个文件被外部进程锁住时转为失败结果并点名该文件。
+     * {@link #render} plus writing to disk (the default implementation): render into memory,
+     * check the relative paths, then sync each file in place through
+     * {@link ProbeOutputCommitter#commitInPlace}. A failed render touches no disk. When an
+     * external process holds a file locked, the result is a failure that names that file.
      *
-     * @return 生成结果（文件数、耗时、输出目录、warnings）
+     * @return the generation result (file count, duration, output directory, warnings)
      */
     default GenerateResult generate(ProbeContext ctx) {
         long start = System.currentTimeMillis();
@@ -127,9 +145,10 @@ public interface ProbeBackend {
     }
 
     /**
-     * 生成结果。{@code outputDir} 供命令层/日志直接定位产物位置；{@code warnings} 携带
-     * 「生成成功但存在部分降级」的信息（事件监听器抛异常、editor-config 贡献失败等）——
-     * 此前这些只进日志，调用方无从感知。
+     * Result of a generation. {@code outputDir} lets the command layer and logs locate the output
+     * directly. {@code warnings} carries "generated but partially degraded" information, such as
+     * an event listener that threw or an editor-config contribution that failed; without it these
+     * only reach the log and callers cannot see them.
      */
     record GenerateResult(
             boolean success,
@@ -143,7 +162,7 @@ public interface ProbeBackend {
             warnings = warnings == null ? List.of() : List.copyOf(warnings);
         }
 
-        /** 兼容旧 4 参调用点（outputDir = null，warnings = 空）。 */
+        /** Compatible with the old 4-argument call sites (outputDir = null, warnings = empty). */
         public GenerateResult(boolean success, int filesGenerated, long durationMs, String message) {
             this(success, filesGenerated, durationMs, message, null, List.of());
         }
@@ -160,12 +179,14 @@ public interface ProbeBackend {
             return new GenerateResult(false, 0, 0, message, null, List.of());
         }
 
-        /** 带输出目录的失败（默认 generate 用——渲染/提交失败时目录仍可知，便于用户定位）。 */
+        /** A failure result that carries the output directory. The default generate path uses it, so when
+         *  rendering or submitting fails the user still knows where the output went. */
         public static GenerateResult failure(Path outputDir, String message) {
             return new GenerateResult(false, 0, 0, message, outputDir, List.of());
         }
 
-        /** 异常转失败结果；message 为 null/空时回退 {@code toString()}（避免 "backend failed: null"）。 */
+        /** Turns a throwable into a failure result. When the message is null or blank it falls back to
+         *  {@code toString()}, so the result never says "backend failed: null". */
         public static GenerateResult failureOf(Throwable t) {
             return failure(messageOf(t));
         }
@@ -175,7 +196,8 @@ public interface ProbeBackend {
             return m == null || m.isBlank() ? t.toString() : m;
         }
 
-        /** 在既有结果上追加 warnings（无新增时原样返回）。 */
+        /** Returns a copy of {@code base} with {@code extra} appended to its warnings. Returns {@code base}
+         *  unchanged when there is nothing to add. */
         public static GenerateResult withWarnings(GenerateResult base, List<String> extra) {
             if (extra == null || extra.isEmpty()) return base;
             List<String> merged = new ArrayList<>(base.warnings());

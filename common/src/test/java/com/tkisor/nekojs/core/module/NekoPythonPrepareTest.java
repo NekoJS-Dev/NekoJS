@@ -30,13 +30,13 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * 票据 13 AC1 / AC3（准备侧）/ AC4：.py 经 {@link NekoModulePipelineCache#prepare} 得到
- * language id=python、正确的 module mode、可执行 JS、可用的 statement-level source map；
- * Python 源解析/转换错误在 PREPARE 阶段携带原始 .py 行列；源码 / 语言 / mode 变化使
- * prepared 身份失效。
+ * .py through {@link NekoModulePipelineCache#prepare} gets language id=python, the correct module
+ * mode, executable JS and a usable statement-level source map. Python parse and transform errors in
+ * the PREPARE stage carry the original .py line and column. A change to the source, the language or
+ * the mode invalidates the prepared identity.
  *
- * <p>断言口径是最高调用者 seam 的可观察结果（prepared module 字段、异常对象字段、
- * cache key、source-map 查询），不读私有 parser 对象引用。
+ * <p>Assertions use observable results of the public entry points (prepared module fields,
+ * exception fields, cache key, source-map queries) and never read private parser object references.
  */
 class NekoPythonPrepareTest {
 
@@ -67,7 +67,7 @@ class NekoPythonPrepareTest {
         return file;
     }
 
-    // ---- AC1: language id / mode / executable code / usable source map ----
+    // ---- Language id, mode, executable code and usable source map ----
 
     @Test
     void pythonDefinitionsPublishLanguageModeAndExecutableCode() throws Exception {
@@ -90,9 +90,11 @@ class NekoPythonPrepareTest {
     }
 
     /**
-     * Prepended-line 语义：Python 会按需在模块顶部前置运行时助手与异常 prelude。这些行属于
-     * 生成坐标，必须显式无映射（而不是被当成 authored 行），且不得让后续语句的映射整体偏移——
-     * 这正是 {@code prependedLineCount=0} 的含义：前置行已经在 map 内部消化。
+     * Prepended-line semantics: Python prepends runtime helpers and the exception prelude at the top
+     * of the module as needed. Those lines are generated coordinates and must be explicitly unmapped
+     * rather than treated as authored lines, and they must not shift the mapping of the statements
+     * that follow. That is what {@code prependedLineCount=0} means: the prepended lines are already
+     * accounted for inside the map.
      */
     @Test
     void prependedHelperLinesAreUnmappedAndDoNotShiftAuthoredStatements() throws Exception {
@@ -105,14 +107,14 @@ class NekoPythonPrepareTest {
         SourceMapRegistry registry = new SourceMapRegistry(paths.root());
         registry.register(prepared.sourcePath(), prepared.sourceMap(), prepared.prependedLineCount());
 
-        // 前置助手行不得映射成 authored 行 1。
+        // Prepended helper lines must not map to authored line 1.
         assertNull(mappedLineOrNull(registry, prepared, "__nekoFloorDiv"),
                 "prepended helper lines must stay unmapped, not claim an authored line: " + prepared.code());
-        // 作者写的语句仍映射到它自己的 Python 行。
+        // The authored statement still maps to its own Python line.
         assertEquals(1, mappedLine(registry, prepared, "var value").line,
                 "prepended helpers must not shift the authored statement line: " + prepared.code());
 
-        // 对照：没有前置助手的 Python 模块，映射行号同样落在作者的 Python 行上。
+        // Control case: a Python module with no prepended helpers maps to the same authored Python line.
         NekoPreparedModule plain = cache.prepare(write("py/prepend_plain.py", "value = 7\n"));
         assertFalse(plain.code().contains("__nekoFloorDiv"), plain.code());
         SourceMapRegistry plainRegistry = new SourceMapRegistry(paths.root());
@@ -145,7 +147,8 @@ class NekoPythonPrepareTest {
         assertEquals(source, root.getAsJsonArray("sourcesContent").get(0).getAsString(),
                 "authored source must be retained verbatim for diagnostics");
 
-        // 可观察行为：经 registry 查询必须回到 authored .py 路径、authored 行与 authored 内容。
+        // Observable behavior: a registry lookup must return the authored .py path, the authored line and the
+        // authored content.
         SourceMapRegistry registry = new SourceMapRegistry(paths.root());
         registry.register(prepared.sourcePath(), prepared.sourceMap(), prepared.prependedLineCount());
         SourceMapRegistry.OriginalPosition mapped =
@@ -157,7 +160,7 @@ class NekoPythonPrepareTest {
                 "the mapped position must carry the authored Python source content");
     }
 
-    // ---- AC3 (prepare side): authored file/line/column for Python source errors ----
+    // ---- Prepared-stage positions for Python source errors ----
 
     @Test
     void pythonLexErrorCarriesAuthoredFileLineAndColumn() throws Exception {
@@ -189,7 +192,7 @@ class NekoPythonPrepareTest {
 
     @Test
     void pythonEmitterErrorCarriesTheAuthoredStatementLine() throws Exception {
-        // del <name> 无法在 JS 里解绑，是发射期错误（不是词法/语法错误）。
+        // `del <name>` cannot unbind in JS, so it is an emit-stage error, not a lexer or parser error.
         Path file = write("py/bad_emit.py", "value = 1\nother = 2\ndel other\n");
 
         NekoModuleError staged = NekoModulePipelinePrepareTest.assertStaged(
@@ -213,7 +216,7 @@ class NekoPythonPrepareTest {
         assertEquals(3, staged.sourceLine(), staged.detail());
     }
 
-    // ---- AC4: cache identity invalidation ----
+    // ---- Cache identity invalidation ----
 
     @Test
     void unchangedPythonInputsHitTheSamePreparedIdentity() throws Exception {
@@ -234,7 +237,7 @@ class NekoPythonPrepareTest {
         assertTrue(after.code().contains("BBBB"), after.code());
         assertNotEquals(before.cacheKey(), after.cacheKey(), "Python content change must invalidate the entry");
 
-        // mode: 同路径从「有顶层定义（ESM）」改成「纯语句脚本（CJS）」
+        // mode: the same path changes from a top-level definition (ESM) to a plain statement script (CJS)
         Path mode = write("py/mode.py", "def f():\n    return 1\nvalue = f()\n");
         NekoPreparedModule esm = cache.prepare(mode);
         assertEquals(NekoModuleMode.ESM, esm.mode());
@@ -243,7 +246,7 @@ class NekoPythonPrepareTest {
         assertEquals(NekoModuleMode.COMMONJS, cjs.mode());
         assertNotEquals(esm.cacheKey(), cjs.cacheKey(), "Python mode change must invalidate the entry");
 
-        // language identity: 同后缀换成另一个已注册语言
+        // language identity: the same extension now resolves to another registered language
         Path lang = write("py/lang.py", "x = 1\ny = 2\n");
         NekoPreparedModule beforeLanguage = cache.prepare(lang);
         assertEquals("python", beforeLanguage.languageId());
@@ -306,7 +309,7 @@ class NekoPythonPrepareTest {
                     "generated line " + generatedLine + " must map into authored lines, was " + position);
         }
         assertTrue(mapped > 0, "a Python module with statements must publish statement mappings");
-        // 顶层 define 的生成行必须精确映射到它所在的 Python 行。
+        // The generated line of a top-level define must map exactly to the Python line it came from.
         assertEquals(2, mappedLine(registry, prepared, "function greet").line,
                 "the emitted function must map to its authored def line");
     }

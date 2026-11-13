@@ -3,27 +3,31 @@ package com.tkisor.nekojs.api.facade;
 import com.tkisor.nekojs.api.data.PerfTimerValue;
 
 /**
- * 用户主动调用的性能检测工具。提供高精度时间戳、函数计时、批量基准与标签计时器。
+ * Performance measurement tools a script calls directly. It provides a high-resolution timestamp,
+ * function timing, batch benchmarks and labelled timers.
  *
- * <p>脚本侧形如 {@code Performance.now()} / {@code Performance.time(() => ...)} /
- * {@code Performance.bench(() => ..., 1000)} / {@code Performance.start('label')}。
- * 回调参数以 {@link Object} 透传（Graal {@code Value}），由实现侧执行。
+ * <p>Scripts use it as {@code Performance.now()} / {@code Performance.time(() => ...)} /
+ * {@code Performance.bench(() => ..., 1000)} / {@code Performance.start('label')}. Callback
+ * arguments are passed through as {@link Object} (a Graal {@code Value}) and run by the implementation.
  */
 public interface PerformanceFacade {
 
-    /** 单调时钟当前时间戳（毫秒，{@code double}，亚毫秒精度）。对标 Web {@code performance.now()}。 */
+    /**
+     * Current timestamp of the monotonic clock in milliseconds ({@code double}, sub-millisecond
+     * precision). Matches Web {@code performance.now()}.
+     */
     double now();
 
-    /** 执行一次 {@code fn}，返回耗时毫秒。 */
+    /** Runs {@code fn} once and returns the elapsed milliseconds. */
     double time(Object fn);
 
     /**
-     * 执行 {@code fn} {@code runs} 次，返回统计（runs/total/mean/min/max）。
+     * Runs {@code fn} {@code runs} times and returns the statistics (runs/total/mean/min/max).
      *
      * <p>Negative {@code runs} is clamped to {@code 0}.
      */
     PerfStat bench(Object fn, int runs);
 
-    /** 开始一个标签计时器，可选 label。返回不可变 {@link PerfTimerValue} 句柄。 */
+    /** Starts a labelled timer; the label is optional. Returns an immutable {@link PerfTimerValue} handle. */
     PerfTimerValue start(String label);
 }

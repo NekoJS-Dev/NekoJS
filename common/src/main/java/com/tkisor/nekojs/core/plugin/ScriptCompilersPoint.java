@@ -4,26 +4,27 @@ import com.tkisor.nekojs.api.NekoJSPlugin;
 import com.tkisor.nekojs.core.compiler.ScriptCompilerRegistry;
 
 /**
- * 内置扩展点 {@code nekojs:script_compilers}（ADR-0001 自包含 Point 文件）。
- * 累积器即 {@link ScriptCompilerRegistry}（registry 形态）；merge append。
+ * Built-in extension point {@code nekojs:script_compilers}. The accumulator is the
+ * {@link ScriptCompilerRegistry} itself, and the merge policy is append.
  */
 public final class ScriptCompilersPoint {
 
-    /** 扩展点 id（observable 契约）。 */
+    /** Extension point id. */
     public static final String ID = "nekojs:script_compilers";
 
     private ScriptCompilersPoint() {
     }
 
-    /** 显式声明形态（与直接覆写 NekoJSPlugin 对应钩子等价收集）：插件被 {@code nekojs:script_compilers} 扩展点收集。 */
+    /** Explicit declaration form: the plugin is collected by the {@code nekojs:script_compilers} extension point, the
+     * same result as overriding the matching NekoJSPlugin hook directly. */
     public interface Contributor extends NekoJSPlugin {
 
-        /** 注册脚本编译器（语言插件）。编译器在脚本加载/热重载时被调用。 */
+        /** Registers a script compiler for a language. The compiler runs when scripts load and when they hot reload. */
         default void registerScriptCompilers(ScriptCompilerRegistry registry) {
         }
     }
 
-    /** 扩展点定义（由 {@link NekoBuiltinPointsPlugin} 清单注册）。 */
+    /** The extension point definition, registered from the {@link NekoBuiltinPointsPlugin} list. */
     public static final NekoPluginExtensionPoint<NekoJSPlugin, ScriptCompilerRegistry, ScriptCompilerRegistry> POINT =
             NekoPluginExtensionPoint.<NekoJSPlugin, ScriptCompilerRegistry, ScriptCompilerRegistry>builder(ID, NekoJSPlugin.class)
                     .merge(MergePolicy.append())

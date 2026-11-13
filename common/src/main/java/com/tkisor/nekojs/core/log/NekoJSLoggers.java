@@ -33,8 +33,9 @@ import java.util.concurrent.TimeUnit;
 import static org.apache.logging.log4j.Level.INFO;
 
 /**
- * NekoJS 日志管理器
- * 包含日志折叠机制，防止脚本死循环或高频触发导致的日志刷屏崩溃。
+ * Manages NekoJS loggers.
+ * Includes log collapsing so a script loop or a high-frequency trigger cannot flood the log and
+ * crash the game.
  */
 public final class NekoJSLoggers {
 
@@ -49,7 +50,7 @@ public final class NekoJSLoggers {
     private static final List<CollapsingAppender> APPENDERS = new CopyOnWriteArrayList<>();
 
     static {
-        // 每 1000 毫秒批量刷写
+        // Flush in batches every 1000 milliseconds.
         FLUSHER.scheduleAtFixedRate(() -> {
             for (CollapsingAppender appender : APPENDERS) {
                 appender.flush();
@@ -150,7 +151,8 @@ public final class NekoJSLoggers {
     private NekoJSLoggers() {}
 
     /**
-     * 自定义的 Log4j2 拦截追加器，专门负责识别相同特征的日志并将其聚合。
+     * Custom Log4j2 appender that intercepts log events and groups the ones with identical
+     * characteristics.
      */
     public static class CollapsingAppender extends AbstractAppender {
         private final Appender delegate;
@@ -181,7 +183,8 @@ public final class NekoJSLoggers {
         }
 
         /**
-         * 将拦截下来的日志下发给底层的 AsyncAppender 存文件，并手动完美同步到主控制台
+         * Sends the intercepted events to the underlying AsyncAppender for file output, and mirrors them
+         * manually to the main console.
          */
         public synchronized void flush() {
             if (lastEvent != null) {

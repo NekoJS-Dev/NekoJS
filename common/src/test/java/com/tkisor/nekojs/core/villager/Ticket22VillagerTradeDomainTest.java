@@ -54,15 +54,17 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Ticket 22 domain mechanism fixture (common layer, zero Minecraft): the candidate collection
- * phase, commit-time application, failure retention and the generation-bound read-only query.
+ * Tests the village trade mechanism at the common layer, with no Minecraft types: the candidate
+ * collection phase, application at commit time, retention on failure, and the generation-bound
+ * read-only query.
  *
- * <p>It drives the real {@code NekoRuntimeRoot} + real Graal pipeline with a <b>synthetic</b>
- * trade applier that implements the same contract as the platform adapters (preflight rejects a
- * whole batch; apply owns the complete desired state; the committed snapshot is the read model).
- * The real Minecraft adapters (26.x trade registries, 1.21.1 classic pools) belong to the
- * version-tree fixtures; what is pinned here is the shared contract: inert collection, joint
- * failure with the old active kept, generation/stale query semantics and explicit unavailability.
+ * <p>It drives the real {@code NekoRuntimeRoot} and the real Graal pipeline with a
+ * <b>synthetic</b> trade applier that implements the same contract as the platform adapters:
+ * preflight rejects a whole batch, apply owns the complete desired state, and the committed
+ * snapshot is the read model. The real Minecraft adapters (the 26.x trade registries and the
+ * 1.21.1 classic pools) live in the version-tree tests. What is pinned here is the shared
+ * behavior: collection is inert, a joint failure keeps the old active state, queries respect
+ * the generation and reject stale ones, and unavailability is reported explicitly.
  */
 class Ticket22VillagerTradeDomainTest {
 
@@ -324,7 +326,7 @@ class Ticket22VillagerTradeDomainTest {
                 """.formatted(tradeSet, count);
     }
 
-    // ==================== AC4: collection is inert, the commit applies exactly once ====================
+    // ==================== Collecting is inert; the commit applies the batch once ====================
 
     @Test
     void candidateCollectionIsInertAndCommitAppliesTheBatchExactlyOnce() throws Exception {
@@ -370,7 +372,7 @@ class Ticket22VillagerTradeDomainTest {
         }
     }
 
-    // ==================== AC4: a rejected batch keeps the old active ====================
+    // ==================== A rejected batch keeps the old active plan ====================
 
     @Test
     void rejectedBatchKeepsOldActivePlanAndPublishesNothing() throws Exception {
@@ -439,7 +441,7 @@ class Ticket22VillagerTradeDomainTest {
         }
     }
 
-    // ==================== AC3/AC7: generation-bound query, stale tokens, unrestored records ====================
+    // ==================== Generation-bound query, stale tokens, unrestored records ====================
 
     @Test
     void committedGenerationIsReadableAndOlderTokensAreExplicitlyStale() throws Exception {

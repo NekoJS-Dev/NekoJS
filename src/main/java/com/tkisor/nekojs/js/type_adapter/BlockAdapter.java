@@ -1,5 +1,6 @@
-// 26.x 实现，本文件不应再出现版本守卫。1.21.1 的实现是 versions/1.21.1/src 下的同名文件，
-// 改本文件行为时须同步它。
+// 26.x implementation; this file must not contain version guards again. The 1.21.1
+// implementation is the same-named file under versions/1.21.1/src, so keep it in sync when
+// this file's behavior changes.
 package com.tkisor.nekojs.js.type_adapter;
 
 import com.tkisor.nekojs.api.AdapterInputShape;
@@ -49,7 +50,7 @@ public class BlockAdapter extends AbstractJSTypeAdapter<Block> {
         if (host instanceof NekoId id) {
             return blockFromId(Identifier.fromNamespaceAndPath(id.namespace(), id.path()));
         }
-        return null; // 不识别
+        return null; // Not recognized
     }
 
     private Block blockFromId(Identifier id) {

@@ -13,12 +13,15 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
 /**
- * 配置阶段包分发任务（NeoForge 26.x / 1.21.1 共用）：通过
- * {@link RegisterConfigurationTasksEvent}（FML 官方入口，免 mixin）挂进每个连接的
- * 配置任务队列——排在 NeoForge 自身的通道协商任务之后执行，此时自定义 payload 已可发送。
+ * Pack distribution task for the configuration phase (shared by NeoForge 26.x and 1.21.1). It hooks
+ * into each connection's configuration task queue through {@link RegisterConfigurationTasksEvent},
+ * the official FML entry point, so no mixin is needed. The task runs after NeoForge's own channel
+ * negotiation tasks, at which point custom payloads can already be sent.
  *
- * <p>行为：engine.toml packSync 启用时推哈希清单；mode=all 且有包时紧随其后全量推
- * bundle（无请求往返——客户端注册表校验依赖包先到）。本地/单人内存连接跳过。
+ * <p>Behavior: when packSync in engine.toml is enabled it sends the hash list; when mode=all and
+ * there are packs it sends the full bundle right after that, with no request round trip, because the
+ * client registry check needs the packs to arrive first. Local/singleplayer memory connections are
+ * skipped.
  */
 public class PackSyncConfigurationTask implements ConfigurationTask {
 
@@ -30,7 +33,7 @@ public class PackSyncConfigurationTask implements ConfigurationTask {
         this.listener = listener;
     }
 
-    /** 事件入口：packSync 未启用或本地连接时不注册任务（零开销）。 */
+    /** Event entry point: registers no task when packSync is off or the connection is local, so it costs nothing. */
     public static void register(RegisterConfigurationTasksEvent event) {
         if (!PackSyncServer.enabled()) return;
         ServerConfigurationPacketListener listener = event.getListener();

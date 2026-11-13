@@ -14,8 +14,8 @@ public final class ScriptBootstrap {
     private ScriptBootstrap() {}
 
     /**
-     * 生成工程化的默认脚本结构
-     * 路径：nekojs/[type]_scripts/src/main.js
+     * Creates the default project script layout. Each type gets
+     * nekojs/[type]_scripts/src/main.js.
      */
     public static void generateDefaultScripts() {
         for (ScriptType type : ScriptType.autoLoadTypes()) {

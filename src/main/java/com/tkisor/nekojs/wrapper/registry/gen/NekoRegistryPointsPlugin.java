@@ -12,17 +12,19 @@ import com.tkisor.nekojs.core.plugin.NekoPluginExtensionRegistry;
 import net.minecraft.core.registries.Registries;
 
 /**
- * 通用注册表的扩展点定义插件：以与第三方完全相同的 provider 路径注册
- * {@code nekojs:registry_infos} / {@code nekojs:registry_types} 两个引擎级扩展点，
- * 并把单一注册入口 {@link RegistryEvents#REGISTER} 挂进事件组、登记内置 builder 类型。
+ * Plugin that defines the extension points for the common registries. It registers the two
+ * engine-level extension points {@code nekojs:registry_infos} and {@code nekojs:registry_types}
+ * through the same provider path a third-party plugin uses, attaches the single registration entry
+ * point {@link RegistryEvents#REGISTER} to the event group, and registers the built-in builder types.
  *
- * <p>这两点定义在版本树（触及 MC 类型，ADR-0007 L3 层），故不经 common 的
- * {@code NekoBuiltinPointsPlugin} 清单，而由本插件（{@code @RegisterNekoJSPlugin}
- * 扫描发现）注册——V2 模型下"引擎 EP + 版本树定义"的规范形态。
- * registry_types 经 {@code dependsOn(registry_infos)} 声明依赖，拓扑序由引擎保证。
+ * <p>Both points touch Minecraft types, so they live in the version tree. That is why they are
+ * registered here, by this plugin (found by the {@code @RegisterNekoJSPlugin} scan), instead of
+ * going through the common {@code NekoBuiltinPointsPlugin} manifest: an engine extension point
+ * defined in the version tree is registered this way. registry_types declares
+ * {@code dependsOn(registry_infos)}, and the engine guarantees the topological order.
  *
- * <p>内置类型清单随 Builder 重写逐个扩充；当前先落首个类型
- * （sound_event/basic）做垂直切片。
+ * <p>The built-in type list grows as builders are rewritten; for now it carries the first type
+ * (sound_event/basic).
  */
 @RegisterNekoJSPlugin
 public final class NekoRegistryPointsPlugin
@@ -51,7 +53,8 @@ public final class NekoRegistryPointsPlugin
 
     @Override
     public void registerRegistryTypes(RegistryTypesPoint.RegistryTypesCollector collector) {
-        // 平台无关类型（纯 vanilla 构建）；builder 类随类型登记（契约反射输入，ticket 15）
+        // Platform-neutral types, built from vanilla only. The builder class is registered with the type
+        // because the contract reads it by reflection
         collector.registerType(Registries.SOUND_EVENT, "basic", SoundEventBuilder.class, SoundEventBuilder::new);
         collector.setDefault(Registries.SOUND_EVENT, "basic");
         collector.registerType(Registries.MOB_EFFECT, "basic", MobEffectBuilder.class, MobEffectBuilder::new);
@@ -60,15 +63,17 @@ public final class NekoRegistryPointsPlugin
         collector.setDefault(Registries.POTION, "basic");
         collector.registerType(Registries.VILLAGER_TYPE, "basic", VillagerTypeBuilder.class, VillagerTypeBuilder::new);
         collector.setDefault(Registries.VILLAGER_TYPE, "basic");
-        // builder 本体平台无关（零 loader 依赖），fabric 由 FabricRegistryAdapter 单批直注 +
-        // 收尾挂实体属性/groupTab 追加（NeoForge 侧经 EntityAttributeCreationEvent /
-        // BuildCreativeModeTabContentsEvent 消费同一批记账）。
+        // The builders themselves are platform-neutral and depend on no loader. Fabric injects them in one
+        // batch through FabricRegistryAdapter and appends entity attributes and groupTab entries at the end
+        // (NeoForge consumes the same bookkeeping through EntityAttributeCreationEvent and
+        // BuildCreativeModeTabContentsEvent).
         collector.registerType(Registries.ITEM, "basic", ItemBuilder.class, ItemBuilder::new);
         collector.setDefault(Registries.ITEM, "basic");
         collector.registerType(Registries.BLOCK, "basic", BlockBuilder.class, BlockBuilder::new);
         collector.setDefault(Registries.BLOCK, "basic");
 //? if neoforge {
-        // 流体体系是 NeoForge 面（FluidStack/FluidIngredient），fabric 等价物需重设计
+// The fluid system is a NeoForge feature (FluidStack/FluidIngredient); the fabric equivalent
+// would have to be redesigned
         collector.registerType(Registries.FLUID, "basic", FluidBuilder.class, FluidBuilder::new);
         collector.setDefault(Registries.FLUID, "basic");
 //?}
@@ -82,12 +87,14 @@ public final class NekoRegistryPointsPlugin
         collector.setDefault(Registries.CREATIVE_MODE_TAB, "basic");
     }
 
-    /** registry_infos 产物（bootstrap 完成后可取；adapter 构建脚本面事件时调用）。 */
+    /** The registry_infos result. Available once bootstrap finishes; the adapter reads it when it builds
+     * the script-facing events. */
     static RegistryInfosPoint.RegistryInfos registryInfos() {
         return requireResult(infosHandle, RegistryInfosPoint.ID);
     }
 
-    /** registry_types 产物（bootstrap 完成后可取；adapter 构建脚本面事件时调用）。 */
+    /** The registry_types result. Available once bootstrap finishes; the adapter reads it when it builds
+     * the script-facing events. */
     static RegistryTypesPoint.RegistryTypes registryTypes() {
         return requireResult(typesHandle, RegistryTypesPoint.ID);
     }

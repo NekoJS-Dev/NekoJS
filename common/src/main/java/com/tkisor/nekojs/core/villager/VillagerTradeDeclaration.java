@@ -4,17 +4,17 @@ import java.util.Locale;
 import java.util.Objects;
 
 /**
- * One "append a trade to an existing trade set" declaration (ticket 22), normalized into a
- * <b>pure JVM</b> value: every member is a plain id string, a number or a boolean, so this
- * type can live in {@code common} and can never touch a Minecraft type.
+ * One "append a trade to an existing trade set" declaration, normalized into a <b>pure JVM</b>
+ * value: every member is a plain id string, a number or a boolean, so this type can live in
+ * {@code common} and can never touch a Minecraft type.
  *
- * <p>Registry surgery (building the real trade, writing the live trade set) happens only in
+ * <p>The registry work, building the real trade and writing the live trade set, happens only in
  * the platform/version adapter at the legal commit point of a candidate generation.
  *
- * <p>{@link #key()} is the canonical identity used for idempotent re-declaration across
- * reloads (the same declaration from the same or another script maps to the same key) and for
- * the "no longer declared" (unrestored) bookkeeping. The first version of this domain exposes
- * {@code add} only — remove/replace/modify are not part of the action set.
+ * <p>{@link #key()} is the canonical identity used for idempotent re-declaration across reloads
+ * (the same declaration from the same or another script maps to the same key) and for the "no
+ * longer declared" (unrestored) bookkeeping. This first version of the domain exposes
+ * {@code add} only; remove/replace/modify are not part of the action set.
  */
 public final class VillagerTradeDeclaration {
 

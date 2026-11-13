@@ -19,25 +19,22 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Ticket 24 reload cleanup fixture (NeoForge side, real Graal pipeline): scripts register
- * listeners on the real family buses, and after repeated SERVER reloads — no duplicate
- * dispatch, old generations no longer receive callbacks, cancellation results follow the
- * active generation, and a failed candidate keeps the old active with no half-cleaned
- * state. This is the primary evidence for ticket 24 AC4; bus-level concurrency stress
- * lives in common's {@code EventBusJSExternalBehaviorStressTest}.
+ * Checks reload cleanup on the NeoForge side with the real Graal pipeline: scripts register
+ * listeners on the real family buses, and after repeated SERVER reloads there is no duplicate
+ * dispatch, old generations no longer receive callbacks, cancellation results follow the active
+ * generation, and a failed candidate keeps the old active generation with no half-cleaned state.
+ * Bus-level concurrency stress lives in common's {@code EventBusJSExternalBehaviorStressTest}.
  *
- * <p>The probe is a {@code List} (same as the ticket 26 harness): the script callback does
- * {@code event.add(tag)}, and the Java side posts a fresh List and reads back what was
- * "actually invoked" — assertions depend on no private registry or callback object
- * identity. The synthetic payload carries only the probe (a headless JVM has no real MC
- * event instances; the native event → payload conversion and the source trace of platform
- * callbacks are in {@code Ticket24GameplayEventPhaseTraceTest}).
+ * <p>The probe is a {@code List}: the script callback does {@code event.add(tag)}, and the Java
+ * side posts a fresh List and reads back what was actually invoked, so assertions depend on no
+ * private registry or callback object identity. The synthetic payload carries only the probe
+ * (a headless JVM has no real MC event instances; the native event to payload conversion and the
+ * source trace of platform callbacks are in {@code Ticket24GameplayEventPhaseTraceTest}).
  *
- * <p>Thread/timing semantics: this harness runs load/reload/post serially on the test
- * thread (matching the production owner-thread model — SERVER dispatch and reload both
- * happen on the server thread); cross-thread re-entrancy is backstopped by Graal's
- * single-thread constraint (already frozen by ticket 07's {@code ScriptContextCancellationTest}),
- * not repeated here.
+ * <p>Thread and timing: this harness runs load/reload/post serially on the test thread, matching
+ * the production owner-thread model, where SERVER dispatch and reload both happen on the server
+ * thread. Cross-thread re-entrancy is backstopped by Graal's single-thread constraint (already
+ * frozen by {@code ScriptContextCancellationTest}), not repeated here.
  */
 class Ticket24GameplayEventReloadLifecycleTest {
 
@@ -123,9 +120,9 @@ class Ticket24GameplayEventReloadLifecycleTest {
         harness.loadScripts(ScriptType.SERVER);
         assertEquals(List.of("old"), post(PlayerEvents.LOGGED_IN));
 
-        // A same-batch peer domain plan throws in the STATE_PLAN preflight → the whole candidate
-        // batch fails (same technique as the ticket 26 harness, no production code changed just
-        // to fabricate a failure). The peer rejects only once, keeping the recovery path testable.
+        // A peer domain in the same candidate batch throws in the STATE_PLAN preflight, so the
+        // whole candidate batch fails. This fabricates a failure without changing production code.
+        // The peer rejects only once, which keeps the recovery path testable.
         harness.root.registerDomainCollector(new CandidateDomainCollector() {
             private boolean rejected;
 

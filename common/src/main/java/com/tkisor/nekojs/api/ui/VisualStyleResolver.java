@@ -7,15 +7,15 @@ import java.util.Map;
 import java.util.Optional;
 
 /**
- * Parses script-side visual props ({@code color}, {@code background},
- * {@code borderColor}, {@code borderWidth}, {@code radius}, {@code opacity},
- * {@code fontSize}, {@code font}, {@code truncate}, {@code resource}, {@code fit}, {@code crop}, {@code icon}) into a
- * {@link VisualSpec}. Invalid values are skipped and reported as locatable
- * diagnostics instead of throwing, so one bad prop cannot take down a whole tree.
+ * Parses script-side visual props ({@code color}, {@code background}, {@code borderColor},
+ * {@code borderWidth}, {@code radius}, {@code opacity}, {@code fontSize}, {@code font},
+ * {@code truncate}, {@code resource}, {@code fit}, {@code crop}, {@code icon}) into a
+ * {@link VisualSpec}. Invalid values are skipped and reported as locatable diagnostics
+ * instead of throwing, so one bad prop cannot take down a whole tree.
  *
- * <p>Prop names match the common JSX runtime's primitive props (the runtime freezes
- * them onto host nodes; the host paints from the resolved spec). Values arrive as
- * plain Java scalars/maps/lists as produced by the host adapter boundary.
+ * <p>Prop names match the common JSX runtime's primitive props: the runtime freezes them
+ * onto host nodes, and the host paints from the resolved spec. Values arrive as plain
+ * Java scalars/maps/lists as produced by the host adapter.
  */
 public final class VisualStyleResolver {
     private VisualStyleResolver() {

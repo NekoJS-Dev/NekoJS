@@ -1,14 +1,15 @@
-// fabric 节点孪生：共享树同名接口整文件 `//? if neoforge` 守卫（总线直传 NeoForge 原生
-// 事件类）。fabric 侧由 FabricLevelEventBindings 以中立 payload 提供子集；爆炸系与
-// saved 需 mixin（见 docs/fabric-port-status.md），落地后本孪生随之扩。共享树版事件载荷
-// 中立化后合并回单副本。
+// Fabric copy of the shared tree's LevelEvents interface, which is guarded file-wide by
+// `//? if neoforge` and passes bus calls straight to the native NeoForge event classes. On
+// Fabric, FabricLevelEventBindings supplies a subset with neutral payloads. Explosions and saved
+// need a mixin (see docs/fabric-port-status.md); this copy grows once they land. The shared tree
+// version merges back into a single copy once its event payloads are neutral.
 package com.tkisor.nekojs.bindings.event;
 
 import com.tkisor.nekojs.api.event.EventBusJS;
 import com.tkisor.nekojs.api.event.EventGroup;
 import com.tkisor.nekojs.wrapper.event.level.LevelEventJS;
 
-/** 维度（Level）事件组（server 脚本）：加载/卸载与 tick（fabric 子集）。 */
+/** Level (dimension) event group for server scripts: load, unload and tick (the Fabric subset). */
 public interface LevelEvents {
     EventGroup GROUP = EventGroup.of("LevelEvents");
 

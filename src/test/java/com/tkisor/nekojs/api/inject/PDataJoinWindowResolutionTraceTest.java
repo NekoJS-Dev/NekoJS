@@ -9,21 +9,25 @@ import java.util.stream.Stream;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * 票 18 joinLevel 窗口修复的源码 trace（票 17 NetworkRegistrationSourceTraceTest 先例）：
- * pdata 写入路径在 03 号票实测发现——{@code EntityJoinLevelEvent} 回调窗口内实体尚未进入
- * level 实体索引，按实体 id 反查（{@code level.getEntity(id)}）必空，脚本写 pdata 被静默
- * 丢弃（03 REPORT §3-3，归本票修复）。
+ * Source trace for the joinLevel window fix, following the pattern of
+ * NetworkRegistrationSourceTraceTest. While an {@code EntityJoinLevelEvent} callback runs, the
+ * entity is not in the level entity index yet, so a reverse lookup by entity id
+ * ({@code level.getEntity(id)}) always comes back empty and a script write to pdata is dropped
+ * silently.
  *
- * <p>修复形状：{@link EntityPDataStore.Access} 增加实体引用面（平台实现直接解引用持久化
- * 容器，不做 id 反查），脚本入口 {@code EntityExtension#neko$pdata()} 经
- * {@link EntityPDataStore#getPDataTag}/{@code setPDataTag} 走实体引用面。真实 joinLevel
- * 事件属平台行为（裸 JVM 无 FML 无法构造实体/level，见 EntityPDataStoreTest 的说明），
- * 本测试把「写入不依赖 id 反查」钉在源码结构上：实体引用面方法体不出现反查调用，
- * 反查调用计数保持为 id 面专属。
+ * <p>The fix: {@link EntityPDataStore.Access} gains an entity-reference face whose platform
+ * implementations dereference the persistent container directly instead of looking the entity up
+ * by id, and the script entry point {@code EntityExtension#neko$pdata()} goes through
+ * {@link EntityPDataStore#getPDataTag}/{@code setPDataTag} on that face. A real joinLevel event is
+ * platform behavior and cannot be built on a bare JVM without FML (see EntityPDataStoreTest), so
+ * this test pins "writing does not depend on an id lookup" to the source structure: the
+ * entity-reference methods contain no lookup call, and the lookup call count stays confined to the
+ * id-based face.
  */
 class PDataJoinWindowResolutionTraceTest {
 
-    // ---- 仓库根定位（节点测试 CWD = versions/<node>，向上找到控制器脚本） ----
+    // ---- Locate the repository root; the node test CWD is versions/<node>, so walk up to the
+    // controller script ----
 
     private static Path repoRoot() {
         Path dir = Path.of("").toAbsolutePath();
@@ -56,7 +60,7 @@ class PDataJoinWindowResolutionTraceTest {
         return count;
     }
 
-    // ---- 桥本体：实体引用面存在，静态入口走实体引用面 ----
+    // ---- The bridge: the entity-reference face exists and the static entry points use it ----
 
     @Test
     void bridgeExposesEntityReferenceOverloadsAndScriptEntriesPreferThem() {
@@ -70,8 +74,9 @@ class PDataJoinWindowResolutionTraceTest {
         assertTrue(bridge.contains("current.set(entity, key, tag);"),
                 "setPDataTag must route through the entity-reference face, not entity.getId()");
 
-        // 脚本入口（EntityExtension#neko$pdata）经桥的静态入口，不自带容器解析
-        // （setter 的 needle 不含结尾括号：源码形如 setPDataTag(self(), KEY, tag)）
+        // The script entry point (EntityExtension#neko$pdata) goes through the bridge's static entry
+        // points and resolves no container itself. The setter needle omits the closing parenthesis; the
+        // source reads setPDataTag(self(), KEY, tag).
         String extension = read("src/main/java/com/tkisor/nekojs/api/inject/EntityExtension.java");
         assertTrue(extension.contains("EntityPDataStore.getPDataTag(self(), NEKO_PDATA_KEY)"),
                 "the script-facing pdata getter must go through EntityPDataStore.getPDataTag");
@@ -79,13 +84,15 @@ class PDataJoinWindowResolutionTraceTest {
                 "the script-facing pdata setter must go through EntityPDataStore.setPDataTag");
     }
 
-    // ---- NeoForge：实体引用面直接解引用 getPersistentData()，反查只留在 id 面 ----
+    // ---- NeoForge: the entity-reference face dereferences getPersistentData() directly, and the
+    // reverse lookup stays on the id-based face ----
 
     @Test
     void neoforgeInstallOverridesEntityFaceWithDirectContainerDereference() {
         String mod = read("src/main/java/com/tkisor/nekojs/NekoJSMod.java");
 
-        // 实体引用面 override 存在，且直接解引用 NeoForge 平台容器（两版本分支同形前缀）
+        // The entity-reference overrides exist and dereference the NeoForge platform container directly.
+        // Both version branches begin with the same text.
         assertTrue(mod.contains("public net.minecraft.nbt.CompoundTag get(net.minecraft.world.entity.Entity entity, String key)"),
                 "NeoForge install must override the entity-reference get face");
         assertTrue(mod.contains("public void set(net.minecraft.world.entity.Entity entity, String key, net.minecraft.nbt.CompoundTag tag)"),
@@ -95,14 +102,16 @@ class PDataJoinWindowResolutionTraceTest {
         assertTrue(mod.contains("var container = entity.getPersistentData();"),
                 "entity-reference set must dereference Entity#getPersistentData() directly");
 
-        // id 反查（pdataContainer）保持 id 面专属：恰好 get/set 各一处调用点
-        // （方法定义处的签名是 pdataContainer(int entityId)，不计入）。
-        // 若实体引用面回归为经 id 反查（join 窗口写静默丢弃复活），该计数会增长
+        // The id lookup (pdataContainer) stays confined to the id-based face: exactly one call site for
+        // get and one for set. The method definition whose signature is pdataContainer(int entityId) does
+        // not count. If the entity-reference face went back to an id lookup, the silent drop in the join
+        // window would return and this count would grow.
         assertTrue(countOccurrences(mod, "pdataContainer(entityId)") == 2,
                 "reverse lookup must stay confined to the id-keyed face (exactly the id get/set call sites)");
     }
 
-    // ---- Fabric：实体引用面直接解引用 mixin duck 接口，反查只留在 id 面 ----
+    // ---- Fabric: the entity-reference face dereferences the mixin duck interface directly, and the
+    // reverse lookup stays on the id-based face ----
 
     @Test
     void fabricInstallOverridesEntityFaceWithDirectDuckDereference() {
@@ -115,18 +124,21 @@ class PDataJoinWindowResolutionTraceTest {
         assertTrue(countOccurrences(sync, "((NekoEntityPData) entity).neko$getPDataRoot()") >= 4,
                 "both faces must dereference the mixin duck root directly (id face 2 + entity face 2)");
 
-        // findEntity 反查保持 id 面专属：恰好 get/set 各一处。实体引用面若回归反查（join
-        // 窗口写静默丢弃复活），计数会增长到 4
+        // The findEntity lookup stays confined to the id-based face: exactly one call for get and one for
+        // set. If the entity-reference face went back to a lookup, the silent drop in the join window
+        // would return and the count would grow to 4.
         assertTrue(countOccurrences(sync, "findEntity(entityId)") == 2,
                 "reverse lookup must stay confined to the id-keyed face");
     }
 
-    // ---- 平台两面的 NBT 读写语义同形：拷贝防御 + 空 tag 移除子键 ----
+    // ---- Both platform faces read and write NBT the same way: defensive copy and removal of a
+    // subkey on an empty tag ----
 
     @Test
     void bothLoaderFacesKeepCopySemanticsAndEmptyTagRemoval() {
-        // 同一段「copy 读出、空写移除」语义在 NeoForge install、fabric install 与
-        // EntityPDataStoreTest 的内存实现三处同形（桥的域契约）
+        // The same "copy on read, remove on empty write" semantics appear in three places: the NeoForge
+        // install, the fabric install and the in-memory implementation in EntityPDataStoreTest. That is
+        // the domain contract of the bridge.
         try (Stream<Path> files = Stream.of(
                 Path.of("src/main/java/com/tkisor/nekojs/NekoJSMod.java"),
                 Path.of("src/fabric/java/com/tkisor/nekojs/fabric/FabricPDataSync.java"))) {

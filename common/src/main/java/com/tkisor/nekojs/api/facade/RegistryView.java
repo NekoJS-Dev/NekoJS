@@ -5,32 +5,38 @@ import java.util.Iterator;
 import java.util.List;
 
 /**
- * 单个注册表的只读视图，暴露给脚本的 {@code Registry.get(...)} 结果。
+ * Read-only view of a single registry; this is what {@code Registry.get(...)} returns to scripts.
  *
- * <p>所有方法只返回基础类型，不暴露 Minecraft 原生对象。
+ * <p>Every method returns only primitive types; Minecraft native objects are never exposed.
  *
- * <p>实现 {@link Iterable}：视图对象经引擎侧代理转发时可被 {@code for...of} 直接遍历
- * （按条目 id 字符串），KubeJS {@code RegistryWrapper} 的 {@code Iterable} 形态对标——
- * {@code for (const id of Registry.get('minecraft:item'))}。
+ * <p>The view implements {@link Iterable}, so when the engine proxies it, a script can iterate it
+ * directly with {@code for...of} (by entry id string), matching the {@code Iterable} shape of KubeJS
+ * {@code RegistryWrapper}: {@code for (const id of Registry.get('minecraft:item'))}.
  */
 @ContractReceiver
 public interface RegistryView extends Iterable<String> {
-    /** 注册表本身是否存在。 */
+    /** Whether the registry itself exists. */
     boolean exists();
 
-    /** 注册表内所有条目 id（含命名空间）。 */
+    /** Ids of all entries in the registry, including the namespace. */
     List<String> all();
 
-    /** 注册表内是否存在指定 id。 */
+    /** Whether the registry contains the given id. */
     boolean has(String id);
 
-    /** 指定 tag 下的所有条目 id。 */
+    /** Ids of all entries under the given tag. */
     List<String> tag(String tagId);
 
-    /** 该注册表已注册的所有 data map 类型 id（如 {@code neoforge:furnace_fuels}）。 */
+    /**
+     * Ids of all data map types registered for this registry, for example
+     * {@code neoforge:furnace_fuels}.
+     */
     List<String> dataMapIds();
 
-    /** 读取指定条目的 data map 值（JSON 字符串）；条目/类型不存在返回 {@code null}。 */
+    /**
+     * Reads the data map value of the given entry as a JSON string; returns {@code null} if the entry
+     * or the type does not exist.
+     */
     String dataMapValue(String dataMapTypeId, String id);
 
     @Override

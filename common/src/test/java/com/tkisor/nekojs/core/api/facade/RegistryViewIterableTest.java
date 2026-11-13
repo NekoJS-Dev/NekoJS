@@ -9,10 +9,10 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
- * {@code RegistryView} 的可迭代形态（KJS {@code RegistryWrapper} 的
- * {@code for (x of Registry.of(...))} 对标）：默认 {@code iterator()} 委托 {@code all()}。
- * 经引擎代理 {@code ApiFacadeProxy} 转发后的 guest {@code for...of} 行为在
- * {@code ApiFacadeProxyTest#iterableImplementationIsForOfAble} 覆盖。
+ * Covers the iterable form of {@code RegistryView}, matching KJS {@code RegistryWrapper} and its
+ * {@code for (x of Registry.of(...))}: the default {@code iterator()} delegates to {@code all()}.
+ * Guest {@code for...of} after forwarding through the engine proxy {@code ApiFacadeProxy} is
+ * covered by {@code ApiFacadeProxyTest#iterableImplementationIsForOfAble}.
  */
 class RegistryViewIterableTest {
 

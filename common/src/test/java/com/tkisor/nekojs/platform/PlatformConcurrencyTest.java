@@ -27,14 +27,14 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * 平台级懒加载单例的并发安全。
+ * Concurrency safety of the platform-level lazy singletons.
  *
- * <p>覆盖两个修复：
+ * <p>Covers two behaviours:
  * <ul>
- *   <li>{@link NekoJSPaths#get()} 的 synchronized double-checked locking：并发首次调用只允许一次
- *       {@code fromGameDir(Platform.getGameDir())} 初始化。</li>
- *   <li>{@link Platform#init(IPlatform)} 的 synchronized 双初始化保护：并发 init 只允许一个赢家，
- *       另一个线程必须得到 {@link IllegalStateException}。</li>
+ *   <li>Synchronized double-checked locking in {@link NekoJSPaths#get()}: concurrent first calls
+ *       run {@code fromGameDir(Platform.getGameDir())} exactly once.</li>
+ *   <li>Synchronized double-init guard in {@link Platform#init(IPlatform)}: one concurrent init
+ *       wins and the other thread must get an {@link IllegalStateException}.</li>
  * </ul>
  */
 class PlatformConcurrencyTest {
@@ -153,7 +153,7 @@ class PlatformConcurrencyTest {
                 () -> Platform.init(new TestPlatformInit.TestIPlatform(GAME_DIR)));
     }
 
-    /** 统计 getGameDir 调用次数的 IPlatform 包装器，用于观察 NekoJSPaths 初始化是否只发生一次。 */
+    /** Wraps an IPlatform and counts getGameDir calls, so a test can see whether NekoJSPaths initializes once. */
     private static final class CountingPlatform implements IPlatform {
         private final IPlatform delegate;
         private final AtomicInteger gameDirCalls = new AtomicInteger();

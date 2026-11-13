@@ -1,6 +1,7 @@
-// 1.21.1 实现，与版本树 src/ 下的同名 26.x 文件成对。内容等于那份文件在本节点求值后的形态。
-// 26.x 侧行为变更时须同步本文件。
-// 脚本面的 @Doc/@Param 文案两侧本就不同，探针类型 golden 会校验，别照抄主干的措辞。
+// 1.21.1 implementation. It pairs with the same-named 26.x file under src/ in the version
+// tree: this file is that file evaluated for this node. Keep them in sync when 26.x changes.
+// The @Doc/@Param text on the script side differs between the two trees and is checked by the
+// probe-type golden, so do not copy the mainline wording.
 package com.tkisor.nekojs.client.posteffect;
 
 import com.tkisor.nekojs.api.annotation.Doc;
@@ -13,23 +14,23 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Runtime post-effect binding ({@code PostEffects}, feature 8b). Client scripts only.
+ * Runtime post-effect binding ({@code PostEffects}), for client scripts only.
  *
- * <p><b>Runtime binding face (ticket 28).</b> This binding keeps exactly the runtime
- * operations: {@link #set}/{@link #clear}/{@link #toggle}/{@link #current} (plus
- * {@link #isActive}) work with any effect that exists as a resource — the vanilla presets
- * {@code minecraft:invert}, {@code minecraft:spider}, {@code minecraft:creeper},
- * {@code minecraft:blur}, {@code minecraft:entity_outline}, {@code minecraft:transparency}
- * (see {@link #PRESETS}) and any {@code shaders/post} chain JSON supplied by resource packs
- * or other mods. These members are <b>not</b> reload transaction operations.
+ * <p><b>Runtime operations.</b> This binding keeps only the runtime operations:
+ * {@link #set}/{@link #clear}/{@link #toggle}/{@link #current} (plus {@link #isActive}) work
+ * with any effect that exists as a resource — the vanilla presets {@code minecraft:invert},
+ * {@code minecraft:spider}, {@code minecraft:creeper}, {@code minecraft:blur},
+ * {@code minecraft:entity_outline}, {@code minecraft:transparency} (see {@link #PRESETS}) and
+ * any {@code shaders/post} chain JSON supplied by resource packs or other mods. These members
+ * are <b>not</b> reload transaction operations.
  *
- * <p><b>Declaration face.</b> Runtime chains are declared through
+ * <p><b>Declarations.</b> Runtime chains are declared through
  * {@code ClientEvents.postEffects} ({@code event.register(id, options)} /
- * {@code event.unregister(id)}) — the declaration lifecycle is generation-scoped, lives in
- * an inert candidate plan and applies only at the commit point. Use
+ * {@code event.unregister(id)}). The declaration lifecycle is generation-scoped, lives in an
+ * inert candidate plan and applies only at the commit point. Use
  * {@link #activeGeneration()} / {@link #hasDefinition} / {@link #installed()} for the
- * read-only declaration query; the previous direct {@code PostEffects.register} entry point
- * is gone (see the ticket 28 migration table).
+ * read-only declaration query; the direct {@code PostEffects.register} entry point no longer
+ * exists.
  *
  * <pre>
  * // client_scripts

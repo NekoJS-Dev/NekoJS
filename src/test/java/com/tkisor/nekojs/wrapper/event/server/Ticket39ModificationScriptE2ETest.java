@@ -21,18 +21,21 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * 票 39 AC13 贯穿 fixture（item 半边，五节点共享同一份代码；registry-gated）：真实脚本经
- * {@code ItemEvents.modification} 事件面收集声明，commit 点由平台
- * {@link ModificationDomainOwner} Adapter 应用到真实 {@code Item}——从脚本事件到平台
- * 可观察结果，不断言私有静态 Map。
+ * End-to-end fixture for the item half of the modification flow. All five nodes share this
+ * code, and the test runs only where a vanilla registry is available. A real script collects
+ * declarations through the {@code ItemEvents.modification} event surface, and the platform
+ * {@link ModificationDomainOwner} Adapter applies them to the real {@code Item} at commit, so
+ * the assertions read platform-observable results instead of a private static Map.
  *
- * <p>覆盖：初始 generation 收集点（about-to-start）、候选期 inert（live 组件在 commit 前
- * 保持旧 active）、成功 reload 应用新完整计划、声明移除恢复 NekoJS 基线（RESTORED）、
- * 预检拒绝整批保持旧 active（STATE_PLAN）、收集期错误整批失败（DOMAIN_PLAN）、
- * property 写与显式 setter 两种脚本写法结果等价（AC8 的脚本面）。
+ * <p>Covers: the collection point of the initial generation (about-to-start), candidate-phase
+ * inertness (live components keep the old active value until commit), a successful reload
+ * applying the new complete plan, removing a declaration restoring the NekoJS baseline
+ * (RESTORED), a pre-check rejection keeping the whole batch on the old active value
+ * (STATE_PLAN), a collection error failing the whole batch (DOMAIN_PLAN), and property writes
+ * and explicit setters producing equivalent results from the script side.
  *
- * <p>环境门：需要 vanilla 注册表（{@link VanillaRegistryProbe}）——裸 JVM 跳过（报告为
- * skipped），ModDev/开发环境真跑。
+ * <p>Environment gate: needs a vanilla registry ({@link VanillaRegistryProbe}). A bare JVM
+ * reports the test as skipped; ModDev and dev environments run it for real.
  */
 class Ticket39ModificationScriptE2ETest {
 
@@ -78,7 +81,8 @@ class Ticket39ModificationScriptE2ETest {
                   })
                 })
                 """);
-        // 初始 load 是非事务路径：只注册 active 监听器，不做领域收集（收集点是平台触发的）
+        // The initial load is not transactional: it registers the active listeners only and collects
+        // nothing. The platform triggers collection later.
         loadServerScripts();
         assertEquals(64, maxStackSizeOfDiamond(), "initial non-transactional load must not apply modifications");
 
@@ -91,7 +95,7 @@ class Ticket39ModificationScriptE2ETest {
 
     @Test
     void candidateStaysInertUntilCommitAndReloadAppliesTheNewPlan() throws Exception {
-        // 先跑一次成功提交：active 计划 = maxStackSize 16
+        // Run one successful commit first, so the active plan sets maxStackSize to 16.
         harness.writeServerScript("mod.js", """
                 ItemEvents.modification(event => event.modify('minecraft:diamond', item => item.setMaxStackSize(16)))
                 """);
@@ -99,8 +103,10 @@ class Ticket39ModificationScriptE2ETest {
         harness.applyInitialPlan();
         assertEquals(16, maxStackSizeOfDiamond());
 
-        // 第二轮：候选构建期（DOMAIN_PLAN 已收集、commit 之前）live 组件必须仍是旧 active 值。
-        // probe 收集器在真实 owner 之后注册 → 观察到的是「同轮声明已收集但尚未应用」的 live 值。
+        // Second round: during candidate construction (after domain collection, before commit)
+        // the live component must still hold the old active value. The probe collector registers
+        // after the real owner, so it sees the live value with this round's declarations already
+        // collected but not yet applied.
         List<Integer> seenDuringCandidate = new ArrayList<>();
         harness.root.registerDomainCollector(new com.tkisor.nekojs.core.lifecycle.CandidateDomainCollector() {
             @Override public String domain() { return "e2e-probe"; }
@@ -130,7 +136,8 @@ class Ticket39ModificationScriptE2ETest {
         harness.applyInitialPlan();
         assertEquals(16, maxStackSizeOfDiamond());
 
-        // 脚本不再声明：成功 reload 后先恢复 NekoJS 持有基线，再应用新的完整（空）计划
+        // The script declares nothing now: a successful reload first restores the baseline NekoJS
+        // holds, then applies the new complete plan, which is empty.
         harness.writeServerScript("mod.js", "global.noModification = true\n");
         harness.root.reload(ScriptType.SERVER);
 
@@ -150,7 +157,8 @@ class Ticket39ModificationScriptE2ETest {
         assertEquals(16, maxStackSizeOfDiamond());
         ModificationDomainOwner.Diagnostics before = harness.owner.lastDiagnostics();
 
-        // 预检拒绝（超出 1..99 上限）：整批不提交，旧 active 继续服务
+        // The pre-check rejects a value outside 1..99: the whole batch is not committed and the
+        // old active value keeps serving.
         harness.writeServerScript("mod.js", """
                 ItemEvents.modification(event => {
                   event.modify('minecraft:diamond', item => item.setMaxStackSize(500))
@@ -192,7 +200,8 @@ class Ticket39ModificationScriptE2ETest {
         assertEquals(16, maxStackSizeOfDiamond(),
                 "neither declaration of the failed batch is applied (whole batch fails, old active kept)");
 
-        // 候选资源随失败丢弃：下一轮正常 reload 仍能提交
+        // Candidate resources are dropped with the failure, so the next ordinary reload still
+        // commits.
         harness.writeServerScript("mod.js", """
                 ItemEvents.modification(event => event.modify('minecraft:diamond', item => item.setMaxStackSize(48)))
                 """);
@@ -216,7 +225,7 @@ class Ticket39ModificationScriptE2ETest {
         String viaPropertyRarity = Items.DIAMOND.components()
                 .getOrDefault(DataComponents.RARITY, net.minecraft.world.item.Rarity.COMMON).getSerializedName();
 
-        // 复位到基线，再以显式 setter 形态重放同一修改
+        // Reset to the baseline, then replay the same modifications through explicit setters.
         harness.close();
         harness = new Ticket39ModificationScriptHarness(Map.of());
         harness.writeServerScript("mod.js", """

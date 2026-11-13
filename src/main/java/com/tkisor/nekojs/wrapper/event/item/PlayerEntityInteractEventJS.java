@@ -8,17 +8,21 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 
 /**
- * 玩家与实体交互事件（{@code ItemEvents.entityInteracted}）的**加载器中立**载荷。
+ * Loader-neutral payload for the player entity interact event
+ * ({@code ItemEvents.entityInteracted}).
  *
- * <p>语义对齐 NeoForge {@code PlayerInteractEvent.EntityInteract}：玩家右击实体
- * （不包含攻击——26.1.2 攻击走独立的 {@code ServerboundAttackPacket}）时触发，
- * 按交互时<b>主手物品</b> dispatch。fabric 侧由 {@code FabricItemEventBindingsV2} +
- * {@code MixinServerGamePacketListenerItemInteract} 从
- * {@code ServerGamePacketListenerImpl#handleInteract} 的
- * {@code ServerPlayer.interactOn} 调用点转换（实体存在性/世界边界/交互范围校验均已通过）。
+ * <p>The meaning follows NeoForge {@code PlayerInteractEvent.EntityInteract}: it fires when a
+ * player right-clicks an entity (attacks are excluded; in 26.1.2 an attack goes through the
+ * separate {@code ServerboundAttackPacket}) and is dispatched by the <b>main hand item</b> at
+ * the time of the interaction. On fabric, {@code FabricItemEventBindingsV2} +
+ * {@code MixinServerGamePacketListenerItemInteract} convert the
+ * {@code ServerPlayer.interactOn} call site in
+ * {@code ServerGamePacketListenerImpl#handleInteract}, after the entity existence, world
+ * border and interaction range checks have passed.
  *
- * <p>取消语义：监听器 {@code return true} = 放弃本次交互（fabric 侧取消整包处理，
- * 不再执行原版交互；对应 NeoForge 的 setCanceled）。
+ * <p>Cancel semantics: a listener {@code return true} drops this interaction (fabric cancels
+ * the whole packet handling and runs no vanilla interaction; the NeoForge setCanceled
+ * equivalent).
  */
 @Doc("Fired when a player interacts (right-click) with an entity (ItemEvents.entityInteracted). Dispatched by the item in the main hand.")
 @Doc("Cancellable: return true to cancel the interaction.")

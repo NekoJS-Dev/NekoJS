@@ -546,7 +546,8 @@ public final class ApiValueMarshaller {
 
     private int valueScore(Object value, ApiTypeRef type) {
         if (type.kind() == ApiTypeRef.Kind.UNION) {
-            // 循环版 max：等价于 stream().mapToInt(...).max().orElse(-1)，免去每参数的流分配
+            // Loop version of max: same as stream().mapToInt(...).max().orElse(-1) without allocating a
+            // stream per parameter
             int score = -1;
             for (ApiTypeRef member : type.arguments()) {
                 int memberScore = valueScore(value, member);
@@ -755,7 +756,8 @@ public final class ApiValueMarshaller {
 
     private int returnBranchScore(Object value, ApiTypeRef type) {
         if (type.kind() == ApiTypeRef.Kind.UNION) {
-            // 循环版 max：等价于 stream().mapToInt(...).max().orElse(-1)，免去每分支的流分配
+            // Loop version of max: same as stream().mapToInt(...).max().orElse(-1) without allocating a
+            // stream per branch
             int score = -1;
             for (ApiTypeRef branch : type.arguments()) {
                 int branchScore = returnBranchScore(value, branch);
@@ -768,8 +770,9 @@ public final class ApiValueMarshaller {
         return switch (type.kind()) {
             case PRIMITIVE -> !matchesPrimitive(value, type) ? -1 : "object".equals(type.name()) ? 1 : 4;
             case ARRAY -> value instanceof Iterable<?> || value.getClass().isArray() ? 4 : -1;
-            // Iterable 不再拒收：契约接收者可以自身可迭代（如 RegistryView 的 for...of），
-            // 联合类型里 ARRAY 分支（4 分）仍稳定压过 SYMBOL（2 分），歧义不会出现
+            // Iterable values are accepted: a contract receiver can be iterable itself, as RegistryView is
+            // for for...of. In a union type the ARRAY branch (score 4) still always beats SYMBOL
+            // (score 2), so no ambiguity arises
             case SYMBOL -> isPrimitive(value) || value.getClass().isArray() ? -1 : 2;
             case CALLBACK -> value instanceof ApiCallback ? 4 : -1;
             case UNION, VOID, TYPE_VARIABLE -> -1;

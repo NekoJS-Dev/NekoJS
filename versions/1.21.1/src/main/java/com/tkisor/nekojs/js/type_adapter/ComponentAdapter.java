@@ -1,5 +1,6 @@
-// 1.21.1 实现，与版本树 src/ 下的同名 26.x 文件成对。内容等于那份文件在本节点求值后的形态。
-// 26.x 侧行为变更时须同步本文件。
+// 1.21.1 implementation, paired with the same-named 26.x file under the version tree's src/. The content
+// is what that file becomes once evaluated for this node. Keep this file in sync when the 26.x behavior
+// changes.
 package com.tkisor.nekojs.js.type_adapter;
 
 import com.tkisor.nekojs.api.AdapterInputShape;
@@ -42,7 +43,7 @@ public class ComponentAdapter extends BaseJsTypeAdapter<Component> {
     @Override
     protected Component fromHostObject(Object host) {
         if (host instanceof Component component) return component;
-        return null; // 不识别
+        return null; // Unrecognized values are not handled here.
     }
 
     @Override
@@ -85,10 +86,9 @@ public class ComponentAdapter extends BaseJsTypeAdapter<Component> {
             return Component.score(score.name(), score.objective());
         }
         if (value instanceof TextValue.Selector selector) {
-            // NF26 limitation: Component.selector requires CommandBuildContext which is unavailable here; degrades to literal. See audit DEFECT-D10.
-            // 26.x（MC 1.21.6+）：Component.selector 签名变为 (ParsedSelector)，而 ParsedSelector 需要
-            // CommandBuildContext 才能从 pattern 构造；适配器层无该上下文，只能退化为字面量。
-            // selector 在 1.21.1 / 1.12.2 仍可正常渲染。
+            // 26.x (MC 1.21.6+): Component.selector takes a ParsedSelector, and building a ParsedSelector from a
+            // pattern needs a CommandBuildContext. The adapter layer has no such context, so the selector
+            // degrades to a literal here. On 1.21.1 and 1.12.2 the selector still renders normally.
             return Component.selector(selector.pattern(), java.util.Optional.empty());
         }
         MutableComponent result = Component.empty();
@@ -105,7 +105,7 @@ public class ComponentAdapter extends BaseJsTypeAdapter<Component> {
         return ((TextArgument.BooleanValue) argument).value();
     }
 
-    /** 把可移植 {@link TextStyle} 应用到组件上（仅非空字段覆盖）。 */
+    /** Applies a portable {@link TextStyle} to the component; only non-null fields overwrite anything. */
     private static void applyStyle(MutableComponent component, TextStyle style) {
         if (style.isEmpty()) {
             return;

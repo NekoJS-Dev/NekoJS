@@ -1,4 +1,4 @@
-// TODO(fabric): fabric 侧还没有对应实现，整文件守卫等移植完成后去掉
+// Fabric has no equivalent implementation yet; drop this whole-file guard once the port is done.
 //? if neoforge {
 //? if >=26 {
 package com.tkisor.nekojs.api.recipe;
@@ -23,19 +23,21 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * 原料动作：{@link IngredientActionRegistry} 的匹配/变换语义。
+ * Ingredient actions: the matching and transformation semantics of
+ * {@link IngredientActionRegistry}.
  *
- * <p>除水桶余量用例外，全部用自定义 Item 实例（{@code new Item(new Item.Properties())}
- * 不触碰注册表），裸 JUnit 可跑；涉及 vanilla 注册表类初始化的用例经
- * {@code VanillaRegistryProbe} 守卫，在无 FML Loader 的 JVM 中跳过（ModDev unitTest 接入后真跑）。
- * mixin 的接线由 MixinTargetResolutionTest 做字节级目标校验。
+ * <p>Except for the water bucket remainder case, every test uses custom Item instances
+ * ({@code new Item(new Item.Properties())} does not touch the registry), so they run under plain
+ * JUnit. Tests that initialize vanilla registry classes are guarded by
+ * {@code VanillaRegistryProbe} and skip in a JVM without the FML loader; they run for real once
+ * ModDev unitTest is wired in. MixinTargetResolutionTest checks the mixin target at byte level.
  */
 class IngredientActionRegistryTest {
 
     @BeforeAll
     static void requireVanillaRegistries() {
-        // 26.x Item 构造/ItemStack 组件都会触碰 DataComponents→BuiltInRegistries；
-        // 裸 JUnit 跳过，见 VanillaRegistryProbe
+        // In 26.x, Item construction and ItemStack components both reach
+        // DataComponents -> BuiltInRegistries; plain JUnit skips them, see VanillaRegistryProbe.
         org.junit.jupiter.api.Assumptions.assumeTrue(
                 com.tkisor.nekojs.testfixture.VanillaRegistryProbe.available(),
                 "item stack components need vanilla registries (no FML loader in bare JUnit)");
@@ -43,12 +45,12 @@ class IngredientActionRegistryTest {
 
     private Identifier recipeId;
 
-    /** 无耐久物品（stone 代用品）。 */
+    /** Item without durability; stands in for stone. */
     private static Item plainItem() {
         return new Item(new Item.Properties());
     }
 
-    /** 耐久 100 的可损耗物品（pickaxe 代用品）。 */
+    /** Item with durability 100 that wears down; stands in for a pickaxe. */
     private static Item durableItem() {
         return new Item(new Item.Properties().durability(100));
     }
@@ -104,7 +106,8 @@ class IngredientActionRegistryTest {
     void keepActionReturnsFreshCopyAndUnmatchedSlotsKeepVanillaRemainder() {
         Assumptions.assumeTrue(com.tkisor.nekojs.testfixture.VanillaRegistryProbe.available(),
                 "water bucket remainder needs vanilla registries (no FML loader in bare JUnit)");
-        // 水桶有 vanilla 余量（空桶）：不匹配的槽位必须保留该语义
+        // A water bucket has a vanilla remainder, the empty bucket: unmatched slots must keep that
+        // behavior.
         IngredientActionRegistry.record(recipeId, new IngredientActionRegistry.Action(
                 IngredientActionRegistry.Kind.KEEP, Ingredient.of(Items.DIAMOND), 1, ItemStack.EMPTY));
 

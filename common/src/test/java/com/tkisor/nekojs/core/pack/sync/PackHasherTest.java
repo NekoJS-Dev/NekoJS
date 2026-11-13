@@ -14,8 +14,9 @@ import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * 包哈希聚焦测试：文件创建顺序无关的稳定性、内容/manifest 变化敏感、
- * 内容目录范围（脚本/assets/data 参与哈希，状态文件不参与）。
+ * Pack hash tests: the hash is stable whatever order the files were created in, it changes when
+ * the content or the manifest changes, and only content directories count (scripts/assets/data
+ * take part, state files do not).
  */
 class PackHasherTest {
 
@@ -29,8 +30,8 @@ class PackHasherTest {
 
     @Test
     void hashIsStableAcrossFileCreationOrder() throws Exception {
-        Path a = buildPack("pack_a", true); // 先写 one.js 再写 two.js
-        Path b = buildPack("pack_b", false); // 先写 two.js 再写 one.js（内容相同）
+        Path a = buildPack("pack_a", true); // Writes one.js before two.js.
+        Path b = buildPack("pack_b", false); // Writes two.js before one.js; the content is the same.
 
         assertEquals(PackHasher.hashPackDir(a), PackHasher.hashPackDir(b));
     }
@@ -70,9 +71,9 @@ class PackHasherTest {
         List<PackContentFile> files = PackHasher.readContentFiles(pack);
         assertEquals(
             List.of("assets/nekojs/textures/logo.png", "client_scripts/hud.js", "data/nekojs/recipes/r.json"),
-            files.stream().map(PackContentFile::relativePath).toList()); // 排序 + 范围过滤（状态文件/未知目录不参与）
+            files.stream().map(PackContentFile::relativePath).toList()); // Sorted and filtered by scope: state files and unknown directories take no part.
 
-        // 哈希 = manifest + 排序内容文件：等价手工构造
+        // The hash covers the manifest plus the sorted content files, so build it by hand here.
         String expected = PackHasher.hash(
             Files.readAllBytes(pack.resolve("manifest.json")),
             List.of(
@@ -81,7 +82,7 @@ class PackHasherTest {
                 new PackContentFile("data/nekojs/recipes/r.json", "{}".getBytes())));
         assertEquals(expected, PackHasher.hashPackDir(pack));
 
-        // 状态文件翻转不影响哈希（不属于分发内容）
+        // Flipping the state file does not change the hash; it is not distributed content.
         Files.writeString(pack.resolve(".neko_pack.state.json"), "{\"enabled\": false}");
         assertEquals(expected, PackHasher.hashPackDir(pack));
     }
@@ -97,8 +98,9 @@ class PackHasherTest {
         }
     }
 
-    /** 建包：manifest（两包同 id——manifest 字节参与哈希，目录名不参与）+ 两个
-     * server_scripts 文件（one.js=hello、two.js=second，写入顺序可变）。 */
+    /** Builds a pack: a manifest (both packs use the same id, since the manifest bytes take part in
+     * the hash and the directory name does not) plus two server_scripts files
+     * (one.js=hello, two.js=second, written in either order). */
     private Path buildPack(String id, boolean oneFirst) throws Exception {
         Path pack = packRoot.resolve(id);
         Files.createDirectories(pack.resolve("server_scripts"));

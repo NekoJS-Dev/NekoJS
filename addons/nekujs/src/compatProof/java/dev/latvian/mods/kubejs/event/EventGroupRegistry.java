@@ -1,6 +1,6 @@
 package dev.latvian.mods.kubejs.event;
 
-/** Exact interface invocation boundary used by the supplied Additions plugin. */
+/** Exact interface the supplied Additions plugin calls. */
 @FunctionalInterface
 public interface EventGroupRegistry {
     void register(EventGroup group);

@@ -23,22 +23,29 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * 工单 33（W9）contract/spec 覆盖 gate —— Fabric {@code common-api-processor} 延期后的
- * 非 processor 替代门禁之一：在<b>节点真实编译产物</b>上运行，不依赖 annotation processor。
+ * Contract/spec coverage gate: one of the non-processor replacement gates for the deferred
+ * Fabric {@code common-api-processor}. It runs on the <b>node's real compiled output</b> and does not
+ * depend on an annotation processor.
  *
- * <p><b>owner</b>：Managed Surface/Probe owner 定义规范 spec；build convention owner 负责接线。
- * <b>输入</b>：本节点 classpath 上真实编译出的
- * {@code com.tkisor.nekojs.api.spec.inject.*}（规范声明：{@code @PlatformAvailability} scope +
- * {@code neko$} 方法）与 {@code com.tkisor.nekojs.api.inject.*Extension}（平台实现面）。
- * <b>逐项输出</b>：每个 spec 的 scope / 本节点是否 required / 实现面 / 每个 {@code neko$} 方法的
- * override 状态，与只读基线 {@code /nekojs/platform-gates/spec-coverage-<loader>.txt} 逐行对比；
- * 同时落 {@code build/nekojs-gates/spec-coverage-<loader>.json} 供 CI 汇总进同一报告。
- * <b>失败诊断</b>：逐条指出缺失的 <i>contract</i>（哪个 spec 在本节点没有任何实现面）与
- * <i>method</i>（哪个 {@code spec.neko$xxx} 未被实现面自行声明），并带 node/scope/impl。
+ * <p><b>Owner</b>: the Managed Surface/Probe owner defines the spec; the build convention owner
+ * owns the wiring. <b>Input</b>: the
+ * {@code com.tkisor.nekojs.api.spec.inject.*} classes actually compiled onto this node's
+ * classpath (the spec declarations: {@code @PlatformAvailability} scope plus {@code neko$}
+ * methods) and {@code com.tkisor.nekojs.api.inject.*Extension} (the platform implementation
+ * side). <b>Per-item output</b>: each spec's scope, whether this node requires it, its
+ * implementation side, and the override status of every {@code neko$} method, compared line by
+ * line against the read-only baseline
+ * {@code /nekojs/platform-gates/spec-coverage-<loader>.txt}; the run also writes
+ * {@code build/nekojs-gates/spec-coverage-<loader>.json} for CI to fold into the same report.
+ * <b>Failure diagnosis</b>: each failure names the missing <i>contract</i> (which spec has no
+ * implementation side on this node) and the missing <i>method</i> (which {@code spec.neko$xxx}
+ * the implementation side does not declare itself), with node/scope/impl.
  *
- * <p>与 {@code common-api-processor} 的关系：processor 只接受 {@code nf26/nf121/cr}，没有
- * Fabric platform option/scope，1.2.0 明确延期（见工单 33 延期说明）。本 gate 用编译后反射面
- * 覆盖同一契约，<b>不是 processor 等价物</b>，也不改变支持矩阵或 Fabric 已声明能力的验证范围。
+ * <p>Relation to {@code common-api-processor}: the processor only accepts {@code nf26/nf121/cr},
+ * has no Fabric platform option or scope, and that support is deferred to 1.2.0. This gate covers
+ * the same contract through the compiled reflection surface. It is <b>not</b> a processor
+ * equivalent and does not change the support matrix or the verification scope of the capabilities
+ * Fabric has already declared.
  */
 @Tag("platform-gate")
 class PlatformSpecContractGateTest {
@@ -116,7 +123,7 @@ class PlatformSpecContractGateTest {
                 + REPORT_DIR + "/spec-coverage-" + loader + ".json）:\n" + String.join("\n", gaps));
     }
 
-    // ---- 逐项输出落盘 ----
+    // ---- Per-item report output ----
 
     private static void emitReport(String node, String loader, String mcPredicate,
                                    Map<String, String> rows, List<String> gaps) throws IOException {
@@ -145,9 +152,12 @@ class PlatformSpecContractGateTest {
         return "\"" + value.replace("\\", "\\\\").replace("\"", "\\\"") + "\"";
     }
 
-    // ---- 节点事实源（packaged metadata，非硬编码） ----
+    // ---- Node facts (packaged metadata, not hardcoded) ----
 
-    /** 节点身份（Gradle 注入 -Dnekojs.node=<node>）：报告按节点落盘，同 loader 的不同 MC 节点不互相覆盖。 */
+    /**
+     * Node identity (Gradle injects -Dnekojs.node=<node>): reports are written per node, so different
+     * MC nodes of the same loader do not overwrite each other.
+     */
     private static String nodeId() {
         return System.getProperty("nekojs.node");
     }
@@ -158,7 +168,8 @@ class PlatformSpecContractGateTest {
         return "unknown";
     }
 
-    /** 节点打包 metadata 里的 minecraft 依赖谓词：节点受支持 MC 范围的真实声明。 */
+    /** The {@code minecraft} dependency predicate in the node's packaging metadata: the real
+     * declaration of the MC range the node supports. */
     private static String minecraftPredicate() {
         String fabric = readResource("/fabric.mod.json");
         if (fabric != null) {
@@ -199,7 +210,7 @@ class PlatformSpecContractGateTest {
         }
     }
 
-    // ---- spec 发现 ----
+    // ---- Spec discovery ----
 
     private static List<Class<?>> specs() throws Exception {
         List<Class<?>> result = new ArrayList<>();
@@ -216,8 +227,9 @@ class PlatformSpecContractGateTest {
     private static final Map<String, List<String>> PACKAGE_CACHE = new java.util.HashMap<>();
 
     /**
-     * 枚举包内成员：直接扫 test 运行 classpath（jar 与目录两种形态都覆盖），
-     * 不依赖 ClassLoader 目录枚举（:common 产物可能是 jar 形式）。
+     * Lists the members of a package by scanning the test runtime classpath directly, which covers
+     * both jar and directory forms. It does not rely on ClassLoader directory enumeration, because
+     * the :common artifact may be a jar.
      */
     private static List<String> classNamesInPackage(String packagePath) throws Exception {
         List<String> cached = PACKAGE_CACHE.get(packagePath);
@@ -258,7 +270,7 @@ class PlatformSpecContractGateTest {
         return names;
     }
 
-    /** 平台实现面：{@code api.inject.*} 里直接 extends 该 spec 的接口。 */
+    /** Platform implementation side: the interfaces under {@code api.inject.*} that directly extend the spec. */
     private static Class<?> implementor(Class<?> spec) throws Exception {
         for (String simple : classNamesInPackage(IMPL_PACKAGE)) {
             Class<?> type = loadQuiet(IMPL_PACKAGE + "." + simple);
@@ -270,7 +282,8 @@ class PlatformSpecContractGateTest {
         return null;
     }
 
-    /** 覆盖 = 实现面<b>自己声明</b>同签名方法，不是继承 spec 的哨兵 default。 */
+    /** Covered means the implementation side <b>declares</b> a method with the same signature itself,
+     * rather than inheriting the spec's sentinel default. */
     private static boolean declares(Class<?> impl, Method specMethod) {
         for (Method candidate : impl.getDeclaredMethods()) {
             if (!candidate.getName().equals(specMethod.getName())) continue;
@@ -294,7 +307,8 @@ class PlatformSpecContractGateTest {
         return availability == null ? PlatformAvailability.Scope.ALL : availability.value();
     }
 
-    /** scope 语义（与 SpecCoverageProcessor.isRequiredOn 一致，平台轴换成节点真实 loader）。 */
+    /** Scope semantics, matching SpecCoverageProcessor.isRequiredOn, except that the platform axis uses
+     * the node's real loader. */
     private static boolean requiredOn(PlatformAvailability.Scope scope, String loader) {
         return switch (scope) {
             case ALL -> true;
@@ -303,7 +317,7 @@ class PlatformSpecContractGateTest {
         };
     }
 
-    // ---- 只读基线 ----
+    // ---- Read-only baselines ----
 
     private static String readFixture(String path) throws IOException {
         try (InputStream stream = PlatformSpecContractGateTest.class.getResourceAsStream(path)) {

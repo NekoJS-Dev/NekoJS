@@ -15,18 +15,20 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * AC8（ticket 09）高级 Java 面 smoke：{@code Java.type}、{@code Java.loadClass} 别名、
- * Graal interop（List/Map 映射、Number targetTypeMapping）与当前 HostAccess/ClassFilter
- * 形态保持既有行为，不因契约整理收紧。
+ * Smoke test for the advanced Java surface: {@code Java.type}, the
+ * {@code Java.loadClass} alias, and Graal interop (List/Map mapping, Number
+ * targetTypeMapping) keep their current behavior under the present
+ * HostAccess/ClassFilter, and are not narrowed by contract cleanup.
  *
- * <p>按 {@code NekoSandboxFactory.build} 的关键接线复制 Context（真实
- * {@link NekoSharedHostAccess} + 真实 {@link ClassFilter} + 相同 interop 选项），
- * 省略 logger/IO/node runtime 等与本 smoke 无关的外围。{@code java:} ESM 模块协议的
- * 解析语义由 {@code NekoModuleResolverTest} 覆盖。
+ * <p>The {@link Context} copies the wiring that matters from
+ * {@code NekoSandboxFactory.build} (real {@link NekoSharedHostAccess} + real
+ * {@link ClassFilter} + the same interop options) and leaves out logger, IO and node
+ * runtime, which this smoke test does not need. Resolution of the {@code java:} ESM
+ * module protocol is covered by {@code NekoModuleResolverTest}.
  */
 class AdvancedJavaInteropSmokeTest {
 
-    /** HostAccess.ALL + adapter targetTypeMapping 的宿主侧探针。 */
+    /** Host-side probe for HostAccess.ALL plus the adapter's targetTypeMapping. */
     public static final class HostProbe {
         public String echo(String value) { return "echo:" + value; }
         public int sumInteger(Integer a, Integer b) { return a + b; }
@@ -50,7 +52,7 @@ class AdvancedJavaInteropSmokeTest {
                 .option("js.strict", "true")
                 .build();
         context.getBindings("js").putMember("probe", probe);
-        // 与 NekoSandboxFactory 相同的别名接线
+        // Same alias wiring as NekoSandboxFactory
         context.eval("js", "Java.loadClass = Java.type;");
         return context;
     }
@@ -91,17 +93,17 @@ class AdvancedJavaInteropSmokeTest {
     @Test
     void graalInteropKeepsCurrentHostAccessShape() {
         try (Context context = sandboxLikeContext(new HostProbe())) {
-            // 宿主对象成员可访问（HostAccess.ALL + allowPublicAccess 的既有形态）
+            // Host object members are reachable (HostAccess.ALL plus allowPublicAccess)
             assertEquals("echo:hi", context.eval("js", "probe.echo('hi')").asString());
 
-            // JS 数组 → java.util.List（allowListAccess/allowArrayAccess）
+            // JS array → java.util.List (allowListAccess/allowArrayAccess)
             assertEquals(3, context.eval("js", "probe.listSize(['a', 'b', 'c'])").asInt());
             assertEquals("a-b-c", context.eval("js", "probe.joinList(['a', 'b', 'c'])").asString());
 
-            // JS 对象字面量 → java.util.Map（allowMapAccess）
+            // JS object literal → java.util.Map (allowMapAccess)
             assertEquals(2, context.eval("js", "probe.mapSize({x: 1, y: 2})").asInt());
 
-            // Number targetTypeMapping：JS number → Integer 形参（NekoSharedHostAccess 映射）
+            // Number targetTypeMapping: a JS number reaches an Integer parameter, mapped by NekoSharedHostAccess
             assertEquals(30, context.eval("js", "probe.sumInteger(10, 20)").asInt());
         }
     }

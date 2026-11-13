@@ -1,4 +1,4 @@
-// TODO(fabric): fabric 侧还没有对应实现，整文件守卫等移植完成后去掉
+// TODO(fabric): there is no Fabric implementation yet; remove this whole-file guard once the port is done
 //? if neoforge {
 //? if >=26 {
 package com.tkisor.nekojs.dynamic;
@@ -7,14 +7,15 @@ import com.tkisor.nekojs.core.dynamic.facade.DynamicRegistryEvents;
 import com.tkisor.nekojs.core.dynamic.facade.DynamicRegistryFacadeRuntime;
 
 /**
- * 动态注册 facade 的生产装配（ticket 16）：进程级持有 {@link DynamicRegistryFacadeRuntime}
- * 单例；候选域收集器由平台装配（{@code NekoJSMod}）经
- * {@code NekoRuntimeRoot#registerDomainCollector} 注册进 root（与票 39 的 modification
- * owner 同一接缝），reload 的 DOMAIN_PLAN 阶段统一调用；server registry ready 时由
- * {@code ServerEventListener#onServerAboutToStart} 触发初次候选。
+ * Production assembly of the dynamic registration facade: holds the process-level
+ * {@link DynamicRegistryFacadeRuntime} singleton. The platform assembly ({@code NekoJSMod})
+ * registers the candidate domain collector into the root through
+ * {@code NekoRuntimeRoot#registerDomainCollector}, the same place the modification owner
+ * uses; the DOMAIN_PLAN phase of a reload calls it. The first candidates are triggered by
+ * {@code ServerEventListener#onServerAboutToStart} when the server registry is ready.
  *
- * <p>Declarations are collected through the event facade only. Successful activation owns backend
- * claim retirement; releasing a script generation never changes registry claims.
+ * <p>Declarations are collected through the event facade only. Successful activation retires
+ * backend claims; releasing a script generation never changes registry claims.
  */
 public final class DynamicRegistryFacade {
 
@@ -23,15 +24,19 @@ public final class DynamicRegistryFacade {
     private DynamicRegistryFacade() {
     }
 
-    /** 进程级 facade runtime（平台装配时注册进 root；测试经构造隔离实例）。 */
+    /**
+     * Process-level facade runtime, registered into the root by the platform assembly; tests get
+     * an isolated instance by construction.
+     */
     public static DynamicRegistryFacadeRuntime runtime() {
         return RUNTIME;
     }
 
     /**
-     * 初次候选触发（server registry ready）：向 active 总线投递收集事件并按
-     * preflight/publish 语义处置。幂等（同定义重声明不冲突），与 reload 候选收集
-     * 消费同一账本。
+     * Triggers the first candidate collection once the server registry is ready: posts the
+     * collection event on the active bus and handles it with the preflight/publish rules.
+     * Idempotent (re-declaring the same definition does not conflict) and shares one ledger
+     * with the reload candidate collection.
      */
     public static void fireInitialCollection() {
         RUNTIME.collectInitial("server-registry-ready");

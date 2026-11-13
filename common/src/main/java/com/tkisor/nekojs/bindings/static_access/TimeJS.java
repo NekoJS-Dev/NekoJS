@@ -5,21 +5,21 @@ import com.tkisor.nekojs.api.annotation.Param;
 import com.tkisor.nekojs.api.annotation.Return;
 
 /**
- * 时间单位工具（1 秒 = 20 tick）与时间字符串解析。
+ * Time unit helpers (1 second = 20 ticks) and parsing of time strings.
  */
 @Doc("Time unit helpers in game ticks (1 second = 20 ticks).")
 public final class TimeJS {
-    /** 一秒的 tick 数。 */
+    /** Number of ticks in one second. */
     @Doc("Ticks per second (20).")
     public final int SECOND = 20;
-    /** 一分钟的 tick 数。 */
+    /** Number of ticks in one minute. */
     @Doc("Ticks per minute (1200).")
     public final int MINUTE = SECOND * 60;
-    /** 一小时的 tick 数。 */
+    /** Number of ticks in one hour. */
     @Doc("Ticks per hour (72000).")
     public final int HOUR = MINUTE * 60;
 
-    /** 秒转 tick。 */
+    /** Converts seconds to ticks. */
     @Doc("Converts seconds to ticks.")
     @Param(name = "value", value = "amount of seconds")
     @Return("equivalent amount of ticks")
@@ -27,7 +27,7 @@ public final class TimeJS {
         return value * SECOND;
     }
 
-    /** 分钟转 tick。 */
+    /** Converts minutes to ticks. */
     @Doc("Converts minutes to ticks.")
     @Param(name = "value", value = "amount of minutes")
     @Return("equivalent amount of ticks")
@@ -35,7 +35,7 @@ public final class TimeJS {
         return value * MINUTE;
     }
 
-    /** 小时转 tick。 */
+    /** Converts hours to ticks. */
     @Doc("Converts hours to ticks.")
     @Param(name = "value", value = "amount of hours")
     @Return("equivalent amount of ticks")
@@ -44,9 +44,10 @@ public final class TimeJS {
     }
 
     /**
-     * 解析时间字符串为 tick 数（1 秒 = 20 tick）。支持单位后缀：
-     * {@code ms}(毫秒，1tick=50ms，向下取整)、{@code s}(秒)、{@code m}(分)、{@code h}(小时)、{@code t}(tick)；
-     * 纯数字或未知单位按 tick 处理。
+     * Parses a time string into ticks (1 second = 20 ticks). Supported unit suffixes:
+     * {@code ms} (milliseconds, 1 tick = 50 ms, rounded down), {@code s} (seconds), {@code m}
+     * (minutes), {@code h} (hours) and {@code t} (ticks); a plain number or an unknown suffix is
+     * treated as ticks.
      * <pre>
      * Time.parseTime("5s")   // 100
      * Time.parseTime("10m")  // 12000
@@ -79,7 +80,8 @@ public final class TimeJS {
     }
 
     /**
-     * 解析时间字符串为毫秒数（{@code "5s"→5000}、{@code "2t"→100}、{@code "100ms"→100}）。纯数字按毫秒。
+     * Parses a time string into milliseconds ({@code "5s"→5000}, {@code "2t"→100},
+     * {@code "100ms"→100}). A plain number is treated as milliseconds.
      */
     @Doc("Parses a time string into milliseconds; plain numbers are treated as milliseconds.")
     @Param(name = "str", value = "time string with unit suffix (ms/s/m/h/t)")

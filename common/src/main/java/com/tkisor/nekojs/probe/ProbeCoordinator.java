@@ -26,68 +26,69 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
- * Probe 协调器：一次 probe 运行的**流程编排**——配置 → 共享收集 → 共享 IR → 覆盖事件 →
- * 外部副作用 → 逐 backend 渲染（串行）→ 诊断汇总。具体职责由包内组件承担：
+ * Probe coordinator: Orchestrates the **workflow** of a probe run—configuration → shared collection → shared IR → override events →
+ * external side effects → per-backend rendering (serial) → diagnostic summary. Specific responsibilities are handled by package-internal components:
  * <ul>
- *   <li>{@link ProbeConfigService}：probe.toml 读取/缓存（mtime+size 戳）/enabled 持久化</li>
- *   <li>{@link ProbeClassCollector}：种子 BFS 类收集（无状态）</li>
- *   <li>{@link ProbeIrBuilder}：TypeReflector 反射 + assign/modify 事件（无状态）</li>
- *   <li>{@link ProbeOutputCommitter}：staging/backup 目录交换（backend 各自调用）</li>
+ *   <li>{@link ProbeConfigService}: probe.toml reading/caching (mtime + size timestamp) / enabled persistence</li>
+ *   <li>{@link ProbeClassCollector}: Seed BFS class collection (stateless)</li>
+ *   <li>{@link ProbeIrBuilder}: TypeReflector reflection + assign/modify events (stateless)</li>
+ *   <li>{@link ProbeOutputCommitter}: staging/backup directory exchange (called individually by backends)</li>
  * </ul>
  *
- * <p>C3 起支持针对自定义 {@link NekoJSPaths} 实例化（构造传入 paths 与 {@link ProbeExternalArtifacts}），
- * 便于用临时目录隔离测试；实例方法为 {@link #readConfig()}/{@link #reloadConfigCache()}/
- * {@link #applyEnabled(boolean)}/{@link #isProbeEnabled()}/{@link #runProbe}。
- * Java 不允许静态与实例方法同签名共存，故静态兼容层保留与旧版一致的
- * {@code config()/reloadConfig()/setEnabled(boolean)/isEnabled()/run(snapshot, backends)} 签名，
- * 委托惰性单例 {@code defaultCoordinator()}；所有既有静态调用点（命令层与测试）不改也继续编译运行。
+ * <p>Supports instantiation against custom {@link NekoJSPaths} since C3 (passing paths and {@link ProbeExternalArtifacts} to the constructor),
+ * facilitating isolated testing using temporary directories. Instance methods include {@link #readConfig()}/{@link #reloadConfigCache()}/
+ * {@link #applyEnabled(boolean)}/{@link #isProbeEnabled()}/{@link #runProbe()}.
+ * Java does not allow static and instance methods with the same signature to coexist, so the static compatibility layer retains the
+ * same signatures as older versions: {@code config()/reloadConfig()/setEnabled(boolean)/isEnabled()/run(snapshot, backends)}.
+ * These delegate to the lazy singleton {@code defaultCoordinator()}; all existing static call sites (command layer and tests) remain compilable and runnable without changes.
  */
 public final class ProbeCoordinator {
 
-    /* ================= 实例状态 ================= */
+    /* ================= Instance State ================= */
     private final NekoJSPaths paths;
     private final ProbeExternalArtifacts externalArtifacts;
     private final ProbeConfigService configService;
     /**
-     * runProbe 互斥：同一协调器实例同一时间只允许一次运行（fail-fast——占用期间的再次调用
-     * 立即返回失败结果，不排队）。除输出目录写入外，backend 实例（注册表单例）携带
-     * 每轮清理的可变渲染缓存，并发运行会互相破坏；用户命令场景「立即提示已在运行」优于静默排队。
+     * runProbe mutex: Only one run is allowed at a time for the same coordinator instance (fail-fast: subsequent calls during
+     * occupancy return a failure result immediately instead of queuing). Besides output directory writing, backend instances
+     * (registry singletons) carry mutable rendering caches that are cleared every round; concurrent runs would corrupt each other.
+     * In user command scenarios, "prompting immediately that it is already running" is preferred over silent queuing.
      */
     private final AtomicBoolean running = new AtomicBoolean();
 
-    /** 以给定游戏目录路径构造；外部副作用走 {@link ProbeExternalArtifacts#DEFAULT}。 */
+    /** Constructs with the given game directory path; external side effects use {@link ProbeExternalArtifacts#DEFAULT}. */
     public ProbeCoordinator(NekoJSPaths paths) {
         this(paths, ProbeExternalArtifacts.DEFAULT);
     }
 
-    /** 以给定游戏目录路径与外部副作用实现构造（测试可用 {@link ProbeExternalArtifacts#NONE} 隔离写盘）。 */
+    /** Constructs with the given game directory path and external side effect implementation (use {@link ProbeExternalArtifacts#NONE} in tests to isolate disk writes). */
     public ProbeCoordinator(NekoJSPaths paths, ProbeExternalArtifacts artifacts) {
         this.paths = Objects.requireNonNull(paths, "paths");
         this.externalArtifacts = Objects.requireNonNull(artifacts, "artifacts");
         this.configService = new ProbeConfigService(paths);
     }
 
-    /** 读取 probe 配置（委托 {@link ProbeConfigService}：mtime+size 戳缓存自动重读）。 */
+    /** Reads probe configuration (delegates to {@link ProbeConfigService}: automatic re-read based on mtime+size timestamp caching). */
     public ProbeConfig readConfig() {
         return configService.readConfig();
     }
 
-    /** 丢弃配置缓存，下次 {@link #readConfig()} 重新从盘读取（供 {@code /nekojs probe reload} 强制刷新）。 */
+    /** Discards the configuration cache, forcing the next {@link #readConfig()} to re-read from disk (used by {@code /nekojs probe reload} for forced refresh). */
     public void reloadConfigCache() {
         configService.reloadConfigCache();
     }
 
-    /** 把 probe.toml 的 {@code enabled} 写盘并重载缓存（供 {@code /nekojs probe enable|disable} 命令）。 */
+    /** Writes the {@code enabled} status to probe.toml and reloads the cache (used by {@code /nekojs probe enable|disable} commands). */
     public void applyEnabled(boolean enabled) {
         configService.applyEnabled(enabled);
     }
 
-    /** 当前 probe 总开关（{@code == readConfig().enabled()}）。 */
+    /** Returns the current probe master switch ({@code == readConfig().enabled()}). */
     public boolean isProbeEnabled() {
         return configService.isProbeEnabled();
     }
 
-    /* ================= 静态兼容层（旧静态调用点不变） ================= */
+    /* ================= Static Compatibility Layer (Old static call sites remain unchanged) ================= */
     private static volatile ProbeCoordinator DEFAULT;
     private static final Object AUTHORING_PATHS_LOCK = new Object();
     private static AuthoringPathsRegistration authoringPathsRegistration;
@@ -117,7 +118,7 @@ public final class ProbeCoordinator {
         return AuthoringPaths.resolve(paths.gameDir(), AuthoringPaths.DEFAULT_DIRECTORY);
     }
 
-    /** 惰性创建绑定全局 {@link NekoJSPaths#get()} 的默认协调器。 */
+    /** Lazily creates the default coordinator bound to the global {@link NekoJSPaths#get()}. */
     private static ProbeCoordinator defaultCoordinator() {
         ProbeCoordinator d = DEFAULT;
         if (d == null) {
@@ -127,44 +128,44 @@ public final class ProbeCoordinator {
         return d;
     }
 
-    /** 静态 facade：委托全局默认协调器读取配置。 */
+    /** Static facade: Delegates to the global default coordinator to read configuration. */
     public static ProbeConfig config() {
         return defaultCoordinator().readConfig();
     }
 
     /**
-     * 确保 {@code <gamedir>/nekojs/config/probe.toml} 存在：缺失时按默认值自动落盘
-     * （{@link ProbeConfigLoader} 的 autosave 语义，与 {@code engine.toml} 启动期自动生成对称）。
-     * 供 {@code WorkspaceGenerator.setupWorkspace()} 在启动时调用——否则用户首次看到
-     * {@code nekojs/config/} 时只有 engine.toml，probe.toml 要等第一次跑 probe 命令才出现。
-     * 读取失败（文件损坏等）由 loader 内部回退默认配置，此处不抛异常。
+     * Ensures {@code <gamedir>/nekojs/config/probe.toml} exists: Automatically creates it with default values if missing
+     * (using the autosave semantics of {@link ProbeConfigLoader}, symmetric to the startup generation of {@code engine.toml}).
+     * Called by {@code WorkspaceGenerator.setupWorkspace()} at startup; otherwise, users would only see engine.toml in
+     * {@code nekojs/config/} initially, with probe.toml appearing only after the first probe command runs.
+     * Reading failures (e.g., file corruption) are handled by the loader, which falls back to default configuration; no exception is thrown here.
      */
     public static void ensureConfigFile() {
         defaultCoordinator().readConfig();
     }
 
-    /** 静态 facade：委托全局默认协调器丢弃配置缓存。 */
+    /** Static facade: Delegates to the global default coordinator to discard configuration cache. */
     public static void reloadConfig() {
         defaultCoordinator().reloadConfigCache();
     }
 
-    /** 静态 facade：委托全局默认协调器持久化 {@code enabled} 并重载。 */
+    /** Static facade: Delegates to the global default coordinator to persist {@code enabled} and reload. */
     public static void setEnabled(boolean enabled) {
         defaultCoordinator().applyEnabled(enabled);
     }
 
-    /** 静态 facade：委托全局默认协调器重置编辑器配置（{@code /nekojs probe reset_config}）。 */
+    /** Static facade: Delegates to the global default coordinator to reset editor configuration ({@code /nekojs probe reset_config}). */
     public static int resetEditorConfigs() {
         return defaultCoordinator().resetEditorConfigsInternal();
     }
 
     /**
-     * 重置所有 backend 管理的编辑器配置文件：逐 backend 删除其整体拥有的文件
-     * （jsconfig/pyrightconfig/snippets，不碰共享的 {@code .vscode/settings.json}），
-     * 随后由 {@code WorkspaceGenerator.createWorkspaceConfigs()} 重建出厂基础配置。
-     * 配置片段（paths/include 等）由随后的 probe 运行重新合并。
+     * Resets all editor configuration files managed by backends: Deletes files owned by each backend individually
+     * (jsconfig/pyrightconfig/snippets, without touching shared {@code .vscode/settings.json}),
+     * followed by {@code WorkspaceGenerator.createWorkspaceConfigs()} rebuilding the base factory configuration.
+     * Configuration fragments (paths/include, etc.) are merged again by subsequent probe runs.
      *
-     * @return 成功执行 reset 的 backend 数
+     * @return Number of backends that successfully performed the reset
      */
     int resetEditorConfigsInternal() {
         int reset = 0;
@@ -181,30 +182,36 @@ public final class ProbeCoordinator {
         return reset;
     }
 
-    /** 静态 facade：全局默认协调器的 probe 总开关。 */
+    /** Static facade: Master probe switch for the global default coordinator. */
     public static boolean isEnabled() {
         return defaultCoordinator().isProbeEnabled();
     }
 
     /**
-     * 共享类收集（委托 {@link ProbeClassCollector#collect}）：从事件/绑定种子出发的 BFS 闭包，
-     * 按 {@link ProbeConfig} 包过滤，返回按全限定名排序的确定性集合。
+     * Shared class collection (delegated to {@link ProbeClassCollector#collect}): BFS closure starting from event/binding seeds,
+     * filtered by {@link ProbeConfig} packages, returning a deterministic set sorted by fully qualified name.
      */
     public static LinkedHashSet<Class<?>> collectClasses(NekoScriptCatalogSnapshot snapshot, ProbeConfig cfg) {
         return ProbeClassCollector.collect(snapshot, cfg);
     }
 
     /**
-     * 对选中的 backend 集合执行一次 probe：共享收集 → 各 backend 渲染 → 外部副作用一次。
-     * 实例版 {@code run(...)}：路径全部取自本实例的 {@link #paths}，外部副作用走 {@link #externalArtifacts}。
+     * Runs one probe over the selected backends: shared collection, rendering for each backend,
+     * then one external side effect. This is the instance form of {@code run(...)}: all paths come
+     * from this instance's {@link #paths} and external side effects use
+     * {@link #externalArtifacts}.
      *
-     * <p>同一协调器实例同一时间只允许一次运行（fail-fast）：占用期间的再次调用立即返回
-     * {@code "probe already running"}，不排队。选中集合内重复 outputDir 的后续 backend 被跳过
-     * （结果为 failure，就地同步会把先跑者的产物当陈旧文件删掉）。事件/编辑器配置的降级信息进结果 warnings。
+     * <p>One coordinator instance runs one probe at a time and fails fast: a call made while a run
+     * is active returns {@code "probe already running"} immediately instead of queuing. A backend
+     * whose outputDir is already used by an earlier backend in the same run is skipped and
+     * reported as a failure, because in-place synchronization would delete the first runner's
+     * artifacts as stale files. Result warnings also carry degradation of events and editor
+     * configuration.
      *
-     * @param snapshot 当前 catalog 快照
-     * @param backends 命令解析出的、本次要跑的 backend（已按 priority/名字解析）
-     * @return 每个 backend 的生成结果（顺序与输入一致）
+     * @param snapshot current catalog snapshot
+     * @param backends backends parsed from the command for this probe, already resolved by
+     *                 priority and name
+     * @return generation result per backend, in input order
      */
     public List<ProbeBackend.GenerateResult> runProbe(NekoScriptCatalogSnapshot snapshot, List<ProbeBackend> backends) {
         if (backends.isEmpty()) {
@@ -229,7 +236,7 @@ public final class ProbeCoordinator {
                     .map(b -> ProbeBackend.GenerateResult.failure("probe disabled in probe.toml"))
                     .toList();
         }
-        // mode=NONE：整体关闭类扫描（在共享收集与 paths 获取之前尽早返回，不做任何写盘）
+        // mode=NONE: Disable class scanning entirely (return early before shared collection and path resolution, do not perform any disk writes)
         if (cfg.scan().mode() == ProbeConfig.ScanConfig.ScanMode.NONE) {
             return backends.stream()
                     .map(b -> ProbeBackend.GenerateResult.failure("probe disabled (scan mode=NONE in probe.toml)"))
@@ -248,8 +255,8 @@ public final class ProbeCoordinator {
         LinkedHashSet<Class<?>> collected = ProbeClassCollector.collect(snapshot, cfg, runWarnings);
         NekoJSPaths paths = this.paths;
 
-        // 共享 IR：当 modify_type/assign_type 有监听器，或某 backend 需要 IR（TS 与 Python 内置
-        // backend 都声明 requiresIr=true，IR 是唯一渲染源）时构建一次。
+        // Shared IR: Built once when there are listeners for modify_type/assign_type, or when a backend requires IR (TS and Python built-in
+        // backends declare requiresIr=true, making IR the sole rendering source).
         boolean needIr = ProbeEvents.MODIFY_TYPE.hasListeners()
                 || ProbeEvents.ASSIGN_TYPE.hasListeners()
                 || backends.stream().anyMatch(ProbeBackend::requiresIr);
@@ -258,8 +265,8 @@ public final class ProbeCoordinator {
                 ? ProbeIrBuilder.fireAssignType(runWarnings)
                 : Map.of();
 
-        // 单一共享线程池：整个 probe 运行（IR 反射构建 + 各 backend 内部的并行渲染）只有这一个池
-        // （backend 之间由本类串行调度——线程池不承诺 backend 间并行）
+        // Single shared thread pool: This is the only pool used for the entire probe run (IR reflection construction + parallel rendering within each backend)
+        // (backends are scheduled serially by this class—the thread pool does not guarantee parallelism between backends)
         ExecutorService sharedPool = Executors.newFixedThreadPool(
                 Math.max(1, Math.min(Runtime.getRuntime().availableProcessors(), 8)));
         try {
@@ -267,10 +274,10 @@ public final class ProbeCoordinator {
                     ? ProbeIrBuilder.buildAndMutateIr(collected, assignMap, sharedPool, runWarnings)
                     : null;
 
-            // add_global / snippets：每次 probe 收集一次（各有监听器才触发）
+            // add_global / snippets: Collected once per probe run (triggered only if there are respective listeners)
             ProbeOverrides overrides = ProbeIrBuilder.fireOverrides(runWarnings);
 
-            // 外部基础配置（WorkspaceGenerator 写 jsconfig 等）先执行一次，供 backend 的 contributeEditorConfig 合并
+            // External base configuration (e.g., WorkspaceGenerator writing jsconfig) is executed first, to be merged by backend's contributeEditorConfig
             try {
                 Path baseDir = paths.gameDir().resolve(cfg.baseDir());
                 externalArtifacts.generate(baseDir, authoringPaths);
@@ -280,9 +287,9 @@ public final class ProbeCoordinator {
 
             EditorConfigContributor editorConfigs = new FileEditorConfigContributor();
             List<ProbeBackend.GenerateResult> results = new ArrayList<>(backends.size());
-            // 输出目录去重：两个 backend 写同一目录时，后跑者的陈旧文件清理会删掉先跑者的产物
-            // （后跑者覆盖先跑者）。每组目录只跑第一个选中的 backend，其余跳过并告警——
-            // 同语言多 backend 共存合法，但共享输出目录不合法（要换目录用 outputDir 配置）。
+            // Output directory deduplication: When two backends write to the same directory, stale file cleanup by the second runner will delete the artifacts of the first runner
+            // (the second runner overwrites the first). Only the first selected backend runs for each directory, others are skipped with a warning—
+            // Coexistence of multiple backends for the same language is valid, but sharing an output directory is not (use outputDir configuration to change directories).
             Set<Path> seenOutputDirs = new HashSet<>();
             for (ProbeBackend backend : backends) {
                 Path langDir = backend.outputDir(paths, cfg).normalize();
@@ -311,8 +318,10 @@ public final class ProbeCoordinator {
                     NekoJS.LOGGER.error("Probe backend {}:{} failed", backend.languageId(), backend.name(), e);
                     result = ProbeBackend.GenerateResult.failureOf(e);
                 }
-                // 生成成功后：向编辑器配置贡献本 backend 的片段（paths/extraPaths，幂等合并，指向真实输出目录）。
-                // 失败只降级（生成产物已提交），但记入该 backend 的 warnings 让命令层可见。
+                // After a successful generation, contribute this backend's fragments to the editor
+                // config (paths/extraPaths, merged idempotently, pointing at the real output
+                // directory). A failure only degrades it (the artifacts are already committed)
+                // but is added to this backend's warnings so the command layer sees it.
                 List<String> backendWarnings = new ArrayList<>();
                 if (result.success()) {
                     try {
@@ -336,17 +345,21 @@ public final class ProbeCoordinator {
         }
     }
 
-    /** 静态 facade：委托全局默认协调器执行一次 probe（命令层旧调用点不变）。 */
+    /**
+     * Static facade: delegates one probe to the global default coordinator. Existing command-layer
+     * call sites keep working unchanged.
+     */
     public static List<ProbeBackend.GenerateResult> run(NekoScriptCatalogSnapshot snapshot, List<ProbeBackend> backends) {
         return defaultCoordinator().runProbe(snapshot, backends);
     }
 
     /**
-     * 开服自动 probe（{@code probe.toml runAtStartup = true} 时启用；默认 false，opt-in）：
-     * 各平台在 ServerStarted 时调用一次——跑默认 TS backend 并把结果摘要写进日志。
-     * 任何失败只记日志，绝不影响开服。{@code enabled = false} 或 {@code scan.mode = NONE} 时跳过。
+     * Startup probe, enabled when {@code probe.toml runAtStartup = true} (default false, opt-in).
+     * Each platform calls it once on ServerStarted: it runs the default TS backend and writes a
+     * summary of the result to the log. Any failure is only logged and never affects server
+     * startup. Skipped when {@code enabled = false} or {@code scan.mode = NONE}.
      *
-     * @return 是否真的执行了一次 probe（配置开启且 backend 可用）
+     * @return whether a probe actually ran (config enabled and a backend available)
      */
     public static boolean runStartupProbeIfConfigured() {
         ProbeConfig cfg = config();
@@ -376,12 +389,12 @@ public final class ProbeCoordinator {
         return true;
     }
 
-    /** 当前已注册的 backend 总数（诊断用）。 */
+    /** Number of registered backends; for diagnostics. */
     public static int registeredBackendCount() {
         return ProbeBackendRegistry.get().registrars().size();
     }
 
-    /** 仅收集（不渲染），供诊断/测试。 */
+    /** Collects classes only and renders nothing; for diagnostics and tests. */
     public static Set<Class<?>> collectOnly(NekoScriptCatalogSnapshot snapshot) {
         return collectClasses(snapshot, config());
     }

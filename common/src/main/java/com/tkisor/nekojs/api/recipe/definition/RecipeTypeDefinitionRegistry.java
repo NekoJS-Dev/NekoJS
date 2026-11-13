@@ -21,8 +21,9 @@ public final class RecipeTypeDefinitionRegistry {
     }
 
     public RecipeTypeDefinitionRegistry merge(RecipeTypeDefinitionRegistry other) {
-        // 内层 map 不可变（构造时 unmodifiableMap）：必须复制后再 putAll，
-        // 否则同命名空间合并（如插件覆盖已自动发现的命名空间）会抛 UnsupportedOperationException。
+        // The inner maps are immutable (unmodifiableMap at construction): copy them before putAll,
+        // or merging into an existing namespace (for example a plugin overriding an auto-discovered
+        // namespace) throws UnsupportedOperationException.
         Map<String, Map<String, RecipeTypeDefinition>> merged = new LinkedHashMap<>();
         definitions.forEach((namespace, types) -> merged.put(namespace, new LinkedHashMap<>(types)));
         for (var entry : other.definitions.entrySet()) {

@@ -13,8 +13,9 @@ import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 /**
- * {@link SandboxPolicy} 是两层脚本文件系统（Graal FileSystem + Node shim）写裁决的唯一真相：
- * 受保护配置拒写、flag 收敛、两层一致。
+ * {@link SandboxPolicy} is the single decision point for writes to the two-layer script
+ * filesystem (Graal FileSystem and the Node shim): protected config files are refused, the flags
+ * converge, and both layers agree.
  */
 class SandboxPolicyTest {
 
@@ -45,7 +46,7 @@ class SandboxPolicyTest {
     void legacyEngineConfigFileIsWriteProtected() throws IOException {
         NekoJSPaths paths = paths();
         SandboxPolicy strict = new SandboxPolicy(SandboxConfig.defaultConfig(), paths);
-        // 严格模式：路径本身就在 neko 根外，先被作用域拒绝（IOException）
+        // Strict mode: the path itself is outside the nekojs root, so the scope check rejects it first (IOException).
         assertThrows(IOException.class, () -> strict.resolveWrite(paths.legacyEngineConfig()));
     }
 
@@ -54,9 +55,9 @@ class SandboxPolicyTest {
         NekoJSPaths paths = paths();
         SandboxPolicy strict = new SandboxPolicy(SandboxConfig.defaultConfig(), paths);
 
-        // neko 根内放行（不存在路径的 for-create 形式也应通过）
+        // Allowed inside the nekojs root; the for-create form of a path that does not exist must pass too.
         assertDoesNotThrow(() -> strict.resolveWrite(paths.root().resolve("startup_scripts/new.js")));
-        // gameDir 内、neko 根外拒绝（此前 Graal FS 无条件放行到 mods/）
+        // Rejected inside gameDir but outside the nekojs root (the Graal FS used to allow mods/ unconditionally).
         assertThrows(IOException.class, () -> strict.resolveWrite(gameDir.resolve("mods/malicious.jar")));
         assertThrows(IOException.class, () -> strict.resolveWrite(gameDir.resolve("world/data/x.dat")));
     }
@@ -75,7 +76,8 @@ class SandboxPolicyTest {
         assertDoesNotThrow(() -> policy.resolveWrite(gameDir.resolve("somewhere/output.txt")));
         assertThrows(AccessDeniedException.class,
                 () -> policy.resolveWrite(paths.config().resolve("engine.toml")));
-        // 宽松模式下旧位置在作用域内，必须由配置保护挡下（AccessDenied 而非放行）
+        // In lenient mode the old location is inside the scope, so the config protection must stop it
+        // (AccessDenied rather than allowed).
         assertThrows(AccessDeniedException.class,
                 () -> policy.resolveWrite(paths.legacyEngineConfig()));
     }
@@ -85,7 +87,8 @@ class SandboxPolicyTest {
         NekoJSPaths paths = paths();
         SandboxPolicy strict = new SandboxPolicy(SandboxConfig.defaultConfig(), paths);
 
-        // Node shim 的字符串入口：绝对/相对（相对 gameDir 工作目录）两种形式同判
+        // The Node shim's string entry point: absolute and relative forms (relative uses gameDir as the
+        // working directory) are judged the same way.
         assertThrows(AccessDeniedException.class,
                 () -> strict.resolveWrite("nekojs/config/engine.toml", gameDir));
         assertThrows(IOException.class,

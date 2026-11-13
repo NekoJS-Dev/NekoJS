@@ -4,10 +4,10 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 /**
- * 一组已验证契约的不可变集合，按 {@link ApiContractIdentity} 索引。
+ * An immutable set of verified contracts, indexed by {@link ApiContractIdentity}.
  *
- * <p>通过 {@link #of(VerifiedApiContract...)} 构造，重复身份会抛
- * {@link IllegalArgumentException}。
+ * <p>Build one with {@link #of(VerifiedApiContract...)}; a duplicate identity throws
+ * {@link IllegalArgumentException}.
  */
 public final class VerifiedContractSet {
 
@@ -17,7 +17,7 @@ public final class VerifiedContractSet {
         this.index = Map.copyOf(index);
     }
 
-    /** 以一组契约构造集合；重复身份抛 {@link IllegalArgumentException}。 */
+    /** Builds a set from the given contracts; a duplicate identity throws {@link IllegalArgumentException}. */
     public static VerifiedContractSet of(VerifiedApiContract... contracts) {
         Map<ApiContractIdentity, VerifiedApiContract> map = new LinkedHashMap<>();
         for (VerifiedApiContract c : contracts) {
@@ -29,19 +29,22 @@ public final class VerifiedContractSet {
         return new VerifiedContractSet(map);
     }
 
-    /** 返回全部契约（不可变列表）。 */
+    /** Returns all contracts as an immutable list. */
     public List<VerifiedApiContract> all() {
         return List.copyOf(index.values());
     }
 
-    /** 返回指定 owner 的全部契约。 */
+    /** Returns every contract registered for the given owner. */
     public List<VerifiedApiContract> forOwner(String owner) {
         return index.values().stream()
                 .filter(c -> c.identity().owner().equals(owner))
                 .collect(Collectors.toUnmodifiableList());
     }
 
-    /** 返回指定 owner 的 PORTABLE 契约；数量不为 1 时抛 {@link IllegalStateException}。 */
+    /**
+     * Returns the PORTABLE contract for the given owner.
+     * Throws {@link IllegalStateException} unless exactly one exists.
+     */
     public VerifiedApiContract requirePortable(String owner) {
         List<VerifiedApiContract> portable = index.values().stream()
                 .filter(c -> c.identity().owner().equals(owner)

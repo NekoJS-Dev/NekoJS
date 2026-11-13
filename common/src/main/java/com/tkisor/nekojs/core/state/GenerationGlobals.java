@@ -6,22 +6,24 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * 一个 generation 的 global/shared 视图与候选写集持有者（票 10）。
+ * Holds the global/shared views and the candidate write set for one generation.
  *
- * <p>每个 Context（候选或 active）创建一份；{@link #globalView()}/{@link #sharedView()}
- * 绑定为该 Context 的 {@code global}/{@code shared}（工作名）成员。视图本身与绑定定义
- * 分离（spec 10「绑定定义与按 generation 创建的视图必须分开」）。
+ * <p>Each Context (candidate or active) creates one. {@link #globalView()} and
+ * {@link #sharedView()} are bound as that Context's {@code global}/{@code shared} members. The
+ * view itself is separate from the binding definition.
  *
  * <ul>
- *   <li><b>非事务 generation</b>（初始 load / STARTUP reset+load / 单文件 FILE 路径）：
- *       顶层 set/delete/clear 直接提交进 store；</li>
- *   <li><b>事务 generation</b>（候选）：顶层写进写集，read-your-writes；
- *       {@link #preflightJoint()} 联合预检（私有 + 共享写集 + 外部
- *       {@link CandidateStatePlan}），{@link #publishJoint()} 在 commit 点一次性联合发布；
- *       {@link #discard()} 随候选失败丢弃全部写集；</li>
- *   <li><b>generation 生命周期</b>：{@link #close()} 只失效「本 generation 写入的 guest
- *       值」（已销毁 Context 的 guest 函数/Value 不因存入 Map 获得永久保活）；非 guest
- *       值与 store 整体跨 reload 保留（root close 才释放）。</li>
+ *   <li><b>Non-transactional generation</b> (initial load, STARTUP reset+load, single-file FILE
+ *       path): a top-level set/delete/clear commits straight into the store;</li>
+ *   <li><b>Transactional generation</b> (candidate): top-level writes go into the write set with
+ *       read-your-writes. {@link #preflightJoint()} runs the joint preflight (private write set,
+ *       shared write set and external {@link CandidateStatePlan} instances);
+ *       {@link #publishJoint()} publishes all of them at once at the commit point;
+ *       {@link #discard()} drops every write set when the candidate fails;</li>
+ *   <li><b>Generation lifetime</b>: {@link #close()} invalidates only the guest values this
+ *       generation wrote. Guest functions and Values of a destroyed Context are not kept alive
+ *       forever just because they sit in the map. Non-guest values and the store survive reload
+ *       as a whole and are released only when the root closes.</li>
  * </ul>
  */
 public final class GenerationGlobals implements AutoCloseable {
@@ -34,13 +36,14 @@ public final class GenerationGlobals implements AutoCloseable {
     private final GlobalStore.MapWriteSet privateWrites;
     private final GlobalStore.MapWriteSet sharedWrites;
 
-    /** 候选的外部联合计划（测试计划 / 后续领域计划）；只在 owner thread（候选构建）上写。 */
+    /** External joint plans of the candidate (test plans and later domain plans). Only the owner thread
+     * building the candidate writes this list. */
     private final List<CandidateStatePlan> plans = new ArrayList<>();
 
     /**
-     * UI roots bound to this generation (ticket 42); read and written on the owner thread
-     * only. Candidate roots are registered while the candidate builds and become production
-     * roots when that candidate commits; closing this generation releases all of them.
+     * UI roots bound to this generation. Only the owner thread reads and writes the list. Candidate
+     * roots are registered while the candidate builds and become production roots when that
+     * candidate commits; closing this generation releases all of them.
      */
     private final List<UiRoot> uiRoots = new ArrayList<>();
 
@@ -71,7 +74,7 @@ public final class GenerationGlobals implements AutoCloseable {
         return transactional && !published;
     }
 
-    /** 本 generation 的类型私有 {@code global} 视图（绑定到所属 Context）。 */
+    /** The type-private {@code global} view of this generation, bound to its Context. */
     public GlobalView globalView() {
         if (globalView == null) {
             globalView = new GlobalView(this, privateStore, privateWrites);
@@ -79,7 +82,8 @@ public final class GenerationGlobals implements AutoCloseable {
         return globalView;
     }
 
-    /** 本 generation 的显式共享 {@code shared} 视图（工作名；绑定到所属 Context）。 */
+    /** The explicitly shared view of this generation. The working name is {@code shared}; the view is
+     * bound to its Context. */
     public GlobalView sharedView() {
         if (sharedView == null) {
             sharedView = new GlobalView(this, sharedStoreRef, sharedWrites);
@@ -87,11 +91,12 @@ public final class GenerationGlobals implements AutoCloseable {
         return sharedView;
     }
 
-    // ---- 候选外部计划边界（AC5） ----
+    // ---- Candidate external plans ----
 
     /**
-     * 候选执行期间挂入联合计划（非候选 generation 上调用得到明确拒绝）。
-     * ScriptManager 经 {@code registerCandidatePlan(Context, plan)} 提供 Context 侧 seam。
+     * Joins a candidate plan while the candidate is running. Calling this on a generation that
+     * is not a candidate is rejected with an explicit exception. {@code ScriptManager} supplies
+     * the Context-side entry point through {@code registerCandidatePlan(Context, plan)}.
      */
     public void addPlan(CandidateStatePlan plan) {
         if (plan == null) throw new NullPointerException("plan");
@@ -105,15 +110,18 @@ public final class GenerationGlobals implements AutoCloseable {
         plans.add(plan);
     }
 
-    // ---- 联合预检 / 联合发布 / 丢弃（事务 generation） ----
+    // ---- Joint preflight, joint publish and discard (transactional generations) ----
 
     /**
-     * 联合预检（STATE_PLAN 阶段）：私有 + 共享写集冲突校验，随后外部计划 preflight。
-     * 抛 {@link GlobalStateException}（domain 结构化）即让 candidate 失败。
+     * Runs the joint preflight in the STATE_PLAN phase: it validates the private and shared write
+     * sets for conflicts, then preflights the external plans. Throwing a
+     * {@link GlobalStateException} (structured domain) fails the candidate.
      *
-     * <p>写集校验持 root 锁进行（validate 读 store 的版本/epoch 账目，与并发 writer 的
-     * bump 竞争属 JMM 违例——commit 点锁内复验是权威兜底，但预检自身不得无锁裸读）；
-     * 外部计划 preflight 保持在锁外执行（不得在持锁下跑任意代码）。
+     * <p>Write-set validation runs while holding the root lock, because validate reads the
+     * store's version/epoch accounting and racing a concurrent writer's bump would violate the
+     * JMM; the recheck under the lock at the commit point is the authoritative fallback, but
+     * preflight itself must not read without the lock. External plan preflight stays outside the
+     * lock, because arbitrary code must not run while the lock is held.
      */
     public void preflightJoint() {
         if (!isTransactional()) return;
@@ -134,19 +142,23 @@ public final class GenerationGlobals implements AutoCloseable {
     }
 
     /**
-     * 联合发布（commit 点，必须尚未发生任何 commit 期变更）：锁内先复验两个写集
-     * （复验失败 = 预检与提交之间有其他 writer——在改任何状态之前抛出，active 完整保留），
-     * 再执行外部计划 publish（契约：预检通过后不得抛；抛出则 global/shared 写集不发布），
-     * 最后一次性应用私有 + 共享写集（同一持锁内完成，无半提交）。
+     * Publishes jointly at the commit point. No commit-time change may have happened yet. Under
+     * the lock it first revalidates both write sets; a failed recheck means another writer
+     * committed between preflight and commit, so it throws before any state changes and the
+     * active state is fully preserved. It then publishes the external plans (they must not throw
+     * once preflight passed; if one does, the global/shared write sets are not published), and
+     * finally applies the private and shared write sets in one step while still holding the same
+     * lock, so there is no half commit.
      */
     public void publishJoint() {
         if (!isTransactional()) return;
         synchronized (stores.lock) {
             stores.assertOpen();
-            // (a) 复验（任何变更之前）：冲突在此抛出 → discardCandidate，不丢已提交写
+            // (a) Recheck before any change: a conflict throws here and leads to discardCandidate,
+            // so committed writes are never lost
             if (privateWrites != null) privateWrites.validate();
             if (sharedWrites != null) sharedWrites.validate();
-            // (b) 外部计划发布（在 global/shared 写集之前；契约见 CandidateStatePlan）
+            // (b) Publish the external plans before the global/shared write sets (see CandidateStatePlan)
             for (CandidateStatePlan plan : List.copyOf(plans)) {
                 try {
                     plan.publish();
@@ -157,7 +169,7 @@ public final class GenerationGlobals implements AutoCloseable {
                                     + " plan's own partial effects are its responsibility", t);
                 }
             }
-            // (c) 一次性应用（锁内；此后不再有失败路径）
+            // (c) Apply both write sets at once under the lock; no failure path remains after this point
             if (privateWrites != null) privateWrites.apply(this);
             if (sharedWrites != null) sharedWrites.apply(this);
             published = true;
@@ -217,7 +229,7 @@ public final class GenerationGlobals implements AutoCloseable {
         }
     }
 
-    /** 候选失败/取消：丢弃全部写集与计划（不触碰已提交 store，不产生任何变更）。 */
+    /** Fails or cancels a candidate: discards every write set and plan without touching the committed store. */
     public void discard() {
         synchronized (stores.lock) {
             if (privateWrites != null) privateWrites.discardOps();
@@ -228,10 +240,11 @@ public final class GenerationGlobals implements AutoCloseable {
     }
 
     /**
-     * Releases candidate-scoped plans before their registrations are dropped (ticket 27 AC4):
-     * a failed or cancelled candidate must not leave pending resources behind. Failures of
-     * single plans are logged and skipped so one misbehaving plan cannot keep the candidate
-     * teardown from completing. Idempotent — publish already released committed plans.
+     * Releases candidate-scoped plans before their registrations are dropped: a failed or
+     * cancelled candidate must not leave pending resources behind. When a single plan fails, the
+     * failure is logged and the plan is skipped so one misbehaving plan cannot keep the
+     * candidate teardown from completing. Idempotent; publish has already released committed
+     * plans.
      */
     private void discardPlans() {
         for (CandidateStatePlan plan : List.copyOf(plans)) {
@@ -245,12 +258,12 @@ public final class GenerationGlobals implements AutoCloseable {
         }
     }
 
-    // ---- generation 生命周期 ----
+    // ---- Generation lifecycle ----
 
     /**
-     * generation 关闭（Context 销毁路径调用）：失效本 generation 写入的 guest 值
-     * （不延长已销毁 Context 的生命周期）；非 guest 值保留在 store 内跨 reload。
-     * 幂等。
+     * Closes the generation; the Context destruction path calls this. It invalidates the guest
+     * values this generation wrote without extending the lifetime of the destroyed Context.
+     * Non-guest values stay in the store across reloads. Idempotent.
      */
     @Override
     public void close() {
@@ -267,7 +280,7 @@ public final class GenerationGlobals implements AutoCloseable {
         return closed;
     }
 
-    // ---- UI root lifecycle (ticket 42) ----
+    // ---- UI root lifecycle ----
 
     /**
      * Host-side UI root owned by exactly one generation. Registered at creation into the

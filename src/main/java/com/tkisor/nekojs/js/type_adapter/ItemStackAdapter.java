@@ -1,5 +1,5 @@
-// 26.x 实现，本文件不应再出现版本守卫。1.21.1 的实现是 versions/1.21.1/src 下的同名文件，
-// 改本文件行为时须同步它。
+// 26.x implementation. This file must not contain version guards again. The 1.21.1 implementation is
+// the same-named file under versions/1.21.1/src, and changing behavior here requires updating it too.
 package com.tkisor.nekojs.js.type_adapter;
 
 import com.tkisor.nekojs.api.AdapterInputShape;
@@ -25,7 +25,8 @@ import static com.tkisor.nekojs.api.AdapterInputShape.*;
 
 public final class ItemStackAdapter implements JSTypeAdapter<ItemStack> {
 
-    // 容忍无空格（"1xminecraft:stone"），用 Pattern 替代 matches()+indexOf()（后者在 namespace 前出现 x 也有 bug）
+    // Accepts input without a space ("1xminecraft:stone"). Uses Pattern instead of matches()+indexOf(),
+    // which also breaks when an x appears before the namespace
     private static final Pattern COUNT_PATTERN = Pattern.compile("^(\\d+)x\\s*(\\S+)$");
 
     @Override
@@ -110,7 +111,7 @@ public final class ItemStackAdapter implements JSTypeAdapter<ItemStack> {
             idText = m.group(2);
         }
 
-        // id 部分复用 ParseIds（统一 trim / minecraft: 前缀 / 拒绝 tag 前缀 / tryParse）
+        // Reuses ParseIds for the id part (uniform trim / minecraft: prefix / tag prefix rejection / tryParse)
         Identifier id = ParseIds.parseItemOrBlockId(idText);
         return idToItemStack(id, count);
     }
@@ -135,7 +136,7 @@ public final class ItemStackAdapter implements JSTypeAdapter<ItemStack> {
                 "ItemStack object must contain 'item' or 'id'");
         }
 
-        // B10: 复用当前实例，不再每次 new
+        // Reuses the current instance instead of creating a new one on every call
         ItemStack stack = this.apply(itemValue);
         if (value.hasMember("components")) {
             DataComponentPatch patch = DataComponentsAdapter.toPatch(value.getMember("components"));
@@ -162,7 +163,7 @@ public final class ItemStackAdapter implements JSTypeAdapter<ItemStack> {
 
     private static ItemStack itemToItemStack(Item item, int count) {
         if (item == BuiltInRegistries.ITEM.getValue(Identifier.withDefaultNamespace("air"))) return ItemStack.EMPTY;
-        // builtInRegistryHolder 已废弃：从注册表 wrap 等价 holder
+        // builtInRegistryHolder is deprecated: wrapping from the registry gives an equivalent holder
         Holder<Item> holder = BuiltInRegistries.ITEM.wrapAsHolder(item);
         return new ItemStack(holder, count, DataComponentPatch.EMPTY);
     }

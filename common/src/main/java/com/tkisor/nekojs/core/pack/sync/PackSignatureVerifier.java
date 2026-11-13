@@ -12,18 +12,23 @@ import java.security.spec.X509EncodedKeySpec;
 import java.util.List;
 
 /**
- * 远端包签名校验器（Katton {@code RemoteScriptSignatureVerifier} 移植）。
+ * Verifies signatures on remote packs, ported from Katton's {@code RemoteScriptSignatureVerifier}.
  *
  * <ul>
- *   <li>仅支持 Ed25519；manifest.signature = {algorithm, keyId, publicKey, signature}。</li>
- *   <li>公钥解析：信任库按 keyId pinning 的公钥优先；两者并存时嵌入公钥必须与 pinning
- *       字节一致（{@link MessageDigest#isEqual} 常量时间比较）——防密钥静默轮换。</li>
- *   <li>无 signature 块 = 未签名包：仅当 {@code allowUnsigned} 时有效（否则拒绝并断连）。</li>
+ *   <li>Only Ed25519 is supported; manifest.signature = {algorithm, keyId, publicKey, signature}.</li>
+ *   <li>Public key resolution: a key pinned by keyId in the trust store takes priority; when both
+ *       exist, the embedded key must match the pinned bytes ({@link MessageDigest#isEqual},
+ *       constant-time), which prevents silent key rotation.</li>
+ *   <li>No signature block means an unsigned pack: it is only valid when {@code allowUnsigned} is
+ *       set, otherwise it is rejected and the connection drops.</li>
  * </ul>
  */
 public final class PackSignatureVerifier {
 
-    /** 校验结果：signed=false 表示包未携带签名块（是否放行由 allowUnsigned 决定）。 */
+    /**
+     * Verification result. A pack with no signature block has signed=false, and allowUnsigned decides
+     * whether it is accepted.
+     */
     public record Result(boolean valid, boolean signed, String reason, String keyId, String fingerprint) {
 
         static Result unsigned(boolean valid, String reason) {
@@ -121,7 +126,10 @@ public final class PackSignatureVerifier {
             : new Result(false, true, "signature mismatch for " + keyId, keyId, fingerprint);
     }
 
-    /** 解析 manifest 顶层 signature 对象；缺失/非对象返回 null（未签名包）。 */
+    /**
+     * Parses the top-level signature object of the manifest. Returns null when it is missing or is not an
+     * object, which means the pack is unsigned.
+     */
     static JsonObject parseSignatureBlock(String manifestJson) {
         try {
             JsonElement root = JsonParser.parseString(manifestJson);

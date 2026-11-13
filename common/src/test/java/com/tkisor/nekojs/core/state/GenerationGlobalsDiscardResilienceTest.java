@@ -10,9 +10,9 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Ticket 27 AC4 discard resilience: a candidate generation's joint discard must tear down
- * EVERY plan even when one plan's {@code discard()} throws — one misbehaving plan cannot
- * block the candidate cleanup of the others (the failure is logged as NEKO-1001 and skipped).
+ * Discard resilience: when a candidate generation is discarded, every plan must be torn down
+ * even if one plan's {@code discard()} throws. A misbehaving plan must not block the cleanup
+ * of the others; that failure is logged as NEKO-1001 and skipped.
  */
 class GenerationGlobalsDiscardResilienceTest {
 

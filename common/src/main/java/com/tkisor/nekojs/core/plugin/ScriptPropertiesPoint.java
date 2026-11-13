@@ -4,29 +4,31 @@ import com.tkisor.nekojs.api.NekoJSPlugin;
 import com.tkisor.nekojs.script.prop.ScriptPropertyRegistry;
 
 /**
- * 内置扩展点 {@code nekojs:script_properties}（ADR-0001 自包含 Point 文件）。
+ * Built-in extension point {@code nekojs:script_properties}.
  *
- * <p><b>闭包特例</b>：累积器是 bootstrap 传入的 {@link ScriptPropertyRegistry}
- * （每轮值不同），故不提供静态常量，而由 {@link #point(ScriptPropertyRegistry)}
- * 静态工厂在注册期构造（ADR 预案：闭包点 = 静态工厂方法）。
+ * <p>This one is a closure: the accumulator is the {@link ScriptPropertyRegistry} passed in by
+ * bootstrap, and its value differs on every round. There is therefore no static constant.
+ * {@link #point(ScriptPropertyRegistry)} builds the point at registration time instead.
  */
 public final class ScriptPropertiesPoint {
 
-    /** 扩展点 id（observable 契约）。 */
+    /** Extension point id. */
     public static final String ID = "nekojs:script_properties";
 
     private ScriptPropertiesPoint() {
     }
 
-    /** 显式声明形态（与直接覆写 NekoJSPlugin 对应钩子等价收集）：插件被 {@code nekojs:script_properties} 扩展点收集。 */
+    /** Explicit declaration form: the plugin is collected by the {@code nekojs:script_properties} extension point, the
+     * same result as overriding the matching NekoJSPlugin hook directly. */
     public interface Contributor extends NekoJSPlugin {
 
-        /** 注册脚本属性（{@code AFTER}/{@code MODLOADED}/{@code DISABLE}/{@code PRIORITY} 等文件头属性）。 */
+        /** Registers a script property, one of the file header properties such as {@code AFTER},
+         * {@code MODLOADED}, {@code DISABLE} and {@code PRIORITY}. */
         default void registerScriptProperty(ScriptPropertyRegistry registry) {
         }
     }
 
-    /** 扩展点定义（由 {@link NekoBuiltinPointsPlugin} 清单注册时构造）。 */
+    /** The extension point definition, built when the {@link NekoBuiltinPointsPlugin} list is registered. */
     public static NekoPluginExtensionPoint<NekoJSPlugin, ScriptPropertyRegistry, ScriptPropertyRegistry> point(
             ScriptPropertyRegistry scriptProperties) {
         return NekoPluginExtensionPoint.<NekoJSPlugin, ScriptPropertyRegistry, ScriptPropertyRegistry>builder(ID, NekoJSPlugin.class)

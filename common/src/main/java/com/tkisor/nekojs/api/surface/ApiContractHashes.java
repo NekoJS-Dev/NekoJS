@@ -4,11 +4,12 @@ import java.util.Map;
 import java.util.Objects;
 
 /**
- * API 契约哈希快照：portable API 版本与契约哈希，以及各模块的契约哈希。
+ * Snapshot of the API contract hashes: the portable API version and contract hash, plus one
+ * contract hash per module.
  *
- * @param portableApiVersion    portable API 版本字符串
- * @param portableContractHash  portable 契约哈希
- * @param moduleContractHashes  模块 id → 契约哈希（拷贝为不可变映射）
+ * @param portableApiVersion   portable API version string
+ * @param portableContractHash portable contract hash
+ * @param moduleContractHashes module id to contract hash (copied into an immutable map)
  */
 public record ApiContractHashes(
         String portableApiVersion,

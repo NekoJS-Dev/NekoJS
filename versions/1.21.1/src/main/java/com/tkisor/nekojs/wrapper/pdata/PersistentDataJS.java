@@ -1,5 +1,5 @@
-// 1.21.1 实现，与版本树 src/ 下的同名 26.x 文件成对。内容等于那份文件在本节点求值后的形态。
-// 26.x 侧行为变更时须同步本文件。
+// 1.21.1 implementation, paired with the same-named 26.x file under src/ in the version tree.
+// The content is that file evaluated at this node; keep this file in sync when 26.x behavior changes.
 package com.tkisor.nekojs.wrapper.pdata;
 
 import net.minecraft.nbt.CompoundTag;
@@ -117,8 +117,9 @@ public class PersistentDataJS {
     }
 
     /**
-     * 批量编辑事务：在一次 copy 上执行多次修改，结束统一写回，避免连续 {@code putXxx} 的多次 copy+写回。
-     * 脚本示例：{@code entity.pdata.edit(tag => { tag.putInt("a",1); tag.putString("b","x"); })}
+     * Runs several edits as one transaction: they all apply to a single copy, which is written
+     * back once at the end, so consecutive {@code putXxx} calls do not copy and save each time.
+     * Script example: {@code entity.pdata.edit(tag => { tag.putInt("a",1); tag.putString("b","x"); })}
      */
     public PersistentDataJS edit(Consumer<CompoundTag> editor) {
         ensureWritable();

@@ -11,12 +11,14 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * S2C 配置阶段包 bundle（{@code nekojs:pack_bundle}）：{@code [(syncId, scope,
- * manifestJson, files[(relativePath, bytes)])]}，紧随哈希清单全量推送（无请求往返）。
+ * S2C configuration-phase pack bundle ({@code nekojs:pack_bundle}): {@code [(syncId, scope,
+ * manifestJson, files[(relativePath, bytes)])]}, pushed in full right after the hash list, with no
+ * request round trip.
  *
- * <p>线格式（与 neoforge-1.21.1 同名包一致）：varint 包数量；每包 UTF(syncId) +
- * UTF(scope) + byteArray(manifest) + varint 文件数 + 每文件 UTF(relPath) + byteArray(bytes)。
- * 解码上限防恶意巨型包（业务侧 {@code PackSyncClient} 另有整体体量校验）。
+ * <p>Wire format (same as the packet of the same name in neoforge-1.21.1): varint pack count; per
+ * pack UTF(syncId) + UTF(scope) + byteArray(manifest) + varint file count + per file UTF(relPath) +
+ * byteArray(bytes). The decode limits defend against maliciously huge packets; {@code PackSyncClient}
+ * checks the overall size separately on the business side.
  */
 public record PackBundlePayload(List<PackEntry> packs) implements CustomPacketPayload {
 
@@ -45,7 +47,7 @@ public record PackBundlePayload(List<PackEntry> packs) implements CustomPacketPa
         packs = List.copyOf(packs);
     }
 
-    /** 各平台推送面共用的转换：{@link SyncedPack} 列表 → 线格式 bundle。 */
+    /** Conversion shared by every platform's push side: a list of {@link SyncedPack} becomes the wire bundle. */
     public static PackBundlePayload of(List<SyncedPack> packs) {
         List<PackEntry> entries = new ArrayList<>();
         for (SyncedPack pack : packs) {
@@ -62,7 +64,10 @@ public record PackBundlePayload(List<PackEntry> packs) implements CustomPacketPa
         return new PackBundlePayload(entries);
     }
 
-    /** 各平台接收面共用：线格式 bundle → 客户端管线包快照（哈希由管线自算/对照）。 */
+    /**
+     * Conversion shared by every platform's receive side: the wire bundle becomes the client pipeline's
+     * pack snapshot. The pipeline computes and compares the hash.
+     */
     public List<SyncedPack> toSyncedPacks() {
         List<SyncedPack> out = new ArrayList<>(packs.size());
         for (PackEntry pack : packs) {

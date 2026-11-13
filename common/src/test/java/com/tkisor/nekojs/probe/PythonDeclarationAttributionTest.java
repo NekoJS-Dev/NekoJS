@@ -25,12 +25,15 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * 票据 13 AC7：Python declaration/probe 的语言与 module 归属不被 JS/TS declaration 覆盖。
+ * Checks that Python declaration and probe output keep their own language and module attribution and
+ * are not overwritten by JS/TS declarations.
  *
- * <p>Python 与 TypeScript backend 消费**同一份** {@link NekoScriptCatalogSnapshot} + 同一份
- * 共享 IR，各自渲染到自己的输出目录；同一次运行里两者互不覆盖语言 id、输出目录或 module
- * 归属（{@code ProbeCoordinator} 拒绝共享输出目录，{@code ProbeBackend#outputDir} 按 languageId
- * 派生）。观测点：builtin registry 的 language id、两个 backend 的实际输出目录与产物内容。
+ * <p>The Python and TypeScript backends consume the same {@link NekoScriptCatalogSnapshot} and the
+ * same shared IR, and each renders into its own output directory. In one run neither overwrites the
+ * other's language id, output directory or module attribution ({@code ProbeCoordinator} rejects a
+ * shared output directory, and {@code ProbeBackend#outputDir} is derived from the language id). The
+ * test observes the language ids in the builtin registry plus the real output directories and output
+ * content of both backends.
  */
 class PythonDeclarationAttributionTest {
 
@@ -40,9 +43,11 @@ class PythonDeclarationAttributionTest {
     }
 
     /**
-     * AC7 的真实运行路径：**同一次 {@link ProbeCoordinator} 运行**里 TS 与 Python 两个 backend
-     * 同时在场（这正是命令层 {@code /nekojs probe all} 的形态）。断言两者各自落在自己的语言
-     * 目录、互不覆盖——不是两个 backend 各自被 `new` 出来分别 generate 的构造性证明。
+     * The real path this protection has to hold on: the TS and Python backends are both present in one
+     * {@link ProbeCoordinator} run, which is what the {@code /nekojs probe all} command does. The test
+     * asserts that each backend writes into its own language directory and neither overwrites the
+     * other. It is not a synthetic proof built by constructing two backends with {@code new} and
+     * generating from them separately.
      */
     @Test
     void coordinatorRunsTypeScriptAndPythonTogetherWithoutOverwritingEachOther(@TempDir Path temp)
@@ -50,7 +55,8 @@ class PythonDeclarationAttributionTest {
         NekoJSPaths paths = NekoJSPaths.fromGameDir(temp);
         Files.createDirectories(paths.root());
 
-        // 真实 registry 会话：经扩展点注册两个 builtin backend 并 lock（同生产 bootstrap）。
+        // Real registry session: registers both builtin backends through the extension point and locks the
+        // registry, the same way production bootstrap does.
         Field inst = ProbeBackendRegistry.class.getDeclaredField("INSTANCE");
         inst.setAccessible(true);
         inst.set(null, null);
@@ -75,7 +81,7 @@ class PythonDeclarationAttributionTest {
         assertEquals(tsDir, results.get(0).outputDir(), "the TS backend owns the typescript directory");
         assertEquals(pyDir, results.get(1).outputDir(), "the Python backend owns the python directory");
 
-        // 互不覆盖：各自的语言产物都在，且都不是对方的形态。
+        // Neither overwrites the other: both language outputs exist, and neither has the other's shape.
         assertTrue(Files.exists(pyDir.resolve("nekojs/py.typed")), "Python must emit its PEP 561 marker");
         assertTrue(Files.exists(pyDir.resolve("nekojs/__init__.pyi")), "Python must emit its entry stub");
         assertTrue(Files.exists(tsDir.resolve("index.d.ts")) || Files.isDirectory(tsDir),
@@ -95,8 +101,8 @@ class PythonDeclarationAttributionTest {
     }
 
     /**
-     * AC7 保护：{@link ProbeCoordinator} 拒绝同一次运行中两个 backend 共享输出目录——
-     * 这条保护正是「语言产物不被另一个语言的 declaration 覆盖」的机制保证。
+     * {@link ProbeCoordinator} rejects two backends that share an output directory in one run. That
+     * check is what keeps one language's declarations from overwriting the other's.
      */
     @Test
     void coordinatorRejectsTwoBackendsSharingOneOutputDirectory(@TempDir Path temp) throws Exception {
@@ -104,7 +110,7 @@ class PythonDeclarationAttributionTest {
         Files.createDirectories(paths.root());
 
         ProbeCoordinator coordinator = new ProbeCoordinator(paths, ProbeExternalArtifacts.NONE);
-        // 把 python 的输出目录配置成 typescript 的目录 → 两者共享。
+        // Point the python output directory at the typescript one, so the two backends share it.
         Path shared = paths.gameDir().resolve(".neko_probe").resolve("shared");
         ProbeBackend ts = new DirectoryPinnedBackend("typescript", "pinned", shared, "ts.txt", "ts");
         ProbeBackend py = new DirectoryPinnedBackend("python", "pinned", shared, "py.txt", "py");
@@ -122,7 +128,10 @@ class PythonDeclarationAttributionTest {
                 "the skipped backend must not have written into the shared directory");
     }
 
-    /** 固定输出目录的探针 backend（用于行使 coordinator 的目录去重保护）。 */
+    /**
+     * A probe backend with a fixed output directory, used to exercise the coordinator's duplicate
+     * directory check.
+     */
     private static final class DirectoryPinnedBackend implements ProbeBackend {
         private final String languageId;
         private final String name;
@@ -181,7 +190,8 @@ class PythonDeclarationAttributionTest {
     @Test
     void pythonDeclarationIsDerivedFromTheSharedCatalogAndKeepsModuleAttribution(@TempDir Path temp)
             throws Exception {
-        // 同一个 runtime member 输入：TS 与 Python 的声明都由它派生，但 Python 侧模块归属是 Java 包路径。
+        // The same runtime member input: both the TS and the Python declaration derive from it, but on the
+        // Python side the module is the Java package path.
         TypeDecl fixture = new TypeDecl(TypeDecl.Kind.CLASS, Host.class, Host.class.getName());
         NekoScriptCatalogSnapshot snapshot = snapshotWith(
                 List.of(BindingCatalogEntry.of("Host", ScriptType.SERVER, Host.class, false)));
@@ -201,7 +211,7 @@ class PythonDeclarationAttributionTest {
         assertTrue(module.contains("class PythonDeclarationAttributionTest_Host"),
                 "the runtime member must appear under its own Python module: " + module);
 
-        // 语言归属：产物是 .pyi 且带 PEP 561 marker，不是 TS 的 .d.ts。
+        // Language attribution: the output is a .pyi with the PEP 561 marker, not a TS .d.ts.
         assertTrue(Files.exists(out.resolve("nekojs/py.typed")), "PEP 561 marker must be emitted");
         assertTrue(Files.exists(out.resolve("nekojs/__init__.pyi")),
                 "the Python global-binding entry must be emitted");
@@ -225,7 +235,7 @@ class PythonDeclarationAttributionTest {
         assertTrue(init.contains("__all__"), "Python entry must export __all__: " + init);
     }
 
-    /** 稳定 FQN 的 runtime member fixture。 */
+    /** Runtime member fixture with a stable FQN. */
     public static final class Host {
         public String getLabel() {
             return "label";

@@ -1,6 +1,7 @@
-// 1.21.1 实现，与版本树 src/ 下的同名 26.x 文件成对（票 22）。26.x 文件带 //? if >=26 守卫，
-// 本节点的注册表形状是经典静态池（VillagerTrades.TRADES / WANDERING_TRADER_TRADES），
-// 与 26.x 的 VILLAGER_TRADE / TRADE_SET 可重载注册表不同，故本节点成对文件独立实现。
+// 1.21.1 implementation, paired with the 26.x file of the same name under the version tree's src/.
+// The 26.x file carries //? if >=26 guards. This node's registry shape is the classic static pools
+// (VillagerTrades.TRADES / WANDERING_TRADER_TRADES), unlike the reloadable VILLAGER_TRADE /
+// TRADE_SET registries on 26.x, so this node's paired file is implemented separately.
 package com.tkisor.nekojs.wrapper.event.server;
 
 import com.tkisor.nekojs.NekoJS;
@@ -39,20 +40,20 @@ import java.util.Optional;
 import java.util.Set;
 
 /**
- * Villager trade domain owner and 1.21.1 adapter (ticket 22): the 1.21.1 twin of the 26.x owner.
+ * Domain owner and 1.21.1 adapter for villager trades: the 1.21.1 twin of the 26.x owner.
  *
- * <p>Registry shape difference: 1.21.1 keeps trades in the two static pools
+ * <p>Registry shape differs: 1.21.1 keeps trades in the two static pools
  * {@code VillagerTrades.TRADES} (profession -> level -> listings) and
  * {@code VillagerTrades.WANDERING_TRADER_TRADES} (level -> listings), so the trade set id is the
- * pool id ({@code '<profession>/level_<n>'} or {@code 'wandering_trader/<pool>'}); the pools are
+ * pool id ({@code '<profession>/level_<n>'} or {@code 'wandering_trader/<pool>'}). The pools are
  * plain static fields, so they are replaced with rebuilt immutable copies instead of reflective
  * registry surgery.
  *
- * <p>Everything else follows the shared contract: collection is inert
- * ({@link CandidateDomainCollector}), the joint preflight/publish boundary decides commit, and
- * the commit restores the captured vanilla pools before applying the complete new plan, so a
- * declaration that disappeared never keeps stale listings and an ordinary reload never deletes
- * vanilla trades.
+ * <p>Everything else behaves like 26.x: collection is inert
+ * ({@link CandidateDomainCollector}), the preflight decides when to commit, and the commit
+ * restores the captured vanilla pools before applying the complete new plan. So a declaration
+ * that disappeared never keeps stale listings, and an ordinary reload never deletes vanilla
+ * trades.
  */
 public final class VillagerTradeDomainOwner
         implements CandidateDomainCollector, VillagerTradeApplier, AutoCloseable {

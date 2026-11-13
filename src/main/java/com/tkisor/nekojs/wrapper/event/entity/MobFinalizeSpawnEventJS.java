@@ -10,19 +10,22 @@ import net.minecraft.world.entity.SpawnGroupData;
 import net.minecraft.world.level.ServerLevelAccessor;
 
 /**
- * 生物生成初始化完成事件（{@code EntityEvents.finalizeSpawn}）的**加载器中立**载荷。
+ * Loader-neutral payload for the mob spawn finalize event
+ * ({@code EntityEvents.finalizeSpawn}).
  *
- * <p>成员对齐 NeoForge 原生 {@code FinalizeSpawnEvent} 的 getter
- * （getEntity/getLevel/getDifficulty/getSpawnType/getSpawnData）。fabric 侧由
- * {@code FabricEntityEventBindingsV2} + {@code MixinMobFinalizeSpawn} 从
- * {@code Mob#finalizeSpawn} 的 TAIL 转换（自然生成/区块生成/刷怪笼等所有生成原因同入口）。
+ * <p>The members follow the getters of NeoForge native {@code FinalizeSpawnEvent}
+ * (getEntity/getLevel/getDifficulty/getSpawnType/getSpawnData). On fabric,
+ * {@code FabricEntityEventBindingsV2} + {@code MixinMobFinalizeSpawn} convert the TAIL of
+ * {@code Mob#finalizeSpawn}; natural spawning, chunk spawning and spawners all use the same
+ * entry.
  *
- * <p><b>已知差异（fabric，26.1.2 javap 实证）</b>：{@code NaturalSpawner} 两处
- * {@code finalizeSpawn} 调用点（字节码 441/502）均<b>不检查返回值</b>——即使
- * 以 RETURN 注入改写返回 null 也无法阻止生成。因此 fabric 侧为**通知型**（不可
- * 取消、不可改写难度/spawnData）；NeoForge 的 setSpawnCancelled/setSpawnData/
- * setDifficulty 在其自身 patch 的生成链中生效，fabric 需自行 rework 生成管线才能
- * 支持（超出本批次）。
+ * <p><b>Known difference on fabric (26.1.2, javap-verified)</b>: neither
+ * {@code NaturalSpawner} call site of {@code finalizeSpawn} (bytecode 441/502) checks the
+ * return value, so even a RETURN injection that rewrites the result to null cannot stop the
+ * spawn. The fabric side is therefore notification only: it cannot be cancelled and cannot
+ * rewrite the difficulty or spawnData. NeoForge's setSpawnCancelled/setSpawnData/
+ * setDifficulty work inside its own patched spawn chain; fabric would need a reworked spawn
+ * pipeline to support them.
  */
 @Doc("Fired after a mob's spawn data is finalized (EntityEvents.finalizeSpawn). Dispatched by entity type.")
 @Doc("Fabric: notification only — not cancellable, spawn data / difficulty cannot be rewritten.")

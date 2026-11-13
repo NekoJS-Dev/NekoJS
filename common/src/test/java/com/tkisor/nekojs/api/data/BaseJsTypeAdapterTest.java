@@ -91,7 +91,7 @@ class BaseJsTypeAdapterTest {
                 () -> adapter.convert(stringView, ConversionContext.empty()));
     }
 
-    /** 不接受 null（acceptNull=false）时 convert 必须抛异常，而非静默返回 defaultValue。 */
+    /** With acceptNull=false, convert must throw instead of silently returning defaultValue. */
     @Test
     void convertThrowsOnNullWhenAcceptNullIsFalse() {
         JsTypeAdapter<String> adapter = new UpperCaseAdapter();
@@ -101,7 +101,8 @@ class BaseJsTypeAdapterTest {
                 () -> adapter.convert(nullView, ConversionContext.empty()));
     }
 
-    /** fromHostObject 对已接受的 host 输入返回 null 视为失败，异常消息需指明适配器类。 */
+    /** When fromHostObject returns null for an accepted host input, convert fails and the message names
+     *  the adapter class. */
     @Test
     void convertThrowsWhenFromHostObjectReturnsNull() {
         JsTypeAdapter<String> adapter = new NullHostAdapter();
@@ -115,7 +116,8 @@ class BaseJsTypeAdapterTest {
                 "exception message should name the adapter class: " + e.getMessage());
     }
 
-    /** fromOther 对已接受的其它形状返回 null 视为失败，异常消息需指明适配器类。 */
+    /** When fromOther returns null for an accepted other shape, convert fails and the message names the
+     *  adapter class. */
     @Test
     void convertThrowsWhenFromOtherReturnsNull() {
         JsTypeAdapter<String> adapter = new NullOtherAdapter();
@@ -129,20 +131,22 @@ class BaseJsTypeAdapterTest {
                 "exception message should name the adapter class: " + e.getMessage());
     }
 
-    /** 不接受字符串：未覆盖 fromString（supportsString 默认 true 但探测 fromString 会失败）。 */
+    /** Accepts no strings: fromString is not overridden (supportsString defaults to true, but the
+     *  fromString probe fails). */
     private static final class NoStringAdapter extends BaseJsTypeAdapter<String> {
         NoStringAdapter() { super(String.class); }
         @Override protected String fromHostObject(Object host) { return host.toString(); }
     }
 
-    /** 接受 host object 形状但 fromHostObject 返回 null（真实子类的缺陷形态，如 ComponentAdapter）。 */
+    /** Accepts the host object shape but returns null from fromHostObject, the defect shape seen in real
+     *  subclasses such as ComponentAdapter. */
     private static final class NullHostAdapter extends BaseJsTypeAdapter<String> {
         NullHostAdapter() { super(String.class); }
         @Override protected String fromString(String s) { return s; }
         @Override protected String fromHostObject(Object host) { return null; }
     }
 
-    /** 接受其它形状（acceptOther）但 fromOther 返回 null。 */
+    /** Accepts other shapes through acceptOther but returns null from fromOther. */
     private static final class NullOtherAdapter extends BaseJsTypeAdapter<String> {
         NullOtherAdapter() { super(String.class); }
         @Override protected boolean acceptOther(JsValueView value) { return true; }

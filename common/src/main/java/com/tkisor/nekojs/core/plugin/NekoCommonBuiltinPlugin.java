@@ -34,10 +34,11 @@ import com.tkisor.nekojs.script.prop.ScriptPropertyRegistry;
 public final class NekoCommonBuiltinPlugin implements NekoJSPlugin, com.tkisor.nekojs.core.plugin.BindingsPoint.Contributor, com.tkisor.nekojs.core.plugin.ScriptCompilersPoint.Contributor, com.tkisor.nekojs.core.plugin.ScriptPropertiesPoint.Contributor, TypeDocsPoint.Contributor, NodeTypeDocsPoint.Contributor {
 
     /**
-     * 平台无关的全局绑定：run-once 守卫（{@code once}/{@code clearOnce}，ProxyExecutable
-     * 函数绑定，标记进程级存活）与客户端数据只读视图（{@code clientData}，存储在 common，
-     * 由平台网络层写入）。server 端推送用的 {@code ClientData} 绑定依赖平台网络层，
-     * 由各平台 core plugin 注册。
+     * Platform-independent global bindings. The run-once guard ({@code once}/{@code clearOnce})
+     * binds ProxyExecutable functions and marks liveness at process level. The client data
+     * read-only view ({@code clientData}) is stored in common and written by the platform
+     * network layer. The {@code ClientData} binding used for server-side pushes depends on the
+     * platform network layer, so each platform's core plugin registers it.
      */
     @Override
     public void registerBinding(BindingRegistry registry) {

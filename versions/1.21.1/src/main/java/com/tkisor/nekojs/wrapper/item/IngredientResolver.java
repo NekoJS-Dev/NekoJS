@@ -1,5 +1,6 @@
-// 1.21.1 实现，与版本树 src/ 下的同名 26.x 文件成对。内容等于那份文件在本节点求值后的形态。
-// 26.x 侧行为变更时须同步本文件。
+// 1.21.1 implementation, paired with the 26.x file of the same name under the version tree's src/.
+// The content is that file as evaluated on this node. Keep this file in sync when the 26.x side
+// changes behavior.
 package com.tkisor.nekojs.wrapper.item;
 
 import com.tkisor.nekojs.api.data.NekoId;
@@ -33,22 +34,26 @@ import java.util.regex.Pattern;
 public final class IngredientResolver {
     private IngredientResolver() {}
 
-    /** 26.x 的 DefaultedRegistry 没有 asLookup()；从 vanilla RegistryAccess 取 lookup。 */
+    /** 26.x's DefaultedRegistry has no asLookup(); take the lookup from vanilla RegistryAccess. */
     private static final HolderLookup.RegistryLookup<Item> ITEM_LOOKUP =
         RegistryAccess.fromRegistryOfRegistries(BuiltInRegistries.REGISTRY).lookupOrThrow(Registries.ITEM);
 
     /**
-     * 脚本提供的 regex 源串 → 预编译 Pattern 缓存。{@code /regex/} 语法与 {@code {regex: ...}}
-     * 的模式串来自脚本（非编译期常量，无法 hoist 成 static final）；Pattern 不可变且线程安全，
-     * 按源串去重可在重复解析同一批配方时省去逐次编译。规模以脚本中不同 regex 数为上界。
-     * 非法 regex 抛 PatternSyntaxException，不缓存（与原行为一致）。
+     * Caches compiled {@link Pattern} instances keyed by the regex source string from scripts.
+     * The pattern source of {@code /regex/} syntax and {@code {regex: ...}} comes from scripts,
+     * so it is not a compile-time constant and cannot be hoisted into a static final. Pattern is
+     * immutable and thread-safe, so deduplicating by source string skips recompiling when the same
+     * batch of recipes is parsed repeatedly. The number of entries is bounded by the number of
+     * distinct regexes in scripts. An invalid regex throws PatternSyntaxException and is not cached.
      */
     private static final Map<String, Pattern> REGEX_CACHE = new ConcurrentHashMap<>();
 
     /**
-     * Tag-created ingredients → their {@link TagKey}，供序列化改写为 "#id" 引用形态（见 {@link #tagOriginOf}）。
-     * WeakHashMap：一次配方 reload 会创建成千上万短命 ingredient，不能进程级泄漏。
-     * {@code Ingredient#equals} 按 values 比较——同一 tag 的多个实例互撞映射到相同 TagKey，无害。
+     * Tag-created ingredients to their {@link TagKey}, so serialization can rewrite them into the
+     * "#id" reference form (see {@link #tagOriginOf}). This is a WeakHashMap: one recipe reload
+     * creates thousands of short-lived ingredients, and they must not leak for the process
+     * lifetime. {@code Ingredient#equals} compares by values, so several instances of the same tag
+     * collide onto the same TagKey, which is harmless.
      */
 
     private static Pattern compiledRegex(String regex) {
@@ -60,7 +65,7 @@ public final class IngredientResolver {
         return cached;
     }
 
-    // ===================== 字符串前缀分派 =====================
+    // ===================== String prefix dispatch =====================
 
     public static Ingredient fromString(String raw) {
         String s = normalizeRaw(raw);
@@ -119,26 +124,32 @@ public final class IngredientResolver {
         return wrapper.unwrap();
     }
 
-    /** 匹配所有已注册物品的真 wildcard（live AnyHolderSet，注册表变化即时反映）。 */
+    /**
+     * A true wildcard matching every registered item. The live {@code AnyHolderSet}
+     * reflects registry changes immediately.
+     */
     public static Ingredient wildcard() {
         return ingredientOfHolders(new AnyHolderSet<>(ITEM_LOOKUP));
     }
 
     /**
-     * 配方 JSON 序列化时取回 tag ingredient 的 {@link TagKey}：{@code #tag} 解析出的
-     * HolderSet.Named 绑定在 BuiltInRegistries 的 owner 上，而配方序列化用的是本次数据包
-     * 加载的 RegistryOps——两者包装层实例不同，{@code HolderSetCodec} 的 owner 校验恒拒绝
-     * （"is not valid in current registry set"，真机表现为 shaped 配方里写 {@code #tag}
-     * 原料必炸）。序列化侧据此改写为 vanilla 合法的 {@code {"tag": ...}} 引用形态，
-     * 重新 parse 时由当前 RegistryOps 自行解析。非 tag 来源返回 {@code null}。
+     * Returns the {@link TagKey} of a tag ingredient when serializing recipe JSON. The
+     * HolderSet.Named that {@code #tag} resolves to is bound to the owner from BuiltInRegistries,
+     * while recipe serialization uses the RegistryOps of the current data pack load; the two
+     * wrapper instances differ, so the owner check in {@code HolderSetCodec} always rejects them
+     * ("is not valid in current registry set", which in game makes a shaped recipe that uses a
+     * {@code #tag} ingredient fail). Serialization therefore rewrites the ingredient into the
+     * vanilla-valid {@code {"tag": ...}} reference form, and the current RegistryOps resolves the
+     * tag again when the recipe is parsed. Returns {@code null} for an ingredient that did not
+     * come from a tag.
      */
 
-    /** 取反 ingredient：返回匹配「除 excluded 外所有物品」的 DifferenceIngredient。 */
+    /** Negated ingredient: returns a DifferenceIngredient that matches every item except {@code excluded}. */
     public static Ingredient not(Ingredient excluded) {
         return DifferenceIngredient.of(wildcard(), excluded);
     }
 
-    // ===================== fromValue 统一入口（字符串/对象/数组/host）=====================
+    // ===================== fromValue single entry point (string/object/array/host) =====================
 
     public static Ingredient fromValue(Value value) {
         if (value == null || value.isNull()) return Ingredient.of();
@@ -158,10 +169,10 @@ public final class IngredientResolver {
             "item / item id / ingredient object / ingredient array", value, "unsupported ingredient value");
     }
 
-    // ===================== 对象分派（声明式，超越 KubeJS）=====================
+    // ===================== Object dispatch (declarative, goes beyond KubeJS) =====================
 
     private static Ingredient fromObject(Value value) {
-        // 组合 / 谓词优先于简单字段
+        // Combinators and predicates take precedence over plain fields
         if (value.hasMember("filter")) {
             Value fn = value.getMember("filter");
             if (!fn.canExecute()) {
@@ -230,7 +241,7 @@ public final class IngredientResolver {
         return Ingredient.of(items);
     }
 
-    // ===================== 给 IngredientJS.or() 用的旧 combine（保持兼容）=====================
+    // ===================== Legacy combine used by IngredientJS.or() (kept for compatibility) =====================
 
     public static Ingredient combine(List<Ingredient> alternatives) {
         List<Ingredient> present = alternatives.stream().filter(i -> i != null).toList();
@@ -238,18 +249,19 @@ public final class IngredientResolver {
         if (present.size() == 1) return present.getFirst();
         List<Holder<Item>> holders = new ArrayList<>();
         for (Ingredient ingredient : present) {
-            // items() 无等价非废弃 API（getValues().stream() 不含 custom ingredient 展开），保守保留
+            // No equivalent non-deprecated API for items() (getValues().stream() does not expand custom
+            // ingredients), so keep using it.
             for (ItemStack stack : ingredient.getItems()) {
                 if (!stack.isEmpty()) holders.add(stack.getItemHolder());
             }
         }
         if (holders.isEmpty()) return Ingredient.of();
-        // holders 是 List<Holder<Item>>，必须先 unwrap 成 Item[]，否则 toArray(new Item[0]) 会
-        // 因元素类型是 Holder 而抛 arraycopy: element type mismatch。
+        // holders is a List<Holder<Item>>, so it must be unwrapped to Item[] first; otherwise
+        // toArray(new Item[0]) throws arraycopy: element type mismatch because the elements are Holder.
         return Ingredient.of(holders.stream().map(Holder::value).toArray(Item[]::new));
     }
 
-    // ===================== 旧的 id normalize（保留 API，IngredientJS 可能用）=====================
+    // ===================== Legacy id normalize (API kept, IngredientJS may use it) =====================
 
     public static String normalizeItemId(String raw) {
         String id = normalizeRaw(raw);

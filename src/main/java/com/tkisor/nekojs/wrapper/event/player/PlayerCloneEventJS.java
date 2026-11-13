@@ -4,9 +4,11 @@ import lombok.Getter;
 import net.minecraft.server.level.ServerPlayer;
 
 /**
- * 玩家实体克隆事件的中立 payload（死亡重生/末地返回时的数据拷贝点；成员对齐 NeoForge
- * {@code PlayerEvent.Clone}：{@code event.player} 为新实体，{@code event.original} 为
- * 旧实体；{@code alive} 表示旧实体是否仍存活——fabric COPY_FROM 的三参全量）。
+ * Loader-neutral payload for the player entity clone event (the data copy point on death
+ * respawn and on returning from the End). The members follow NeoForge
+ * {@code PlayerEvent.Clone}: {@code event.player} is the new entity, {@code event.original}
+ * the old one, and {@code alive} tells whether the old entity is still alive. fabric's
+ * COPY_FROM passes all three.
  */
 public class PlayerCloneEventJS {
 

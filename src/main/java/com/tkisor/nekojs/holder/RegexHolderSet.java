@@ -1,5 +1,6 @@
-// 26.x 实现，本文件不应再出现版本守卫。1.21.1 的实现是 versions/1.21.1/src 下的同名文件，
-// 改本文件行为时须同步它。
+// 26.x implementation; this file must not contain version guards again. The 1.21.1
+// implementation is the same-named file under versions/1.21.1/src, so keep it in sync when
+// this file's behavior changes.
 package com.tkisor.nekojs.holder;
 
 import com.mojang.datafixers.util.Either;
@@ -13,8 +14,8 @@ import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
 /**
- * 按正则匹配注册表 id 的惰性 HolderSet（对应 {@code /regex/} 语法）。
- * 仅运行时匹配，未注册 codec。
+ * Lazy HolderSet that matches registry ids against a regular expression (the {@code /regex/}
+ * syntax). Runtime matching only; no codec is registered.
  */
 public final class RegexHolderSet<T> extends HolderSet.ListBacked<T> {
     private final HolderLookup.RegistryLookup<T> lookup;

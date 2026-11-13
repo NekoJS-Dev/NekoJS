@@ -1,5 +1,5 @@
-// 1.21.1 实现，与版本树 src/ 下的同名 26.x 文件成对。内容等于那份文件在本节点求值后的形态。
-// 26.x 侧行为变更时须同步本文件。
+// 1.21.1 implementation, paired with the same-named 26.x file under src/ in the version tree.
+// The content is that file evaluated at this node; keep this file in sync when 26.x behavior changes.
 package com.tkisor.nekojs.wrapper.registry.gen;
 
 import net.minecraft.core.registries.Registries;
@@ -13,31 +13,41 @@ import java.util.Map;
 import java.util.function.Consumer;
 
 /**
- * 方块 builder（ADR-0005 连带注册三件套的样板）：
+ * Block builder and the template for the linked three-part registration:
  * <pre>
  * event.block('mymod:ruby_block', b =&gt; { b.hardness = 3; b.noItem() })
- * event.block('mymod:ruby_block', b =&gt; { b.item.maxStackSize = 16 })   // 定制自动 BlockItem
+ * event.block('mymod:ruby_block', b =&gt; { b.item.maxStackSize = 16 })   // customize the automatic BlockItem
  * </pre>
- * 三件套：构造期预创建 {@link #item} 子 builder（默认连带注册 BlockItem）、
- * {@link #noItem()} 置 null 抑制、本类 {@code implements Supplier}（BlockItem 经
- * {@link #get()} 懒引用方块，注册事件抽干期才构建）。
+ * Construction pre-creates the {@link #item} child builder, which registers a BlockItem by
+ * default; {@link #noItem()} sets it to null to suppress that. This class implements
+ * {@code Supplier}: the BlockItem gets the block through {@link #get()} lazily, so it is only
+ * built when the registration event drains.
  */
 public class BlockBuilder extends RegistryObjectBuilder<Block> {
 
-    /** 声明了 renderType 的方块（26.x 资产生成消费：translucent 用 force_translucent 贴图引用）。 */
+    /**
+     * Render type declared for the block. 26.x asset generation consumes it:
+     * translucent uses the force_translucent texture reference.
+     */
 
     private float hardness = 1.5f;
     private float resistance = 1.5f;
     private int lightLevel = 0;
     private boolean requiresTool = false;
-    /** 声音类型名：wood/gravel/grass/metal/glass/wool/sand/snow/amethyst（默认 stone）。 */
+    /** Sound type name: wood/gravel/grass/metal/glass/wool/sand/snow/amethyst (default stone). */
     private String sound = "stone";
-    /** 地图颜色名（如 'dirt'/'water'/'gold'/'color_red'）。默认 stone。 */
+    /** Map color name (such as 'dirt'/'water'/'gold'/'color_red'). Default stone. */
     private String mapColor = "stone";
-    /** 客户端渲染层：solid / cutout / cutout_mipped / translucent。26.x 模型驱动，仅文档意义。 */
+    /**
+     * Client render layer: solid / cutout / cutout_mipped / translucent. 26.x drives
+     * this from the model, so it is documentation only.
+     */
     private String renderType = null;
 
-    /** 预创建的 BlockItem 子 builder：{@code b.item.maxStackSize = 16} 直接定制；{@link #noItem()} 置 null。 */
+    /**
+     * Pre-created BlockItem child builder: {@code b.item.maxStackSize = 16} customizes
+     * it directly; {@link #noItem()} sets it to null.
+     */
     private ItemBuilder item;
     private boolean itemDefinitionFrozen;
 
@@ -46,7 +56,7 @@ public class BlockBuilder extends RegistryObjectBuilder<Block> {
         this.item = new ItemBuilder(id);
     }
 
-    // ---- 数据属性：显式 setter 与 JavaBean property 同一写入点（ticket 15） ----
+    // ---- Data properties: the explicit setter and the JavaBean property share one write point ----
 
     public float getHardness() {
         return hardness;
@@ -83,7 +93,7 @@ public class BlockBuilder extends RegistryObjectBuilder<Block> {
         this.requiresTool = requiresTool;
     }
 
-    /** 声音类型名（已归一化小写）。 */
+    /** Sound type name, normalized to lower case. */
     public String getSound() {
         return sound;
     }
@@ -92,7 +102,7 @@ public class BlockBuilder extends RegistryObjectBuilder<Block> {
         this.sound = sound == null ? "stone" : sound.toLowerCase();
     }
 
-    /** 地图颜色名（已归一化小写）。 */
+    /** Map color name, normalized to lower case. */
     public String getMapColor() {
         return mapColor;
     }
@@ -101,7 +111,7 @@ public class BlockBuilder extends RegistryObjectBuilder<Block> {
         this.mapColor = mapColor == null ? "stone" : mapColor.toLowerCase();
     }
 
-    /** 渲染层（已归一化：空白视为未声明——build 期本来就走同一分支）。 */
+    /** Render layer, normalized: blank counts as not declared, which build takes the same branch for anyway. */
     @com.tkisor.nekojs.api.annotation.ScriptNullable
     public String getRenderType() {
         return renderType;
@@ -111,15 +121,17 @@ public class BlockBuilder extends RegistryObjectBuilder<Block> {
         this.renderType = renderType == null || renderType.isBlank() ? null : renderType;
     }
 
-    /** 预创建的 BlockItem 子 builder（脚本面经 {@code BuilderSurface} 包装）。 */
+    /** Pre-created BlockItem child builder (wrapped by {@code BuilderSurface} on the script side). */
     @com.tkisor.nekojs.api.annotation.ScriptNullable
     public ItemBuilder getItem() {
         return item;
     }
 
     /**
-     * 连带 BlockItem 抑制/恢复的唯一写入点：{@code b.item = null} 与 {@link #noItem()}
-     * 走本 setter。脚本侧只接受 null（抑制）；定制走 {@code b.item.xxx} 或 {@link #item(Consumer)}。
+     * The only write point for suppressing or restoring the linked BlockItem: both
+     * {@code b.item = null} and {@link #noItem()} go through this setter. The script side only
+     * accepts null, which suppresses the item; customization goes through {@code b.item.xxx} or
+     * {@link #item(Consumer)}.
      */
     public void setItem(@com.tkisor.nekojs.api.annotation.ScriptNullable ItemBuilder item) {
         if (itemDefinitionFrozen) throw new IllegalStateException("[NEKO-4035] Block item definition is frozen after collection");
@@ -135,18 +147,21 @@ public class BlockBuilder extends RegistryObjectBuilder<Block> {
                         + "b.item.xxx = ... or b.item(cb) instead");
     }
 
-    /** 不可破坏（硬度 -1 / 抗爆 3600000）。 */
+    /** Unbreakable (hardness -1, blast resistance 3600000). */
     public void unbreakable() {
         setHardness(-1.0f);
         setResistance(3600000.0f);
     }
 
-    /** 抑制自动 BlockItem 连带注册（与 {@code b.item = null} 同一写入点）。 */
+    /** Suppresses the automatic BlockItem registration (same write point as {@code b.item = null}). */
     public void noItem() {
         setItem(null);
     }
 
-    /** 定制自动 BlockItem 属性（便捷面；等价于直接改 {@link #getItem()} 子 builder）。 */
+    /**
+     * Customizes the automatic BlockItem properties (convenience form; equivalent to
+     * editing the {@link #getItem()} child builder directly).
+     */
     public void item(Consumer<ItemBuilder> consumer) {
         if (this.item == null) {
             throw new IllegalStateException("noItem() 已抑制 BlockItem 生成，不能再配置 item(cb)");
@@ -182,7 +197,10 @@ public class BlockBuilder extends RegistryObjectBuilder<Block> {
         return block;
     }
 
-    /** 连带注册：预创建子 builder 非 null 时注册 BlockItem（ITEM pass 在 BLOCK 之后）。 */
+    /**
+     * Linked registration: registers the BlockItem when the pre-created child builder
+     * is not null (the ITEM pass runs after BLOCK).
+     */
     @Override
     public void handleAdditionalObjects(RegistryObjectBuilder.AdditionalObjectRegistry registry) {
         ItemBuilder itemBuilder = this.item;
@@ -208,7 +226,7 @@ public class BlockBuilder extends RegistryObjectBuilder<Block> {
         };
     }
 
-    /** 常用 MapColor 名称 → 常量。未命中回退 STONE（保留默认）。 */
+    /** Maps a common MapColor name to its constant. Falls back to STONE when nothing matches, keeping the default. */
     private static net.minecraft.world.level.material.MapColor resolveMapColor(String name) {
         if (name == null) return net.minecraft.world.level.material.MapColor.STONE;
         return switch (name.toLowerCase()) {

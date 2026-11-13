@@ -7,8 +7,9 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * 覆盖 {@link ProbeBackendRegistry}：注册、按 priority 排序、(语言, 名字) 冲突 fail-fast、lock 后禁止注册。
- * 注意：用独立 {@code new ProbeBackendRegistry()} 实例测试，不触碰静态 {@code INSTANCE}。
+ * Covers {@link ProbeBackendRegistry}: registration, ordering by priority, fail-fast on a
+ * (language, name) conflict, and no registration after lock. Each test uses its own
+ * {@code new ProbeBackendRegistry()} instance and leaves the static {@code INSTANCE} untouched.
  */
 class ProbeBackendRegistryTest {
 

@@ -20,12 +20,13 @@ public final class ScriptContainer {
     public final ScriptProperties properties;
 
     /**
-     * 所属脚本包 id；平铺脚本目录（workspace）来源的脚本为 {@code null}。
-     * 用于按包归因（probe 展示 / 世界包卸载时按前缀反注册监听器）。
+     * Id of the script pack this script belongs to; {@code null} for a script from a flat script
+     * directory (workspace). Used to attribute by pack: probe display, and unregistering listeners
+     * by prefix when a world pack unloads.
      */
     @Nullable
     public final String packId;
-    /** 所属脚本包作用域；平铺脚本为 {@code null}。 */
+    /** Scope of the script pack; {@code null} for a flat script. */
     @Nullable
     public final ScriptPackScope packScope;
     /** Manifest version captured at discovery; runtime queries must not read newer metadata. */

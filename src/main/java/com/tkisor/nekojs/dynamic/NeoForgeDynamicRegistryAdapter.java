@@ -21,29 +21,28 @@ import java.util.Map;
 import java.util.function.Supplier;
 
 /**
- * Ticket 21 platform wiring: the 26.x NeoForge implementation of
- * {@link DynamicRegistryAdapter}. All real registry surgery goes through the existing
- * {@link DynamicRegistries} freeze-bypassing registration path (the three frozen candidate
- * types Item/SoundEvent/MobEffect, tickets 16/21); no second surgery mechanism is added.
+ * NeoForge 26.x implementation of {@link DynamicRegistryAdapter}. All real registry changes
+ * go through the existing {@link DynamicRegistries} freeze-bypassing registration path, which
+ * covers the three frozen candidate types Item/SoundEvent/MobEffect; no second surgery
+ * mechanism is added.
  *
  * <p><b>Value reconstruction</b>: the request carries the normalized property readings
- * ({@code name=value}, same source and order as the builder readings). They are fully
- * parsed and validated in {@link #prepareActivation} (closed type set, closed mode set,
- * parseable id, well-formed readings); {@link #activate} then only consumes validated
- * shapes. A prepare rejection aborts the whole batch before any client traffic
- * (coordinator contract).
+ * ({@code name=value}, same source and order as the builder readings). {@link #prepareActivation}
+ * fully parses and validates them (closed type set, closed mode set, parseable id, well-formed
+ * readings); {@link #activate} then only consumes validated shapes. A prepare rejection aborts
+ * the whole batch before any client traffic (coordinator contract).
  *
- * <p><b>Rollback</b>: when {@code activate} violates its no-throw contract, the
- * coordinator demands {@link #rollbackActivation}. This implementation unregisters only
- * the entries the failed attempt <b>newly registered</b> (re-claimed entries keep serving
- * — they were legitimately registered by an earlier batch), through the controlled
- * unregister surgery in {@link DynamicRegistries}; a failing rollback widens the recorded
- * degradation detail instead of escaping.
+ * <p><b>Rollback</b>: when {@code activate} violates its no-throw contract, the coordinator
+ * demands {@link #rollbackActivation}. This implementation unregisters only the entries the
+ * failed attempt <b>newly registered</b> (re-claimed entries keep serving, because an earlier
+ * batch registered them legitimately), through the controlled unregister surgery in
+ * {@link DynamicRegistries}. A failing rollback widens the recorded degradation detail instead
+ * of escaping.
  *
- * <p><b>Threading</b>: the coordinator/participant call this class on the transaction
- * owner thread (server/client main thread); this class performs no thread hops. The
- * provider supplier is chosen by the assembly (server = the current server's
- * registryAccess, client = the process-wide read-only projection of BuiltInRegistries).
+ * <p><b>Threading</b>: the coordinator and participant call this class on the transaction
+ * owner thread (server/client main thread); this class performs no thread hops. The assembly
+ * chooses the provider supplier (server: the current server's registryAccess; client: the
+ * process-wide read-only projection of BuiltInRegistries).
  */
 final class NeoForgeDynamicRegistryAdapter implements DynamicRegistryAdapter {
 

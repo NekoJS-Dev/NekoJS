@@ -3,7 +3,7 @@ package com.tkisor.nekojs.api.data;
 import org.jspecify.annotations.NonNull;
 
 /**
- * 平台无关的资源定位符，替代原版的 Identifier
+ * A platform-independent resource locator that stands in for vanilla's Identifier.
  */
 public record ScriptId(String namespace, String path) {
 

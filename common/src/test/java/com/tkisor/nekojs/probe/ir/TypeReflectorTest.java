@@ -13,8 +13,8 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * {@link TypeReflector} 的 JS 名重映射与 bridge 过滤测试：
- * probe 声明的名字必须与运行时 Graal remapper（{@code JavaMemberIndex.remapName}）一致。
+ * Tests for JS name remapping and bridge filtering in {@link TypeReflector}: the names the probe declares must match
+ * the runtime Graal remapper ({@code JavaMemberIndex.remapName}).
  */
 class TypeReflectorTest {
 
@@ -58,7 +58,8 @@ class TypeReflectorTest {
         public void hiddenMethod() {}
     }
 
-    /** 接口协变返回覆盖：javac 会生成 Object bridge（同参不同返回），必须过滤。 */
+    /** Covariant return override on an interface: javac emits an Object bridge with the same parameters and a different
+     * return type, and it must be filtered out. */
     public interface BaseSpec {
         default Object value() { return null; }
     }
@@ -85,14 +86,14 @@ class TypeReflectorTest {
     void getterSetterDetectionUsesRemappedName() {
         TypeDecl decl = new TypeReflector().reflect(RemapSample.class);
 
-        // neko$getId → getId → getter 属性 id（与运行时 Graal getter 语义一致：脚本访问 .id）
+        // neko$getId becomes getId, the getter for property id, matching runtime Graal getter semantics (a script reads .id)
         MethodDecl getter = decl.methods.stream()
                 .filter(m -> m.isGetter && "id".equals(m.property))
                 .findFirst()
                 .orElseThrow(() -> new AssertionError("expected getter for property id in " + decl.methods));
         assertEquals("getId", getter.effectiveName());
 
-        // neko$setId → setId → setter 配对
+        // neko$setId becomes setId and pairs with the getter as the setter
         MethodDecl setter = decl.methods.stream()
                 .filter(m -> m.isSetter && m.effectiveName().equals("setId"))
                 .findFirst()
@@ -103,7 +104,7 @@ class TypeReflectorTest {
     @Test
     void hideFromJsExcludesMethod() {
         TypeDecl decl = new TypeReflector().reflect(RemapSample.class);
-        // @HideFromJS 方法不进 IR（jsName == null 直接跳过），与运行时可见性一致
+        // @HideFromJS methods never reach the IR (jsName == null skips them), matching runtime visibility
         assertTrue(decl.methods.stream().noneMatch(m -> m.name.equals("hiddenMethod")),
                 "@HideFromJS methods must be excluded from probe output: " + decl.methods);
     }
@@ -112,16 +113,17 @@ class TypeReflectorTest {
     void interfaceBridgeMethodsAreFiltered() {
         TypeDecl decl = new TypeReflector().reflect(ConcreteSpec.class);
 
-        // ConcreteSpec.value() 的协变覆盖会让 javac 生成 Object value() bridge（同参不同返回，
-        // Python 桩里是非法重载）——必须过滤，只留 String value()
+        // ConcreteSpec.value() covariant override makes javac emit an Object value() bridge: same parameters,
+        // different return type, which is an invalid overload in a Python stub; filter it, keep String value().
         List<MethodDecl> values = decl.methods.stream().filter(m -> m.effectiveName().equals("value")).toList();
         assertEquals(1, values.size(), "bridge must be filtered: " + decl.methods);
         assertEquals("string", values.get(0).returnType.ref.name(), "non-bridge declaration must win");
     }
 
-    // ==================== mixin/interface-injection 宿主类场景 ====================
+    // ==================== mixin / interface-injection host class ====================
 
-    /** 注入接口：注解在接口上；宿主类实现它（mixin 注入后方法反射自宿主类）。 */
+    /** Injected interface. The annotation sits on the interface and the host class implements it; after mixin injection the
+     * methods are reflected from the host class. */
     @RemapByPrefix("neko$")
     public interface InjectedSpec {
         Object neko$data();
@@ -152,8 +154,9 @@ class TypeReflectorTest {
 
     @Test
     void hostClassMethodsRemapViaInjectedInterfaceAnnotation() {
-        // 运行时 Graal 经接口方法路径命中 @RemapByPrefix → JS 名 data；probe 反射宿主类
-        // 方法（declaringClass=InjectedHost）也必须 remap，声明与运行时一致
+        // At runtime Graal reaches @RemapByPrefix through the interface method path and gets the JS name data.
+        // Probing reflects the host class methods (declaringClass=InjectedHost), which must remap the same way
+        // so that the declaration matches runtime.
         TypeDecl decl = new TypeReflector().reflect(InjectedHost.class);
 
         MethodDecl data = decl.methods.stream()
@@ -161,7 +164,7 @@ class TypeReflectorTest {
                 .findFirst()
                 .orElseThrow(() -> new AssertionError("neko$data must remap to data: " + decl.methods));
         assertEquals("neko$data", data.name, "java name preserved");
-        // bridge 过滤：同一 neko$data 只保留一个声明（Object bridge 被剔除）
+        // Bridge filtering: only one declaration survives for neko$data (the Object bridge is dropped)
         assertEquals(1, decl.methods.stream().filter(m -> m.effectiveName().equals("data")).count(),
                 "bridge must be filtered on host classes too: " + decl.methods);
     }

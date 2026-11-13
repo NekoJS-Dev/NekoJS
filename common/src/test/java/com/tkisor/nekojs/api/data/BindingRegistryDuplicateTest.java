@@ -11,15 +11,17 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * 重复注册行为回归：同名 binding 二次注册必须被拒绝（返回 false、保留首个，首胜语义），
- * 不同名正常注册返回 true。被拒时会打 warn 日志（logger "nekojs.bootstrap"），
- * 但本测试不捕获日志，只断言注册行为本身。
+ * Regression test for duplicate registration: registering a second binding with the same name is
+ * rejected (returns false, the first binding stays, first one wins), while a differently named
+ * binding is registered and returns true. A rejection logs a warning under the logger
+ * "nekojs.bootstrap", but this test does not capture logs and asserts only the registration result.
  */
 class BindingRegistryDuplicateTest {
 
     @BeforeAll
     static void initPlatform() {
-        // ScriptType 枚举常量初始化依赖 NekoJSPaths -> Platform，必须先初始化测试平台
+        // Initializing the ScriptType enum constants needs NekoJSPaths -> Platform, so the test platform
+        // must be set up first
         TestPlatformInit.ensureInitialized();
     }
 
@@ -43,7 +45,7 @@ class BindingRegistryDuplicateTest {
     void duplicateTypedBindingAlsoRejectedByName() {
         var reg = new BindingRegistry.BindingRegistryImpl(ScriptType.TEST);
         var first = Binding.of("probe", new Object());
-        // TypedBinding 显式携带 valueType，同样按名字去重
+        // TypedBinding carries valueType explicitly, but is still deduplicated by name
         var second = Binding.of("probe", new Object(), Runnable.class);
 
         assertTrue(reg.register(first));

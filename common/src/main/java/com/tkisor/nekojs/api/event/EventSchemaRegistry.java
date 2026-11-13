@@ -18,8 +18,8 @@ public final class EventSchemaRegistry {
                 if (bus != null) events.put(eventName, bus.eventType());
             } catch (Throwable t) {
                 events.put(eventName, Object.class);
-                // 降级必须可见：Object.class 会让该事件的回调成员校验静默失效，
-                // 旧行为连日志都没有，「预检为什么没报这个拼写」完全要靠推断
+                // The fallback must be visible: with Object.class, member checks for this event's callbacks
+                // stop silently, and nothing explains why preflight accepted a misspelled member.
                 com.tkisor.nekojs.core.error.Diagnostics.report(
                         "event-schema",
                         com.tkisor.nekojs.core.error.Diagnostics.Severity.WARN,
@@ -28,8 +28,9 @@ public final class EventSchemaRegistry {
                         t);
             }
         });
-        // 同名组可分多次注册（EventGroupRegistry.Impl.register 对同名组做 merge），
-        // schema 必须随组合并而不是整组覆盖：覆盖会让先注册组的全部事件校验静默失效
+        // A group with the same name can be registered more than once (EventGroupRegistry.Impl.register
+        // merges the groups), so the schema must merge with the existing one instead of overwriting it.
+        // Overwriting silently disables event validation for every event of the earlier registration.
         SCHEMA.compute(group.name(), (name, existing) -> {
             Map<String, Class<?>> merged = existing == null ? new HashMap<>(events) : new HashMap<>(existing);
             merged.putAll(events);

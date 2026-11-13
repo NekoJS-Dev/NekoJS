@@ -12,25 +12,27 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 import java.util.OptionalInt;
 
 /**
- * {@code PlayerEvents.containerOpened/containerClosed} 的 fabric 挂点（javap 实证
- * minecraft-merged-deobf-26.1.2.jar，字段 {@code containerMenu}/{@code inventoryMenu}
- * 声明于 {@code Player}，均为 public）。
+ * Fabric hook points for {@code PlayerEvents.containerOpened/containerClosed} (checked with javap
+ * on minecraft-merged-deobf-26.1.2.jar; the {@code containerMenu}/{@code inventoryMenu} fields are
+ * declared on {@code Player} and both are public).
  *
- * <p>注入策略：INVOKE 注入的 handler 参数只能取宿主方法参（前缀），
- * {@code openMenu} 新建的 {@code AbstractContainerMenu} 是局部变量、取不到，
- * 因此三个 open 方法全部用 {@code @At("RETURN")} + 读 {@code containerMenu}
- * （{@code putfield containerMenu} 都在 RETURN 之前：openMenu 偏移 109、
- * openHorseInventory 偏移 66、openNautilusInventory 偏移 66）。
+ * <p>Injection strategy: a handler of an INVOKE injection can only take parameters of the host
+ * method (the prefix), and the {@code AbstractContainerMenu} that {@code openMenu} creates is a
+ * local variable, so it is out of reach. All three open methods therefore use
+ * {@code @At("RETURN")} and read {@code containerMenu} (every {@code putfield containerMenu}
+ * happens before the RETURN: offset 109 in openMenu, 66 in openHorseInventory, 66 in
+ * openNautilusInventory).
  *
- * <p>守卫：{@code containerMenu != inventoryMenu} 排除“创世菜单失败/无菜单”
- * 路径（此时菜单回落到 inventoryMenu）；openMenu 额外用
- * {@code getReturnValue().isPresent()} 只在 {@code OptionalInt.of} 成功路触发。
+ * <p>Guard: {@code containerMenu != inventoryMenu} skips the "creative menu failed / no menu" path,
+ * where the menu falls back to inventoryMenu. openMenu also requires
+ * {@code getReturnValue().isPresent()} so it only fires on the successful {@code OptionalInt.of}
+ * path.
  *
- * <p>{@code doCloseContainer()} 无参：HEAD 注入。此点 {@code containerMenu}
- * 仍是被关闭的旧菜单（{@code removed} 与 putfield 都在其后）；不取
- * {@code transferState} INVOKE 点是因为其 CP owner 是静态类型
- * {@code InventoryMenu}，方法实际声明于 {@code AbstractContainerMenu}，
- * 混合器 INVOKE 扫描对 owner≠声明类的调用点计数 0（本会话实证）。
+ * <p>{@code doCloseContainer()} takes no arguments, so a HEAD injection is used. At that point
+ * {@code containerMenu} is still the old menu being closed ({@code removed} and the putfield both
+ * happen later). The {@code transferState} INVOKE point is not used because its CP owner is the
+ * static type {@code InventoryMenu} while the method is declared on {@code AbstractContainerMenu},
+ * and the mixin INVOKE scan counts 0 call sites when the owner differs from the declaring class.
  */
 @Mixin(ServerPlayer.class)
 public abstract class ServerPlayerContainerMixin {

@@ -38,44 +38,43 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Declared-event-surface golden (tickets 23/24/27 shared declaration gap, extended 2026-09-29 with
- * ticket 26's KeyBindEvents): freezes the TypeScript declarations of the recipe/data, gameplay,
- * client GUI/render and keybind event domains, derived from <b>this node's real registration entry
- * points</b> through the same production chain the probe uses — {@link NekoScriptCatalog#events}
- * (catalog derivation) → {@link EventDeclarationGenerator} (TS declaration renderer).
+ * Declared-event-surface golden: freezes the TypeScript declarations of the recipe/data, gameplay,
+ * client GUI/render and keybind event domains. The declarations come from <b>this node's real
+ * registration entry points</b>, through the same production chain the probe uses —
+ * {@link NekoScriptCatalog#events} (catalog derivation) → {@link EventDeclarationGenerator}
+ * (TS declaration renderer).
  *
- * <p><b>Why this golden lives in the node tree.</b> The recorded gap (ticket 23 AC1, ticket 24
- * AC8, ticket 27 AC7) is zero hits for these domains in the common declaration goldens
- * ({@code api-manifest-core.json}, probe {@code *.expected.d.ts}, {@code declaration-parity.txt}).
- * That is an input-set property, not staleness: those derivations reflect the portable-core
- * contract only ({@code CoreManagedApiBootstrap.buildContract}: 7 facades + data types +
- * {@code ScriptEventRegistrationEvent}), and the engine modules must stay free of Minecraft
- * dependencies (ADR-0007), so the MC-facing event families can never enter them. The runtime
- * reflection that does see the families ({@code EventContractReflector} from
- * {@code IPluginRuntime.eventGroups()}) feeds callback-schema validation only, never a
- * declaration golden. This test closes that wiring gap at the level where the families are
- * reachable: per node, from the real registration hooks.
+ * <p><b>Why this golden lives in the node tree.</b> These domains have zero hits in the common
+ * declaration goldens ({@code api-manifest-core.json}, probe {@code *.expected.d.ts},
+ * {@code declaration-parity.txt}). That is a property of the input set, not staleness: those
+ * derivations reflect the portable-core contract only ({@code CoreManagedApiBootstrap.buildContract}:
+ * 7 facades + data types + {@code ScriptEventRegistrationEvent}), and the engine modules must stay
+ * free of Minecraft dependencies (ADR-0007), so the MC-facing event families can never enter them.
+ * The runtime reflection that does see the families ({@code EventContractReflector} from
+ * {@code IPluginRuntime.eventGroups()}) feeds callback-schema validation only, never a declaration
+ * golden. This test closes that gap where the families are reachable: per node, from the real
+ * registration hooks.
  *
  * <p><b>Input</b> (identical to {@code EventSurfaceDomainGateTest}, shared through
  * {@link EventRegistrationSurfaces}): every {@code @RegisterNekoJSPlugin} class on the node
  * classpath (plus the fabric built-in list), driven through {@code registerEvents} and
- * {@code registerClientEvents} into fresh registries. Only the four ticket domains are
- * frozen: {@code ServerEvents}/{@code RecipeViewerEvents} (23), the eight gameplay families
- * (24), {@code ClientEvents} (27), {@code KeyBindEvents} (26 — its direct-registration member
- * {@code register} freezes the same way as {@code ClientEvents.hudRender}: both are
- * {@code EventBusJS} members of the group, and the family freezes what the renderer declares,
- * not the call semantics). Other domains keep their existing gates — this golden does not
- * become a second cross-domain baseline. The ticket-29 assets faces split at this boundary:
- * the event members {@code ClientEvents.generateAssets}/{@code lang} are already frozen through
- * {@code ClientEvents}, while the {@code Assets} typed binding and the plugin-only
- * {@code generatedLangs()} are not event-group members ({@link NekoScriptCatalog#events} derives
- * from {@code eventGroups()} only) and stay outside this family's charter.
+ * {@code registerClientEvents} into fresh registries. Only four domains are frozen:
+ * {@code ServerEvents}/{@code RecipeViewerEvents}, the eight gameplay families,
+ * {@code ClientEvents}, and {@code KeyBindEvents} (its direct-registration member {@code register}
+ * freezes the same way as {@code ClientEvents.hudRender}: both are {@code EventBusJS} members of
+ * the group, and the family freezes what the renderer declares, not the call semantics). Other
+ * domains keep their existing gates — this golden does not become a second cross-domain baseline.
+ * The assets faces split here: the event members {@code ClientEvents.generateAssets}/{@code lang}
+ * are already frozen through {@code ClientEvents}, while the {@code Assets} typed binding and the
+ * plugin-only {@code generatedLangs()} are not event-group members
+ * ({@link NekoScriptCatalog#events} derives from {@code eventGroups()} only) and stay outside this
+ * family.
  *
  * <p><b>Goldens</b>: {@code src/test/resources/golden/events-declared/<node>.<side>-events.d.ts}
  * with one file per script side ({@code startup}/{@code server}/{@code client}) — production
  * renders one declaration document per side, and each golden stays a standalone valid
- * {@code .d.ts}. One set per node: the registered surface genuinely differs across nodes (e.g.
- * fabric {@code ClientEvents} has no render members yet, STARTUP-only groups such as
+ * {@code .d.ts}. One set per node: the registered surface really differs across nodes (e.g. fabric
+ * {@code ClientEvents} has no render members yet, and STARTUP-only groups such as
  * {@code CapabilityEvents} appear in the startup file only). Ordinary runs are read-only;
  * regeneration runs through the shared explicit workflow:
  * {@code ./gradlew :<node>:platformGateTest -Dnekojs.golden.regenerate=true}, then review the
@@ -84,13 +83,13 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 @Tag("platform-gate")
 class DeclaredEventSurfaceGoldenTest {
 
-    /** In-scope groups, grouped by owning ticket domain. Order is part of the golden layout. */
+    /** In-scope groups, grouped by domain. The order is part of the golden layout. */
     private static final List<String> RECIPE_DATA_GROUPS = List.of("ServerEvents", "RecipeViewerEvents");
     private static final List<String> GAMEPLAY_GROUPS = List.of(
             "BlockEvents", "ItemEvents", "LevelEvents", "PlayerEvents",
             "CommandEvents", "CapabilityEvents", "GoalEvents", "EntityEvents");
     private static final List<String> CLIENT_GUI_RENDER_GROUPS = List.of("ClientEvents");
-    /** Ticket 26 client input: the keybind group (the ClientEvents members of 26 are in scope via ClientEvents). */
+    /** Client input: the keybind group. The ClientEvents members are in scope through ClientEvents. */
     private static final List<String> CLIENT_INPUT_HUD_GROUPS = List.of("KeyBindEvents");
 
     private static final List<String> IN_SCOPE;
@@ -109,11 +108,12 @@ class DeclaredEventSurfaceGoldenTest {
 
     @org.junit.jupiter.api.BeforeAll
     static void initPlatformStub() {
-        // EventDeclarationGenerator 的 import 过滤（ProbeConfigLoader.isRelevantClassDefault）读
-        // Platform.defaultScanPackages()——裸 JVM 需要先装一个最小 Platform 桩（同 Ticket24 的
-        // @BeforeAll 模式；已初始化时复用，不重复 init）。scan packages 必须镜像本 loader 真实
-        // Platform 实现（NeoForgePlatform/FabricPlatform），否则 neoforge 侧 import 集合会随
-        // 「谁先初始化了 Platform」漂移——golden 就不是确定性的了。
+        // EventDeclarationGenerator's import filter (ProbeConfigLoader.isRelevantClassDefault) reads
+        // Platform.defaultScanPackages(), so a bare JVM needs a minimal Platform stub installed first
+        // (the same @BeforeAll pattern; an already-initialized Platform is reused, never initialized
+        // twice). The scan packages must mirror this loader's real Platform implementation
+        // (NeoForgePlatform/FabricPlatform), otherwise the neoforge import set drifts with whichever
+        // side initialized Platform first and the golden stops being deterministic.
         final String loader = EventRegistrationSurfaces.loaderId();
         final List<String> scanPackages = "fabric".equals(loader)
                 ? List.of("net.minecraft")
@@ -145,8 +145,10 @@ class DeclaredEventSurfaceGoldenTest {
         String loader = EventRegistrationSurfaces.loaderId();
         assertFalse("unknown".equals(loader), "节点必须能判定自己的 loader");
 
-        // 跨节点在场事实复用票 33 只读基线：本节点「应注册」的在册组 = present 行；not-verified
-        // 的组（如 fabric 的 CapabilityEvents）不属于本节点声明面，不进 golden 也不算缺失。
+        // Cross-node presence comes from the read-only baseline: the in-scope groups this node should
+        // register are the present rows. A not-verified group (fabric CapabilityEvents, for example)
+        // is not part of this node's declared surface, so it never enters the golden and does not
+        // count as missing.
         Map<String, Boolean> presence = readPresenceFixture(node);
         List<String> expectedGroups = IN_SCOPE.stream()
                 .filter(group -> presence.getOrDefault(group, false)).toList();
@@ -176,8 +178,9 @@ class DeclaredEventSurfaceGoldenTest {
             totalMembers += countMembers(declaration, expectedGroups);
         }
 
-        // 可读性断言：每个在册组都必须渲染出 namespace（防“空 golden 全绿”）。STARTUP 组
-        // （如 CapabilityEvents/GoalEvents）只出现在 startup 侧文件，SERVER/CLIENT 同理按 side 过滤。
+        // Readability check: every in-scope group must render a namespace, so an empty golden cannot pass.
+        // A STARTUP group (CapabilityEvents/GoalEvents, for example) only appears in the startup-side
+        // file; SERVER and CLIENT groups are filtered by side the same way.
         String all = String.join("\n", rendered.values());
         for (String group : expectedGroups) {
             assertTrue(all.contains("namespace " + group + " {"),
@@ -206,7 +209,7 @@ class DeclaredEventSurfaceGoldenTest {
         }
     }
 
-    // ---- 真实注册面驱动（与 EventSurfaceDomainGateTest 同一发现/调用输入） ----
+    // ---- Driving the real registration surface (same discovery and calls as EventSurfaceDomainGateTest) ----
 
     /**
      * Drives every contributor's registration hooks and merges the registered groups.
@@ -261,7 +264,7 @@ class DeclaredEventSurfaceGoldenTest {
         return count;
     }
 
-    // ---- golden 支撑 ----
+    // ---- Golden helpers ----
 
     private static String goldenName(String node, ScriptType side) {
         return node + "." + side.name.toLowerCase() + "-events.d.ts";
@@ -296,7 +299,7 @@ class DeclaredEventSurfaceGoldenTest {
         return value.replace("\r\n", "\n");
     }
 
-    // ---- 逐项输出落盘（与票 33 gate 同目录，供 CI 汇总） ----
+    // ---- Per-item report output (same directory as the gate report, for CI aggregation) ----
 
     private static void emitReport(String node, Map<String, EventGroup> registered,
                                    List<String> expectedGroups, Map<ScriptType, String> rendered) throws IOException {
@@ -320,9 +323,9 @@ class DeclaredEventSurfaceGoldenTest {
     }
 
     /**
-     * Reads the ticket-33 cross-node presence baseline (the reviewed snapshot of which domains
-     * each node really registers) and returns {@code group -> present?} for this node. Null for
-     * groups the baseline does not mention at all for this node.
+     * Reads the cross-node presence baseline (the reviewed snapshot of which domains each node
+     * really registers) and returns {@code group -> present?} for this node. Groups the baseline
+     * does not mention for this node are absent from the map.
      */
     private static Map<String, Boolean> readPresenceFixture(String node) throws IOException {
         try (InputStream in = DeclaredEventSurfaceGoldenTest.class.getResourceAsStream(PRESENCE_FIXTURE)) {
@@ -342,7 +345,7 @@ class DeclaredEventSurfaceGoldenTest {
         }
     }
 
-    /** Catalog derivation needs only the event-group view (same stub shape as ticket 24's test). */
+    /** Catalog derivation only needs the event-group view; this stub supplies nothing else. */
     private static final class StubRuntime implements IPluginRuntime {
         private final Map<String, EventGroup> eventGroups;
 

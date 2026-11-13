@@ -8,24 +8,27 @@ import net.minecraft.network.chat.HoverEvent;
 import java.util.ServiceLoader;
 
 /**
- * 客户端侧的跨版本编译期符号差异门面。
+ * Client-side facade for compile-time symbol differences between versions.
  *
- * <p>本门面住在 neoforge-shared（1.21.1 与 26.x 都编译它），覆盖三类差异：
+ * <p>The facade lives in neoforge-shared, which both 1.21.1 and 26.x compile, and covers the
+ * differences between them:
  * <ul>
- *   <li>26.1 → 26.2 机械改名：{@code Minecraft#screen / setScreen} →
- *       {@code Gui#screen() / setScreen()}、{@code RenderSystem#getApiDescription()} →
- *       {@code getBackendDescription()}；</li>
- *   <li>26.x → 1.21.1 形状差：toast 管理器 26.x 是 {@code ToastManager}、1.21.1 是
- *       {@code ToastComponent}（类型名不同，无法进共享签名——改为推送
- *       {@link #addOrUpdateSystemToast} 整个操作）；HoverEvent 的 show-text 构造
- *       26.x 是 {@code HoverEvent.ShowText}、1.21.1 是 {@code new HoverEvent(Action, ...)}。</li>
+ *   <li>Mechanical renames from 26.1 to 26.2: {@code Minecraft#screen / setScreen} →
+ *       {@code Gui#screen() / setScreen()}, {@code RenderSystem#getApiDescription()} →
+ *       {@code getBackendDescription()};</li>
+ *   <li>Shape differences from 26.x to 1.21.1: the toast manager is {@code ToastManager} in 26.x
+ *       and {@code ToastComponent} in 1.21.1 (different type names, so it cannot appear in a shared
+ *       signature, and {@link #addOrUpdateSystemToast} moves the whole operation down instead); the
+ *       show-text HoverEvent is {@code HoverEvent.ShowText} in 26.x and
+ *       {@code new HoverEvent(Action, ...)} in 1.21.1.</li>
  * </ul>
- * 实现在各版本模块（{@code Nf1211ClientCompat} / {@code Nf261ClientCompat} /
- * {@code Nf262ClientCompat}，类名刻意不同——drift 比较对不允许同名不同体），经
- * {@code META-INF/services} 由 ServiceLoader 在首次取用时解析。
+ * The implementations live in the per-version modules ({@code Nf1211ClientCompat} /
+ * {@code Nf261ClientCompat} / {@code Nf262ClientCompat}, deliberately with different class names
+ * because the drift comparison forbids the same name with a different body) and are resolved by
+ * ServiceLoader through {@code META-INF/services} on first use.
  *
- * <p><strong>只在客户端代码路径引用</strong>：签名含客户端专属类型，专用服务器上加载
- * 本类会 NoClassDefFoundError。
+ * <p><strong>Reference this class only on client code paths</strong>: its signatures contain
+ * client-only types, so loading this class on a dedicated server throws NoClassDefFoundError.
  */
 public final class McClientCompat {
 
@@ -46,13 +49,19 @@ public final class McClientCompat {
 
         void showScreen(Screen screen);
 
-        /** 26.x：{@code RenderSystem.getApiDescription()}；26.2 起改名 getBackendDescription。 */
+        /** 26.x: {@code RenderSystem.getApiDescription()}; renamed to getBackendDescription as of 26.2. */
         String renderBackendDescription();
 
-        /** SystemToast.addOrUpdate 的版本无关形式（toast 管理器类型两端不同，整个操作下沉到实现）。 */
+        /**
+         * Version-independent form of SystemToast.addOrUpdate. The toast manager type differs between the
+         * two platforms, so the whole operation moves down into the implementation.
+         */
         void addOrUpdateSystemToast(SystemToast.SystemToastId id, Component title, Component description);
 
-        /** show-text HoverEvent 的版本无关构造（26.x HoverEvent.ShowText vs 1.21.1 Action 构造）。 */
+        /**
+         * Version-independent construction of a show-text HoverEvent (26.x HoverEvent.ShowText vs the
+         * 1.21.1 Action constructor).
+         */
         HoverEvent hoverEventShowText(Component text);
 
     }

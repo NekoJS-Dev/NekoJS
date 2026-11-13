@@ -9,14 +9,14 @@ import net.minecraft.world.item.crafting.Ingredient;
 import net.neoforged.neoforge.common.crafting.SizedIngredient;
 
 /**
- * 带数量的物品配料包装（ingredient + count），用于配方中「N 个 X」的输入。
+ * Item ingredient wrapper with a count (ingredient + count), for recipe inputs like "N of X".
  */
 @Doc("An item ingredient paired with a count, for recipe inputs like '4 sticks'.")
 public class SizedIngredientJS implements NekoWrapper<SizedIngredient> {
     private final Ingredient ingredient;
     private final int count;
 
-    /** 构造：数量必须为正（否则抛 {@link IllegalArgumentException}）。 */
+    /** Constructor: the count must be positive (otherwise throws {@link IllegalArgumentException}). */
     @Doc("Creates a sized ingredient from an ingredient and a count.")
     @Param(name = "ingredient", value = "the ingredient to match")
     @Param(name = "count", value = "required item count; must be positive")
@@ -28,21 +28,21 @@ public class SizedIngredientJS implements NekoWrapper<SizedIngredient> {
         this.count = count;
     }
 
-    /** 底层配料。 */
+    /** The underlying ingredient. */
     @Doc("Gets the underlying ingredient.")
     @Return("the wrapped Ingredient")
     public Ingredient ingredient() {
         return ingredient;
     }
 
-    /** 所需数量。 */
+    /** The required count. */
     @Doc("Gets the required item count.")
     @Return("the count; always positive")
     public int count() {
         return count;
     }
 
-    /** 解包为原版 {@link SizedIngredient}（每次调用新建）。 */
+    /** Unwraps to the vanilla {@link SizedIngredient} (a new instance on every call). */
     @Doc("Unwraps to the NeoForge SizedIngredient.")
     @Return("a new SizedIngredient instance built from this wrapper's ingredient and count")
     @Override

@@ -9,7 +9,7 @@ import net.neoforged.neoforge.event.level.ExplosionEvent;
 import net.neoforged.neoforge.event.level.LevelEvent;
 import net.neoforged.neoforge.event.tick.LevelTickEvent;
 
-/** 维度（Level）事件组（server 脚本）：加载/卸载/保存、tick 与爆炸各阶段。 */
+/** Level (dimension) event group (server scripts): load, unload and save, tick, and each explosion stage. */
 public interface LevelEvents {
     EventGroup GROUP = EventGroup.of("LevelEvents");
 
@@ -23,19 +23,19 @@ public interface LevelEvents {
             GROUP.server("tickPre", LevelTickEvent.Pre.class);
     EventBusJS<LevelTickEvent.Post, Void> TICK_POST =
             GROUP.server("tickPost", LevelTickEvent.Post.class);
-    // tick：tickPost 的裸名别名。脚本侧建议迁移到 tickPre/tickPost。
+    // tick: a bare-name alias for tickPost. Scripts should migrate to tickPre/tickPost.
     @Deprecated
     EventBusJS<LevelTickEvent.Post, Void> TICK =
             GROUP.server("tick", LevelTickEvent.Post.class);
     EventBusJS<ExplosionEvent.Start, Void> EXPLOSION_START =
             GROUP.server("explosionStart", ExplosionEvent.Start.class);
-    // beforeExplosion：explosionStart 的历史别名。脚本侧建议迁移到 explosionStart。
+    // beforeExplosion: a legacy alias for explosionStart. Scripts should migrate to explosionStart.
     @Deprecated
     EventBusJS<ExplosionEvent.Start, Void> BEFORE_EXPLOSION =
             GROUP.server("beforeExplosion", ExplosionEvent.Start.class);
     EventBusJS<ExplosionEvent.Detonate, Void> EXPLOSION_DETONATE =
             GROUP.server("explosionDetonate", ExplosionEvent.Detonate.class);
-    // afterExplosion：explosionDetonate 的历史别名。脚本侧建议迁移到 explosionDetonate。
+    // afterExplosion: a legacy alias for explosionDetonate. Scripts should migrate to explosionDetonate.
     @Deprecated
     EventBusJS<ExplosionEvent.Detonate, Void> AFTER_EXPLOSION =
             GROUP.server("afterExplosion", ExplosionEvent.Detonate.class);
@@ -44,7 +44,8 @@ public interface LevelEvents {
             .bind(LOADED)
             .bind(UNLOADED)
             .bind(SAVED)
-            // LevelTickEvent 双逻辑侧触发：SERVER 总线只投递服务端实例（客户端 level tick 在 Render 线程）
+            // LevelTickEvent fires on both logical sides: the SERVER bus delivers only server instances
+            // (client level tick runs on the Render thread).
             .bind(TICK_PRE, e -> !e.getLevel().isClientSide())
             .bind(TICK_POST, e -> !e.getLevel().isClientSide())
             .bind(TICK, e -> !e.getLevel().isClientSide())

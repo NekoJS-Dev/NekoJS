@@ -12,15 +12,16 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Ticket 23 AC8 external-behavior fixtures for the {@code ServerEvents.lootTables} JSON
- * surface: modification (setJson/create/modify), conflicts between setJson and remove on the
- * same id, "delete" semantics (empty-table replacement recorded as a pending removal), and the
- * post-reload stale state (pending declarations survive reload event instances because scripts
- * re-declare every reload — documented behavior, pinned here as characterization).
+ * External-behavior fixtures for the {@code ServerEvents.lootTables} JSON surface:
+ * modification (setJson/create/modify), conflicts between setJson and remove on the same id,
+ * "delete" semantics (an empty-table replacement recorded as a pending removal), and the
+ * stale state after a reload (pending declarations survive the new reload event instances
+ * because scripts re-declare them on every reload; this is documented behavior, pinned here
+ * as characterization).
  *
  * <p>Registry-light: everything below observes the pending/loaded JSON surface only; the
  * {@code LootTableLoadEvent} application path itself needs a live reload pipeline (recorded as
- * not run in the ticket 23 report). Each test uses unique table ids so the process-wide
+ * not run in this batch's report). Each test uses unique table ids so the process-wide
  * pending maps are never asserted globally.
  */
 class LootTableEventJSJsonSurfaceTest {
@@ -90,10 +91,10 @@ class LootTableEventJSJsonSurfaceTest {
 
     @Test
     void pendingDeclarationsSurviveReloadInstancesAsStaleStateUntilRedeclared() {
-        // Documented semantics ("pending 修改跨 reload 保留（每次 reload 脚本重新声明）"):
-        // a table declared by an OLD script generation stays pending when the next reload's
-        // scripts stop declaring it. Pinned so a future cleanup policy change is a conscious
-        // contract change, not an accident.
+        // Stale pending declarations, as documented ("a pending modification survives a reload
+        // because scripts declare it again on every reload"): a table declared by an OLD script
+        // generation stays pending when the next reload's scripts stop declaring it. Pinned so a
+        // future cleanup policy change is a conscious behavior change, not an accident.
         String staleId = "nekojs:" + fresh("stale");
         new LootTableEventJS().setJson(staleId, "{\"type\":\"minecraft:chest\"}");
 

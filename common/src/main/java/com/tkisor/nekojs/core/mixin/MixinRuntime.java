@@ -15,7 +15,7 @@ import graal.graalvm.polyglot.proxy.ProxyObject;
 import java.util.*;
 import java.util.function.Predicate;
 
-/** Root-owned hook listeners, sharing the existing event generation commit boundary. */
+/** Hook listeners owned by the root. They commit together with the existing event generation. */
 public final class MixinRuntime implements AutoCloseable, MixinNativeBridge.Sink {
     public interface ThreadGate { boolean allows(String thread); }
     private record Slot(MixinPlan plan, MixinPlan.Hook hook, HookBus bus) {}

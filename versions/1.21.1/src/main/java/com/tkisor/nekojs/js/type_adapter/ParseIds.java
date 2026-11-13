@@ -1,20 +1,23 @@
-// 1.21.1 实现，与版本树 src/ 下的同名 26.x 文件成对。内容等于那份文件在本节点求值后的形态。
-// 26.x 侧行为变更时须同步本文件。
+// 1.21.1 implementation, paired with the same-named 26.x file under the version tree's src/. The content
+// is what that file becomes once evaluated for this node. Keep this file in sync when the 26.x behavior
+// changes.
 package com.tkisor.nekojs.js.type_adapter;
 
 import com.tkisor.nekojs.api.data.ValueConversionException;
 import net.minecraft.resources.ResourceLocation;
 
 /**
- * 物品 / 方块 / 物品栈共用的 id 解析公共逻辑，消除 Block/Item/ItemStack 三处重复。
+ * Shared id parsing for items, blocks and item stacks, so Block, Item and ItemStack no longer each
+ * carry their own copy.
  *
- * <p>统一规则：{@code trim} → 缺省补 {@code minecraft:} 前缀 → 拒绝 {@code #} 前缀（tag id）→
- * {@link ResourceLocation#tryParse(String)}，失败抛 {@link ValueConversionException}。
+ * <p>The rules are the same everywhere: {@code trim}, add the {@code minecraft:} prefix when it is
+ * missing, reject a {@code #} prefix because that is a tag id, then call
+ * {@link ResourceLocation#tryParse(String)}; if that fails, throw {@link ValueConversionException}.
  */
 public final class ParseIds {
     private ParseIds() {}
 
-    /** 解析物品/方块 id；空串返回 {@code minecraft:air}。 */
+    /** Parses an item or block id; an empty string returns {@code minecraft:air}. */
     public static ResourceLocation parseItemOrBlockId(String raw) {
         if (raw == null || raw.isBlank()) return ResourceLocation.withDefaultNamespace("air");
         String id = raw.trim();
@@ -31,7 +34,7 @@ public final class ParseIds {
         return location;
     }
 
-    /** 解析正整数计数；非法抛 {@link ValueConversionException}。 */
+    /** Parses a positive integer count; throws {@link ValueConversionException} when the text is not one. */
     static int parsePositiveCount(String raw) {
         int count;
         try {

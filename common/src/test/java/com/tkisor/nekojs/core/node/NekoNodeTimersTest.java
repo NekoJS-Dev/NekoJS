@@ -26,7 +26,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
  */
 class NekoNodeTimersTest {
 
-    /** 远超任何合理上限的安全上界，防止回归（上限失效）时死循环。 */
+    /** A safety bound far above any real limit, so a broken limit fails instead of looping forever. */
     private static final int SAFETY_BOUND = 100_000;
 
     private NekoNodeTimers timers;
@@ -112,7 +112,8 @@ class NekoNodeTimersTest {
         assertDoesNotThrow(timers::close);
     }
 
-    /** 循环注册直到首个 {@link IllegalStateException}，返回成功注册数（即实际上限）。 */
+    /** Registers in a loop until the first {@link IllegalStateException} and returns how many
+     * registrations succeeded, which is the effective limit. */
     private int registerUntilRejected(boolean oneShot) {
         int registered = 0;
         for (int i = 0; i < SAFETY_BOUND; i++) {

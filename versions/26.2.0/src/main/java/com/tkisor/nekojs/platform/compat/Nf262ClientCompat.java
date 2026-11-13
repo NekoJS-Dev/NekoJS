@@ -8,9 +8,10 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.HoverEvent;
 
 /**
- * 26.2 侧 {@link McClientCompat.Impl}：screen / toast manager 访问器移到了
- * {@code Minecraft#gui}，RenderSystem 的后端描述改名 {@code getBackendDescription()}。
- * 注册：{@code META-INF/services/com.tkisor.nekojs.platform.compat.McClientCompat$Impl}。
+ * 26.2 implementation of {@link McClientCompat.Impl}. The screen and toast manager accessors moved
+ * to {@code Minecraft#gui}, and the RenderSystem backend description was renamed to
+ * {@code getBackendDescription()}.
+ * Registered through {@code META-INF/services/com.tkisor.nekojs.platform.compat.McClientCompat$Impl}.
  */
 public final class Nf262ClientCompat implements McClientCompat.Impl {
 

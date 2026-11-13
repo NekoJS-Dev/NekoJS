@@ -16,17 +16,19 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 /**
- * {@link EventBusJS#hasListeners()} 的兜底分支（C5）。
+ * Covers the fallback branch of {@link EventBusJS#hasListeners()}.
  *
- * <p>{@code hasListeners()} 先查 {@code tokensByType} 镜像（JS 侧经 {@link EventBusJS#execute}
- * 注册的监听器）；为防绕过 {@code execute} 的直接 Java 注册（测试、bridge 代码）失同步，
- * 再兜底检查底层 bus（{@code EventBusBase.isEmpty()}）。本测试用
- * {@link EventBusJS#bus()} 直接注册 Java 监听器——此场景 {@code tokensByType} 恒为空，
- * 正是要覆盖的兜底分支。
+ * <p>{@code hasListeners()} first checks the {@code tokensByType} mirror, which holds the
+ * listeners registered from JS through {@link EventBusJS#execute}. To stay in sync with direct
+ * Java registrations that bypass {@code execute} (tests, bridge code), it then falls back to the
+ * underlying bus ({@code EventBusBase.isEmpty()}). This test registers a Java listener through
+ * {@link EventBusJS#bus()} directly; on that path {@code tokensByType} stays empty, which is
+ * exactly the fallback branch this test covers.
  *
- * <p>{@link EventBusJS} 按 {@code ScriptType} 分桶管理监听器（注册 / 清理路径触发
- * {@code ScriptType.<clinit>}，依赖 {@code Platform} 已初始化），故 {@code @BeforeAll}
- * 先做平台 fixture 初始化（与 {@code TypeScriptNoopIrGoldenTest} 同款），保证不依赖测试执行顺序。
+ * <p>{@link EventBusJS} keeps listeners in buckets per {@code ScriptType}. The registration and
+ * cleanup paths touch {@code ScriptType.<clinit>}, which needs {@code Platform} to be
+ * initialized, so {@code @BeforeAll} initializes the platform fixture first (the same way
+ * {@code TypeScriptNoopIrGoldenTest} does) and the test does not depend on execution order.
  */
 class EventBusJSHasListenersTest {
 
@@ -35,7 +37,7 @@ class EventBusJSHasListenersTest {
         TestPlatformInit.ensureInitialized();
     }
 
-    /** 无任何监听器（镜像与底层 bus 都空）→ false。 */
+    /** No listeners at all (mirror and underlying bus both empty) returns false. */
     @Test
     void hasListenersIsFalseWithoutAnyListener() {
         EventBusJS<String, Void> bus = EventBusJS.of(String.class);
@@ -43,8 +45,9 @@ class EventBusJSHasListenersTest {
     }
 
     /**
-     * 经 {@code bus().listen(Consumer)} 直接注册 Java 监听器（绕过 {@code execute()}，
-     * {@code tokensByType} 镜像为空）→ {@code EventBusBase.isEmpty()} 兜底分支必须报 true。
+     * Registers a Java listener directly through {@code bus().listen(Consumer)}, bypassing
+     * {@code execute()}, so the {@code tokensByType} mirror stays empty. The
+     * {@code EventBusBase.isEmpty()} fallback must still report true.
      */
     @Test
     void hasListenersIsTrueForDirectJavaListener() {
@@ -54,7 +57,7 @@ class EventBusJSHasListenersTest {
         assertTrue(bus.hasListeners(), "Java 直接注册的监听器应被 isEmpty() 兜底分支发现");
     }
 
-    /** 兜底分支与底层 bus 状态保持同步：注销后回到 false。 */
+    /** The fallback branch follows the underlying bus: after unregistering it reports false again. */
     @Test
     void hasListenersReturnsFalseAfterDirectListenerUnregistered() {
         EventBusJS<String, Void> bus = EventBusJS.of(String.class);

@@ -17,18 +17,21 @@ import java.util.Optional;
 import java.util.Set;
 
 /**
- * 适配器驱动的输入别名生成器。
+ * Generates input aliases from adapter declarations.
  *
- * <p>消费 {@link AdapterCatalogEntry#getShapes() 适配器声明的形状}，渲染成 TypeScript
- * 输入别名（{@code $Foo_}），并：
+ * <p>Consumes the shapes an adapter declares ({@link AdapterCatalogEntry#getShapes() adapter-declared shapes}),
+ * renders them into TypeScript input aliases ({@code $Foo_}), and:
  * <ol>
- *   <li>把 {@code targetType -> $Foo_} 注册进 {@link TypeAliasRegistry}，使 {@link TypeConverter}
- *       自动放宽所有引用该类型的方法参数（补上原有"别名生成了却没接到参数"的缺陷）；</li>
- *   <li>按目标类全限定名缓存 {@link AdapterAlias}（别名联合类型 + 依赖的 import），
- *       供 {@link IndexFileGenerator} 在目标类所在包模块内就近发 {@code export type} 声明。</li>
+ *   <li>registers {@code targetType -> $Foo_} in {@link TypeAliasRegistry} so {@link TypeConverter} automatically
+ *       widens every method parameter that references that type (this fixes the earlier defect where aliases were
+ *       generated but never reached the parameters);</li>
+ *   <li>caches the {@link AdapterAlias} by target class FQN (the alias union type plus its imports), so
+ *       {@link IndexFileGenerator} can emit the {@code export type} next to the target class in its own package
+ *       module.</li>
  * </ol>
  *
- * <p>必须在 {@link IndexFileGenerator#pregenerateClass} 与参数渲染之前调用 {@link #prepare}。
+ * <p>{@link #prepare} must run before {@link IndexFileGenerator#pregenerateClass} and before parameters are
+ * rendered.
  */
 public final class AdapterAliasGenerator {
     private final TypeAliasRegistry aliasRegistry;
@@ -46,14 +49,16 @@ public final class AdapterAliasGenerator {
     }
 
     /**
-     * 解析适配器的形状，填充别名注册表与别名缓存。
+     * Resolves the adapter shapes and fills the alias registry and alias cache.
      *
-     * <p>分两遍：第一遍只登记 {@code targetType -> $Foo_} 映射，第二遍才渲染。这样嵌套位置
-     * 引用别的适配器目标时（如 {@code SizedIngredient} 的 {@code ingredient} 槽位引用
-     * {@code Ingredient}）不受适配器注册顺序影响。
+     * <p>Works in two passes: the first registers only the {@code targetType -> $Foo_} mapping, the second renders.
+     * A nested position that references another adapter target (for example the {@code ingredient} slot of
+     * {@code SizedIngredient} referencing {@code Ingredient}) therefore does not depend on adapter registration
+     * order.
      *
-     * @param generatedClasses 本次会被实际生成声明类的全限定名集合；仅处理其中的适配器目标，
-     *                         避免为未生成的目标注册别名而引入悬空类型引用
+     * @param generatedClasses FQNs of the classes whose declarations are actually generated this run; only adapter
+     *                         targets in this set are processed, so an alias is never registered for a target that
+     *                         is not generated and left as a dangling type reference
      */
     public void prepare(List<AdapterCatalogEntry> adapters, Set<String> generatedClasses) {
         prepare(adapters, generatedClasses, List.of());
@@ -98,10 +103,11 @@ public final class AdapterAliasGenerator {
     }
 
     /**
-     * Host types referenced by aliases, including same-package types, for declaration dependency completion.
+     * Host types referenced by aliases, including same-package types, used to complete declaration dependencies.
      *
-     * <p>返回按收集序的不可变快照：{@link Set#copyOf} 的迭代序无规范保证（跨 JVM/平台可能
-     * 不同），直接暴露会破坏 probe 输出的确定性，故按插入序复制。
+     * <p>Returns an immutable snapshot in collection order. The iteration order of {@link Set#copyOf} is unspecified
+     * (it may differ across JVMs and platforms), and exposing it directly would break the determinism of probe
+     * output, so the set is copied in insertion order.
      */
     public Set<String> hostImports() {
         return java.util.Collections.unmodifiableSet(new LinkedHashSet<>(hostImports));
@@ -161,8 +167,8 @@ public final class AdapterAliasGenerator {
     }
 
     /**
-     * 返回目标类的输入别名名（如 {@code $ItemStack_}），无别名时返回 null。
-     * 供其它生成器在 import 列表中追加别名（参数放宽后会引用 $Foo_）。
+     * Returns the input alias name of the target class (for example {@code $ItemStack_}), or null when it has none.
+     * Other generators call this to append the alias to their import list, since widened parameters reference $Foo_.
      */
     public String aliasNameOf(String fqn) {
         AdapterAlias alias = aliases.get(fqn);
@@ -235,17 +241,18 @@ public final class AdapterAliasGenerator {
 
     public record RenderedShape(String type, Set<String> referenceFqns, boolean usesRegistry) {}
 
-    // ===================== 形状渲染 =====================
+    // ===================== Shape rendering =====================
 
     private record ShapeContext(String hostSelf, String inputSelf, String selfPackage,
                                 Set<String> imports, Set<String> usedRegistries, Set<String> references,
                                 boolean inputHosts, NamedScope named) {}
 
     /**
-     * @param nested 是否处于嵌套位置（数组元素 / 对象槽位 / 联合成员 / 模板洞）。嵌套位置的
-     *               目标类型要放宽成输入别名 {@code $Foo_}：运行时那些位置同样经适配器转换，
-     *               所以 {@code { any: ['minecraft:stone'] }} 之类的写法必须能通过类型检查。
-     *               顶层不放宽——否则 {@code $Foo_ = $Foo_ | ...} 自引用成环。
+     * @param nested whether this is a nested position (array element, object slot, union member or template hole). A
+     *               target type in a nested position widens to its input alias {@code $Foo_}: the runtime runs those
+     *               positions through the adapter too, so a value like {@code { any: ['minecraft:stone'] }} has to
+     *               type-check. A top-level position is not widened, otherwise {@code $Foo_ = $Foo_ | ...} references
+     *               itself and forms a cycle.
      */
     private String render(AdapterInputShape shape, ShapeContext context, boolean nested) {
         return switch (shape) {
@@ -260,7 +267,8 @@ public final class AdapterAliasGenerator {
             case AdapterInputShape.HostValue v -> {
                 Class<?> hostCls = v.cls();
                 context.references().add(hostCls.getName());
-                // 同包目标已在当前模块声明，无需 import；跨包才收集
+                // A same-package target is already declared in this module, so it needs no import; only
+                // cross-package targets are collected.
                 String hostPkg = hostCls.getPackage() != null ? hostCls.getPackage().getName() : "";
                 if (!hostPkg.equals(context.selfPackage())) {
                     context.imports().add(hostCls.getName());
@@ -283,7 +291,8 @@ public final class AdapterAliasGenerator {
                     String rendered = render(member, context, true);
                     members.add(member instanceof AdapterInputShape.RawValue ? "(" + rendered + ")" : rendered);
                 }
-                // 恒加括号：槽位/数组元素位置都合法，且不依赖调用点自己判断优先级
+                // Always add the parentheses: they are valid in both slot and array element positions, and the
+                // call site does not have to work out precedence itself.
                 yield "(" + String.join(" | ", members) + ")";
             }
             case AdapterInputShape.RegistryValue v -> {
@@ -295,7 +304,7 @@ public final class AdapterAliasGenerator {
                 yield "RegistryTypes." + v.typeName() + "Tag";
             }
             case AdapterInputShape.NamespaceValue v -> {
-                // 与注册表字面量同一模块（@special/types），复用同一条 import 触发
+                // Same module as the registry literal (@special/types), so the same import already covers it.
                 context.usedRegistries().add("Namespace");
                 yield "RegistryTypes.Namespace";
             }
@@ -414,7 +423,7 @@ public final class AdapterAliasGenerator {
         return "{ " + String.join(", ", parts) + " }";
     }
 
-    /** 非合法标识符的 key 用引号包裹。 */
+    /** Quotes a key that is not a valid identifier. */
     private static String quoteKey(String name) {
         if (name.isEmpty()) return "\"\"";
         if (!Character.isJavaIdentifierStart(name.charAt(0))) return "\"" + name + "\"";
@@ -424,7 +433,7 @@ public final class AdapterAliasGenerator {
         return name;
     }
 
-    /** 类的 TypeScript 标识符名（内部类用 Parent$Child 格式，与各生成器一致）。 */
+    /** TypeScript identifier for a class; a nested class uses the Parent$Child form, as in the other generators. */
     private static String tsClassName(Class<?> cls) {
         if (cls.getEnclosingClass() != null && !cls.isAnonymousClass()) {
             return tsClassName(cls.getEnclosingClass()) + "$" + cls.getSimpleName();

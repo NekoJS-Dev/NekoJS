@@ -1,12 +1,12 @@
 package com.tkisor.nekojs.core.error;
 
 /**
- * Diagnostic phase of a script failure (ticket 30 frozen record).
+ * Diagnostic phase of a script failure.
  *
- * <p>One failure is classified into exactly one phase at record time. The phase names the
- * pipeline stage the failure belongs to, which is independent of the reload phase the failure
- * was observed in (see {@link com.tkisor.nekojs.core.lifecycle.ReloadPhase} for the reload
- * transaction stages).
+ * <p>At record time one failure is classified into exactly one phase. The phase names the
+ * pipeline stage the failure belongs to, which is independent of the reload phase the failure was
+ * observed in (see {@link com.tkisor.nekojs.core.lifecycle.ReloadPhase} for the reload transaction
+ * stages).
  *
  * <ul>
  *   <li>{@link #PREPARE} — syntax/transform failures raised by Script Preparation
@@ -20,8 +20,8 @@ package com.tkisor.nekojs.core.error;
  *   <li>{@link #TRUST} — pack trust authorization denials (Pack Trust);</li>
  *   <li>{@link #RELOAD_CANCEL} — transactional reload failures and candidate cancellation
  *       (Runtime Reload);</li>
- *   <li>{@link #WATCHDOG} — cancelled or resource-exhausted evaluations; the phase identity
- *       is retained for diagnostic consumers and does not imply an automatic execution budget.</li>
+ *   <li>{@link #WATCHDOG} — cancelled or resource-exhausted evaluations; the phase name is kept for
+ *       diagnostic consumers and does not imply an automatic execution budget.</li>
  * </ul>
  */
 public enum DiagnosticPhase {

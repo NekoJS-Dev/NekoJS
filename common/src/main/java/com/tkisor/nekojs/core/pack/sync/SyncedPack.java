@@ -3,9 +3,11 @@ package com.tkisor.nekojs.core.pack.sync;
 import java.util.List;
 
 /**
- * 一个待分发的脚本包快照（平台无关的传输单元）：{@code syncId}（{@code <scope段>:<包id>}，
- * 如 {@code packs:demo} / {@code worldpacks:demo}）、作用域枚举名、manifest 原文 JSON、
- * 内容文件列表与包哈希。各平台的 payload 或 ByteBuf 编解码各自与本记录互转。
+ * Snapshot of one script pack to distribute; the platform-independent transfer unit. Carries the
+ * {@code syncId} (scope segment and pack id, for example {@code packs:demo} or
+ * {@code worldpacks:demo}), the scope enum name, the raw manifest JSON, the content file list and
+ * the pack hash. Each platform converts between this record and its own payload or ByteBuf
+ * encoding.
  */
 public record SyncedPack(
     String syncId,
@@ -19,8 +21,9 @@ public record SyncedPack(
         files = List.copyOf(files);
     }
 
-    /** syncId 的目录名编码：{@code packs:demo} → {@code packs_demo}。scope 段固定且不含
-     * 下划线、包 id 经 sanitize（{@code [a-z0-9_-]}），替换 {@code :} 后编码可逆且无碰撞。 */
+    /** Encodes a syncId as a directory name: {@code packs:demo} → {@code packs_demo}. The scope
+     * segment is fixed and contains no underscore, and the pack id is sanitized to
+     * {@code [a-z0-9_-]}, so replacing {@code :} is reversible and collision-free. */
     public static String encodeSyncId(String syncId) {
         return syncId.replace(':', '_');
     }

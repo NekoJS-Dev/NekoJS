@@ -1,5 +1,6 @@
-// 1.21.1 实现，与版本树 src/ 下的同名 26.x 文件成对。内容等于那份文件在本节点求值后的形态。
-// 26.x 侧行为变更时须同步本文件。
+// 1.21.1 implementation, paired with the same-named 26.x file under src/ in the version tree.
+// Its content equals that file evaluated at this node. Keep this file in sync when the 26.x
+// side changes behavior.
 package com.tkisor.nekojs.wrapper.registry.gen;
 
 import com.tkisor.nekojs.wrapper.registry.FoodBuilderJS;
@@ -13,26 +14,28 @@ import java.util.Map;
 import java.util.function.Consumer;
 
 /**
- * 物品 builder（ticket 15 单一写入语义：property 赋值与显式 setter 同一写入点）：
+ * Builds an item. Assigning a property and calling its explicit setter write through the same
+ * path:
  * <pre>
  * event.item('mymod:ruby', b =&gt; { b.maxStackSize = 16; b.rarity = 'epic' })
  * </pre>
- * 复合配置（food）保留 void 方法；发光 / 燃料仅在需要覆盖方法时用匿名子类。
+ * Composite configuration (food) stays a void method. Glowing and fuel use an anonymous subclass
+ * only when a method must be overridden.
  */
 public class ItemBuilder extends RegistryObjectBuilder<Item> {
 
-    /** 已分配创造标签页的物品：物品 id → 标签页 id（BuildCreativeModeTabContents 时消费）。 */
+    /** Items assigned to a creative tab: item id to tab id, consumed during BuildCreativeModeTabContents. */
     public static final Map<ResourceLocation, ResourceLocation> GROUP_ASSIGNMENTS = new HashMap<>();
 
     private int maxStackSize = 64;
     private int maxDamage = 0;
     private boolean fireResistant = false;
-    /** 稀有度名：common / uncommon / rare / epic（默认 common；setter 归一化为小写）。 */
+    /** Rarity name: common / uncommon / rare / epic. Defaults to common; the setter lowercases it. */
     private String rarity = "common";
     private boolean glowing = false;
-    /** 燃料燃烧时间（tick）。&gt;0 时物品可作为熔炉/高炉/烟熏炉燃料。 */
+    /** Fuel burn time in ticks. Above 0 the item burns in a furnace, blast furnace or smoker. */
     private int burnTime = 0;
-    /** 可选：创造标签页 id（如 'minecraft:building_blocks' 或自定义 tab id）。null=不分配。 */
+    /** Optional creative tab id, such as 'minecraft:building_blocks' or a custom tab id. {@code null} assigns none. */
     private String groupTab = null;
 
     private FoodBuilderJS foodBuilder = null;
@@ -43,13 +46,14 @@ public class ItemBuilder extends RegistryObjectBuilder<Item> {
         super(id);
     }
 
-    // ---- 数据属性：显式 setter 与 JavaBean property 同一写入点 ----
+    // ---- Data properties: explicit setters and JavaBean properties share one write path ----
 
     public int getMaxStackSize() {
         return maxStackSize;
     }
 
-    /** 最大堆叠（1-99；MC 在注册冻结期对越界值报错，这里在写入期给出带成员名的错误）。 */
+    /** Maximum stack size (1-99). MC fails on out-of-range values when the registry freezes, so this
+     * rejects them on write with an error that names the member. */
     public void setMaxStackSize(int maxStackSize) {
         definition.writable();
         if (maxStackSize < 1 || maxStackSize > 99) {
@@ -79,7 +83,8 @@ public class ItemBuilder extends RegistryObjectBuilder<Item> {
         this.fireResistant = fireResistant;
     }
 
-    /** 稀有度名（已归一化小写；null 容忍，build 期回退 common——与既有语义一致）。 */
+    /** Rarity name, lowercased by the setter. {@code null} is tolerated; the build path falls back to
+     * common. */
     public String getRarity() {
         return rarity;
     }
@@ -110,7 +115,8 @@ public class ItemBuilder extends RegistryObjectBuilder<Item> {
         this.burnTime = burnTime;
     }
 
-    /** 创造标签页 id（已归一化：空白视为不分配——build 期本来就走同一分支）。 */
+    /** Creative tab id, normalized on write: blank means no assignment, the same branch the build path
+     * takes. */
     @com.tkisor.nekojs.api.annotation.ScriptNullable
     public String getGroupTab() {
         return groupTab;
@@ -121,7 +127,8 @@ public class ItemBuilder extends RegistryObjectBuilder<Item> {
         this.groupTab = groupTab == null || groupTab.isBlank() ? null : groupTab;
     }
 
-    /** 配置食物属性（nutrition/saturation/效果等），复合配置保留方法面。 */
+    /** Configures the food properties (nutrition, saturation, effects and so on); composite settings
+     * stay a method call. */
     public void food(Consumer<FoodBuilderJS> consumer) {
         definition.writable();
         this.foodBuilder = new FoodBuilderJS();
@@ -167,7 +174,8 @@ public class ItemBuilder extends RegistryObjectBuilder<Item> {
             GROUP_ASSIGNMENTS.put(id, ResourceLocation.parse(groupTab));
         }
 
-        // 仅在需要覆盖方法（发光/燃料）时用匿名子类，否则直接 new Item
+        // Use an anonymous subclass only when a method must be overridden (glowing or fuel); otherwise
+        // create a plain Item.
         if (!glowing && burnTime <= 0) {
             return new Item(props);
         }
@@ -188,8 +196,9 @@ public class ItemBuilder extends RegistryObjectBuilder<Item> {
     }
 
     /**
-     * 构建配置好的 {@link Item.Properties}（id / stackSize / durability / fireResistant /
-     * rarity / 食物组件）。供 BlockBuilder 等需要复用属性的场景调用。
+     * Builds the configured {@link Item.Properties}: id, stack size, durability, fire resistance,
+     * rarity and food components. BlockBuilder and other call sites that need the same properties
+     * call this.
      */
     public Item.Properties buildProperties() {
         freezeDefinition();

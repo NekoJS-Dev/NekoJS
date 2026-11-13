@@ -14,19 +14,25 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * {@link EntityPDataStore.Access} 的契约与 {@link EntityPDataStore} 的装配语义：
- * getter 拷贝防御、空写移除子键、install 覆盖、fallback 键控。Access 键为实体 id
- * ——无需构造真实实体（{@code EntityType.PIG} 会触发 NeoForge AttachmentHolder 静态链，裸 JUnit 无 FML）。
+ * Behavior of {@link EntityPDataStore.Access} and how {@link EntityPDataStore} installs an
+ * implementation: getters return defensive copies, writing an empty tag removes the subkey,
+ * install replaces the implementation in place, and the fallback keys entries by entity id. Access
+ * keys on entity ids, so no real entity is needed; {@code EntityType.PIG} would trigger the
+ * NeoForge AttachmentHolder static chain, and plain JUnit has no FML.
  */
 class EntityPDataStoreTest {
 
     @AfterEach
     void restore() {
-        // 卸下测试装的实施，恢复 fallback（EntityPDataStore 无 reset；重装 fallback 形状即可）
+        // Remove the implementation the test installed and restore the fallback. EntityPDataStore has no
+        // reset, so installing a fallback-shaped implementation is enough.
         EntityPDataStore.install(memoryAccess());
     }
 
-    /** 内存实现：与两平台真实实现同一段拷贝/移除语义（NeoForge 内联在 NekoJSMod，fabric 在 FabricPDataSync）。 */
+    /**
+     * In-memory implementation with the same copy and remove semantics as the real ones: the NeoForge
+     * implementation is inlined in NekoJSMod, the Fabric one is in FabricPDataSync.
+     */
     private static EntityPDataStore.Access memoryAccess() {
         Map<Integer, CompoundTag> containers = new HashMap<>();
         return new EntityPDataStore.Access() {
@@ -75,14 +81,15 @@ class EntityPDataStoreTest {
         access.set(1, EntityExtension.NEKO_PDATA_KEY, tagOf("mana", 5));
         assertFalse(access.get(1, EntityExtension.NEKO_PDATA_KEY).isEmpty());
 
-        // 脚本侧清空 pdata 的语义：写空 tag = 移除子键
+        // Clearing pdata from a script: writing an empty tag removes the subkey.
         access.set(1, EntityExtension.NEKO_PDATA_KEY, new CompoundTag());
         assertTrue(access.get(1, EntityExtension.NEKO_PDATA_KEY).isEmpty());
     }
 
     @Test
     void fallbackStoresPerEntityUntilInstalled() {
-        // 重装 fallback 形状的内存实现后，不同实体 id 的数据互不串扰
+        // With a fallback-shaped in-memory implementation installed again, data of different entity ids
+        // stays separate.
         EntityPDataStore.install(memoryAccess());
         EntityPDataStore.get().set(10, "k", tagOf("v", 1));
         EntityPDataStore.get().set(11, "k", tagOf("v", 2));

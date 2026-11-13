@@ -8,8 +8,9 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.HoverEvent;
 
 /**
- * 26.1 侧 {@link McClientCompat.Impl}：Minecraft 直接持有 screen / toast manager 访问器。
- * 注册：{@code META-INF/services/com.tkisor.nekojs.platform.compat.McClientCompat$Impl}。
+ * 26.1 implementation of {@link McClientCompat.Impl}. Minecraft exposes the screen and toast
+ * manager accessors directly.
+ * Registered through {@code META-INF/services/com.tkisor.nekojs.platform.compat.McClientCompat$Impl}.
  */
 public final class Nf261ClientCompat implements McClientCompat.Impl {
 

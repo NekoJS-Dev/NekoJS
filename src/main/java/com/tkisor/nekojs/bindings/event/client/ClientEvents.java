@@ -26,7 +26,8 @@ import net.neoforged.neoforge.client.event.ScreenEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.tick.PlayerTickEvent;
 
-/** 客户端事件组（client 脚本）：tick、登录登出、注册类事件（按键/界面/渲染器/粒子）与 HUD、界面绘制等。 */
+/** Client event group (client scripts): tick, login and logout, registration events (key bindings,
+ * screens, renderers, particles), plus HUD and screen drawing. */
 public interface ClientEvents {
     EventGroup GROUP = EventGroup.of("ClientEvents");
 
@@ -34,7 +35,7 @@ public interface ClientEvents {
             GROUP.client("tickPre", ClientTickEvent.Pre.class);
     EventBusJS<ClientTickEvent.Post, Void> TICK_POST =
             GROUP.client("tickPost", ClientTickEvent.Post.class);
-    // tick：tickPost 的裸名别名。脚本侧建议迁移到 tickPre/tickPost（H-5 别名裁决，2026-08-15）。
+    // tick: the bare-name alias of tickPost. Scripts should move to tickPre/tickPost.
     @Deprecated
     EventBusJS<ClientTickEvent.Post, Void> TICK =
             GROUP.client("tick", ClientTickEvent.Post.class);
@@ -80,8 +81,8 @@ public interface ClientEvents {
             GROUP.client("registerMenuScreens", RegisterMenuScreensEvent.class);
     EventBusJS<EntityRenderersEvent.RegisterRenderers, Void> REGISTER_RENDERERS =
             GROUP.client("registerRenderers", EntityRenderersEvent.RegisterRenderers.class);
-    // 实体与方块实体渲染器共用同一注册 bus；以下两个名字是历史别名。
-    // 脚本侧建议迁移到 registerRenderers（H-5 别名裁决，2026-08-15）。
+    // Entities and block entities share one renderer registration bus; the two names below are
+    // legacy aliases. Scripts should move to registerRenderers.
     @Deprecated
     EventBusJS<EntityRenderersEvent.RegisterRenderers, Void> REGISTER_ENTITY_RENDERERS =
             GROUP.client("registerEntityRenderers", EntityRenderersEvent.RegisterRenderers.class);
@@ -115,47 +116,53 @@ public interface ClientEvents {
         }
     };
 
-    /** 资产生成事件：脚本写入 resource pack JSON（模型 / blockstate 等）。 */
+    /** Asset generation event: scripts write resource pack JSON (models, blockstates and so on). */
     EventBusJS<DataGeneratorJS, String> GENERATE_ASSETS =
             GROUP.client("generateAssets", DataGeneratorJS.class, ASSET_STAGE_KEY);
 
-    /** 语言生成事件：脚本按语言代码收集翻译条目（{@code en_us} 等）。 */
+    /** Language generation event: scripts collect translation entries per language code
+     * ({@code en_us} and so on). */
     EventBusJS<LangGeneratorJS, String> LANG =
             GROUP.client("lang", LangGeneratorJS.class, LANG_KEY);
 
     /**
-     * 后处理声明事件（票 28）：脚本为下一个客户端 generation 声明后处理链
-     * （{@code register}/{@code unregister}）。只在候选期收集 inert 声明，commit 点由
-     * 平台 Adapter 整体安装新 generation 并释放旧 generation 的 listener/资源。
-     * 运行时动作用 {@code PostEffects.set/clear/toggle/current} binding，不经本事件——
-     * 这是既有 ClientEvents 客户端资源/reload 子事件，不是第二个 PostEffects 事件。
+     * Post-processing declaration event: scripts declare the post-processing chain for the next
+     * client generation ({@code register}/{@code unregister}). Declarations are collected inert
+     * during the candidate phase; at the commit point the platform adapter installs the new
+     * generation as a whole and releases the listeners and resources of the old generation.
+     * Runtime changes go through the {@code PostEffects.set/clear/toggle/current} bindings, not
+     * this event. This is the existing ClientEvents client resource/reload sub-event, not a
+     * second PostEffects event.
      */
     EventBusJS<PostEffectEventJS, Void> POST_EFFECTS =
             GROUP.client("postEffects", PostEffectEventJS.class);
 
-    /** HUD 绘制事件（每帧 GUI 渲染后），参数为 {@link PainterJS}。 */
+    /** HUD drawing event (after the GUI render each frame); the argument is a {@link PainterJS}. */
     EventBusJS<PainterJS, Void> HUD = GROUP.client("hud", PainterJS.class);
 
-    /** 界面渲染事件（Screen 渲染后），参数为 {@link ScreenRenderEventJS}。 */
+    /** Screen drawing event (after a Screen renders); the argument is a {@link ScreenRenderEventJS}. */
     EventBusJS<ScreenRenderEventJS, Void> SCREEN_RENDER = GROUP.client("screenRender", ScreenRenderEventJS.class);
 
     /**
-     * 脚本 HUD 渲染器注册入口（非常规总线：调用即注册按 id 记账的常驻渲染器）。
-     * 形态：{@code hudRender('my_hud', { layer: 'normal', priority: 0 }, (ctx, gui) => {})}，
-     * 层为 {@code background|normal|foreground}（background 在原版 HUD 之下），
-     * 同层内 priority 小者先绘制。回调参数 ctx 为 {@code HudRenderContextJS}
-     * （partialTick / 屏幕尺寸 / text / rect / texture 等绘制助手），gui 为原始
-     * GuiGraphicsExtractor。同 id 重复声明在同一 generation 内覆盖旧渲染器；CLIENT reload 在
-     * commit 点按整批换装（本代不再声明的 id 退役），候选失败时旧 generation 的渲染器保持服务。
+     * Script HUD renderer registration entry (not a regular bus: calling it registers a resident
+     * renderer tracked by id). Form:
+     * {@code hudRender('my_hud', { layer: 'normal', priority: 0 }, (ctx, gui) => {})}, where the
+     * layer is {@code background|normal|foreground} (background draws below the vanilla HUD). Within
+     * one layer a smaller priority draws first. The callback's ctx is a {@code HudRenderContextJS}
+     * (drawing helpers for partialTick, screen size, text, rect, texture and so on) and gui is the
+     * raw GuiGraphicsExtractor. Redeclaring the same id inside one generation replaces the old
+     * renderer. A CLIENT reload swaps the whole batch at the commit point (ids no longer declared
+     * retire), and when the candidate fails the previous generation's renderers keep serving.
      */
     EventBusJS<Object, Void> HUD_RENDER =
             GROUP.add("hudRender", ScriptType.CLIENT, RenderRegistrationBusJS.hud());
 
     /**
-     * 脚本世界渲染器注册入口（非常规总线，同 {@link #HUD_RENDER}）。
-     * 形态：{@code worldRender('my_lines', { layer: 'normal', priority: 0 }, ctx => {})}，
-     * 层为 {@code early|normal|late}。回调参数 ctx 为 {@code WorldRenderContextJS}
-     * （相机位置 / partialTick / line / box 等 3D 绘制助手，世界坐标）。
+     * Script world renderer registration entry (not a regular bus, same as {@link #HUD_RENDER}).
+     * Form: {@code worldRender('my_lines', { layer: 'normal', priority: 0 }, ctx => {})}, where the
+     * layer is {@code early|normal|late}. The callback's ctx is a
+     * {@code WorldRenderContextJS} (3D drawing helpers for camera position, partialTick, line, box
+     * and so on, in world coordinates).
      */
     EventBusJS<Object, Void> WORLD_RENDER =
             GROUP.add("worldRender", ScriptType.CLIENT, RenderRegistrationBusJS.world());

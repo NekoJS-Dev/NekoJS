@@ -16,8 +16,8 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Ticket 23 AC2 contract fixture (registry-light — the same bare-JUnit shape as
- * {@code RecipeEventJSGeneratedIdTest}): representative script inputs generate or modify the
+ * Fixture for {@code ServerEvents.recipes} (registry-light, the same bare-JUnit shape
+ * as {@code RecipeEventJSGeneratedIdTest}): representative script inputs generate or modify the
  * expected recipe JSON through the existing {@code recipes} event object. Value conversion
  * (primitive / object / passthrough JSON), nested setPath, id rebinding and filter-free
  * query/remove semantics are pinned on the JSON map the lifecycle later commits; no private
@@ -25,7 +25,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  *
  * <p>Registry-dependent behaviors (filters applied through {@code Recipe.CODEC}, ingredient
  * serialization, {@code MinecraftRecipeHandler} overloads) are covered by the guarded tests
- * noted in the ticket 23 report.
+ * noted in this batch's report.
  */
 class RecipeEventJSJsonContractTest {
 

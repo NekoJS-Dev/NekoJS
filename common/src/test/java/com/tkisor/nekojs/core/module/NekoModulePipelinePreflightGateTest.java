@@ -17,9 +17,11 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * 预检语言门禁回归：JS-only 的 ValParser 预检只允许对原始源即 JS 的扩展名跑——
- * .py（# 注释、def/class）与 .ts（类型注解、interface）的原始源会被碎成伪调用，
- * 产生 "Unknown identifier" 系统性误报进错误面板。转译语言的预检改在编译产物上跑。
+ * Regression test for the preflight language gate: the JS-only ValParser preflight only runs on
+ * extensions whose original source is JS. The original source of .py (with # comments, def/class)
+ * and .ts (with type annotations, interface) would be split into bogus calls and produce
+ * systematic "Unknown identifier" false positives in the error panel. For transpiled languages the
+ * preflight runs on the compiled output instead.
  */
 class NekoModulePipelinePreflightGateTest {
 
@@ -40,14 +42,16 @@ class NekoModulePipelinePreflightGateTest {
     }
 
     private static NekoModulePipeline pipelineWithLanguages() {
-        // 运行时由 @RegisterNekoJSPlugin 自动注册；裸测试手动注册 python/typescript
+        // The runtime registers these through the @RegisterNekoJSPlugin annotation; this bare test
+        // registers python and typescript by hand.
         ScriptCompilerRegistry registry = ScriptCompilerRegistry.createRuntimeRegistry();
         registry.registerLanguage("python", Set.of(".py"), new PythonToJsCompiler());
         registry.register(NekoTypeScriptLanguagePlugin.INSTANCE);
         return new NekoModulePipeline(new NekoCompilationPipeline(), registry, SandboxConfig.defaultConfig());
     }
 
-    /** .py 原始源（含 # 注释与 def）经管线准备成功：转译正常，预检走产物而非原始源。*/
+    /** Original .py source with # comments and def prepares successfully: transpilation works and the
+    preflight runs on the output, not on the original source. */
     @Test
     void pythonSourcePreparesWithoutJsPreflightMisfires() throws Exception {
         NekoModulePipeline pipeline = pipelineWithLanguages();
@@ -61,7 +65,8 @@ class NekoModulePipelinePreflightGateTest {
         assertFalse(module.code().contains("def greet"), "python must be transpiled, not passed through");
     }
 
-    /** .ts 原始源（类型注解 + interface 声明）经管线准备成功且产物是合法 JS 形态。*/
+    /** Original .ts source with type annotations and an interface declaration prepares successfully and
+    the output is valid JS. */
     @Test
     void typescriptSourcePreparesWithoutJsPreflightMisfires() throws Exception {
         NekoModulePipeline pipeline = pipelineWithLanguages();

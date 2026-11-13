@@ -31,23 +31,26 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * {@code modifyWorkspaceConfig} 钩子的端到端冒烟测试。
+ * End-to-end smoke test for the {@code modifyWorkspaceConfig} hook.
  *
- * <p>{@link WorkspaceGenerator#createWorkspaceConfigs()} 在每个 ScriptType 的
- * {@code jsconfig.json} 模型写盘前遍历已登记插件调用该钩子（每个 env 一次），此前没有任何
- * 内置插件实现它。本测试在受控的 {@code @TempDir} 游戏目录里跑完整流程，断言：
- * 四个 env（server/client/startup/test）各触发一次、且插件对模型的修改
- * （追加 include 条目）落到写出的 jsconfig.json 中。
+ * <p>{@link WorkspaceGenerator#createWorkspaceConfigs()} calls this hook on every registered plugin
+ * (once per env) before it writes each ScriptType's {@code jsconfig.json} model, and no built-in
+ * plugin implemented it. This test runs the whole flow in a controlled {@code @TempDir} game
+ * directory and checks that all four envs (server/client/startup/test) fire once each and that the
+ * plugin's change to the model (an added include entry) lands in the written jsconfig.json.
  *
- * <p>测试设施说明：
+ * <p>Test setup:
  * <ul>
- *   <li>{@code NekoJSPaths.get()} 是懒初始化单例、可能已指向共享测试目录——反射重定向到
- *       本测试的 TempDir（测后恢复原值），使读写在受控目录内进行；</li>
- *   <li>{@code NekoScriptCatalog} 的 platform provider 默认 {@code EMPTY.outputLayout()==null}，
- *       {@code createSnippets()} 会 NPE——生产中由平台层
- *       （{@code NeoForgeRuntimeBootstrap} / {@code ForgeRuntimeBootstrap}）注入，
- *       这里注入指向 TempDir 的最小实现；</li>
- *   <li>插件管理器全局态的备份/恢复照 {@code NekoJSBasePluginManagerTest} 的 test seam 用法。</li>
+ *   <li>{@code NekoJSPaths.get()} is a lazily initialized singleton that may already point at a
+ *       shared test directory, so reflection redirects it to this test's TempDir and restores it
+ *       afterwards, keeping all reads and writes inside the controlled directory;</li>
+ *   <li>The {@code NekoScriptCatalog} platform provider defaults to
+ *       {@code EMPTY.outputLayout()==null} and {@code createSnippets()} would NPE there. Production
+ *       injects it from the platform layer ({@code NeoForgeRuntimeBootstrap} /
+ *       {@code ForgeRuntimeBootstrap}), so this test injects a minimal implementation that points
+ *       at the TempDir;</li>
+ *   <li>Global plugin manager state is backed up and restored with the test hook used by
+ *       {@code NekoJSBasePluginManagerTest}.</li>
  * </ul>
  */
 class WorkspaceGeneratorModifyConfigHookTest {
@@ -69,13 +72,14 @@ class WorkspaceGeneratorModifyConfigHookTest {
     void setUp() throws Exception {
         TestPlatformInit.ensureInitialized(gameDir);
 
-        // NekoJSPaths 单例重定向到本测试的 TempDir（WorkspaceGenerator 的全部读写经 NekoJSPaths.get()）
+        // Redirect the NekoJSPaths singleton to this test's TempDir: WorkspaceGenerator reads and writes
+        // only through NekoJSPaths.get()
         previousPaths = PATHS_INSTANCE_FIELD.get(null);
         NekoJSPaths paths = NekoJSPaths.fromGameDir(gameDir);
         PATHS_INSTANCE_FIELD.set(null, paths);
         paths.initFolders();
 
-        // 插件管理器全局态备份 + 清空
+        // Back up and clear the global plugin manager state
         previousEntries = ENTRIES_FIELD.get(null);
         previousSortedView = SORTED_VIEW_FIELD.get(null);
         previousOwnedView = OWNED_VIEW_FIELD.get(null);
@@ -83,7 +87,8 @@ class WorkspaceGeneratorModifyConfigHookTest {
         SORTED_VIEW_FIELD.set(null, null);
         OWNED_VIEW_FIELD.set(null, null);
 
-        // createSnippets 需要 outputLayout；EMPTY provider 返回 null 会 NPE，注入最小实现（测后恢复）
+        // createSnippets needs outputLayout, and the EMPTY provider returns null, which NPEs; inject a
+        // minimal implementation and restore it after the test
         NekoScriptCatalog.setPlatformProvider(new NekoCatalogPlatformProvider() {
             @Override
             public TypeOutputLayout outputLayout() {
@@ -124,7 +129,8 @@ class WorkspaceGeneratorModifyConfigHookTest {
                 new HashSet<>(RecordingWorkspacePlugin.envs),
                 "modifyWorkspaceConfig 必须对每个 ScriptType 的 env 各触发一次");
 
-        // 插件对 jsconfig 模型的修改必须随写盘落地（TempDir 内文件必然不存在、全部新写）
+        // Plugin changes to the jsconfig model must land on disk when the model is written. No file
+        // exists inside the TempDir yet, so every file is written fresh.
         NekoJSPaths paths = NekoJSPaths.get();
         for (Path scriptDir : List.of(paths.serverScripts(), paths.clientScripts(),
                 paths.startupScripts(), paths.testScripts())) {
@@ -186,7 +192,8 @@ class WorkspaceGeneratorModifyConfigHookTest {
         }
     }
 
-    /** 记录每次 modifyWorkspaceConfig 的 env，并向模型追加可断言的 include 标记。 */
+    /** Records the environment of every modifyWorkspaceConfig call and appends an assertable
+     * include marker to the model. */
     @RegisterNekoJSPlugin(priority = 1000)
     public static class RecordingWorkspacePlugin implements NekoJSPlugin {
         static final String MARKER_INCLUDE = "plugin_smoke/**/*.d.ts";

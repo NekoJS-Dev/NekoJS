@@ -29,37 +29,41 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * 票 14 AC1：冻结 {@link EventBusJS} 的<strong>外部行为</strong>——注册、remove、
- * dispatch、priority、cancel、side 记账与 reload 清理——以并发 stress fixture
- * （复用 {@code EventBusConcurrentStressTest} 的形状）钉住：
+ * Pins down the observable behavior of {@link EventBusJS}: registration, remove, dispatch,
+ * priority, cancel, side bookkeeping and reload cleanup. A concurrent stress fixture (shaped like
+ * {@code EventBusConcurrentStressTest}) checks three things:
  *
  * <ul>
- *   <li>并发 mutation（reload 线程清理 mirror / owner 线程注册）与 post 之后，总线最终
- *       回到空状态（JS 侧 mirror 与底层 bus 都空）；</li>
- *   <li>没有任何事件被同一监听器注册重复 dispatch（每次投递对每个已激活注册至多送达一次）；</li>
- *   <li>priority 顺序、可取消语义、dispatch key 定向、按 scriptId 的 remove 保持既有契约。</li>
+ *   <li>after concurrent mutation (a reload thread clearing the mirror, the owner thread
+ *       registering) and posts, the bus ends up empty again, both the JS-side mirror and the
+ *       underlying bus;</li>
+ *   <li>no event is dispatched twice to the same listener registration: each post reaches each
+ *       active registration at most once;</li>
+ *   <li>priority order, cancellable semantics, dispatch key targeting and remove by scriptId keep
+ *       their existing behavior.</li>
  * </ul>
  *
- * <p>线程模型与生产一致（票 07 契约）：注册与监听器回调都只发生在 owner 线程（Graal
- * 单线程约束——任何 {@code Value} 操作都会进入所属 Context，非 owner 线程调用
- * {@code execute} 会被 Graal 拒绝）；reload 清理（{@code clearTokens}）是纯 host 侧
- * 记账操作，可与注册/post 并发——这正是 {@link EventBusJS} 类注释声明的
- * 「注册（脚本加载线程）与 post 迭代并发」镜像竞态面。
+ * <p>The thread model matches production: registration and listener callbacks only happen on the
+ * owner thread. Graal runs single-threaded, every {@code Value} operation enters its owning
+ * Context, and Graal rejects {@code execute} from a non-owner thread. Reload cleanup
+ * ({@code clearTokens}) only touches host-side bookkeeping, so it can run at the same time as
+ * registration and posts; that is the mirror race between registration on the script-load thread
+ * and post iteration which the {@link EventBusJS} class comment describes.
  */
 class EventBusJSExternalBehaviorStressTest {
 
-    /** 事件账本：host 对象（脚本回调内调用），按 eventId 记录每个监听器的送达次数。 */
+    /** Delivery ledger: a host object called from script callbacks; counts deliveries per event and listener. */
     public static final class DeliveryLedger {
         private final Map<Integer, Map<Integer, AtomicInteger>> deliveries = new ConcurrentHashMap<>();
 
-        /** JS 侧调用：ledger.record(event.getId(), LISTENER_TAG)。 */
+        /** Called from JS as ledger.record(event.getId(), LISTENER_TAG). */
         public synchronized void record(int eventId, int listenerTag) {
             deliveries.computeIfAbsent(eventId, k -> new ConcurrentHashMap<>())
                     .computeIfAbsent(listenerTag, k -> new AtomicInteger())
                     .incrementAndGet();
         }
 
-        /** 某事件对某监听器的送达次数（未送达为 0）。 */
+        /** Number of times one listener saw one event; 0 when it was never delivered. */
         synchronized int count(int eventId, int listenerTag) {
             Map<Integer, AtomicInteger> perListener = deliveries.get(eventId);
             if (perListener == null) return 0;
@@ -76,7 +80,7 @@ class EventBusJSExternalBehaviorStressTest {
         }
     }
 
-    /** 带唯一 id 的载荷事件（重复 dispatch 检测靠它）。 */
+    /** Payload event with a unique id; duplicate dispatch detection keys on it. */
     public static final class Payload {
         private final int id;
 
@@ -89,7 +93,7 @@ class EventBusJSExternalBehaviorStressTest {
         }
     }
 
-    /** priority 顺序记录器（host 对象，JS 侧 add）。 */
+    /** Records the call order for priority checks; a host object, called from JS through add. */
     public static final class OrderSink {
         final List<String> order = new ArrayList<>();
 
@@ -120,7 +124,7 @@ class EventBusJSExternalBehaviorStressTest {
         context.close();
     }
 
-    // ---- 顺序前置：单线程外部行为契约（priority / cancel / dispatch / remove / 空态） ----
+    // ---- Ordering first: single-threaded behavior (priority, cancel, dispatch, remove, empty state) ----
 
     @Test
     void priorityOrderAndReloadStyleSweepFrozen() {
@@ -137,11 +141,11 @@ class EventBusJSExternalBehaviorStressTest {
 
         bus.post(new Payload(0));
         bus.post(new Payload(1));
-        // HIGHEST → NORMAL → LOWEST（CommonPriority 降序）
+        // HIGHEST -> NORMAL -> LOWEST (descending CommonPriority)
         assertEquals(List.of("high", "normal", "low", "high", "normal", "low"), sink.order,
                 "listeners must run in priority order for every post");
 
-        // reload 式清扫：按 ScriptType 清空 mirror 与底层 bus，回到空态
+        // Reload-style sweep: clear the mirror and the underlying bus for one ScriptType, back to empty
         assertTrue(bus.hasListeners(), "listener registered -> hasListeners");
         bus.clearTokens(ScriptType.SERVER);
         assertFalse(bus.hasListeners(), "reload-style clear must empty the JS-side mirror");
@@ -223,17 +227,19 @@ class EventBusJSExternalBehaviorStressTest {
                 "priority without listener must be rejected");
     }
 
-    // ---- 并发 stress：owner 注册/post 与 reload 线程清理竞争 ----
+    // ---- Concurrency stress: owner registration and posts race the reload cleaners ----
 
     /**
-     * 形状沿用 {@code EventBusConcurrentStressTest}：owner 线程交替「注册新监听器 +
-     * post」（注册进 mirror 的 {@code compute} 与 bus 的 CopyOnWriteArrayList），同时
-     * reload 线程并发执行按 scriptId 的清理（单文件 reload）与整型清扫（全量 reload）——
-     * 三方竞争同一 {@code tokensByType} bin 锁与 bus 监听器列表。
+     * Shaped like {@code EventBusConcurrentStressTest}: the owner thread alternates between
+     * registering a new listener and posting (registration goes into the mirror's {@code compute}
+     * and into the bus's CopyOnWriteArrayList), while reload threads concurrently clear by
+     * scriptId (single-file reload) and sweep whole types (full reload). All three contend on the
+     * same {@code tokensByType} bin lock and on the bus listener list.
      *
-     * <p>每个注册有唯一 tag（预创建的监听器数组），“无重复 dispatch”因此可精确断言：
-     * 任意 (event, 注册) 的送达次数 <= 1。收尾按 scriptId 清理 + 全类型清扫后，
-     * mirror 与底层 bus 必须同时回到空态。
+     * <p>Every registration has a unique tag (the pre-created listener array), so "no duplicate
+     * dispatch" can be asserted exactly: the delivery count of any (event, registration) pair is
+     * at most 1. After clearing by scriptId and sweeping all types, the mirror and the underlying
+     * bus must both be empty.
      */
     @Test
     void concurrentMutationAndPostReachesEmptyStateWithoutDuplicateDispatch() throws Exception {
@@ -248,13 +254,13 @@ class EventBusJSExternalBehaviorStressTest {
         List<Future<?>> futures = new ArrayList<>();
 
         try {
-            // 监听器在 owner 线程预创建：每个注册一个唯一 tag（重复 dispatch 检测的键）
+            // Pre-create the listeners on the owner thread: one unique tag per registration, the duplicate key
             Value listeners = context.eval("js", """
                     Array.from({ length: %d }, (_, i) =>
                         (function (event) { ledger.record(event.getId(), i); }))
                     """.formatted(registrations));
 
-            // cleaner 线程：纯 host 侧清理（不进入 Graal），与 owner 的注册/post 竞争
+            // Cleaner threads: host-side clearing only (never enters Graal), racing the owner's registrations and posts
             for (int t = 0; t < cleanerThreads; t++) {
                 final boolean byScriptId = t % 2 == 0;
                 futures.add(pool.submit(() -> {
@@ -271,8 +277,8 @@ class EventBusJSExternalBehaviorStressTest {
             }
             start.countDown();
 
-            // owner：注册 → post 交替；注册走 execute()（mirror compute），post 在编译
-            // 快照上迭代当前已激活监听器
+            // Owner: alternate registration and posts; registration goes through execute() (mirror compute),
+            // and a post walks the active listeners over a compiled snapshot
             int registered = 0;
             for (int i = 0; i < posts; i++) {
                 if (registered < registrations && i % 5 == 0) {
@@ -284,12 +290,12 @@ class EventBusJSExternalBehaviorStressTest {
             assertEquals(registrations, registered, "all planned registrations were issued");
 
             for (Future<?> f : futures) {
-                f.get(60, TimeUnit.SECONDS); // cleaner 线程抛错在此失败
+                f.get(60, TimeUnit.SECONDS); // A throw from any cleaner thread fails here
             }
             pool.shutdown();
             assertTrue(pool.awaitTermination(15, TimeUnit.SECONDS));
 
-            // 收尾：按 scriptId 清理 + 全类型清扫，最终回到空态
+            // Wrap up: clear by scriptId, sweep all types, and end empty
             bus.clearTokens(ScriptType.SERVER, scriptId);
             for (ScriptType type : ScriptType.all()) {
                 bus.clearTokens(type);
@@ -298,8 +304,8 @@ class EventBusJSExternalBehaviorStressTest {
             assertTrue(((EventBusBase<?, ?>) bus.bus()).isEmpty(),
                     "post-stress sweep must empty the underlying bus");
 
-            // 无重复 dispatch：任意 (event, listener 注册) 组合的送达次数 <= 1
-            // （mirror 双记账 / bus 重复挂载会让同一次 post 送达两次）
+            // No duplicate dispatch: the delivery count of any (event, listener registration) pair is at most 1.
+            // Double bookkeeping in the mirror or a listener mounted twice would deliver one post twice.
             for (int eventId = 0; eventId < posts; eventId++) {
                 for (int tag : ledger.listenerTags()) {
                     int n = ledger.count(eventId, tag);
@@ -308,8 +314,9 @@ class EventBusJSExternalBehaviorStressTest {
                                     + "x to listener registration " + tag);
                 }
             }
-            // 非平凡下界：整轮至少要有一次真实送达（逐对硬下界会因 cleaner 理论上
-            // 赢得每个注册→post 窗口而引入 flaky，运行级守卫足以排除零投递回归）
+            // A non-trivial lower bound: the whole run must deliver at least once. A per-pair bound would be
+            // flaky because a cleaner can in theory win every register-to-post window; a run-level guard
+            // is enough to catch a zero-delivery regression.
             assertFalse(ledger.listenerTags().isEmpty(),
                     "stress run must deliver at least one event (zero-delivery regression)");
         } finally {

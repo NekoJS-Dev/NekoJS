@@ -19,11 +19,12 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
 
 /**
- * {@link ScriptTypedValue#at(ScriptType)} 的懒初始化并发安全。
+ * Concurrency safety of the lazy initialization in {@link ScriptTypedValue#at(ScriptType)}.
  *
- * <p>修复前 at() 的 check-then-act 未同步，多个线程并发首次取用时可能各自调用
- * initializer，产生重复的 Logger / BindingRegistry 等重资源。修复只同步
- * lazy-initialization 分支（double-checked locking），保证 initializer 每个 type 只执行一次。
+ * <p>Before the fix the check-then-act in at() was unsynchronized, so concurrent first calls could each
+ * run the initializer and create duplicate Logger / BindingRegistry instances and other heavy
+ * resources. Only the lazy-initialization branch is synchronized (double-checked locking), which runs
+ * the initializer exactly once per type.
  */
 class ScriptTypedValueConcurrencyTest {
 

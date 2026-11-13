@@ -10,8 +10,9 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * 注解文档（{@code @Doc}/{@code @Param}/{@code @Return}）→ IR docs → TS JSDoc 的回归。
- * 无注解成员 docs 必须为空（渲染零输出，守护未注解路径与旧产物逐字节一致）。
+ * Regression tests for annotation docs ({@code @Doc}/{@code @Param}/{@code @Return}) reaching IR docs, then TS JSDoc.
+ * Members without annotations must have empty docs and render nothing, which keeps the unannotated path
+ * byte-for-byte identical to the output produced without docs.
  */
 class AnnotatedDocsTest {
 

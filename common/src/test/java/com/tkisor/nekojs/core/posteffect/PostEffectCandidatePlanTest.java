@@ -13,18 +13,21 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Ticket 28 声明生命周期机制 fixture（common 层，零 MC）：候选计划 inert、整批成败、
- * 声明移除退役语义、失败不触达 Adapter、fingerprint 与 parity。
+ * Tests the declaration lifecycle at the common layer, with no Minecraft types: a candidate
+ * plan stays inert until commit, a batch succeeds or fails as a whole, removing a declaration
+ * retires it, a failure never reaches the adapter, and fingerprints and parity hold.
  *
- * <p>本 fixture 只断言 common 接缝（计划 + {@link PostEffectApplier}）；平台 Adapter 的
- * 真实效果贯穿面在版本树 {@code PostEffectDeclarationLifecycleTest}。
+ * <p>This test only covers the common layer (the plan plus {@link PostEffectApplier}). The real
+ * effect of a platform adapter is covered by {@code PostEffectDeclarationLifecycleTest} in the
+ * version tree.
  *
- * <p><b>诚实性约束</b>：只写会因行为变化而失败的断言。恒真的自断言（如对字面量集合求
- * 包含、{@code assertSame(x, x)}）不构成证据，本文件不保留这类写法。
+ * <p><b>Honesty rule</b>: assert only what fails when behavior changes. Self-assertions that
+ * always pass, such as checking a literal set for membership or {@code assertSame(x, x)}, are
+ * not evidence, so this file keeps none of them.
  */
 class PostEffectCandidatePlanTest {
 
-    /** 记录调用的合成 Adapter（不引用任何 MC 类型）。 */
+    /** Synthetic adapter that records its calls. It references no Minecraft type. */
     private static final class RecordingApplier implements PostEffectApplier {
         final List<List<PostEffectDeclaration>> applied = new ArrayList<>();
         final List<List<PostEffectDeclaration>> preflighted = new ArrayList<>();
@@ -160,9 +163,11 @@ class PostEffectCandidatePlanTest {
     }
 
     /**
-     * P1 回归（先红后绿）：同一 id 重新声明为不同 chain JSON 时，重复安装必须让「同一批次
-     * 的两次不同声明」保持可区分——计划层不得把后者当成前者（last-write-wins 是按 id 覆盖，
-     * 覆盖后的声明内容必须是新的那份）。这是平台缓存失效决策的输入事实。
+     * A regression test for redeclaration. When the same id is redeclared with a different
+     * chain JSON, two different declarations in the same batch must stay distinguishable: the
+     * plan must not treat the later one as the earlier one. Last-write-wins replaces by id, and
+     * the replacement must carry the new declaration's content. The platform bases its cache
+     * invalidation decision on this.
      */
     @Test
     void redeclaringTheSameIdInOneBatchKeepsTheLatestDeclaration() {

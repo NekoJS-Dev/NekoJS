@@ -21,15 +21,18 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Consumer;
 
 /**
- * 原生 NeoForge 事件桥（任意事件类 + 处理器直挂 EVENT_BUS）。
+ * Bridge for raw NeoForge events: pass any event class and a handler, and the handler is attached
+ * to {@code EVENT_BUS} directly.
  *
- * <p>与声明式的 {@code ScriptEvents}（STARTUP 注册成命名事件组、server/client 脚本按组监听）
- * 互补：{@code NativeEvents} 面向一次性/就地监听，不引入命名事件组。两者均为一等 API
- * （二者共存：{@code NativeEvents} 不会被收敛进 {@code ScriptEvents}）。
+ * <p>Complements the declarative {@code ScriptEvents}, which registers named event groups at
+ * STARTUP and lets server/client scripts listen by group: {@code NativeEvents} is for one-off or
+ * ad-hoc listeners and introduces no named event group. Both are first-class APIs and coexist;
+ * {@code NativeEvents} will not be folded into {@code ScriptEvents}.
  *
- * <p>监听器返回 {@code true} 会翻译为 {@code setCanceled(true)}（与全局取消约定一致；
- * 仅对可取消事件生效）。实现 {@link Binding}：STARTUP reload 时 {@code close()} 注销
- * 上一轮全部原生监听器，避免 reload 后监听器累积。
+ * <p>A listener that returns {@code true} translates to {@code setCanceled(true)}, matching the
+ * global cancel convention, and only takes effect for cancellable events. Implements
+ * {@link Binding}: on a STARTUP reload, {@code close()} unregisters every native listener from
+ * the previous round, so listeners do not pile up across reloads.
  */
 @Doc("Raw NeoForge event bridge: listen to any NeoForge event class directly on the game event bus.")
 @Doc("Complements the declarative ScriptEvents: use it for one-off or ad-hoc listeners without a named event group.")
@@ -39,7 +42,7 @@ public class NativeEventsJS implements Binding {
     // CopyOnWriteArrayList: registration (JS/reload thread) and clear() (reload thread) can race.
     private static final List<Consumer<? extends Event>> REGISTERED_LISTENERS = new CopyOnWriteArrayList<>();
 
-    /** 注销当前全部原生监听器（STARTUP reload 时由 {@link #close} 调用）。 */
+    /** Unregisters every native listener registered so far. {@link #close} calls this on a STARTUP reload. */
     @Doc("Unregisters every native listener registered so far.")
     public static void clear() {
         for (Consumer<? extends Event> listener : REGISTERED_LISTENERS) {
@@ -48,7 +51,7 @@ public class NativeEventsJS implements Binding {
         REGISTERED_LISTENERS.clear();
     }
 
-    /** 以 NORMAL 优先级监听原生事件（处理器返回 {@code true} 取消可取消事件）。 */
+    /** Listens to a raw event at NORMAL priority; a handler that returns {@code true} cancels a cancellable event. */
     @Doc("Listens to a NeoForge event with NORMAL priority.")
     @Param(name = "eventType", value = "event class or fully qualified class name, e.g. 'net.neoforged.neoforge.event.entity.living.LivingDeathEvent'")
     @Param(name = "handler", value = "callback receiving the event; returning true cancels a cancellable event")
@@ -56,7 +59,10 @@ public class NativeEventsJS implements Binding {
         onEvent(EventPriority.NORMAL, false, eventType, handler);
     }
 
-    /** 以指定优先级监听原生事件（{@code receiveCancelled} 控制是否接收已取消事件）。 */
+    /**
+     * Listens to a raw event at the given priority; {@code receiveCancelled} controls whether
+     * already-cancelled events reach the handler.
+     */
     @Doc("Listens to a NeoForge event with an explicit priority and cancelled-event policy.")
     @Param(name = "priorityObj", value = "EventPriority or its name like 'HIGH'; defaults to NORMAL on anything else")
     @Param(name = "receiveCancelled", value = "when true the handler also receives already-cancelled events")
@@ -66,7 +72,7 @@ public class NativeEventsJS implements Binding {
         registerNative(priorityObj, receiveCancelled, eventType, handler);
     }
 
-    /** {@link #onEvent(Object, boolean, Object, Object)} 的显式类型别名。 */
+    /** Explicitly typed alias of {@link #onEvent(Object, boolean, Object, Object)}. */
     @Doc("Alias of onEvent(priority, receiveCancelled, eventType, handler).")
     @Param(name = "priorityObj", value = "EventPriority or its name like 'HIGH'")
     @Param(name = "receiveCancelled", value = "when true the handler also receives already-cancelled events")
@@ -76,17 +82,20 @@ public class NativeEventsJS implements Binding {
         onEvent(priorityObj, receiveCancelled, eventType, handler);
     }
 
-    /** 泛型事件监听（KubeJS 兼容签名，genericClassType 被忽略）。 */
+    /** Listens to a generic event. This is the KubeJS-compatible signature; {@code genericClassType} is ignored. */
     @Doc("Listens to a generic NeoForge event at NORMAL priority; the generic class argument is ignored.")
     @Param(name = "genericClassType", value = "ignored, kept for KubeJS compatibility")
     @Param(name = "eventType", value = "event class or fully qualified class name")
     @Param(name = "handler", value = "callback receiving the event; returning true cancels a cancellable event")
     public void onGenericEvent(Object genericClassType, Object eventType, Object handler) {
-        // 忽略 genericClassType，直接作为普通事件挂载
+        // Ignore genericClassType and attach the event like any ordinary one
         onEvent(EventPriority.NORMAL, false, eventType, handler);
     }
 
-    /** 泛型事件监听（KubeJS 兼容签名，genericClassType 被忽略），带优先级与 receiveCancelled。 */
+    /**
+     * Listens to a generic event with a priority and receiveCancelled. This is the
+     * KubeJS-compatible signature; {@code genericClassType} is ignored.
+     */
     @Doc("Listens to a generic NeoForge event with an explicit priority; the generic class argument is ignored.")
     @Param(name = "genericClassType", value = "ignored, kept for KubeJS compatibility")
     @Param(name = "priorityObj", value = "EventPriority or its name like 'HIGH'")
@@ -97,7 +106,7 @@ public class NativeEventsJS implements Binding {
         registerNative(priorityObj, receiveCancelled, eventType, handler);
     }
 
-    /** {@link #onGenericEvent(Object, Object, boolean, Object, Object)} 的显式类型别名。 */
+    /** Explicitly typed alias of {@link #onGenericEvent(Object, Object, boolean, Object, Object)}. */
     @Doc("Alias of onGenericEvent(genericClassType, priority, receiveCancelled, eventType, handler).")
     @Param(name = "genericClassType", value = "ignored, kept for KubeJS compatibility")
     @Param(name = "priorityObj", value = "EventPriority or its name like 'HIGH'")
@@ -115,18 +124,19 @@ public class NativeEventsJS implements Binding {
 
         EventPriority priority = resolvePriority(priorityObj);
         Value handlerValue = handler == null ? null : Value.asValue(handler);
-        // 记录 handler 的归属（Context/ScriptType）：分发时的异常必须按脚本类型进错误面板
-        // （与 EventBusJS.recordListenerError 同一通道），而不是一行 debug——原生事件
-        // handler 抛错后旧实现完全不可见，「监听器看起来在跑但每次都静默失败」
+        // Records the handler's owner (Context/ScriptType): an exception thrown during dispatch must reach
+        // the error panel under that script type (the same channel as EventBusJS.recordListenerError),
+        // not a single debug line. Otherwise a native event handler that throws is invisible and the
+        // listener looks like it is running while failing silently on every call.
         graal.graalvm.polyglot.Context handlerContext = contextOf(handlerValue);
         ScriptType ownerType = handlerContext == null ? null
                 : com.tkisor.nekojs.script.ScriptManager.getTypeFromContext(handlerContext);
 
         Consumer<Event> consumer = event -> {
-            // ticket 06：candidate generation 隔离的兜底——失败候选的 Context 已关闭，但原生
-            // 事件注册（NeoForge EVENT_BUS）无法随候选 generation 原子撤销（域 Adapter 面，
-            // W7 收口）；分发短路使已丢弃候选的残留注册成为 no-op，与 EventBusJS 的
-            // isContextDead 门一致。
+            // Fallback for candidate generation isolation: a failed candidate's Context is already closed, but
+            // native event registrations on the NeoForge EVENT_BUS cannot be undone together with that
+            // candidate generation. Short-circuiting dispatch turns a leftover registration from a
+            // discarded candidate into a no-op, matching the isContextDead gate in EventBusJS.
             if (com.tkisor.nekojs.script.ScriptManager.isContextDead(handlerContext)) {
                 return;
             }
@@ -176,9 +186,10 @@ public class NativeEventsJS implements Binding {
     private static final Map<String, Class<?>> CLASS_CACHE = new ConcurrentHashMap<>();
 
     /**
-     * 解析失败的类名负缓存（有上界）：CLASS_CACHE 只记成功，同一坏名字被反复解析时
-     * 每次都会重跑 Class.forName 异常链；命中负缓存后直接返回 null（与原失败路径一致，
-     * debug 日志保留）。
+     * Negative cache for class names that failed to resolve, with an upper bound. CLASS_CACHE only
+     * records successes, so resolving the same bad name again reruns the Class.forName exception
+     * chain every time. A hit here returns null directly, the same result as the failure path, and
+     * the debug log is kept.
      */
     private static final Set<String> CLASS_MISS_CACHE = ConcurrentHashMap.newKeySet();
     private static final int CLASS_MISS_CACHE_LIMIT = 256;
@@ -204,7 +215,8 @@ public class NativeEventsJS implements Binding {
             default -> {
             }
         }
-        // 注册期失败（值转不成 Class）：监听器不会注册，必须可见
+        // Registration-time failure (the value cannot become a Class): the listener is never registered,
+        // so this must be visible
         NekoJS.LOGGER.warn("Failed to resolve class type for native event registration: {}", obj);
         return null;
     }
@@ -260,7 +272,7 @@ public class NativeEventsJS implements Binding {
         return EventPriority.NORMAL;
     }
 
-    // ---- Binding 生命周期：STARTUP reload 时注销旧的原生事件监听器 ----
+    // ---- Binding lifecycle: unregister the old native event listeners on a STARTUP reload ----
 
     @Override
     public String name() {

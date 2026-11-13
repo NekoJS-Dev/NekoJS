@@ -21,35 +21,40 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
 
 /**
- * play 阶段网络的 fabric 桥：装配 {@link PlayPacketDispatcher} 发送面，
- * 注册 play payload 类型（S2C 同步包 + 双向脚本自定义通道）与对应 receiver。
- * payload 类与线格式沿用共享树，与 NeoForge 侧一致。
+ * Fabric bridge for play-phase networking: sets up the {@link PlayPacketDispatcher} send side and
+ * registers the play payload types (the S2C sync packet and the bidirectional script channel) with
+ * their receivers. The payload classes and wire format come from the shared tree and match NeoForge.
  *
- * <p>当前 fabric play 面的显式子集：{@code ClientData} 键值同步（{@code ClientData.sync} →
- * {@code clientData.get}）、脚本自定义通道 {@code NekoScriptPayload}（双向，经
- * {@link com.tkisor.nekojs.network.NetworkMessageHandler} 中立投递）；pdata 同步走
- * {@link FabricPDataSync}（实体扩展由 fabric {@code MixinEntity} 挂接、持久化容器由
- * {@code NekoEntityPDataMixin} 提供），配置阶段包分发走 {@link FabricPackSync}。
- * 刻意缺失的网络面（错误面板显示 {@code ShowErrorListPacket}、脚本编辑器/dashboard
- * 同步包）见 {@code docs/fabric-port-status.md}——票 17 明确不伪造这部分 parity。
+ * <p>The explicit Fabric play subset: {@code ClientData} key-value sync ({@code ClientData.sync} to
+ * {@code clientData.get}) and the script channel {@code NekoScriptPayload} (bidirectional, delivered
+ * neutrally through {@link com.tkisor.nekojs.network.NetworkMessageHandler}). Pdata sync goes
+ * through {@link FabricPDataSync} (the Fabric {@code MixinEntity} attaches the entity extension and
+ * {@code NekoEntityPDataMixin} provides the storage container), and configuration-phase pack
+ * distribution goes through {@link FabricPackSync}. The network pieces deliberately left out (the
+ * error panel {@code ShowErrorListPacket} and the script editor/dashboard sync packets) are listed
+ * in {@code docs/fabric-port-status.md}; that parity is intentionally not faked.
  */
 public final class FabricPlayNetwork {
 
-    /** 发全服需要 server 实例，而脚本线程没有上下文——跟随服务器生命周期持有当前实例。 */
+    /** Sending to the whole server needs a server instance, and script threads have no context, so the
+     * current instance is held for the life of the server. */
     private static volatile MinecraftServer currentServer;
 
-    /** 「离开旧世界才清」守卫（首次进服 null→世界 不清，见 {@link ClientLevelWatch}）。 */
+    /** Clears only when the client leaves an old world; the null-to-level change on first join does not
+     * clear. See {@link ClientLevelWatch}. */
     private static final ClientLevelWatch LEVEL_WATCH = new ClientLevelWatch();
 
     private FabricPlayNetwork() {}
 
-    /** 服务器半：发送面装配 + S2C payload 类型注册（common init 调用）。 */
+    /** Server side: send-side setup plus S2C payload type registration (called from common init). */
     public static void registerServer() {
         PayloadTypeRegistry.clientboundPlay().register(
                 ClientDataSyncPacket.TYPE, ClientDataSyncPacket.STREAM_CODEC);
         PlayPacketDispatchers.install(new FabricDispatcher());
-        // 脚本自定义通道（Network.sendToServer/sendToPlayer/sendToAll）：双向类型 + 服务端 receiver。
-        // receiver 在网络线程触发——切服务端主线程后走中立投递（脚本回调访问 MC 对象须主线程）。
+        // Script-defined channel (Network.sendToServer/sendToPlayer/sendToAll): types in both directions
+        // plus the server receiver. The receiver runs on the network thread, so it hops to the server
+        // main thread first and posts the event neutrally (script callbacks that touch MC objects must
+        // run on the main thread).
         PayloadTypeRegistry.serverboundPlay().register(
                 com.tkisor.nekojs.network.NekoScriptPayload.TYPE, com.tkisor.nekojs.network.NekoScriptPayload.CODEC);
         PayloadTypeRegistry.clientboundPlay().register(
@@ -61,19 +66,22 @@ public final class FabricPlayNetwork {
         ServerLifecycleEvents.SERVER_STOPPED.register(server -> currentServer = null);
     }
 
-    /** 客户端半：receiver + 断线/切世界清空 store（client init 调用）。 */
+    /** Client side: receivers, plus clearing the store on disconnect and on world change (called from
+     * client init). */
     public static void registerClient() {
         ClientPlayNetworking.registerGlobalReceiver(ClientDataSyncPacket.TYPE, (payload, context) ->
                 context.client().execute(() -> acceptClientData(payload)));
-        // 脚本自定义通道客户端 receiver：切客户端主线程后走中立投递
+        // Script channel client receiver: hops to the client main thread first, then posts the event
+        // neutrally
         ClientPlayNetworking.registerGlobalReceiver(com.tkisor.nekojs.network.NekoScriptPayload.TYPE,
                 (payload, context) -> context.client().execute(() ->
                         com.tkisor.nekojs.network.NetworkMessageHandler.postClientEvent(payload)));
         ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> ClientDataStore.SHARED.clear());
-        // NeoForge 侧挂在 client level unload（断线与切维度都清），fabric 无对应事件——
-        // 盯客户端世界实例变化等价。只在"离开一个已有世界"时清（lastClientLevel 非空），
-        // 进服那次 null→世界 不清，否则会把刚随进服推下来的数据一起抹掉——
-        // 语义钉在 ClientLevelWatch（节点本地 JVM fixture）
+        // NeoForge hooks client level unload, which clears on both disconnect and dimension change; Fabric
+        // has no matching event, so watching the client level instance is equivalent. It clears only
+        // when leaving an existing world (the previous level is non-null); the null-to-level change on
+        // first join does not clear, or it would wipe the data just pushed down on join. The rule lives
+        // in ClientLevelWatch
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             if (LEVEL_WATCH.leftPreviousLevel(client.level)) {
                 ClientDataStore.SHARED.clear();
@@ -81,13 +89,16 @@ public final class FabricPlayNetwork {
         });
     }
 
-    /** 与 NeoForge 侧 {@code ClientDataMessageHandler} 同：主线程解析 JSON 后写入共享 store。 */
+    /**
+     * Same as {@code ClientDataMessageHandler} on NeoForge: parses the JSON on the main thread,
+     * then writes it into the shared store.
+     */
     private static void acceptClientData(ClientDataSyncPacket payload) {
         try {
             JsonElement json = JsonParser.parseString(payload.json());
             ClientDataStore.SHARED.accept(payload.key(), json);
         } catch (IllegalArgumentException ignored) {
-            // key 非法（空/超长）——构造端已校验，坏包直接丢弃
+            // Invalid key (empty or too long). The sending side validates it, so a bad packet is just dropped.
         } catch (Exception e) {
             NekoJS.LOGGER.warn("Discarding malformed client data packet for key {}: {}", payload.key(), e.toString());
         }
@@ -106,7 +117,7 @@ public final class FabricPlayNetwork {
         public void sendToAllPlayers(CustomPacketPayload payload) {
             MinecraftServer server = currentServer;
             if (server == null) {
-                // 契约是发送失败不打断脚本：服务器未运行时丢弃并告警
+                // A failed send must not break the script: when no server is running, drop the payload and warn.
                 NekoJS.LOGGER.warn("No server is running; dropping broadcast of {}", payload.type().id());
                 return;
             }

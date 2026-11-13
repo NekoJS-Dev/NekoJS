@@ -18,7 +18,7 @@ public final class ExampleAddonSurface {
     private int registrationCalls;
     private String publishedSummary = "<not finished yet>";
 
-    /** Current singleton of this class-loader world (test observation seam). */
+    /** Current singleton of this class-loader world. */
     public static ExampleAddonSurface get() {
         if (instance == null) {
             instance = new ExampleAddonSurface();

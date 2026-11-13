@@ -4,8 +4,9 @@ import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.world.item.CreativeModeTab;
 
 /**
- * {@link CreativeModeTab} 适配器：纯 id 查询，委托 {@link SimpleRegistryBasedAdapter}。
- * 支持 string id（自动补 {@code minecraft:}）/ {@code NekoId} / {@code Identifier} / 自身类型 host。
+ * Adapter for {@link CreativeModeTab}: a pure id lookup delegated to {@link SimpleRegistryBasedAdapter}.
+ * Accepts a string id (with {@code minecraft:} added when missing), {@code NekoId}, {@code Identifier},
+ * or a host of the target type itself.
  */
 public final class CreativeModeTabAdapter extends SimpleRegistryBasedAdapter<CreativeModeTab> {
     public CreativeModeTabAdapter() {

@@ -16,9 +16,10 @@ import java.util.List;
 import static com.tkisor.nekojs.api.AdapterInputShape.*;
 
 /**
- * BlockState 输入适配器：支持 {@code 'minecraft:stone[prop=val,prop2=val2]'} 字符串
- * （KubeJS 风格）→ {@link BlockState}。属性在 {@code [...]} 内逗号分隔，
- * 用方块的属性表解析（未知属性/非法值抛 {@link ValueConversionException}）。
+ * BlockState input adapter: converts a {@code 'minecraft:stone[prop=val,prop2=val2]'} string
+ * (KubeJS style) into a {@link BlockState}. Properties inside {@code [...]} are comma
+ * separated and resolved against the block's property table; an unknown property or an
+ * illegal value throws {@link ValueConversionException}.
  */
 public class BlockStateAdapter extends AbstractJSTypeAdapter<BlockState> {
 
@@ -72,7 +73,7 @@ public class BlockStateAdapter extends AbstractJSTypeAdapter<BlockState> {
     protected BlockState fromHostObject(Object host) {
         if (host instanceof BlockState state) return state;
         if (host instanceof Block block) return block.defaultBlockState();
-        return null; // 不识别
+        return null; // Not recognized
     }
 
     private static BlockState applyProperties(BlockState state, String propsPart, String original) {

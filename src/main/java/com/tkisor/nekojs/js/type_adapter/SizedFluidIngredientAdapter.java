@@ -27,7 +27,7 @@ public final class SizedFluidIngredientAdapter implements JSTypeAdapter<SizedFlu
     public List<AdapterInputShape> inputShapes() {
         return List.of(
                 self(),
-                // 字符串语法逐个单列：裸 string 会吞掉联合里的 id 字面量补全
+                // Each string form is listed separately: a bare string absorbs the id literal completions in the union
                 registry("Fluid"),
                 template("#", registryTag("Fluid")),
                 template("@", namespace()),

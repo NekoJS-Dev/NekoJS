@@ -15,7 +15,10 @@ import net.neoforged.neoforge.event.tick.PlayerTickEvent;
 
 import java.util.function.Function;
 
-/** 玩家事件组（server 脚本）：登录登出、聊天、tick、重生、合成/烧炼与物品栏变化等（合成类按物品定向）。 */
+/**
+ * Player event group (server scripts): login and logout, chat, tick, respawn, crafting and
+ * smelting, and inventory changes (the crafting events are targeted by item).
+ */
 public interface PlayerEvents {
     EventGroup GROUP = EventGroup.of("PlayerEvents");
 
@@ -39,13 +42,13 @@ public interface PlayerEvents {
             GROUP.server("advancement", AdvancementEvent.AdvancementEarnEvent.class);
     EventBusJS<PlayerContainerEvent.Open, Void> CONTAINER_OPENED =
             GROUP.server("containerOpened", PlayerContainerEvent.Open.class);
-    // inventoryOpened：containerOpened 的跨版本兼容别名。脚本侧建议迁移到 containerOpened。
+    // inventoryOpened: a cross-version compatibility alias for containerOpened. Scripts should migrate to containerOpened.
     @Deprecated
     EventBusJS<PlayerContainerEvent.Open, Void> INVENTORY_OPENED =
             GROUP.server("inventoryOpened", PlayerContainerEvent.Open.class);
     EventBusJS<PlayerContainerEvent.Close, Void> CONTAINER_CLOSED =
             GROUP.server("containerClosed", PlayerContainerEvent.Close.class);
-    // inventoryClosed：containerClosed 的跨版本兼容别名。脚本侧建议迁移到 containerClosed。
+    // inventoryClosed: a cross-version compatibility alias for containerClosed. Scripts should migrate to containerClosed.
     @Deprecated
     EventBusJS<PlayerContainerEvent.Close, Void> INVENTORY_CLOSED =
             GROUP.server("inventoryClosed", PlayerContainerEvent.Close.class);
@@ -58,7 +61,7 @@ public interface PlayerEvents {
     EventBusJS<PlayerDestroyItemEvent, Item> DESTROYED =
             GROUP.server("destroyed", PlayerDestroyItemEvent.class, dispatchByItem(PlayerDestroyItemEvent::getOriginal));
 
-    /** 玩家物品栏变化：按物品 id 分发（{@code PlayerEvents.inventoryChanged('minecraft:stone', ...)}）。 */
+    /** Player inventory change: dispatched by item id ({@code PlayerEvents.inventoryChanged('minecraft:stone', ...)}). */
     EventBusJS<InventoryChangedEventJS, Item> INVENTORY_CHANGED =
             GROUP.server("inventoryChanged", InventoryChangedEventJS.class, dispatchByInventoryItem());
 
@@ -74,8 +77,9 @@ public interface PlayerEvents {
             .bind(LOGGED_IN)
             .bind(LOGGED_OUT)
             .bind(CHAT)
-            // PlayerTickEvent 双逻辑侧触发：SERVER 总线只投递服务端实例（客户端玩家 tick
-            // 在 Render 线程，进入 SERVER Context 会被 Graal 拒绝多线程访问）
+            // PlayerTickEvent fires on both logical sides: the SERVER bus delivers only server instances
+            // (client player tick runs on the Render thread, and entering the SERVER Context there is
+            // rejected by Graal as multi-threaded access).
             .bind(TICK_POST, e -> !e.getEntity().level().isClientSide())
             .bind(TICK_PRE, e -> !e.getEntity().level().isClientSide())
             .bind(CLONED)
@@ -86,7 +90,7 @@ public interface PlayerEvents {
             .bind(INVENTORY_OPENED)
             .bind(CONTAINER_CLOSED)
             .bind(INVENTORY_CLOSED)
-            // EntityInteract 双逻辑侧触发：SERVER 总线只投递服务端实例
+            // EntityInteract fires on both logical sides: the SERVER bus delivers only server instances.
             .bind(ENTITY_INTERACT, e -> !e.getLevel().isClientSide())
             .bind(CRAFTED)
             .bind(SMELTED)

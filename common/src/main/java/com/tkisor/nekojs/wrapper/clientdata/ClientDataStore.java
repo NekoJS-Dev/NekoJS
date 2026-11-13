@@ -17,56 +17,65 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * 服务端→客户端键值数据（{@code ClientData.sync} / {@code clientData.get}）的客户端存储。
+ * Client-side store for server-to-client key-value data ({@code ClientData.sync} /
+ * {@code clientData.get}).
  *
- * <p>纯 common、无 Minecraft 依赖：平台网络层收到 {@code ClientDataSyncPacket} 后在主线程
- * 调用 {@link #accept(String, JsonElement)} 写入；脚本侧经 {@code clientData} 绑定只读访问。
- * 值以 gson {@link JsonElement} 保存（网络传输用 JSON 字符串，三个平台共用一种编解码），
- * 读取时经 {@link #jsonToObject} 还原成 Map/List/String/Number/Boolean/null 交给 GraalJS。
+ * <p>Plain common code with no Minecraft dependency. The platform network layer receives a
+ * {@code ClientDataSyncPacket} and calls {@link #accept(String, JsonElement)} on the main thread
+ * to write it; scripts read the data through the {@code clientData} binding, read-only. Values
+ * are kept as gson {@link JsonElement}s, so the network carries a JSON string and all three
+ * platforms share one codec. On read, {@link #jsonToObject} turns them back into
+ * Map/List/String/Number/Boolean/null for GraalJS.
  *
- * <p>v1 语义：同 key 直接覆盖；断线/切世界时由平台客户端钩子调用 {@link #clear()}
- * （NeoForge 侧挂在 level unload，同 {@code PDataSyncService.clearClientMirrors} 的时机）。
+ * <p>v1 semantics: a value with the same key is overwritten. On disconnect and world change the
+ * platform client hook calls {@link #clear()}; on NeoForge it is hooked to level unload, the same
+ * point as {@code PDataSyncService.clearClientMirrors}.
  *
- * <p>JSON 类型（string/number/bool/object/array/null）可完整往返；其它 Java 类型由
- * {@link #toJsonElement(Object)} 拒绝（抛 {@link IllegalArgumentException}）。
+ * <p>JSON types (string/number/bool/object/array/null) round-trip unchanged. Any other Java type
+ * is rejected by {@link #toJsonElement(Object)}, which throws {@link IllegalArgumentException}.
  */
 public final class ClientDataStore {
 
-    /** key 上限：与脚本网络 channel（64）相比放宽到 256，足够标识 HUD/界面数据槽位。 */
+    /** Key length cap: 256, wider than the 64 used for script network channels, and enough to name
+     * HUD and GUI data slots. */
     public static final int MAX_KEY_LENGTH = 256;
 
-    /** 进程级共享实例：客户端收包与各 ScriptType 的 {@code clientData} 绑定都读写它。 */
+    /** Process-wide shared instance. Packet handling on the client and the {@code clientData}
+     * bindings of every ScriptType all read and write it. */
     public static final ClientDataStore SHARED = new ClientDataStore();
 
     private final Map<String, JsonElement> data = new ConcurrentHashMap<>();
 
-    /** 客户端收到同步包：覆盖写入（v1 无版本号，同 key 后到者胜）。 */
+    /** Writes a value received in a sync packet, overwriting the old one. v1 carries no version
+     * number, so the last write for a key wins. */
     public void accept(String key, JsonElement value) {
         data.put(requireKey(key), requireValue(value));
     }
 
-    /** 读取 key 对应值并还原为脚本友好对象；不存在或值为 JSON null 时返回 {@code null}。 */
+    /** Returns the value for the key converted back into a script-friendly object, or {@code null}
+     * when the key is missing or its value is JSON null. */
     public Object get(String key) {
         JsonElement element = data.get(requireKey(key));
         return element == null ? null : jsonToObject(element);
     }
 
-    /** 是否存在该 key（值为 JSON null 时也返回 true，与 {@link #get} 的 null 返回区分）。 */
+    /** Tells whether the key exists. This also returns {@code true} when the value is JSON null,
+     * which distinguishes it from a {@code null} returned by {@link #get}. */
     public boolean has(String key) {
         return data.containsKey(requireKey(key));
     }
 
-    /** 当前全部 key 的快照（无序）。 */
+    /** Returns a snapshot of all current keys, in no particular order. */
     public Set<String> keys() {
         return Set.copyOf(data.keySet());
     }
 
-    /** 当前条目数。 */
+    /** Returns the current number of entries. */
     public int size() {
         return data.size();
     }
 
-    /** 清空全部数据（断线/切世界钩子调用）。 */
+    /** Drops all data. Called by the disconnect and world-change hooks. */
     public void clear() {
         data.clear();
     }
@@ -87,12 +96,13 @@ public final class ClientDataStore {
     }
 
     /**
-     * 把脚本传入的任意值转成 gson {@link JsonElement}。
+     * Converts any value coming from a script into a gson {@link JsonElement}.
      *
-     * <p>GraalJS 对 {@code Object} 参数的默认映射：JS object→{@code Map}、array→{@code List}、
-     * 原始值→装箱类型；直接传入的 Graal {@link Value} 走 {@link JsonObjectAdapter#convertValueToJson}。
-     * 已是 {@link JsonElement} 的原样通过；其余类型（函数、宿主对象等非 JSON 值）抛
-     * {@link IllegalArgumentException}。
+     * <p>By default GraalJS maps an {@code Object} parameter like this: a JS object becomes a
+     * {@code Map}, an array becomes a {@code List}, and a primitive becomes its boxed type. A Graal
+     * {@link Value} passed directly goes through {@link JsonObjectAdapter#convertValueToJson}. A
+     * value that is already a {@link JsonElement} passes through unchanged. Anything else, such as a
+     * function or a host object, throws {@link IllegalArgumentException}.
      */
     public static JsonElement toJsonElement(Object value) {
         if (value == null) return JsonNull.INSTANCE;
@@ -101,7 +111,8 @@ public final class ClientDataStore {
         if (value instanceof String string) return new JsonPrimitive(string);
         if (value instanceof Character character) return new JsonPrimitive(character);
         if (value instanceof Number number) {
-            // 保持整数的 int/long 精度，其余按 double（与 JsonObjectAdapter.convertValueToJson 一致）
+            // Keep int/long precision for integer types and use double for the rest, matching
+            // JsonObjectAdapter.convertValueToJson.
             if (value instanceof Integer || value instanceof Long || value instanceof Short || value instanceof Byte) {
                 return new JsonPrimitive(number.longValue());
             }
@@ -138,9 +149,10 @@ public final class ClientDataStore {
     }
 
     /**
-     * 把 gson {@link JsonElement} 还原为脚本友好对象：
-     * object→{@code LinkedHashMap}、array→{@code ArrayList}、原始值→装箱类型、null→{@code null}。
-     * 整数统一为 {@link Long}、小数为 {@link Double}（JSON 无 int/double 之分，往返保持数值等值）。
+     * Converts a gson {@link JsonElement} back into a script-friendly object: an object becomes a
+     * {@code LinkedHashMap}, an array an {@code ArrayList}, a primitive its boxed type, null stays
+     * {@code null}. Integers become {@link Long} and fractions {@link Double}, because JSON does not
+     * distinguish int from double; values keep their numeric value on the round trip.
      */
     public static Object jsonToObject(JsonElement element) {
         if (element == null || element.isJsonNull()) return null;
@@ -149,9 +161,10 @@ public final class ClientDataStore {
             if (primitive.isBoolean()) return primitive.getAsBoolean();
             if (primitive.isString()) return primitive.getAsString();
             if (primitive.isNumber()) {
-                // gson 反序列化出的 LazilyParsedNumber 不区分 int/double，按文本形态判定：
-                // 无 '.'/'e'/'E' 视作整数统一为 Long，否则 Double。与序列化侧
-                // （整数存 long、其余存 double）互为逆操作，数值往返无损。
+                // gson hands back LazilyParsedNumber, which does not distinguish int from double, so decide on
+                // the text form: without '.'/'e'/'E' treat it as an integer and use Long, otherwise use Double.
+                // This is the inverse of serialization (integers stored as long, the rest as double), so
+                // numbers round-trip without loss.
                 String raw = primitive.getAsString();
                 if (raw.indexOf('.') < 0 && raw.indexOf('e') < 0 && raw.indexOf('E') < 0) {
                     return primitive.getAsLong();

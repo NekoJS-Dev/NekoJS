@@ -5,13 +5,12 @@ import com.tkisor.nekojs.api.ScriptType;
 import java.util.Objects;
 
 /**
- * Locatable source-path/action record for one diagnostic (ticket 30 non-GUI seam).
+ * Locatable source path and open action for one diagnostic.
  *
- * <p>This is the parseable hand-off consumed by ticket 27 to implement the external IDE open
- * and the read-only report GUI. It carries only attribution and location data — generation,
- * owner, ScriptType, source path, line/column — plus the action verb. It performs no GUI
- * behavior and no process dispatch; local-file validation remains the job of
- * {@link LocalErrorSource} on the consumer side.
+ * <p>This is the parseable hand-off an external IDE open and the read-only report GUI consume. It
+ * carries only attribution and location data — generation, owner, ScriptType, source path,
+ * line/column — plus the action verb. It performs no GUI behavior and no process dispatch;
+ * local-file validation remains the job of {@link LocalErrorSource} on the consumer side.
  *
  * <p>The {@link #payload()} form is a single stable line of {@code key=value} pairs; values
  * containing whitespace are double-quoted. {@link #parse(String)} is the inverse and rejects

@@ -16,18 +16,20 @@ import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
- * 负责管理所有 NekoJS 基础插件。
+ * Manages all NekoJS base plugins.
  *
- * <p>平台 PluginLoader 仅负责「发现」被 {@link RegisterNekoJSPlugin} 标记的类，
- * 通过 {@link #registerClass(Class)} 交给本类完成「按 clientOnly/requiredMods 过滤 + 实例化 + priority 排序」。
- * {@link #getPlugins()} 返回按 priority 降序（数值大先）排列的视图，priority 相同时按实现类 FQN
- * 字典序（登记顺序来自平台注解扫描，不确定，不能作为排序依据）。
+ * <p>The platform PluginLoader only discovers classes marked with {@link RegisterNekoJSPlugin}
+ * and hands them to {@link #registerClass(Class)}, which filters them by
+ * clientOnly/requiredMods, instantiates them and orders them by priority. {@link #getPlugins()}
+ * returns a view sorted by priority from highest to lowest; equal priorities fall back to the
+ * implementation class FQN in lexicographic order, because registration order comes from the
+ * platform annotation scan and is not deterministic.
  */
 public final class NekoJSBasePluginManager {
     private record PluginEntry(PluginIdentity identity, NekoJSPlugin plugin, int priority) {}
 
-    // All three fields are non-final ONLY as a private test seam (tests reset/inject ENTRIES
-    // and clear both derived views together); do not reassign them in production code.
+    // All three fields are non-final only so tests can reset or inject ENTRIES and clear
+    // both derived views together; do not reassign them in production code.
     private static List<PluginEntry> ENTRIES = new CopyOnWriteArrayList<>();
     private static volatile List<NekoJSPlugin> sortedView = null;
     private static volatile List<OwnedPlugin> ownedView = null;
@@ -35,10 +37,12 @@ public final class NekoJSBasePluginManager {
     private NekoJSBasePluginManager() {}
 
     /**
-     * 读取类上的 {@link RegisterNekoJSPlugin} 注解，按 {@code clientOnly}/{@code requiredMods}
-     * 过滤后实例化并登记。priority 来自注解（缺省 1000）。
+     * Reads the {@link RegisterNekoJSPlugin} annotation on the class, filters it by
+     * {@code clientOnly}/{@code requiredMods}, then instantiates and registers the plugin.
+     * priority comes from the annotation (default 1000).
      *
-     * <p>使用 legacy owner 格式 {@code "legacy:<class FQN>"}，codeSource 来自 protection domain。
+     * <p>Uses the legacy owner format {@code "legacy:<class FQN>"}; codeSource comes from the
+     * protection domain.
      */
     public static synchronized void registerClass(Class<?> clazz) {
         PluginIdentity identity = createLegacyIdentity(clazz);
@@ -46,7 +50,7 @@ public final class NekoJSBasePluginManager {
     }
 
     /**
-     * 使用已验证的 owner identity 注册插件类。
+     * Registers a plugin class under an owner identity that has already been validated.
      */
     public static synchronized void registerClass(PluginIdentity identity, Class<?> clazz) {
         if (!NekoJSPlugin.class.isAssignableFrom(clazz)) {
@@ -59,10 +63,11 @@ public final class NekoJSBasePluginManager {
             return;
         }
 
-        // 同 (identity, class) 的重复发现只登记一次：dev classpath 可能重复列出同一 jar
-        // （common/common-api 可能各出现两次，getResources 会上报两遍），
-        // NeoForge 的 ModList scan data 同样可能对同一类给出多条 AnnotationData。
-        // 不同 identity（不同 owner）注册同一类仍是允许的语义。
+        // The same (identity, class) pair is registered only once: the dev classpath can list
+        // the same jar twice (common/common-api may each appear twice and getResources reports
+        // them twice), and NeoForge's ModList scan data can likewise return several
+        // AnnotationData for one class. Registering the same class under a different identity
+        // (a different owner) stays allowed.
         for (PluginEntry entry : ENTRIES) {
             if (entry.plugin().getClass() == clazz && entry.identity().equals(identity)) {
                 NekoJS.LOGGER.debug("Skip duplicate plugin registration: {} (owner {})", clazz.getName(), identity.ownerId());
@@ -118,19 +123,22 @@ public final class NekoJSBasePluginManager {
     }
 
     /**
-     * 插件顺序：priority 降序（数值大先），同 priority 按实现类 FQN 再按 owner id 字典序。
+     * Plugin order: priority from highest to lowest, then the implementation class FQN, then the
+     * owner id, both lexicographic.
      *
-     * <p>不能只按 priority 排：内置插件里 8 个有 7 个用缺省 1000，而登记顺序来自平台的注解
-     * 扫描结果（NeoForge 的 {@code getAllScanData()} 是 Set，遍历顺序不保证），而 binding
-     * 注册是 first-wins——同 priority 下靠登记顺序等于让「谁的绑定生效」随 JVM 运行而变。
-     * FQN 兜底让顺序在同一份 classpath 上完全确定。
+     * <p>Priority alone is not enough: 7 of the 8 built-in plugins use the default 1000, and
+     * registration order comes from the platform annotation scan (NeoForge's
+     * {@code getAllScanData()} is a Set, so iteration order is not guaranteed) while binding
+     * registration is first-wins. Relying on registration order within one priority would let
+     * "whose binding wins" change between JVM runs. The FQN tie-break makes the order fully
+     * deterministic on the same classpath.
      */
     private static final Comparator<PluginEntry> ORDER = Comparator
             .comparingInt(PluginEntry::priority).reversed()
             .thenComparing(entry -> entry.plugin().getClass().getName())
             .thenComparing(entry -> entry.identity().ownerId());
 
-    /** 按 priority 降序（数值大先）、同 priority 按类 FQN 字典序返回所有已登记插件。 */
+    /** Returns every registered plugin, sorted by priority from highest to lowest, then by class FQN. */
     public static synchronized List<NekoJSPlugin> getPlugins() {
         List<NekoJSPlugin> view = sortedView;
         if (view != null) return view;
@@ -142,7 +150,7 @@ public final class NekoJSBasePluginManager {
         return view;
     }
 
-    /** 返回所有已登记插件及其 owner identity，顺序同 {@link #getPlugins()}。 */
+    /** Returns every registered plugin with its owner identity, in the same order as {@link #getPlugins()}. */
     public static synchronized List<OwnedPlugin> getOwnedPlugins() {
         List<OwnedPlugin> view = ownedView;
         if (view != null) return view;

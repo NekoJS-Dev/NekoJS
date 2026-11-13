@@ -6,18 +6,20 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 
 /**
- * 玩家打开/关闭容器事件（{@code PlayerEvents.containerOpened / containerClosed}，
- * 别名 inventoryOpened/inventoryClosed）的加载器中立载荷。
+ * Loader-neutral payload for the player container open/close events
+ * ({@code PlayerEvents.containerOpened / containerClosed}, aliases inventoryOpened /
+ * inventoryClosed).
  *
- * <p>成员对齐 NeoForge 26.x {@code PlayerContainerEvent} 的 getter 形态：
- * {@code event.player}（PlayerEvent.getEntity 层面，载荷统一为 player）、
- * {@code event.container}（getContainer()，打开/关闭的那个菜单）；{@code menu} 是
- * container 的脚本侧别名。
+ * <p>The members follow the getters of NeoForge 26.x {@code PlayerContainerEvent}:
+ * {@code event.player} (the PlayerEvent.getEntity level; the payload always uses player) and
+ * {@code event.container} (getContainer(), the menu being opened or closed); {@code menu} is
+ * the script-side alias of container.
  *
- * <p>crafted/smelted/destroyed 等「物品损坏造成容器关闭」的场景不会触发本事件——
- * 它只对应玩家主动打开（{@code ServerPlayer#openMenu / openHorseInventory /
- * openNautilusInventory}）与主动关闭（{@code ServerPlayer#doCloseContainer}，
- * 含客户端发来的关闭包）。
+ * <p>Cases where item damage closes the container (crafted/smelted/destroyed and similar) do
+ * not fire this event. It only covers a player opening a menu
+ * ({@code ServerPlayer#openMenu / openHorseInventory /
+ * openNautilusInventory}) or closing one ({@code ServerPlayer#doCloseContainer}, including the
+ * close packet sent by the client).
  */
 @Doc("Fired when a player opens or closes a container menu (PlayerEvents.containerOpened / containerClosed).")
 @Doc("containerOpened also exists under the deprecated alias inventoryOpened; containerClosed under inventoryClosed.")

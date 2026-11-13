@@ -12,9 +12,10 @@ import java.util.Objects;
 import java.util.Set;
 
 /**
- * NekoJS 文件路径单例：通过 {@link #get()} 获取全局实例。
+ * Singleton for NekoJS file paths: get the global instance through {@link #get()}.
  *
- * <p>不可变——创建后所有路径不变。实例方法获取路径，静态方法执行校验。
+ * <p>Immutable: every path is fixed once the instance is created. Instance methods return paths;
+ * static methods run the checks.
  */
 public final class NekoJSPaths {
 
@@ -37,7 +38,7 @@ public final class NekoJSPaths {
         return new NekoJSPaths(Objects.requireNonNull(gameDir, "gameDir"));
     }
 
-    /* ================= 实例状态 ================= */
+    /* ================= Instance state ================= */
     private final Path gameDir;
     private final Path root;
     private final Path startupScripts;
@@ -58,9 +59,11 @@ public final class NekoJSPaths {
     private final Set<Path> scriptRoots;
 
     private NekoJSPaths(Path gameDir) {
-        // Windows 上 gameDir 可能带 8.3 短名（如 C:\Users\RUNNER~1\...）或大小写与磁盘实际形式
-        // 不一致：与 toRealPath() 的结果混用会让 startsWith 判定全部失配。构造时统一成 real
-        // 形式，所有派生路径（root/scripts/config...）随之同源；取 real 失败时退回逻辑形式。
+        // On Windows, gameDir can carry an 8.3 short name (such as C:\Users\RUNNER~1\...) or a
+        // letter case that differs from the form on disk. Mixing those with toRealPath() results
+        // makes every startsWith check fail. Normalize to the real form in the constructor so all
+        // derived paths (root/scripts/config...) share the same base; if the real form cannot be
+        // taken, fall back to the logical form.
         this.gameDir = toRealForm(gameDir.toAbsolutePath().normalize());
         this.root = this.gameDir.resolve("nekojs");
         this.startupScripts = root.resolve("startup_scripts");
@@ -71,9 +74,11 @@ public final class NekoJSPaths {
         this.nodeModules = root.resolve("node_modules");
         this.config = root.resolve("config");
         this.readme = root.resolve("README.txt");
-        // 引擎配置与 probe.toml 同目录：<gamedir>/nekojs/config/engine.toml——所有 NekoJS
-        // 配置集中在 nekojs/config/ 下，与脚本目录并列，方便打包分发与查找。
-        // 旧位置 <gamedir>/config/nekojs-engine.toml（安全加固期间短暂使用）仅作只读回退（见 legacyEngineConfig）。
+        // The engine config sits next to probe.toml at <gamedir>/nekojs/config/engine.toml: all
+        // NekoJS configuration lives under nekojs/config/, beside the script directories, which
+        // makes packaging and lookup easier. The old location
+        // <gamedir>/config/nekojs-engine.toml is a read-only fallback only (see
+        // legacyEngineConfig).
         this.engineConfig = config.resolve("engine.toml");
         this.legacyEngineConfig = this.gameDir.resolve("config").resolve("nekojs-engine.toml");
         this.probeConfig = config.resolve("probe.toml");
@@ -84,7 +89,7 @@ public final class NekoJSPaths {
         this.scriptRoots = Set.of(startupScripts, serverScripts, clientScripts, testScripts);
     }
 
-    /* ================= 实例 getter ================= */
+    /* ================= Instance getters ================= */
     public Path gameDir() { return gameDir; }
     public Path root() { return root; }
     public Path startupScripts() { return startupScripts; }
@@ -96,17 +101,20 @@ public final class NekoJSPaths {
     public Path config() { return config; }
     public Path readme() { return readme; }
     public Path engineConfig() { return engineConfig; }
-    /** 旧版引擎配置位置 {@code <gamedir>/config/nekojs-engine.toml}（仅作只读迁移回退）。 */
+    /** Old engine config location {@code <gamedir>/config/nekojs-engine.toml} (read-only migration fallback only). */
     public Path legacyEngineConfig() { return legacyEngineConfig; }
     public Path probeConfig() { return probeConfig; }
     public Path assets() { return assets; }
     public Path data() { return data; }
-    /** 脚本包根目录 {@code <gamedir>/nekojs/packs/}（WORLD 包在存档侧，不在此）。 */
+    /** Script pack root {@code <gamedir>/nekojs/packs/} (WORLD packs live with the save, not here). */
     public Path packsRoot() { return packsRoot; }
-    /** 服务器下发脚本包的客户端缓存根 {@code <gamedir>/nekojs/server_packs/}（按服务器地址哈希分桶）。 */
+    /**
+     * Client cache of script packs sent by a server: {@code <gamedir>/nekojs/server_packs/},
+     * bucketed by a hash of the server address.
+     */
     public Path serverPacks() { return serverPacks; }
 
-    /* ================= 实例路径初始化 ================= */
+    /* ================= Instance path setup ================= */
     public void initFolders() {
         ensureDir(root);
         ensureDir(startupScripts);
@@ -120,20 +128,23 @@ public final class NekoJSPaths {
         ensureDir(data);
     }
 
-    /* ================= 路径校验（实例方法） ================= */
+    /* ================= Path checks (instance methods) ================= */
 
     /**
-     * 路径的公共规范形式（见 {@code canonicalSplicedForm}）：自身存在则 toRealPath，
-     * 否则最近存在祖先 real 形式拼接缺失后缀。跨调用方统一比较/relativize 用。
+     * Common canonical form of a path (see {@code canonicalSplicedForm}): toRealPath() when the
+     * path exists, otherwise the real form of the nearest existing ancestor with the missing
+     * suffix appended. Callers use it to compare and relativize paths the same way.
      */
     public static Path canonicalForm(Path path) {
         return canonicalSplicedForm(path);
     }
 
     /**
-     * 判断路径是否位于给定根内，两侧都取规范比较形式（存在→toRealPath，缺失→最近存在
-     * 祖先 real + 缺失后缀拼接）。调用方持有未规范化的根（如含 8.3 短名/大小写别名的
-     * 临时目录）时，与 {@link #verifyInsideGameDir} 等返回的规范形式直接 startsWith 会失配。
+     * Checks whether a path lies inside the root given by the caller; both sides use the canonical
+     * comparison form (existing -> toRealPath, missing -> real form of the nearest existing
+     * ancestor plus the missing suffix). When the caller holds a root that is not canonical (a
+     * temp directory with an 8.3 short name or a letter-case alias), a plain startsWith against
+     * the canonical form returned by {@link #verifyInsideGameDir} and the other checks would miss.
      */
     public static boolean isInside(Path path, Path root) {
         return canonicalForm(path).startsWith(canonicalForm(root));
@@ -183,9 +194,12 @@ public final class NekoJSPaths {
         return ScriptFilePolicy.legacyRuntime().isSupportedScriptFile(path);
     }
 
-    /* ================= 内部工具 ================= */
+    /* ================= Internal helpers ================= */
 
-    /** 存在则返回 toRealPath 形式（解析 8.3 短名/大小写/symlink），否则原样返回。 */
+    /**
+     * Returns the toRealPath form when the path exists (resolving 8.3 short names, letter case
+     * and symlinks); otherwise returns the path unchanged.
+     */
     private static Path toRealForm(Path path) {
         try {
             return Files.exists(path) ? path.toRealPath() : path;
@@ -215,9 +229,11 @@ public final class NekoJSPaths {
     }
 
     /**
-     * 路径的规范比较形式：自身存在则 {@code toRealPath()}；否则取最近存在祖先的 real 形式
-     * 拼接缺失后缀。缺失根目录（如尚未 initFolders 的 {@code nekojs/}）与缺失目标路径都
-     * 用同一规则生成形式，比较才不因 8.3 短名/大小写拼写差异失配。
+     * Canonical comparison form of a path: {@code toRealPath()} when the path exists; otherwise
+     * the real form of the nearest existing ancestor with the missing suffix appended. Missing
+     * directories (such as {@code nekojs/} before initFolders) and missing target paths are built
+     * by the same rule, so comparisons do not fail on 8.3 short name or letter-case spelling
+     * differences.
      */
     private static Path canonicalSplicedForm(Path path) {
         Path abs = path.normalize().toAbsolutePath();
@@ -236,15 +252,19 @@ public final class NekoJSPaths {
     }
 
     /**
-     * 根包含性校验（ForCreate 与普通校验共用同一物理包含不变量）：
+     * Checks that a path stays inside a root. The ForCreate and plain variants share the same
+     * physical containment rule:
      * <ul>
-     *   <li>目标已存在：以 {@code toRealPath()} 的 real 形式判定并返回——同时抓住 symlink
-     *       逃逸与 8.3 短名/大小写失配（Windows 的 {@code C:\Users\RUNNER~1\...} 与
-     *       toRealPath 解析出的长名混用曾是全部误判来源）；</li>
-     *   <li>目标缺失：以拼接形式判定——最近存在祖先的 real 形式（解析全部 symlink/短名）
-     *       拼上缺失后缀。已存在前缀里的 symlink 父目录逃逸在此被抓住；别名拼写的新路径
-     *       也因两侧同规则拼接而不被误拒。返回该规范形式，同一逻辑路径不因调用方拼写不同
-     *       而产生不同结果。</li>
+     *   <li>Target exists: decide and return using the real form from {@code toRealPath()}. This
+     *       catches symlink escapes and 8.3 short name or letter-case mismatches alike (on
+     *       Windows, mixing {@code C:\Users\RUNNER~1\...} with the long name that toRealPath
+     *       resolves to is the usual source of false judgements);</li>
+     *   <li>Target missing: decide using the spliced form, the real form of the nearest existing
+     *       ancestor (resolving all symlinks and short names) plus the missing suffix. A symlink
+     *       parent in the existing prefix that escapes is caught here, and a new path spelled
+     *       through an alias is not rejected by mistake because both sides are spliced the same
+     *       way. Returns that canonical form, so one logical path gives the same result no matter
+     *       how the caller spells it.</li>
      * </ul>
      */
     private Path verifyInsideRoot(Path path, Path rt) throws IOException {
@@ -261,7 +281,8 @@ public final class NekoJSPaths {
         Path spliced = canonicalSplicedForm(normalized);
         if (!spliced.startsWith(rootForm)) {
             if (normalized.startsWith(rootAbs) || normalized.startsWith(rootForm)) {
-                // 逻辑上在根内，但已存在前缀解析后指向根外——symlink 祖先逃逸
+                // Logically inside the root, but the existing prefix resolves outside it: a symlink
+                // ancestor escape
                 throw new IOException("Symlink escape detected: " + spliced);
             }
             throw new IOException("Access outside allowed root is forbidden: " + normalized);

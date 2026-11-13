@@ -6,12 +6,11 @@ import com.tkisor.nekojs.api.villager.VillagerTradeQuery;
 import java.util.List;
 
 /**
- * Read-only, generation-bound query result of the {@code VillagerTrades.query()} binding
- * (ticket 22 AC3/AC7).
+ * Read-only, generation-bound query result of the {@code VillagerTrades.query()} binding.
  *
- * <p>It is a snapshot of what the last commit published plus the domain bookkeeping records —
- * never a live registry view, never a mutable manager, never a writable object. A token read
- * from a generation that is no longer the active one reports {@link Status#STALE} and gives
+ * <p>It is a snapshot of what the last commit published plus the domain bookkeeping records. It
+ * is never a live registry view, never a mutable manager and never a writable object. A token
+ * read from a generation that is no longer the active one reports {@link Status#STALE} and gives
  * deterministic empty/zero answers for every member instead of stale data.
  */
 @ScriptTypeView(VillagerTradeQuery.class)
@@ -102,14 +101,13 @@ public final class VillagerTradeQuerySurface implements VillagerTradeQuery {
 
     /**
      * Listings that are still active in the registry but that the latest generation no longer
-     * declares: they are recorded here instead of being physically deleted by an ordinary
-     * reload (ticket 22 AC7).
+     * declares. They are recorded here instead of being physically deleted by an ordinary reload.
      */
     public List<String> getUnrestoredListingKeys() {
         return unrestoredKeys;
     }
 
-    /** Listings retired because their script declared the trade set obsolete (ticket 22 AC7). */
+    /** Listings retired because their script declared the trade set obsolete. */
     public List<String> getRetiredListingKeys() {
         return retiredKeys;
     }

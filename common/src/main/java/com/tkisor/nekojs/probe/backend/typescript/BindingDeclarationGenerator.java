@@ -7,9 +7,9 @@ import java.lang.reflect.*;
 import java.util.*;
 
 /**
- * 绑定声明生成器：从 BindingCatalogEntry 生成 TypeScript 全局绑定声明。
+ * Generates TypeScript global binding declarations from BindingCatalogEntry.
  *
- * <p>格式参考 ProbeJS：
+ * <p>Output format follows ProbeJS:
  * <pre>
  * import { $Platform } from "java:dev/latvian/mods/kubejs/platform";
  * import { $ConsoleJS } from "java:dev/latvian/mods/kubejs/util";
@@ -24,16 +24,16 @@ import java.util.*;
  */
 public final class BindingDeclarationGenerator {
     /**
-     * 为指定 ScriptType 生成绑定声明。
+     * Generates the binding declarations for the given ScriptType.
      */
     public String generate(List<BindingCatalogEntry> bindings, ScriptType scriptType) {
         StringBuilder sb = new StringBuilder();
         sb.append("// Bindings for ").append(scriptType.name).append(" scripts\n");
 
-        // 收集需要 import 的类
+        // Collect the classes that need an import
         Set<String> imports = referencedClasses(bindings);
 
-        // 生成 import
+        // Emit the imports
         Map<String, List<String>> importsByPackage = new TreeMap<>();
         for (String fqn : imports) {
             String pkg = fqn.substring(0, fqn.lastIndexOf('.'));
@@ -42,7 +42,8 @@ public final class BindingDeclarationGenerator {
         }
         for (var entry : importsByPackage.entrySet()) {
             String importPath = "java:" + entry.getKey().replace('.', '/');
-            // 包内符号名字典序排序：反射顺序无规范保证，跨 JVM 运行需确定性输出
+            // Sort the symbol names in a package: reflection order is unspecified and output must be the
+            // same across JVM runs
             List<String> names = new ArrayList<>(new java.util.LinkedHashSet<>(entry.getValue()));
             java.util.Collections.sort(names);
             sb.append("import { ").append(String.join(", ", names));
@@ -107,7 +108,7 @@ public final class BindingDeclarationGenerator {
     }
 
     /**
-     * 获取类的 TypeScript 标识符名（内部类使用 Parent$Child 格式）。
+     * Gets the TypeScript identifier for a class (a nested class uses the Parent$Child form).
      */
     private static String getTsClassName(Class<?> cls) {
         if (cls.getEnclosingClass() != null && !cls.isAnonymousClass()) {
@@ -138,8 +139,9 @@ public final class BindingDeclarationGenerator {
             sb.append("any");
         }
 
-        // DelegatingBinding 代理委托：把 targetClass 的静态成员（typeof $Extra）交叉合并进来。
-        // 例如 Item: NekoItemHelper & typeof $Item —— of/empty 来自 ItemJS 实例，其余静态成员来自 MC Item。
+        // DelegatingBinding proxy delegation: cross-merge the static members of targetClass (typeof $Extra).
+        // For example Item: NekoItemHelper & typeof $Item, where of/empty come from the ItemJS instance and the
+        // other static members from the MC Item.
         for (Class<?> extra : binding.extraDocTypes()) {
             sb.append(" & typeof $").append(getTsClassName(extra));
         }
@@ -161,7 +163,8 @@ public final class BindingDeclarationGenerator {
     private void collectImports(Class<?> cls, Set<String> imports) {
         if (cls == null || cls.isPrimitive() || cls == Object.class) return;
         if (cls == String.class || cls == Boolean.class || Number.class.isAssignableFrom(cls)) return;
-        // 数组类：递归收集组件类型，避免 "[Lnet/.../Foo;" 描述符泄漏到 import
+        // Array class: collect the component type recursively, so a descriptor like "[Lnet/.../Foo;" never
+        // leaks into an import
         if (cls.isArray()) {
             collectImports(cls.getComponentType(), imports);
             return;

@@ -25,10 +25,12 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * {@link NekoJSBasePluginManager} 的注册 / 排序视图发布原子性。
+ * Registration and atomic publication of the sorted view in
+ * {@link NekoJSBasePluginManager}.
  *
- * <p>修复契约：{@code registerClass} 两个重载与 {@code getPlugins}/{@code getOwnedPlugins}
- * 都同步在类锁上，杜绝「注册已发生但排序视图仍是旧快照」的竞态（保留 CopyOnWriteArrayList）。
+ * <p>Both {@code registerClass} overloads and {@code getPlugins}/{@code getOwnedPlugins}
+ * synchronize on the class lock, so a registration can never be visible while the sorted
+ * view still holds the previous snapshot ({@code CopyOnWriteArrayList} is kept).
  */
 class NekoJSBasePluginManagerTest {
 
@@ -77,13 +79,15 @@ class NekoJSBasePluginManagerTest {
     }
 
     /**
-     * 确定性竞态测试：reader 线程已进入 getPlugins 的快照计算（持有旧快照、尚未写回
-     * sortedView）时，另一个线程完成 registerClass。修复前 registerClass 不受类锁约束，
-     * reader 之后会把旧快照写回 sortedView，导致新注册插件在最终视图中永久缺失。
+     * Deterministic race test: a reader thread has entered the snapshot computation in
+     * getPlugins (it holds the old snapshot and has not written sortedView yet) while
+     * another thread finishes registerClass. If registerClass is not held by the class
+     * lock, it finishes at once and the reader then writes the old snapshot back to
+     * sortedView, so the new plugin is missing from the final view for good.
      */
     @Test
     void getPluginsDoesNotPublishStaleViewWhenRegisterInterleaves() throws Exception {
-        // 先登记一个初始插件，为 reader 提供可排序的旧快照。
+        // Register one plugin first, so the reader has an old snapshot it can sort.
         NekoJSBasePluginManager.registerClass(PluginP0.class);
 
         BlockingEntries blockingEntries = new BlockingEntries();
@@ -103,11 +107,11 @@ class NekoJSBasePluginManagerTest {
                 return null;
             });
 
-            // 修复前：registerClass 无锁，会立即完成；修复后：它阻塞在类锁上，直到 reader 放行。
+            // registerClass blocks on the class lock until the reader releases it.
             try {
                 registrar.get(500, TimeUnit.MILLISECONDS);
             } catch (TimeoutException expected) {
-                // 修复后的预期：registrar 等待 reader 释放类锁。
+                // Expected: the registrar waits until the reader releases the class lock.
             }
 
             blockingEntries.release.countDown();
@@ -130,9 +134,11 @@ class NekoJSBasePluginManagerTest {
         int registrarThreads = 4;
         int getterThreads = 4;
         int rounds = 20;
-        // 重复发现按 (identity, class) 去重：并发的重复 registerClass 调用下，
-        // 最终视图 = 10 个唯一类各恰好一次（回归：dev classpath 重复列出
-        // common/common-api jar，同插件类被扫描两次导致 ScriptProperty 重复注册崩溃）
+        // Duplicate discoveries are deduplicated by (identity, class): with concurrent
+        //        duplicate registerClass calls, the final view holds each of the 10 unique classes
+        //        exactly once (a duplicate classpath entry once listed the common/common-api jar
+        //        twice, so the same plugin class was scanned twice and ScriptProperty
+        //        registered twice, which crashed).
         int expectedSize = PLUGIN_CLASSES.size();
 
         ExecutorService pool = Executors.newFixedThreadPool(registrarThreads + getterThreads);
@@ -189,9 +195,11 @@ class NekoJSBasePluginManagerTest {
     }
 
     /**
-     * 同 priority 的顺序必须由类 FQN 决定，而不是登记顺序：登记顺序来自平台的注解扫描结果
-     * （NeoForge 的 {@code getAllScanData()} 是 Set），而 binding 注册是 first-wins，靠登记
-     * 顺序等于让「谁的绑定生效」随 JVM 运行而变。内置插件里 8 个有 7 个共用缺省 priority 1000。
+     * Plugins with the same priority must be ordered by class FQN, not by registration
+     * order. Registration order comes from the platform's annotation scan (NeoForge's
+     * {@code getAllScanData()} is a Set), and binding registration is first-wins, so
+     * ordering by registration order lets the effective binding change per JVM run.
+     * Seven of the eight built-in plugins share the default priority 1000.
      */
     @Test
     void samePriorityPluginsAreOrderedByClassNameNotRegistrationOrder() {
@@ -207,7 +215,7 @@ class NekoJSBasePluginManagerTest {
                         .map(owned -> (Class<?>) owned.plugin().getClass()).toList());
     }
 
-    /** 高 priority 仍然优先于 FQN 字典序。 */
+    /** A higher priority still outranks the FQN order. */
     @Test
     void priorityStillOutranksClassName() {
         NekoJSBasePluginManager.registerClass(SamePriorityA.class);
@@ -217,7 +225,8 @@ class NekoJSBasePluginManagerTest {
                 NekoJSBasePluginManager.getPlugins().stream().map(p -> (Class<?>) p.getClass()).toList());
     }
 
-    /** 在 stream() 中阻塞的 CopyOnWriteArrayList：旧快照在阻塞前捕获，用于确定性复现 stale-view 竞态。 */
+    /** A CopyOnWriteArrayList that blocks in stream(): it copies the snapshot
+     *  before blocking, which makes the stale-view race reproducible. */
     private static final class BlockingEntries extends CopyOnWriteArrayList<Object> {
         private static final long serialVersionUID = 1L;
         final transient CountDownLatch entered = new CountDownLatch(1);
@@ -267,7 +276,8 @@ class NekoJSBasePluginManagerTest {
     @RegisterNekoJSPlugin(priority = 1009)
     public static class PluginP9 implements NekoJSPlugin {}
 
-    // 同 priority（缺省 1000）三例：登记顺序刻意为 B、C、A，与 FQN 字典序不同。
+    // Three plugins with the same priority (the default 1000), registered
+    // deliberately as B, C, A, which differs from FQN order.
     @RegisterNekoJSPlugin
     public static class SamePriorityA implements NekoJSPlugin {}
 

@@ -13,35 +13,37 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 /**
- * {@code BlockEvents.neighborNotify} 的 fabric 挂点：
- * {@code NeighborUpdater#executeUpdate} 的 HEAD（接口**静态**方法）。
+ * Fabric hook for {@code BlockEvents.neighborNotify}: the HEAD of
+ * {@code NeighborUpdater#executeUpdate}, a <b>static</b> interface method.
  *
- * <p>javap 实证（minecraft-merged-deobf-26.1.2.jar）：
+ * <p>Checked with javap (minecraft-merged-deobf-26.1.2.jar):
  * <ul>
- *   <li>26.x 把 1.21.x 的 {@code Level.neighborChanged/updateNeighborsAt} 网络全部
- *       搬进 {@code net.minecraft.world.level.redstone}：{@code Level} 上的同名方法已是
- *       空壳（updateNeighborsAt/neighborChanged/neighborShapeChanged 方法体均为
- *       {@code return}），{@code ServerLevel} 转发到
- *       {@code CollectingNeighborUpdater}（见 {@code ServerLevel.neighborChanged}
- *       方法体 {@code neighborUpdater.neighborChanged(...)}），客户端等价物是
- *       {@code InstantNeighborUpdater}。</li>
- *   <li>{@code NeighborUpdater.executeUpdate(Level, BlockState, BlockPos, Block,
- *       Orientation, boolean)} 带方法体：调用
- *       {@code state.handleNeighborChanged(level, pos, block, orientation, forceRedstone)}
- *       并被 try-catch 包成崩溃报告（"Block being updated" / "Source block type"）——
- *       即语义上 {@code pos/state} = 被通知的邻居方块，{@code block} = 发起变更的
- *       源方块（与 NeoForge NeighborNotifyEvent 的 pos/state 对齐，
- *       {@code getNotifiedSides()} 无 26.x 对应物，载荷以 orientation 替代）。</li>
- *   <li>两个队列消费者（{@code CollectingNeighborUpdater$SimpleNeighborUpdate} 单邻居
- *       ；{@code $FullNeighborUpdate} 对应 updateNeighborsAt）的
- *       {@code runNext(Level)} 都收敛到 {@code executeUpdate}（javap 实证）——
- *       跨客户端/服务端、单邻居/全邻居的唯一汇点；绑定处按 {@code isClientSide}
- *       过滤，SERVER 总线只收服务端实例。</li>
+ *   <li>26.x moved the whole 1.21.x {@code Level.neighborChanged/updateNeighborsAt} network into
+ *       {@code net.minecraft.world.level.redstone}. The methods of the same name on {@code Level}
+ *       are now empty shells (updateNeighborsAt, neighborChanged and neighborShapeChanged all have
+ *       a body of {@code return}), {@code ServerLevel} forwards to
+ *       {@code CollectingNeighborUpdater} (see {@code ServerLevel.neighborChanged}, whose body is
+ *       {@code neighborUpdater.neighborChanged(...)}), and the client equivalent is
+ *       {@code InstantNeighborUpdater}.</li>
+ *   <li>{@code NeighborUpdater.executeUpdate(Level, BlockState, BlockPos, Block, Orientation,
+ *       boolean)} has a body: it calls
+ *       {@code state.handleNeighborChanged(level, pos, block, orientation, forceRedstone)} inside
+ *       a try-catch that builds a crash report ("Block being updated" / "Source block type"). So
+ *       {@code pos/state} identify the neighbouring block being notified and {@code block} is the
+ *       source block that changed, matching pos/state on NeoForge NeighborNotifyEvent (which has
+ *       no 26.x counterpart for {@code getNotifiedSides()}, so the payload carries orientation
+ *       instead).</li>
+ *   <li>Both queue consumers ({@code CollectingNeighborUpdater$SimpleNeighborUpdate} for a single
+ *       neighbour and {@code $FullNeighborUpdate} for updateNeighborsAt) converge on
+ *       {@code executeUpdate} in their {@code runNext(Level)} (javap), making it the single sink
+ *       for client and server and for single and full neighbour updates. The binding filters on
+ *       {@code isClientSide}, so the SERVER bus only receives server-side instances.</li>
  * </ul>
  *
- * <p><b>频率说明</b>：任何方块变更通知（含红石高频电路）都会走到本挂点，
- * 注入实现先做 {@code isClientSide + hasListeners} 短路，无监听器时零事件对象。
- * 仍属高频通道：脚本监听器请保持轻量。
+ * <p><b>Frequency</b>: every block change notification, including high-frequency redstone
+ * circuits, reaches this hook. The injected code short-circuits on
+ * {@code isClientSide} and {@code hasListeners} first, so no event object is created without
+ * listeners. This is still a high-frequency path: keep script listeners light.
  */
 @Mixin(NeighborUpdater.class)
 public interface MixinNeighborUpdater {

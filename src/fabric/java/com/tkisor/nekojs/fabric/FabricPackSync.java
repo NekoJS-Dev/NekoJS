@@ -28,18 +28,22 @@ import java.util.List;
 import java.util.function.Consumer;
 
 /**
- * 包分发的 fabric 桥：payload 类与共享核管线（{@link PackSyncClient}/
- * {@link PackSyncServer}）与 NeoForge 侧同源，线格式一致。
+ * Fabric bridge for pack distribution: the payload classes and the shared core pipeline
+ * ({@link PackSyncClient}/{@link PackSyncServer}) come from the same source as NeoForge, so the wire
+ * format matches.
  *
- * <p>服务器推送面：fabric 没有 NeoForge 的 {@code RegisterConfigurationTasksEvent}，等价入口是
- * {@code ServerConfigurationConnectionEvents.CONFIGURE}（vanilla 配置期，对端通道已协商）——
- * 在其中 {@code addTask} 挂一个与 NeoForge 侧同 Type id 的配置任务，语义完全对齐：
- * 任务在配置队列里执行，注册表同步排在其后。推送前以 {@code canSend} 校验对端装了 NekoJS。
+ * <p>Server push side: Fabric has no NeoForge {@code RegisterConfigurationTasksEvent}, so the
+ * equivalent hook is {@code ServerConfigurationConnectionEvents.CONFIGURE} (vanilla configuration
+ * phase, with the peer's channels already negotiated). There {@code addTask} queues a configuration
+ * task with the same type id as NeoForge, which behaves the same way: the task runs in the
+ * configuration queue and registry sync follows it. Before pushing, {@code canSend} checks that the
+ * peer has NekoJS.
  *
- * <p>客户端接收面：fabric configuration receiver 在 netty event loop 执行，与 NeoForge 侧
- * 同构——复用 {@code PackSyncClient} 的主线程 latch 协议阻塞网络线程直到落盘/验签完成，
- * 保证原版注册表校验时远端脚本产物已就位；未信任/验签失败经 {@code Connection.disconnect}
- * 断连并展示原因。
+ * <p>Client receive side: the Fabric configuration receiver runs on the netty event loop, the same
+ * as NeoForge. It reuses the main-thread latch protocol of {@code PackSyncClient} to block the
+ * network thread until the files are on disk and the signature is verified, so the remote script
+ * output is in place before vanilla validates the registry. An untrusted or failed signature
+ * disconnects through {@code Connection.disconnect} and shows the reason.
  */
 public final class FabricPackSync {
 
@@ -47,7 +51,8 @@ public final class FabricPackSync {
 
     private FabricPackSync() {}
 
-    /** 服务器半：payload 类型注册 + CONFIGURE 挂配置任务（common init 调用）。 */
+    /** Server side: payload type registration plus the CONFIGURE configuration task (called from common
+     * init). */
     public static void registerServer() {
         PayloadTypeRegistry.clientboundConfiguration().register(
                 PackHashListPayload.TYPE, PackHashListPayload.STREAM_CODEC);
@@ -55,8 +60,9 @@ public final class FabricPackSync {
                 PackBundlePayload.TYPE, PackBundlePayload.STREAM_CODEC);
         ServerConfigurationConnectionEvents.CONFIGURE.register((handler, server) -> {
             if (!PackSyncServer.enabled()) return;
-            // 内存连接（单人 / 局域网主机自己的客户端）不参与分发，与 NeoForge 侧
-            // PackSyncConfigurationTask#register 同判据——否则每次进世界都白算一遍全部包的哈希
+            // In-memory connections (the client of a single-player or LAN host) do not take part in
+            // distribution, using the same test as NeoForge PackSyncConfigurationTask#register;
+            // otherwise every world join would recompute the hash of every pack for nothing
             if (((ServerCommonPacketListenerAccessor) handler).nekojs$connection().isMemoryConnection()) return;
             if (!ServerConfigurationNetworking.canSend(handler, PackHashListPayload.TYPE)) return;
             handler.addTask(new PushTask(handler));
@@ -64,9 +70,11 @@ public final class FabricPackSync {
     }
 
     /**
-     * 配置阶段推送任务：与 NeoForge 侧 {@code PackSyncConfigurationTask} 同 Type id
-     * （{@link PackSyncServer#TASK_ID}）与同序——先哈希清单，非 hashOnly 且有包时紧随 bundle。
-     * 任务在队列里执行，客户端注册表校验必然晚于本任务完成。
+     * Configuration-phase push task with the same type id as NeoForge
+     * {@code PackSyncConfigurationTask} ({@link PackSyncServer#TASK_ID}) and the same order: the hash
+     * list first, then the bundle immediately after it when the run is not hashOnly and there are
+     * packs. The task runs in the queue, so client registry validation always happens after it
+     * finishes.
      */
     private record PushTask(ServerConfigurationPacketListenerImpl handler) implements ConfigurationTask {
 
@@ -95,7 +103,8 @@ public final class FabricPackSync {
         }
     }
 
-    /** 客户端半：配置阶段 receiver + 断线卸载 + CLIENT 重载钩子（client init 调用）。 */
+    /** Client side: configuration-phase receivers, unload on disconnect, and the CLIENT reload hook
+     * (called from client init). */
     public static void registerClient(Runnable refreshPackResources) {
         ClientConfigurationNetworking.registerGlobalReceiver(PackHashListPayload.TYPE,
                 (payload, context) -> handleHashList(payload, context, refreshPackResources));
@@ -106,7 +115,8 @@ public final class FabricPackSync {
             if (accepted) refreshPackResources.run();
             return accepted;
         });
-        // 两个阶段都要卸载远端包：未信任/验签失败是在配置阶段就被踢，走不到 play 阶段断线
+        // Both phases must unload the remote packs: an untrusted pack or a failed signature kicks the
+        // client during the configuration phase, so it never reaches the play-phase disconnect
         ClientConfigurationConnectionEvents.DISCONNECT.register((handler, client) -> {
             boolean hadPacks = !com.tkisor.nekojs.core.pack.ScriptPackRegistry.get().serverCachePacks().isEmpty();
             PackSyncClient.handleDisconnect(NekoJSFabricMod.runtimeRootOrNull());
@@ -119,7 +129,7 @@ public final class FabricPackSync {
         });
     }
 
-    /* ================= 客户端 receiver（netty 线程） ================= */
+    /* ================= Client receivers (netty thread) ================= */
 
     private static void handleHashList(PackHashListPayload payload, ClientConfigurationNetworking.Context context,
                                        Runnable refreshPackResources) {
@@ -173,7 +183,8 @@ public final class FabricPackSync {
             LOGGER.error("Cannot reload CLIENT scripts after server pack sync: runtime root is unavailable");
             return false;
         }
-        // CLIENT 管理器可能尚未建立（autoLoadTypes 之前 / 专用服务器进程）——reload 会抛
+        // The CLIENT manager may not exist yet (before autoLoadTypes, or in a dedicated server process),
+        // and reload would throw
         if (root.scriptManagerOrNull(ScriptType.CLIENT) == null) {
             LOGGER.error("Cannot reload CLIENT scripts after server pack sync: CLIENT manager is unavailable");
             return false;

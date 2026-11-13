@@ -1,6 +1,7 @@
-// 1.21.1 实现，与版本树 src/ 下的同名 26.x 文件成对。内容等于那份文件在本节点求值后的形态
-//（Identifier→ResourceLocation 与
-// bindComponents→反射 components 字段是本节点的真实差异）；26.x 侧行为变更时须同步本文件。
+// 1.21.1 implementation, paired with the 26.x file of the same name under the version tree's src/.
+// The content is that file as evaluated on this node; the real differences here are
+// Identifier -> ResourceLocation and bindComponents -> the reflective components field.
+// Keep this file in sync when the 26.x side changes behavior.
 package com.tkisor.nekojs.wrapper.event.server;
 
 import com.tkisor.nekojs.bindings.event.ItemEvents;
@@ -15,12 +16,13 @@ import java.lang.reflect.Field;
 import java.util.function.Consumer;
 
 /**
- * Server-side item property modification event payload（{@code ItemEvents.modification}）。
- * 26.x 侧同名文件是版本树 src/ 的守卫形态；ticket 39 收集语义见那份文件的 javadoc。
+ * Server-side item property modification event payload ({@code ItemEvents.modification}).
+ * The file of the same name on the 26.x side is the guarded form in the version tree's src/;
+ * the collection semantics are documented in its javadoc.
  *
  * <h2>Internal (1.21.1)</h2>
- * {@code Item} 仍自持组件 Map（26.x 委托 builtInRegistryHolder），发布走反射写
- * {@code Item#components} 私有 final 字段。
+ * {@code Item} still owns its component map itself (26.x delegates to builtInRegistryHolder),
+ * so publishing writes the private final {@code Item#components} field through reflection.
  */
 public class ItemModificationEventJS {
 
@@ -29,22 +31,24 @@ public class ItemModificationEventJS {
 
     private static final Field COMPONENTS_FIELD = componentsField();
 
-    /** @param plan 收集目标计划（由 1.21.1 侧 {@code ModificationDomainOwner} 创建）。 */
+    /** @param plan the candidate plan to collect into (created by the 1.21.1 {@code ModificationDomainOwner}) */
     @ScriptInternalConstructor
     public ItemModificationEventJS(ModificationCandidatePlan plan) {
         this.plan = plan;
     }
 
     /**
-     * Records a modification declaration for the item with the given id（收集语义与
-     * 26.x 同：回调异常向上传播、声明进 inert 计划、MC 应用只在 Adapter）。
+     * Records a modification declaration for the item with the given id. Collection works the same
+     * way as on 26.x: callback exceptions propagate, declarations go into an inert plan, and
+     * Minecraft is only changed in the Adapter.
      *
-     * <p>回调参数类型保持改造前的函数式接口签名（{@code Consumer<ItemModificationJS>}）：
-     * Java 侧直接传 lambda；脚本侧的 Graal 函数由沙盒 HostAccess
-     * （{@code allowAllImplementations}）实现该接口。
+     * <p>The callback keeps the functional interface signature
+     * ({@code Consumer<ItemModificationJS>}): Java callers pass a lambda directly, and a script
+     * function from Graal implements the interface through the sandbox's HostAccess
+     * ({@code allowAllImplementations}).
      *
      * @param itemId item id, e.g. {@code 'minecraft:diamond'} (namespace optional)
-     * @param modifier property callback（脚本函数或 Java {@code Consumer}）
+     * @param modifier property callback (a script function or a Java {@code Consumer})
      */
     public void modify(String itemId, Consumer<ItemModificationJS> modifier) {
         ResourceLocation id = parseItemId(itemId);

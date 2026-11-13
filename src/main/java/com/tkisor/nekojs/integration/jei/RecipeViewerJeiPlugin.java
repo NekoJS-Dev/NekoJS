@@ -34,14 +34,15 @@ import java.util.List;
 import java.util.Set;
 
 /**
- * JEI 集成插件：在 JEI 运行时重建（资源 reload）时触发
- * {@link RecipeViewerEvents} 脚本事件，并把结果应用到 JEI。
+ * JEI integration plugin: posts the {@link RecipeViewerEvents} script events when the JEI
+ * runtime rebuilds (resource reload) and applies the results to JEI.
  *
- * <p>应用时机与 KubeJS 对齐：
+ * <p>Timing matches KubeJS:
  * <ul>
- *   <li>{@code registerRecipes}（注册期）：{@code addInformation} —— JEI 仅此阶段
- *       提供 {@code addIngredientInfo} API；</li>
- *   <li>{@code onRuntimeAvailable}（运行时）：条目增删、配方/类别隐藏。</li>
+ *   <li>{@code registerRecipes} (registration phase): {@code addInformation}, because JEI
+ *       provides the {@code addIngredientInfo} API only in this phase;</li>
+ *   <li>{@code onRuntimeAvailable} (runtime): adds and removes entries, hides recipes and
+ *       categories.</li>
  * </ul>
  */
 @JeiPlugin
@@ -191,7 +192,7 @@ public class RecipeViewerJeiPlugin implements IModPlugin {
         }
     }
 
-    /** 把脚本条目解析为 ItemStack（id 字符串 / ItemStack / Item / FluidStack 忽略）。 */
+    /** Resolves a script entry into an ItemStack (id string / ItemStack / Item; FluidStack is ignored). */
     private static ItemStack resolveItem(Object entry) {
         if (entry instanceof ItemStack stack) {
             return stack;
@@ -206,7 +207,7 @@ public class RecipeViewerJeiPlugin implements IModPlugin {
         return null;
     }
 
-    /** 把脚本条目解析为 FluidStack（id 字符串 / FluidStack）。 */
+    /** Resolves a script entry into a FluidStack (id string / FluidStack). */
     private static FluidStack resolveFluid(Object entry) {
         if (entry instanceof FluidStack stack) {
             return stack;

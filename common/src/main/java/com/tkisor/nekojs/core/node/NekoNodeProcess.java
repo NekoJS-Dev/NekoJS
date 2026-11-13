@@ -13,9 +13,10 @@ public final class NekoNodeProcess {
     private final NekoNodeFS fs;
 
     /**
-     * 疑似密钥的环境变量名模式（大小写不敏感、包含匹配）。共享服务器上 process.env
-     * 不得向脚本泄露 AWS/TOKEN/SECRET 等敏感值；普通变量（OS、TEMP、JAVA_HOME 等）
-     * 保留，避免破坏依赖环境变量的整合包脚本。
+     * Environment variable name patterns that look like secrets (case-insensitive, substring match).
+     * process.env must not leak sensitive values such as AWS/TOKEN/SECRET to scripts on a shared
+     * server. Ordinary variables (OS, TEMP, JAVA_HOME and so on) are kept, so modpack scripts that
+     * depend on env vars keep working.
      */
     private static final List<String> SECRET_ENV_PATTERNS = List.of(
             "password", "passwd", "secret", "token", "credential",
@@ -81,9 +82,9 @@ public final class NekoNodeProcess {
     public CpuUsage cpuUsage() {
         com.sun.management.OperatingSystemMXBean osBean =
                 (com.sun.management.OperatingSystemMXBean) ManagementFactory.getOperatingSystemMXBean();
-        // getProcessCpuTime：进程启动以来的累计 CPU 时间（纳秒；不可用时为 -1）。
-        // Node 语义是 user+system 微秒累计；JVM 无法拆分 user/system，总量记入 user、system 为 0。
-        // （此前用 processCpuLoad 百分比×1e6 填充 user，数值无意义。）
+        // getProcessCpuTime: CPU time accumulated since process start, in nanoseconds (-1 when unavailable).
+        // Node reports accumulated user+system microseconds; the JVM cannot split the two, so the total
+        // goes into user and system stays 0.
         long totalNanos = osBean.getProcessCpuTime();
         long totalMicros = totalNanos < 0 ? 0 : totalNanos / 1000L;
         return new CpuUsage(totalMicros, 0, System.nanoTime());

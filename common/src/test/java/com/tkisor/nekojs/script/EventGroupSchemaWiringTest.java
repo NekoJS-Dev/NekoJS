@@ -23,10 +23,11 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * 事件组 → {@link ScriptBindingSchema} 接线回归：生产环境的事件组
- * （ServerEvents/BlockEvents…）由 eventBridge.bindEvents 绑定，但 schema 只收环境绑定与
- * managed 全局，{@code EventCallbackSourceValidator} 的 {@code schema.containsKey(groupName)}
- * 恒 false——事件回调 preflight 整体静默失效（真实事故：{@code event.rec} 拼错 reload 无报错）。
+ * Wiring of event groups into {@link ScriptBindingSchema}: in production, event groups
+ * (ServerEvents/BlockEvents...) are bound by eventBridge.bindEvents, but the schema only collected
+ * environment bindings and managed globals, so {@code schema.containsKey(groupName)} in
+ * {@code EventCallbackSourceValidator} was always false and event callback preflight silently did
+ * nothing. This is a real incident: a typo in {@code event.rec} produced no error on reload.
  */
 class EventGroupSchemaWiringTest {
 
@@ -70,13 +71,14 @@ class EventGroupSchemaWiringTest {
 
     @Test
     void wiredSchemaMakesCallbackPreflightFlagUnknownMember() {
-        // 按 ScriptEnvironmentFactory.create 的真实顺序构建 schema：环境绑定 + 事件组
+        // Builds the schema in the same order as ScriptEnvironmentFactory.create: environment bindings, then event groups
         Map<String, ScriptBindingSchema.BindingMembers> schema = new HashMap<>();
         ScriptEnvironmentFactory.addEventGroupSchema(schema, List.of(group), Map.of());
         ScriptBindingSchema.View view = new ScriptBindingSchema.View(schema, Set.of());
 
         Path file = com.tkisor.nekojs.script.ScriptTypeEnv.scriptsDir(ScriptType.SERVER).resolve("main.js");
-        // 与真实事故文件一致：CRLF 行尾 + 表达式语句形式的悬空成员访问
+        // Matches the file from the real incident: CRLF line endings and a dangling member access written as
+        // an expression statement
         String source = "ServerEvents.recipes(event => {\r\n    event.rec\r\n})\r\n";
 
         EventCallbackSourceValidator.validate(file, source, view);

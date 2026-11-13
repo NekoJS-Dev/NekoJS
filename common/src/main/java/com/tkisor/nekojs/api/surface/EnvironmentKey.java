@@ -21,7 +21,8 @@ public record EnvironmentKey(
         installedMods = Map.copyOf(installedMods == null ? Map.of() : installedMods);
     }
 
-    /** 按当前平台实况（端侧 / loader / MC 版本 / 已装 mod）构造快照。 */
+    /** Builds a snapshot from the current platform facts: distribution, loader, Minecraft
+     * version and installed mods. */
     public static EnvironmentKey current(ScriptType scriptType) {
         Objects.requireNonNull(scriptType, "scriptType");
 

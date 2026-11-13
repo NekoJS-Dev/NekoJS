@@ -3,8 +3,8 @@ package com.tkisor.nekojs.probe.events;
 import com.tkisor.nekojs.api.surface.ApiTypeRef;
 
 /**
- * {@code probe.add_global} 事件收集的全局声明：一个名字 + 语言中性的类型。
- * 各 backend 在自己的语言里渲染（TS→{@code declare const Name: T;}、Python→{@code Name: T}）。
+ * A global declaration collected by the {@code probe.add_global} event: a name plus a language-neutral type.
+ * Each backend renders it in its own language (TS -> {@code declare const Name: T;}, Python -> {@code Name: T}).
  */
 public record GlobalDecl(String name, ApiTypeRef type) {
     public GlobalDecl {

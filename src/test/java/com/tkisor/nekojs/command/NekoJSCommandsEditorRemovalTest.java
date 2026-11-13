@@ -15,8 +15,8 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
 /**
- * 游戏内编辑器退役契约：/nekojs editor 必须彻底消失（无 alias），
- * 而只读错误入口仍保留在同一个命令树上。
+ * The in-game editor is retired: /nekojs editor must be gone entirely, with no alias, while the
+ * read-only error entry stays on the same command tree.
  */
 class NekoJSCommandsEditorRemovalTest {
 
@@ -26,8 +26,9 @@ class NekoJSCommandsEditorRemovalTest {
                 com.tkisor.nekojs.testfixture.VanillaRegistryProbe.registryMetadataAvailable(),
                 "native command permissions require bootstrapped registry metadata");
         CommandDispatcher<CommandSourceStack> dispatcher = new CommandDispatcher<>();
-        // root 仅被命令 executor 的 lambda 捕获、树构建期不解引用；本测试只断言命令树形状，
-        // 传 null 以免为此引入完整装配 fixture（ticket 05 注入签名变更）
+        // The root is only captured by the command executor lambda and is not dereferenced while the tree
+        // is built. This test asserts the command tree shape only, so it passes null instead of
+        // pulling in a full assembly fixture.
         NekoJSCommands.register(new RegisterCommandsEvent(dispatcher, Commands.CommandSelection.ALL, CommandBuildContext.simple(RegistryAccess.EMPTY, FeatureFlagSet.of())), null);
 
         CommandNode<CommandSourceStack> root = dispatcher.getRoot().getChild("nekojs");

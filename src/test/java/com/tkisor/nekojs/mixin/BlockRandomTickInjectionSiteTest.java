@@ -20,28 +20,27 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Ticket 24 D5 fixture: the {@code BlockEvents.randomTick} mixin must inject into the
- * funnel vanilla actually dispatches, not into the {@code BlockBehaviour} interface default
- * (whose empty body every vanilla randomly-ticking block overrides away — the interface
- * site made the event unreachable for vanilla blocks; observed on the 2026-09-28 real
- * machine session with a forceloaded grass block producing no marker).
+ * Fixture for the {@code BlockEvents.randomTick} mixin: it must inject into the method vanilla
+ * actually dispatches, not into the {@code BlockBehaviour} interface default. That default is
+ * empty and every vanilla randomly-ticking block overrides it, so an injection there leaves the
+ * event unreachable for vanilla blocks.
  *
- * <p>Two legs, headless-JVM friendly:
+ * <p>Two parts, both headless-JVM friendly:
  * <ol>
  *   <li><b>Runtime shape</b> (reflection on the node classpath, mojmap names on both
  *       loaders): {@code BlockBehaviour.BlockStateBase.randomTick(ServerLevel, BlockPos,
- *       RandomSource)} exists as the concrete funnel, {@code BlockState} does not override
- *       it (so {@code ServerLevel}'s per-position virtual dispatch lands on the funnel for
- *       every block), and at least one vanilla randomly-ticking block (CropBlock) overrides
- *       the 4-arg {@code BlockBehaviour.randomTick} — proving the interface-default site is
- *       bypassed by vanilla overrides.</li>
- *   <li><b>Source trace</b>: both loader twins' mixins target {@code BlockStateBase}, keep
- *       the {@code isRandomlyTicking()} gate (vanilla calls the funnel for every position in
- *       a ticking section; the gate preserves the documented "only randomly-ticking blocks"
- *       semantics) and the no-listener fast path.</li>
+ *       RandomSource)} exists as the concrete dispatch method, {@code BlockState} does not
+ *       override it (so {@code ServerLevel}'s per-position virtual dispatch lands on it for
+ *       every block), and at least one vanilla randomly-ticking block (CropBlock) overrides the
+ *       4-arg {@code BlockBehaviour.randomTick}, which proves vanilla overrides never reach the
+ *       interface default.</li>
+ *   <li><b>Source trace</b>: the mixins of both loader trees target {@code BlockStateBase},
+ *       keep the {@code isRandomlyTicking()} gate (vanilla calls this method for every position
+ *       in a ticking section; the gate keeps the "only randomly-ticking blocks" behavior) and
+ *       the no-listener fast path.</li>
  * </ol>
- * The real dispatch leg is verified by the runServer smoke (forceloaded chunk + script
- * listener markers) recorded with this fix.
+ * The real dispatch is covered by the runServer smoke run (forceloaded chunk plus script
+ * listener markers).
  */
 class BlockRandomTickInjectionSiteTest {
 

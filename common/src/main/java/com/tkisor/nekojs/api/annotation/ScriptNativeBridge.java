@@ -6,8 +6,8 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * Marks an explicit native interoperability boundary. Its Java/native signatures remain
- * profile-specific even when its module entry point is stable; it is not a portable wrapper.
+ * Marks a type that bridges Java into native code. Its Java and native signatures stay
+ * profile-specific even when its module entry point is stable, so it is not a portable wrapper.
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.TYPE)

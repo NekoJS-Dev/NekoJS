@@ -6,9 +6,10 @@ import com.tkisor.nekojs.api.annotation.RegisterNekoJSPlugin;
 import com.tkisor.nekojs.api.data.BindingRegistry;
 
 /**
- * 全局绑定 {@code EntitySelectors} 注册插件：向 SERVER 与 TEST 脚本环境暴露
- * 程序化实体选择器入口（{@link EntitySelectorsJS}）。查询需要 {@code ServerLevel}，
- * 客户端 / startup 环境不注册（预构建 selector 的场景建议在 server 脚本内完成）。
+ * Registers the global {@code EntitySelectors} binding: exposes the programmatic entity selector
+ * entry point ({@link EntitySelectorsJS}) to SERVER and TEST scripts. Queries need a
+ * {@code ServerLevel}, so client and startup environments get no binding; build selectors ahead
+ * of time inside a server script instead.
  */
 @RegisterNekoJSPlugin
 public class EntitySelectorsPlugin implements NekoJSPlugin, com.tkisor.nekojs.core.plugin.BindingsPoint.Contributor {

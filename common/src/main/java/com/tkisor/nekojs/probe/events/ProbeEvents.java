@@ -4,22 +4,25 @@ import com.tkisor.nekojs.api.event.EventBusJS;
 import com.tkisor.nekojs.api.event.EventGroup;
 
 /**
- * probe.* 事件组。
+ * The probe.* event group.
  *
- * <p>所有事件均为 {@code ScriptType.SERVER}：probe 命令（{@code /nekojs probe}）在服务端线程执行，
- * 故监听器须在 {@code server_scripts} 注册。STARTUP 的 Graal Context 在内置客户端归客户端线程，
- * 从服务端线程 post 会触发 GraalJS 单线程访问异常——故不用 STARTUP。
+ * <p>Every event is {@code ScriptType.SERVER}: the probe command ({@code /nekojs probe}) runs on the server thread,
+ * so listeners must be registered in {@code server_scripts}. On the built-in client the STARTUP Graal Context
+ * belongs to the client thread, and posting from the server thread raises a GraalJS single-thread access error,
+ * which is why STARTUP is not used.
  */
 public interface ProbeEvents {
     EventGroup GROUP = EventGroup.of("ProbeEvents");
 
     /**
-     * 在 probe 渲染类型声明**之前**触发。脚本通过 {@link ProbeModifyTypeEventJS#forClass(String)}
-     * 拿到 {@link ClassEditor}，对反射产出的 {@code TypeDecl} IR 做参数级编辑（改名/改类型/隐藏/
-     * 加参数/文档…）。被触及的类随后经 {@code TypeScriptClassRenderer} 重新渲染并覆盖声明缓存；
-     * 未触及的类渲染结果与触及前一致（TypeReflector/TypeScriptClassRenderer 镜像旧渲染契约）。
+     * Fires **before** probe renders the type declarations. Through
+     * {@link ProbeModifyTypeEventJS#forClass(String)} scripts get a {@link ClassEditor} and edit the
+     * {@code TypeDecl} IR produced by reflection at parameter level (rename, retype, hide, add parameters,
+     * docs...). Touched classes are then re-rendered by {@code TypeScriptClassRenderer}, which replaces the
+     * cached declarations; untouched classes render exactly as they did before, because TypeReflector and
+     * TypeScriptClassRenderer keep the previous rendering behavior.
      *
-     * <p>典型用法（server_scripts；bus 本身是可调用代理，直接调用即注册）：
+     * <p>Typical use (in server_scripts; the bus is a callable proxy, so a direct call registers the listener):
      * <pre>{@code
      * ProbeEvents.modifyType(event => {
      *     event.forClass("net.minecraft.world.entity.player.Player")
@@ -32,22 +35,23 @@ public interface ProbeEvents {
             GROUP.server("modifyType", ProbeModifyTypeEventJS.class);
 
     /**
-     * 全局类型重定向：把某 Java 全限定名处处改写为自定义类型。在 IR 构建后应用（替换 SYMBOL 类型槽），
-     * 对 TS（重渲染被触及类）与 Python 均生效。需要 IR（监听器使 coordinator 构建 IR）。
+     * Redirects types globally: rewrites a Java fully qualified name to a custom type everywhere. Applied after the
+     * IR is built (it replaces SYMBOL type slots) and takes effect for both TS (re-renders the touched classes) and
+     * Python. Requires the IR (a listener makes the coordinator build it).
      */
     EventBusJS<ProbeAssignTypeEventJS, Void> ASSIGN_TYPE =
             GROUP.server("assignType", ProbeAssignTypeEventJS.class);
 
     /**
-     * 登记额外全局声明（名字+类型）。各 backend 在自己语言里渲染（TS→{@code @manual/globals.d.ts}、
-     * Python→{@code nekojs/__init__.pyi}）。
+     * Registers extra global declarations (name plus type). Each backend renders them in its own language
+     * (TS -> {@code @manual/globals.d.ts}, Python -> {@code nekojs/__init__.pyi}).
      */
     EventBusJS<ProbeAddGlobalEventJS, Void> ADD_GLOBAL =
             GROUP.server("addGlobal", ProbeAddGlobalEventJS.class);
 
     /**
-     * 登记编辑器片段（VSCode {@code .code-snippets}）。当前仅 TS backend 消费
-     * （合并进 {@code nekojs/.vscode/nekojs.code-snippets}）。
+     * Registers editor snippets (VSCode {@code .code-snippets}). Only the TS backend consumes them today; they are
+     * merged into {@code nekojs/.vscode/nekojs.code-snippets}.
      */
     EventBusJS<ProbeSnippetEventJS, Void> SNIPPETS =
             GROUP.server("snippets", ProbeSnippetEventJS.class);

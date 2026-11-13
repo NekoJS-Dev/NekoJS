@@ -12,17 +12,18 @@ import static com.tkisor.nekojs.api.AdapterInputShape.*;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * {@link AliasJSTypeAdapter}：惰性来源解析、透传 probe 面、优先级与环检测。
+ * {@link AliasJSTypeAdapter}: lazy source resolution, pass-through of the probe side, priority and
+ * cycle detection.
  *
- * <p>来源适配器全部用合成 lambda（不检查 Value 内容），因此测试不需要真实的 Graal 转换，
- * Value 用 {@code Value.asValue} 的普通值即可。
+ * <p>Every source adapter is a synthetic lambda that does not inspect the Value, so the tests need
+ * no real Graal conversion; plain values from {@code Value.asValue} are enough.
  */
 class AliasJSTypeAdapterTest {
 
-    /** 来源类型夹具。 */
+    /** Source type fixture. */
     static class Src {}
 
-    /** 目标类型夹具。 */
+    /** Target type fixture. */
     static class Dst {}
 
     private static JSTypeAdapter<Src> srcAdapter() {
@@ -101,7 +102,8 @@ class AliasJSTypeAdapterTest {
 
     @Test
     void unresolvableSourceFallsBackRatherThanThrowing() {
-        // 空注册表 + 未注册的 alias：probe/优先级读取回退默认值，test 不接受，apply 报配置错误
+        // Empty registry with an unregistered alias: the probe and the priority read fall back to defaults,
+        // test accepts nothing, and apply reports a configuration error
         JSTypeAdapterRegistry.Impl registry = new JSTypeAdapterRegistry.Impl();
         AliasJSTypeAdapter<Src, Dst> alias = new AliasJSTypeAdapter<>(
                 Dst.class, Src.class, src -> new Dst(), null, registry);
@@ -129,7 +131,7 @@ class AliasJSTypeAdapterTest {
     @Test
     void aliasChainResolvesToTerminalAdapter() {
         JSTypeAdapterRegistry.Impl registry = new JSTypeAdapterRegistry.Impl();
-        // 链：Dst alias 自 Mid，Mid alias 自 Src（末端是真适配器）
+        // Chain: Dst aliases from Mid, Mid aliases from Src, and Src is the real adapter at the end
         class Mid {}
         JSTypeAdapter<Src> source = srcAdapter();
         AliasJSTypeAdapter<Src, Mid> midAlias = new AliasJSTypeAdapter<>(
@@ -142,7 +144,7 @@ class AliasJSTypeAdapterTest {
 
         assertTrue(topAlias.test(Value.asValue("hit")));
         assertInstanceOf(Dst.class, topAlias.apply(Value.asValue("hit")));
-        // probe 面从链末端透传
+        // The probe side is passed through from the end of the chain
         assertEquals(srcAdapter().inputShapes(), topAlias.inputShapes());
     }
 

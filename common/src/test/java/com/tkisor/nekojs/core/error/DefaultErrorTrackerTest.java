@@ -27,9 +27,10 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * {@link DefaultErrorTracker#recordCallbackError} 回归测试：
- * 同一回调错误必须复用已存储的 {@link ScriptError} 实例并递增频次（去重先于解析，
- * 避免高频回调反复重建 ScriptError 并重读源码文件），不同签名则更新或新增记录。
+ * Regression tests for {@link DefaultErrorTracker#recordCallbackError}. The same callback error
+ * must reuse the stored {@link ScriptError} instance and increment its count: deduplication runs
+ * before parsing, so a high-frequency callback does not rebuild ScriptError and re-read the
+ * source file on every occurrence. A different signature updates or adds a record.
  */
 class DefaultErrorTrackerTest {
 
@@ -243,11 +244,12 @@ class DefaultErrorTrackerTest {
     }
 
     /**
-     * 票 03 基线发现（归 19/07）：WORLD 包脚本位于存档侧（不在 {@code <gamedir>/nekojs}
-     * root 下，Windows 相对 world 路径必现），{@code record} 的 relativize 曾在
-     * executeEntry 的 catch 体内抛 IAE——二次异常掩掉原始 kill/执行错误且错误面板丢条目。
-     * 票 07 起 record 位于 watchdog 终止的失败可观察路径上：必须回退为原样路径文本
-     * 而不是抛出（kill 归因与错误面板条目都以本方法不抛为前提）。
+     * A WORLD pack script lives on the save side, outside the {@code <gamedir>/nekojs} root, and a
+     * relative world path always takes that shape on Windows. {@code record} runs on the failure path
+     * of watchdog termination, so it must return the raw path text instead of throwing: an exception
+     * raised while relativizing escapes executeEntry's catch block, masks the original kill/execution
+     * error and drops the entry from the error panel, and both kill attribution and the error panel
+     * entry rely on this method not throwing.
      */
     @Test
     void recordOfWorldPackScriptOutsideRootDoesNotThrow() {
@@ -302,7 +304,7 @@ class DefaultErrorTrackerTest {
                 "799→800 跨越里程碑 800");
     }
 
-    /** 每次执行都抛出一个全新的 {@link PolyglotException}，模拟 20Hz tick 回调的重复错误。 */
+    /** Builds a fresh {@link PolyglotException} on every call, simulating the repeated error of a 20Hz tick callback. */
     private PolyglotException throwingPolyglot() {
         try (Context context = Context.newBuilder("js").allowAllAccess(true).build()) {
             context.eval(Source.newBuilder("js", "function tick() {\n  throw new Error('tick failure');\n}\ntick();\n", "tick.js").build());

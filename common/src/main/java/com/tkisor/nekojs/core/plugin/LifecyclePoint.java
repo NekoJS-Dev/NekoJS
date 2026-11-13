@@ -9,24 +9,26 @@ import java.util.Objects;
 import java.util.function.Consumer;
 
 /**
- * 内置扩展点 {@code nekojs:lifecycle}（ADR-0001 自包含 Point 文件）。
- * merge 策略 {@link MergePolicy#append}（五个生命周期钩子列表，无键冲突）。
+ * Built-in extension point {@code nekojs:lifecycle}, self-contained in this file. Merge policy
+ * is {@link MergePolicy#append}: five lifecycle hook lists, so no key ever conflicts.
  */
 public final class LifecyclePoint {
 
-    /** 扩展点 id（observable 契约）。 */
+    /** Extension point id; tests and diagnostics depend on this value. */
     public static final String ID = "nekojs:lifecycle";
 
     private LifecyclePoint() {
     }
 
-    /** 显式声明形态（与直接覆写 NekoJSPlugin 对应钩子等价收集）：插件被 {@code nekojs:lifecycle} 扩展点收集。 */
+    /** Explicit declaration form: the plugin is collected by the {@code nekojs:lifecycle} extension
+     * point, the same as overriding the matching NekoJSPlugin hook. */
     public interface Contributor extends NekoJSPlugin {
 
         /**
-         * 注册插件生命周期钩子。默认实现注册 {@code init} / {@code initStartup} / {@code afterInit}
-         * 以及 {@code beforeScriptsLoaded} / {@code afterScriptsLoaded}（NekoJSPlugin 便捷钩子），
-         * 插件按需覆盖对应便捷方法即可。
+         * Registers the plugin's lifecycle hooks. The default implementation registers
+         * {@code init} / {@code initStartup} / {@code afterInit} and
+         * {@code beforeScriptsLoaded} / {@code afterScriptsLoaded} (the NekoJSPlugin convenience
+         * hooks), so a plugin only overrides the convenience method it needs.
          */
         default void registerLifecycleHooks(PluginLifecycleRegister registry) {
             registry.onInit(this::init);
@@ -52,7 +54,7 @@ public final class LifecyclePoint {
         }
     }
 
-    /** 累积器：五个钩子列表；snapshot 后密封。 */
+    /** Accumulator: the five hook lists. It seals after the snapshot. */
     static final class Bucket implements PluginLifecycleRegister, Sealable {
         private final List<Runnable> initHooks = new ArrayList<>();
         private final List<Runnable> initStartupHooks = new ArrayList<>();
@@ -109,7 +111,7 @@ public final class LifecyclePoint {
         }
     }
 
-    /** 扩展点定义（由 {@link NekoBuiltinPointsPlugin} 清单注册）。 */
+    /** Extension point definition, registered by the {@link NekoBuiltinPointsPlugin} manifest. */
     public static final NekoPluginExtensionPoint<NekoJSPlugin, Bucket, LifecycleHooks> POINT =
             NekoPluginExtensionPoint.<NekoJSPlugin, Bucket, LifecycleHooks>builder(ID, NekoJSPlugin.class)
                     .merge(MergePolicy.append())

@@ -8,26 +8,26 @@ import com.tkisor.nekojs.network.ErrorSummaryDTO;
 import java.util.Objects;
 
 /**
- * Frozen diagnostic record of one script failure (ticket 30).
+ * Frozen diagnostic record of one script failure.
  *
  * <p>The record is created once, when the failure enters the {@link ErrorTracker}, and never
- * mutated afterwards: attribution fields (id, phase, owner, generation, source, module
- * identity, cache revision, cause) are frozen at record time so later generation switches can
- * never re-attribute old history. The user-visible projections derived from this record are
- * the per-type log history, the {@link ErrorSummaryDTO dashboard packet} and the
- * external-IDE-workspace open-action seam; Java class-load telemetry is a separate bounded
- * channel with its own documented scope, not a projection of this record.
+ * mutated afterwards. Attribution fields (id, phase, owner, generation, source, module identity,
+ * cache revision, cause) are fixed at record time, so a later generation switch can never
+ * re-attribute old history. Consumers derive three projections from this record: the per-type log
+ * history, the {@link ErrorSummaryDTO dashboard packet} and the external IDE open action. Java
+ * class-load telemetry is a separate bounded channel with its own documented scope; it is not a
+ * projection of this record.
  *
- * <p>Contract notes:
+ * <p>Field rules:
  * <ul>
  *   <li>{@code generation} is the ScriptManager generation the error was recorded under;
  *       {@code -1} when no generation was published for the environment (bare test setups);</li>
  *   <li>{@code recordedDuringCandidate} is true when the error was observed on a candidate
  *       generation that had not committed yet. After a successful commit the number stays the
  *       committed generation; a failed candidate discards its records entirely;</li>
- *   <li>{@code sourcePath} is the authored/mapped original source location when one is known
- *       (source-mapped for transpiled languages), {@code null} otherwise. It is not a
- *       UI display path: fallback pseudo paths never appear here;</li>
+ *   <li>{@code sourcePath} is the authored or mapped original source location when one is known
+ *       (source-mapped for transpiled languages), {@code null} otherwise. It is not a UI display
+ *       path: fallback pseudo paths never appear here;</li>
  *   <li>{@code moduleIdentity} keeps the executing module identity (generated module path,
  *       import specifier or ESM file) next to the mapped source;</li>
  *   <li>{@code line}/{@code column} are the original authored positions after source mapping,
@@ -84,9 +84,9 @@ public record ScriptDiagnosticRecord(
     }
 
     /**
-     * Project a transactional reload failure into the same frozen record shape. Reload
-     * failures stay exceptions for the command/log surface; this projection only feeds the
-     * unified record consumers (user report, telemetry, workspace seam).
+     * Projects a transactional reload failure into the same frozen record shape. Reload failures stay
+     * exceptions for the command and log path; this projection only feeds the unified record
+     * consumers (user report, telemetry, workspace open action).
      */
     public static ScriptDiagnosticRecord ofReloadFailure(NekoReloadException failure) {
         Objects.requireNonNull(failure, "failure");
@@ -108,11 +108,11 @@ public record ScriptDiagnosticRecord(
     }
 
     /**
-     * The dashboard packet projection. The wire shape (six fields) and the packet CONTENT
-     * stay legacy-identical: the caller supplies the unbounded legacy message, the display
-     * path and the full-detail snapshot exactly as the pre-ticket-30 assembly did, so this
-     * projection is the single assembly point without changing what players see. The
-     * record's own bounded {@link #message()} is for log/report lines only.
+     * The dashboard packet projection. The wire shape (six fields) and the packet content stay
+     * unchanged: the caller supplies the unbounded legacy message, the display path and the
+     * full-detail snapshot exactly as before, so this projection is the single assembly point and
+     * players see the same data. The record's own bounded {@link #message()} is for log and report
+     * lines only.
      */
     public ErrorSummaryDTO toErrorSummary(
             int occurrenceCount, String displayPath, String legacyMessage, String fullDetails) {
@@ -126,8 +126,8 @@ public record ScriptDiagnosticRecord(
     }
 
     /**
-     * The external-IDE-workspace open-action projection (non-GUI seam, ticket 27 consumes).
-     * Returns {@code null} when no locatable authored source exists.
+     * The open-action projection used by the external IDE workspace (non-GUI path). Returns
+     * {@code null} when no locatable authored source exists.
      */
     public DiagnosticOpenAction openAction() {
         if (sourcePath == null || line < 0) {

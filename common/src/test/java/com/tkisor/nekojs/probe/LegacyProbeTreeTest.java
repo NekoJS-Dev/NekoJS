@@ -19,14 +19,16 @@ import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Generates the full probe tree from {@link LegacyProbeFixture#snapshot()} using
- * {@link TypeScriptProbeBackend}（Phase 1 起替代旧 ProbeOrchestrator）, then compares
- * every file against golden resources under {@code /nekojs/probe/legacy-tree/}.
+ * {@link TypeScriptProbeBackend}, then compares every file against the golden resources under
+ * {@code /nekojs/probe/legacy-tree/}.
  *
- * <p><b>保留决策</b>：内容比对与 {@link ProbeOutputCompatibilityTest} 重叠，但本测试额外校验
- * 「无多余文件」（golden 之外仅允许 {@code @nekojs/managed/} 子树），能捕获意外新增的包目录/
- * 产物文件——因此保留而非删除。归一化已从「全行排序 + import 排序」收紧为与
- * {@link ProbeOutputCompatibilityTest} 相同的字节级口径（仅 CRLF + 行尾空白归一）：
- * 排序会掩盖成员顺序回归，而产物顺序本身已有确定性保证（TypeReflector 排序 + 字典序 import）。
+ * <p><b>Why this test exists</b>: the content comparison overlaps
+ * {@link ProbeOutputCompatibilityTest}, but this test also checks that no extra file appears -
+ * only the {@code @nekojs/managed/} subtree may exist outside the golden - so it catches new
+ * package directories or output files. Normalization uses the same byte-level rule as
+ * {@link ProbeOutputCompatibilityTest} (only CRLF and trailing whitespace are normalized)
+ * instead of sorting all lines and imports: sorting hides member-order regressions, and output
+ * order is already deterministic (TypeReflector sorting plus lexicographic imports).
  */
 class LegacyProbeTreeTest {
 
@@ -48,8 +50,9 @@ class LegacyProbeTreeTest {
 
         Map<String, String> actualFiles = readTree(tempDir.resolve("probe-types"));
 
-        // 重生成模式（-Dnekojs.golden.regenerate=true，由 gradle 任务 regenerateGoldens 设置）：
-        // 实际产物镜像覆盖 golden 资源目录后跳过断言（跑完人工 review + 提交）
+        // Regenerate mode (-Dnekojs.golden.regenerate=true, set by the regenerateGoldens Gradle task): mirror
+        // the actual output over the golden resource directory, then skip the assertions for a manual
+        // review and commit
         if (ProbeGoldenSupport.regenerateEnabled()) {
             Path goldenDir = ProbeGoldenSupport.resourceDir(getClass(), GOLDEN_BASE_PATH);
             assertNotNull(goldenDir, "golden tree resources must resolve to a file: URL under " + GOLDEN_BASE_PATH);
@@ -81,7 +84,8 @@ class LegacyProbeTreeTest {
     }
 
     /**
-     * 用 TypeScriptProbeBackend 生成到指定目录；显式传入旧 5-前缀白名单以与 golden tree 字节可比。
+     * Generates into the given directory with TypeScriptProbeBackend. Passes the five-prefix
+     * allowlist explicitly so the output stays byte-comparable with the golden tree.
      */
     private ProbeBackend.GenerateResult generateAt(NekoScriptCatalogSnapshot snapshot, Path outputDir) {
         ProbeConfig cfg = new ProbeConfig(true, ".neko_probe", new ProbeConfig.ScanConfig(
@@ -123,7 +127,7 @@ class LegacyProbeTreeTest {
         return files;
     }
 
-    /** 与 {@link ProbeOutputCompatibilityTest} 同一口径：仅 CRLF + 行尾空白归一，不做任何重排。 */
+    /** Same rule as {@link ProbeOutputCompatibilityTest}: normalize only CRLF and trailing whitespace, never reorder. */
     private static String normalize(String value) {
         return value.replace("\r\n", "\n").stripTrailing();
     }

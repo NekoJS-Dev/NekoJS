@@ -6,10 +6,12 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * 可靠的资源清理追踪器：注册 {@link AutoCloseable} 资源或 {@link Runnable} 清理动作，
- * {@link #close()} 时逆序执行所有清理，单个失败不中断后续。
+ * Tracks resources for reliable cleanup. Register an {@link AutoCloseable} resource or a
+ * {@link Runnable} cleanup action, and {@link #close()} runs every cleanup in reverse order. One
+ * failure does not stop the rest.
  *
- * <p>日志和异常信息包含 resource name，便于定位泄漏。
+ * <p>Log messages and exception messages include the resource name, which makes a leak easier to
+ * locate.
  */
 public final class ResourceTracker implements AutoCloseable {
     private final List<Entry> entries = new ArrayList<>();
@@ -57,7 +59,8 @@ public final class ResourceTracker implements AutoCloseable {
             snapshot = List.copyOf(entries);
             entries.clear();
         }
-        // 用户清理动作在锁外执行：它们可能阻塞或重入 tracker 的查询方法，不应长期持有监视器。
+        // User cleanup actions run outside the lock: they may block or re-enter the tracker's query
+        // methods, so the monitor must not be held for long.
         Throwable first = null;
         for (int i = snapshot.size() - 1; i >= 0; i--) {
             Entry entry = snapshot.get(i);

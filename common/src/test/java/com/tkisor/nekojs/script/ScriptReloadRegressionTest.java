@@ -50,16 +50,16 @@ import java.util.concurrent.TimeUnit;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * 回归测试：/nekojs reload 对「非入口 helper 模块」的真实生效性。
+ * Regression test: {@code /nekojs reload} must really take effect for helper modules that are
+ * not entry points.
  *
- * <p>背景缺陷：{@code ScriptManager.reloadScriptFile} 曾走 {@code hotReloadModule} 捷径，
- * 其 relink 因 revision 不匹配静默跳过全部模块却返回 success=true，导致 helper 修改后
- * reload 显示成功但完全不生效（见 ModuleSliceRelinker 的删除历史）。本测试固定修复后的
- * 契约：修改 helper 后 reload 必须让所有受影响的入口重新执行并观察到新值。
+ * <p>After a helper changes, a reload must re-execute every affected entry point so it observes
+ * the new value; reporting success without doing that is the failure this test guards against.
  */
 class ScriptReloadRegressionTest {
 
-    /** 记录入口脚本观察到的 helper 导出值；作为全局绑定注入沙盒。 */
+    /** Records the helper export value observed by an entry script; injected into the sandbox as a
+     * global binding. */
     public static final class TestRecorder {
         private volatile String value;
         private volatile Context recordedContext;
@@ -71,9 +71,11 @@ class ScriptReloadRegressionTest {
         private volatile boolean managerContextMatches;
         private volatile boolean managerKilled;
         private volatile Context managerContextAtProbe;
-        /** probe 时刻 manager 的候选 Context（ticket 06：候选阶段即 candidateContext，commit 后清空）。 */
+        /** The manager's candidate Context at probe time: it holds the candidate during the candidate
+         * phase and is cleared after commit. */
         private volatile Context candidateContextAtProbe;
-        /** binding.close(scriptType) 调用记录（kill 重建 teardown 等价性断言用）。 */
+        /** Records each binding.close(scriptType) call, used to assert the teardown after a kill and
+         * rebuild is equivalent. */
         final java.util.List<String> closedBindings = new CopyOnWriteArrayList<>();
 
         public void record(String value) {
@@ -84,7 +86,8 @@ class ScriptReloadRegressionTest {
             return value;
         }
 
-        /** 记录「调用此方法的 JS 函数」所属的 Graal Context，用于断言脚本实际执行在哪个环境。 */
+        /** Records the Graal Context that owns the JS function calling this method, so tests can assert
+         * which environment a script really ran in. */
         public void recordContext(Value fn) {
             this.recordedContext = fn.getContext();
         }
@@ -98,7 +101,8 @@ class ScriptReloadRegressionTest {
             return recordedContext;
         }
 
-        /** 记录当前 JS 函数所属 Context 是否被 ScriptManager.isContextDead 判为 dead。 */
+        /** Records whether {@code ScriptManager.isContextDead} reports the calling JS function's Context
+         * as dead. */
         public void recordContextDead(Value fn) {
             Context context = fn.getContext();
             this.deadContext = context;
@@ -115,7 +119,7 @@ class ScriptReloadRegressionTest {
                     candidateField.setAccessible(true);
                     this.candidateContextAtProbe = (Context) candidateField.get(manager);
                 } catch (Exception ignored) {
-                    // 诊断辅助：反射失败不应掩盖原始断言
+                    // Diagnostic helper: a reflection failure must not mask the original assertion
                 }
             }
         }
@@ -132,7 +136,7 @@ class ScriptReloadRegressionTest {
             return managerContextAtProbe;
         }
 
-        /** probe 时刻 manager 的候选 Context（ticket 06 诊断面；commit 后为 null）。 */
+        /** The manager's candidate Context at probe time; {@code null} after commit. */
         public Context candidateContextAtProbe() {
             return candidateContextAtProbe;
         }
@@ -194,14 +198,16 @@ class ScriptReloadRegressionTest {
 
     @BeforeAll
     static void initPlatform() {
-        // 使用固定的非临时目录：NekoJSLoggers 的 FileAppender 会持有 <gameDir>/logs/nekojs/server.log
-        // 的文件句柄直到 JVM 退出；若把 gameDir 放在 JUnit @TempDir 中，类结束时临时目录清理会
-        // 因文件被占用而在 Windows 上失败（executionError）。
+        // Use a fixed, non-temporary directory: the NekoJSLoggers FileAppender holds a file handle on
+        // <gameDir>/logs/nekojs/server.log until the JVM exits. If gameDir lived in a JUnit @TempDir,
+        // cleaning up the temporary directory at class end would fail on Windows (executionError)
+        // because the file is still in use.
         Path gameDir = Path.of(System.getProperty("java.io.tmpdir"), "nekojs-test-gamedir");
         TestPlatformInit.ensureInitialized(gameDir);
     }
 
-    /** 测试共享同一个测试 gameDir：每个用例前清空脚本目录，避免用例之间互相发现残留脚本。 */
+    /** Tests share one test gameDir: each test clears the script directory first, so tests do not
+     * discover scripts left behind by another test. */
     @BeforeEach
     void cleanScriptDir() throws Exception {
         Path serverDir = NekoJSPaths.get().serverScripts();
@@ -260,9 +266,10 @@ class ScriptReloadRegressionTest {
     }
 
     /**
-     * 票 20 smoke F4：单文件 reload 接受三种等价写法——裸文件名、{@code server/<file>}
-     * （id 风格前缀）与 {@code server_scripts/<file>}（物理目录形态，用户直觉路径）。
-     * 后者此前被解析成 {@code <scripts>/server_scripts/<file>} 而拒绝。
+     * Single-file reload accepts three equivalent forms: the bare file name, {@code server/<file>}
+     * (the id-style prefix), and {@code server_scripts/<file>} (the physical directory form, the path
+     * users expect). The last form used to resolve to {@code <scripts>/server_scripts/<file>} and was
+     * rejected.
      */
     @Test
     void singleFileReloadAcceptsBareIdAndScriptsDirPathForms() throws Exception {
@@ -301,12 +308,13 @@ class ScriptReloadRegressionTest {
     }
 
     /**
-     * C1 回归：事务式 reload 必须在候选 Context 中加载脚本，而不是沿用旧的
-     * {@code this.context}/{@code this.nodeRuntime}。
+     * Regression: a transactional reload must load scripts in the candidate Context, not reuse the old
+     * {@code this.context}/{@code this.nodeRuntime}.
      *
-     * <p>脚本通过 {@code TestRecorder.recordContext((event) => {})} 把「定义该函数的
-     * Graal Context」上报给 Java 侧。reload 成功后，该 Context 必须等于 ScriptManager
-     * 当前持有的候选 Context；修复前脚本跑在旧 Context 中，二者不相等。
+     * <p>The script calls {@code TestRecorder.recordContext((event) => {})} to report the Graal Context
+     * that defined the function back to Java. After a successful reload, that Context must equal the
+     * candidate Context the ScriptManager currently holds; before the fix the script ran in the old
+     * Context, so the two differ.
      */
     @Test
     void transactionalReloadLoadsScriptsIntoCandidateContext() throws Exception {
@@ -342,8 +350,9 @@ class ScriptReloadRegressionTest {
     }
 
     /**
-     * I1 回归：成功的完整 reload 必须清除 {@code contextKilled}；候选加载失败时恢复旧值。
-     * 这里覆盖成功路径（失败路径由候选-kill 检测交给 catch 恢复）。
+     * Regression: a successful full reload must clear {@code contextKilled}, and a failed candidate load
+     * must restore the previous value. This test covers the success path; the failure path is restored by
+     * the catch that handles candidate-kill detection.
      */
     @Test
     void successfulTransactionalReloadClearsContextKilledFlag() throws Exception {
@@ -379,9 +388,10 @@ class ScriptReloadRegressionTest {
     }
 
     /**
-     * 回归：preload 读失败（编码损坏/权限问题）的脚本不得静默消失。
-     * 旧行为是 {@code disabled=true} 后 {@code shouldRun()} 跳过、{@code lastError} 无人读——
-     * 日志与错误面板都没有任何痕迹。修复后必须进 ErrorTracker 且异常类型保留。
+     * Regression: a script whose preload read fails (bad encoding, permission problem) must not vanish
+     * silently. The old behavior set {@code disabled=true}, {@code shouldRun()} skipped the script, and
+     * nothing read {@code lastError}, so neither the log nor the error panel showed a trace. It must now
+     * reach the ErrorTracker with the exception type preserved.
      */
     @Test
     void unreadableScriptSurfacesInErrorTrackerInsteadOfVanishing() throws Exception {
@@ -389,8 +399,8 @@ class ScriptReloadRegressionTest {
         Path serverDir = paths.serverScripts();
         Files.createDirectories(serverDir);
         Path broken = serverDir.resolve("broken-encoding.js");
-        // 0x80/0x81 是非法 UTF-8 序列：Files.newBufferedReader 的默认 UTF-8 解码在读到时
-        // 抛 MalformedInputException，覆盖 preload 的 catch(Exception) 路径
+        // 0x80/0x81 is not a valid UTF-8 sequence: the default UTF-8 decoder in Files.newBufferedReader
+        // throws MalformedInputException when it reads it, which exercises preload's catch(Exception) path
         Files.write(broken, new byte[]{(byte) 0x80, (byte) 0x81, '\n'});
 
         TestRecorder recorder = new TestRecorder();
@@ -470,9 +480,10 @@ class ScriptReloadRegressionTest {
     }
 
     /**
-     * C1 回归：事务式 reload 候选加载期间，候选 Context 的 timer 回调不能被判定为 dead。
-     * 修复前 {@code isContextDead(candidateContext)} 在最终切换前看到的是旧 Context，
-     * {@code await new Promise(r => setTimeout(r, 0))} 的回调会被跳过，候选脚本加载超时。
+     * Regression: while a transactional reload loads candidates, timer callbacks on the candidate
+     * Context must not be treated as dead. Before the fix {@code isContextDead(candidateContext)} saw
+     * the old Context until the final swap, so the callback of
+     * {@code await new Promise(r => setTimeout(r, 0))} was skipped and the candidate load timed out.
      */
     @Test
     void transactionalReloadCandidateTimerCallbacksAreNotSkipped() throws Exception {
@@ -506,8 +517,9 @@ class ScriptReloadRegressionTest {
             runBounded(manager::reloadScripts, () -> {});
             assertEquals(currentContext(manager), recorder.deadContext(),
                     "isContextDead probe must run in the candidate context");
-            // ticket 06：候选不再提前发布为 live 环境（generation 隔离）。诊断断言随之更新为
-            // 新契约——候选阶段 probe context 是 manager 当时的 candidateContext，而不是 runtime.context()。
+            // Candidates are no longer published as the live environment early (generation isolation), so the
+            // diagnostic assertion follows that rule: during candidate load the probe context is the
+            // manager's candidateContext, not runtime.context().
             assertTrue(recorder.candidateContextAtProbe() != null
                             && recorder.candidateContextAtProbe().equals(recorder.deadContext()),
                     "diagnostic: probe context must be the manager's candidate context during candidate load; "
@@ -531,13 +543,14 @@ class ScriptReloadRegressionTest {
     }
 
     /**
-     * 回归测试：getOrCreateContext 的 check-then-act 必须原子化。
+     * Regression test: the check-then-act in getOrCreateContext must be atomic.
      *
-     * <p>修复前该方法未同步，多个线程并发通过空检查后会各自创建 Graal Context，
-     * 输家 Context（及其 Node timer 调度线程）泄漏在 {@link ScriptManager#CONTEXT_TO_MANAGER}。
-     * 由于现有公开 API 中唯一不持实例锁的 {@link ScriptManager#flushReadyNodeTimers()}
-     * 并不创建 Context，本测试通过反射并发调用私有的 getOrCreateContext（测试允许反射，
-     * 与既有测试一致）来固定该契约：每个 fresh manager 只留下一个 Context 条目。
+     * <p>Before the fix the method was unsynchronized, so threads that passed the null check at the same
+     * time each created a Graal Context, and the losing Context (with its Node timer scheduling thread)
+     * leaked in {@link ScriptManager#CONTEXT_TO_MANAGER}. The only public API that runs without the
+     * instance lock, {@link ScriptManager#flushReadyNodeTimers()}, does not create a Context, so the test
+     * calls the private getOrCreateContext concurrently through reflection (existing tests here also use
+     * reflection) and pins the rule: a fresh manager leaves exactly one Context entry.
      */
     @Test
     void concurrentGetOrCreateContextCreatesSingleContextPerManager() throws Exception {
@@ -551,8 +564,8 @@ class ScriptReloadRegressionTest {
         ExecutorService pool = Executors.newFixedThreadPool(threads);
         try {
             for (int round = 0; round < rounds; round++) {
-                // 每个 round 使用独立 Engine：Graal 要求共享 Engine 的所有 Context 使用同一
-                // HostAccess 配置，而 newManager 每次都会构建新的 NekoSharedHostAccess。
+                // Each round uses its own Engine: Graal requires every Context sharing an Engine to use the same
+                // HostAccess configuration, and newManager builds a new NekoSharedHostAccess each time.
                 Engine engine = Engine.newBuilder().build();
                 ScriptManager manager = newManager(paths, recorder, engine);
                 try {
@@ -626,8 +639,9 @@ class ScriptReloadRegressionTest {
     }
 
     private static Context currentContext(ScriptManager manager) throws Exception {
-        // context 与 nodeRuntime/流已收进成对发布的 RuntimeEnvironment record（单个 volatile
-        // 引用）；从这里取 context 等价于旧字段直读
+        // context, nodeRuntime and the streams now live in the RuntimeEnvironment record, published as a pair
+        // through one volatile reference; reading context here is equivalent to reading the old field
+        // directly
         Field field = ScriptManager.class.getDeclaredField("runtime");
         field.setAccessible(true);
         Object environment = field.get(manager);
@@ -827,7 +841,8 @@ class ScriptReloadRegressionTest {
         }
     }
 
-    /** 记录 clearListeners 调用的桥接桩：区分「整类型清除」（kill 后自动重建路径）与「按脚本清除」（单文件重载路径）。 */
+    /** Records clearListeners calls. It distinguishes a whole-type clear (the automatic rebuild path after
+     * a kill) from a per-script clear (the single-file reload path). */
     private static final class RecordingEventBridge implements ScriptEventBridge {
         final List<ScriptType> typeOnlyCleared = new CopyOnWriteArrayList<>();
         final List<String> scriptScopedCleared = new CopyOnWriteArrayList<>();

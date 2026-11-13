@@ -3,8 +3,9 @@ package com.tkisor.nekojs.api.recipe;
 import java.util.List;
 
 /**
- * {@code event.recipes} proxy 的 key 常量（neoforge 平台共享，避免三份漂移）。
- * 三个 neoforge 平台的 {@code RecipeRegistryProxy} 用这些 key 暴露内省方法。
+ * Key constants for the {@code event.recipes} proxy, shared by the three neoforge platforms so
+ * they cannot drift apart. Each neoforge platform's {@code RecipeRegistryProxy} exposes its
+ * introspection methods under these keys.
  */
 public final class RecipeRegistryKeys {
     public static final String NAMESPACES = "namespaces";

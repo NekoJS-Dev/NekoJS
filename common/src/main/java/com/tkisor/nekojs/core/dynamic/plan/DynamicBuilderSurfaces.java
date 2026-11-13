@@ -11,22 +11,23 @@ import java.util.Comparator;
 import java.util.List;
 
 /**
- * 动态定义 builder 契约条目的派生器（ticket 16，AC9）：以三个冻结类型的 builder 类为
- * <b>唯一契约输入</b>，经 {@link DynamicBuilderContract} 反射出成员目录，转成结构化
- * catalog 条目（{@link RegistryBuilderSurfaceEntry}，票 15 同款条目形状）交给
- * probe TS/Python 后端渲染——runtime member（{@link DynamicBuilderSurface}）、
- * definition fingerprint、TS/Python declaration 全部同源，不手写第二份成员表。
+ * Derives the contract entries of the dynamic definition builders. The builder classes of the
+ * three frozen types are the <b>only contract input</b>: {@link DynamicBuilderContract} reflects
+ * their members into structured catalog entries ({@link RegistryBuilderSurfaceEntry}, the same
+ * entry shape the startup builders use), which the TS/Python probe backends render. Runtime
+ * members ({@link DynamicBuilderSurface}), the definition fingerprint and the TS/Python
+ * declarations all come from that one source, so there is no second hand-written member table.
  *
- * <p>与票 15 {@code RegistryBuilderSurfaces} 的关系：共享<b>条目形状与渲染器</b>（同一
- * 事实源的呈现约定），但派生输入是动态 builder 自己的契约——不进入启动期
- * {@code registry_types} 清单，不与启动 drain 语义耦合（工单协调裁定「共享类型事实、
- * 独立 Builder 路径」）。
+ * <p>It shares the <b>entry shape and renderer</b> with {@code RegistryBuilderSurfaces}: the same
+ * presentation convention over the same type facts, but the input here is the dynamic builders'
+ * own contract. These entries do not enter the startup {@code registry_types} list and are not
+ * coupled to startup drain semantics; the dynamic builder path stays separate.
  */
 public final class DynamicBuilderSurfaces {
 
     private DynamicBuilderSurfaces() {}
 
-    /** 三个冻结类型的结构化契约条目（builder 名字典序确定）。 */
+    /** The structured contract entries of the three frozen types, sorted by builder name. */
     public static List<RegistryBuilderSurfaceEntry> derive() {
         List<RegistryBuilderSurfaceEntry> entries = new ArrayList<>();
         entries.add(entryOf(DynamicDefinitionType.ITEM, DynamicItemBuilder.class));
@@ -71,9 +72,12 @@ public final class DynamicBuilderSurfaces {
     }
 
     /**
-     * 方法成员的 TS 形状：声明面每名冻结一个确定性签名（参数最多者，再按签名串稳定）；
-     * 同名重载（如 {@code fireResistant()} / {@code fireResistant(value)}）在脚本侧由
-     * 实参个数解析。链式 fluent setter 的返回类型渲染为 builder 名（声明面可读）。
+     * TypeScript shape of a method member. The declaration surface freezes one deterministic
+     * signature per name: it picks the overload with the most parameters, then breaks ties by the
+     * signature string. Overloads of the same name, such as {@code fireResistant()} and
+     * {@code fireResistant(value)}, are resolved on the script side by argument count. A fluent
+     * setter that returns itself is rendered with the builder name, which keeps the declaration
+     * readable.
      */
     private static String tsSignature(Class<?> builderClass, List<Method> overloads) {
         Method method = deterministicOverload(overloads);
@@ -89,13 +93,15 @@ public final class DynamicBuilderSurfaces {
         return sb.toString();
     }
 
-    /** 方法成员的 Python 形状（与 TS 同一 Method 输入派生；成员名保持 JS 面 verbatim）。 */
+    /** Python shape of a method member, derived from the same Method input as its TypeScript shape;
+     * the member name stays verbatim as on the JS side. */
     private static String pySignature(Class<?> builderClass, String name, List<Method> overloads) {
         Method method = deterministicOverload(overloads);
         StringBuilder sb = new StringBuilder("def ").append(name).append("(self");
         Parameter[] params = method.getParameters();
         for (int i = 0; i < params.length; i++) {
-            // 参数名回落序号必须用真实下标（与 TS 侧同款）：恒传 0 会产出重复的 arg0
+            // The fallback argument name must use the real index, as it does on the TS side: always passing
+            // 0 would produce repeated arg0 names.
             sb.append(", ").append(paramName(params[i], i)).append(": ")
                     .append(DynamicBuilderContract.pyTypeOf(params[i].getType()));
         }
@@ -103,7 +109,8 @@ public final class DynamicBuilderSurfaces {
         return sb.toString();
     }
 
-    /** 返回类型形状：链式返回 builder → builder 名；void → void/None；其余 → 类型映射。 */
+    /** Return type shape: a fluent builder return becomes the builder name, void becomes
+     * void/None, and anything else goes through the type mapping. */
     private static String returnShape(Class<?> builderClass, Method method, String voidShape, boolean python) {
         Class<?> returnType = method.getReturnType();
         if (returnType == void.class || returnType == Void.class) {

@@ -14,17 +14,18 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 /**
- * 流体硬化事件（{@code BlockEvents.fluidPlaced}）的 fabric 挂点（二）：
- * {@code LavaFluid#spreadTo} 内 {@code LevelAccessor.setBlock} 调用点
- * （INVOKE，javap 实证偏移 57；CP owner = LevelAccessor，单 L 形式匹配）。
+ * Fabric hook (the second one) for the fluid-hardening event ({@code BlockEvents.fluidPlaced}):
+ * the {@code LevelAccessor.setBlock} call site inside {@code LavaFluid#spreadTo} (INVOKE,
+ * javap offset 57; the CP owner is LevelAccessor and the single-L form matches).
  *
- * <p>原版语义：岩浆向下流进水方块 → 硬化为 {@code STONE} + fizz。这与
- * NeoForge 26.1.2 的 {@code FluidPlaceBlockEvent} post 点同位次（补丁源码
- * {@code EventHooks.fireFluidPlaceBlockEvent(level, pos, pos, STONE)}）。
+ * <p>Vanilla behaviour: lava flowing down into a water block hardens into {@code STONE} with a
+ * fizz. This is the same place as the NeoForge 26.1.2 {@code FluidPlaceBlockEvent} post point
+ * (patch source {@code EventHooks.fireFluidPlaceBlockEvent(level, pos, pos, STONE)}).
  *
- * <p>取消语义与 NF 的细微差异：NF 取消 = setBlock 参数换成旧状态（fizz 照放）；
- * fabric 侧 {@code ci.cancel()} = 整个 {@code spreadTo} 提前返回（本次不硬化也
- * 不 fizz、不落 super.spreadTo）。净效果一致：流体不硬化。已记入移植台账。
+ * <p>Cancelling differs slightly from NeoForge: there, cancelling swaps the setBlock argument for
+ * the previous state and the fizz still plays; on fabric {@code ci.cancel()} returns from
+ * {@code spreadTo} early, so nothing hardens, nothing fizzes and {@code super.spreadTo} does not
+ * run. The net effect is the same: the fluid does not harden.
  */
 @Mixin(LavaFluid.class)
 public abstract class MixinLavaFluid {

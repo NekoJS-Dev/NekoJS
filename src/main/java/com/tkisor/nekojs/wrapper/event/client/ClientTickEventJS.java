@@ -1,7 +1,8 @@
 package com.tkisor.nekojs.wrapper.event.client;
 
 /**
- * 客户端 tick 事件的中立 payload（tickPre / tickPost 共用；契约无 payload 成员）。
+ * Loader-neutral payload for the client tick event (shared by tickPre / tickPost; it has no
+ * payload members).
  */
 public class ClientTickEventJS {
 

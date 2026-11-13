@@ -1,4 +1,4 @@
-// TODO(fabric): fabric 侧还没有对应实现，整文件守卫等移植完成后去掉
+// fabric has no matching implementation yet; remove this whole-file guard once the port lands
 //? if neoforge {
 package com.tkisor.nekojs.platform;
 
@@ -22,8 +22,9 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * nekojs.mixins.json 完整性 smoke test：JSON 可解析、required=true、每个 mixin 类可被加载，
- * 防止 mixin 配置与编译产物漂移。各平台读取各自 classpath 上的同名配置（1.21.1 / 26.x 内容不同）。
+ * Smoke test for nekojs.mixins.json: the JSON parses, required=true is set, and every mixin class
+ * loads. It catches drift between the mixin config and the compiled output. Each platform reads
+ * the same-named config from its own classpath (1.21.1 and 26.x have different content).
  */
 class MixinConfigIntegrityTest {
 
@@ -53,7 +54,7 @@ class MixinConfigIntegrityTest {
         String pkg = packageEl.getAsString();
         assertFalse(pkg.isEmpty(), "mixin config 'package' must not be empty");
 
-        // 三段全查（旧版只查 mixins 段——client/server 段的类名拼错不会被抓住）
+        // Check all three sections (an older version only checked "mixins", so a typo in a client/server entry went unnoticed)
         Set<String> seen = new HashSet<>();
         ClassLoader loader = getClass().getClassLoader();
         for (String section : List.of("mixins", "client", "server")) {
@@ -65,7 +66,7 @@ class MixinConfigIntegrityTest {
                 assertTrue(seen.add(section + ":" + simpleName), "duplicate mixin entry: " + simpleName);
 
                 String fqcn = pkg + "." + simpleName;
-                // initialize=false：只验证类存在且可加载，避免在无游戏上下文下运行 mixin 静态初始化器。
+                // initialize=false: only prove the class exists and loads; do not run mixin static initializers without a game context.
                 assertDoesNotThrow(() -> Class.forName(fqcn, false, loader),
                         "mixin class not found on classpath: " + fqcn);
             }

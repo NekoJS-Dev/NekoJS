@@ -10,9 +10,9 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 /**
- * Ticket 27 AC1: the GUI does not cache mutable shared state — {@link ErrorDashboardModel}
- * only holds an immutable copy of the caller's snapshot; later mutations of the caller's list
- * never change the model, and the exposed projection cannot be rewritten from outside.
+ * The GUI does not cache mutable shared state: {@link ErrorDashboardModel} only holds an immutable
+ * copy of the caller's snapshot. Later mutations of the caller's list never change the model, and
+ * the exposed projection cannot be rewritten from outside.
  */
 class Ticket27ErrorDashboardSnapshotTest {
 

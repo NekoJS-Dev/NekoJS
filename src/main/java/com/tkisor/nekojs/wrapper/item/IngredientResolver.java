@@ -1,5 +1,5 @@
-// 26.x 实现，本文件不应再出现版本守卫。1.21.1 的实现是 versions/1.21.1/src 下的同名文件，
-// 改本文件行为时须同步它。
+// 26.x implementation; no version guard should appear in this file again. The 1.21.1 implementation is the
+// file of the same name under versions/1.21.1/src, so changing this file's behavior means updating it too.
 package com.tkisor.nekojs.wrapper.item;
 
 import com.tkisor.nekojs.NekoJS;
@@ -41,22 +41,24 @@ import java.util.regex.Pattern;
 public final class IngredientResolver {
     private IngredientResolver() {}
 
-    /** 26.x 的 DefaultedRegistry 没有 asLookup()；从 vanilla RegistryAccess 取 lookup。 */
+    /** The 26.x DefaultedRegistry has no asLookup(); the lookup comes from the vanilla RegistryAccess. */
     private static final HolderLookup.RegistryLookup<Item> ITEM_LOOKUP =
         RegistryAccess.fromRegistryOfRegistries(BuiltInRegistries.REGISTRY).lookupOrThrow(Registries.ITEM);
 
     /**
-     * 脚本提供的 regex 源串 → 预编译 Pattern 缓存。{@code /regex/} 语法与 {@code {regex: ...}}
-     * 的模式串来自脚本（非编译期常量，无法 hoist 成 static final）；Pattern 不可变且线程安全，
-     * 按源串去重可在重复解析同一批配方时省去逐次编译。规模以脚本中不同 regex 数为上界。
-     * 非法 regex 抛 PatternSyntaxException，不缓存（与原行为一致）。
+     * Script-supplied regex source -> precompiled Pattern cache. The {@code /regex/} syntax and the {@code {regex: ...}}
+     * pattern string come from scripts (not compile-time constants, so they cannot be hoisted into a static final);
+     * a Pattern is immutable and thread-safe, so deduplicating by source string skips recompiling when the same
+     * batch of recipes is parsed repeatedly. The size is bounded by the number of distinct regexes in the scripts.
+     * An invalid regex throws PatternSyntaxException and is not cached.
      */
     private static final Map<String, Pattern> REGEX_CACHE = new ConcurrentHashMap<>();
 
     /**
-     * Tag-created ingredients → their {@link TagKey}，供序列化改写为 "#id" 引用形态（见 {@link #tagOriginOf}）。
-     * WeakHashMap：一次配方 reload 会创建成千上万短命 ingredient，不能进程级泄漏。
-     * {@code Ingredient#equals} 按 values 比较——同一 tag 的多个实例互撞映射到相同 TagKey，无害。
+     * Tag-created ingredients -> their {@link TagKey}, so serialization can rewrite them into the "#id" reference form
+     * (see {@link #tagOriginOf}). WeakHashMap: one recipe reload creates thousands of short-lived ingredients, which
+     * must not leak process-wide. {@code Ingredient#equals} compares by values, so several instances of the same tag
+     * collide onto the same TagKey, which is harmless.
      */
     private static final Map<Ingredient, TagKey<Item>> TAG_ORIGIN =
         Collections.synchronizedMap(new WeakHashMap<>());
@@ -70,7 +72,7 @@ public final class IngredientResolver {
         return cached;
     }
 
-    // ===================== 字符串前缀分派 =====================
+    // ===================== String prefix dispatch =====================
 
     public static Ingredient fromString(String raw) {
         String s = normalizeRaw(raw);
@@ -122,8 +124,8 @@ public final class IngredientResolver {
 //? if neoforge {
         return ((ItemStackExtension) (Object) stack).neko$asIngredient();
 //?} else {
-/*        // fabric 无 ItemStackExtension 注入：降级为纯物品形态（丢数据组件）——26.x 组件 ingredient
-        // 的 fabric 面随 ItemStackExtension 移植批次补（见 docs/fabric-port-status.md）
+/*        // fabric has no ItemStackExtension injection: degrade to a plain item (dropping data components); the fabric
+        // side of 26.x component ingredients lands with the ItemStackExtension port batch (see docs/fabric-port-status.md)
         return Ingredient.of(stack.getItem());
 *///?}
     }
@@ -136,29 +138,29 @@ public final class IngredientResolver {
         return wrapper.unwrap();
     }
 
-    /** 匹配所有已注册物品的 wildcard（快照语义：ingredientOfHolders 本就拍平成 Item[]）。 */
+    /** Wildcard matching every registered item (snapshot semantics: ingredientOfHolders already flattens to Item[]). */
     public static Ingredient wildcard() {
         return allItemsSnapshot();
     }
 
     /**
-     * 配方 JSON 序列化时取回 tag ingredient 的 {@link TagKey}：{@code #tag} 解析出的
-     * HolderSet.Named 绑定在 BuiltInRegistries 的 owner 上，而配方序列化用的是本次数据包
-     * 加载的 RegistryOps——两者包装层实例不同，{@code HolderSetCodec} 的 owner 校验恒拒绝
-     * （"is not valid in current registry set"，真机表现为 shaped 配方里写 {@code #tag}
-     * 原料必炸）。序列化侧据此改写为 vanilla 合法的 {@code {"tag": ...}} 引用形态，
-     * 重新 parse 时由当前 RegistryOps 自行解析。非 tag 来源返回 {@code null}。
+     * Retrieves the {@link TagKey} of a tag ingredient during recipe JSON serialization: the HolderSet.Named parsed
+     * from {@code #tag} is bound to the BuiltInRegistries owner, while recipe serialization uses this data pack load's
+     * RegistryOps -- the two wrap different instances, so the HolderSetCodec owner check always rejects it
+     * ("is not valid in current registry set", which in game always blew up on a shaped recipe with a {@code #tag}
+     * ingredient). The serialization side therefore rewrites it into the vanilla-legal {@code {"tag": ...}} reference
+     * form, and the current RegistryOps resolves it when parsing again. Returns {@code null} for a non-tag origin.
      */
     public static TagKey<Item> tagOriginOf(Ingredient ingredient) {
         return ingredient == null ? null : TAG_ORIGIN.get(ingredient);
     }
 
-    /** 取反 ingredient：返回匹配「除 excluded 外所有物品」。 */
+    /** Inverted ingredient: matches every item except the excluded ones. */
     public static Ingredient not(Ingredient excluded) {
 //? if neoforge {
         return DifferenceIngredient.of(wildcard(), excluded);
 //?} else {
-/*        // fabric 无 DifferenceIngredient：wildcard 快照减去 excluded 匹配集（展开层面等价）
+/*        // fabric has no DifferenceIngredient: wildcard snapshot minus the excluded match set (equivalent at the expansion level)
         @SuppressWarnings("deprecation")
         var excludedItems = excluded.items().map(Holder::value).collect(java.util.stream.Collectors.toSet());
         return Ingredient.of(ITEM_LOOKUP.listElements().map(Holder::value)
@@ -166,7 +168,7 @@ public final class IngredientResolver {
 *///?}
     }
 
-    // ===================== fromValue 统一入口（字符串/对象/数组/host）=====================
+    // ===================== fromValue entry point (string/object/array/host) =====================
 
     public static Ingredient fromValue(Value value) {
         if (value == null || value.isNull()) return Ingredient.of();
@@ -186,10 +188,10 @@ public final class IngredientResolver {
             "item / item id / ingredient object / ingredient array", value, "unsupported ingredient value");
     }
 
-    // ===================== 对象分派（声明式，超越 KubeJS）=====================
+    // ===================== Object dispatch (declarative, beyond KubeJS) =====================
 
     private static Ingredient fromObject(Value value) {
-        // 组合 / 谓词优先于简单字段
+        // Combinations and predicates take precedence over simple fields
         if (value.hasMember("filter")) {
             Value fn = value.getMember("filter");
             if (!fn.canExecute()) {
@@ -245,7 +247,7 @@ public final class IngredientResolver {
 //? if neoforge {
         return new CompoundIngredient(list).toVanilla();
 //?} else {
-/*        // fabric 无 CompoundIngredient：combine（下方中立方法）的展开合并等价
+/*        // fabric has no CompoundIngredient: the expansion merge of combine (the neutral method below) is equivalent
         return combine(list);
 *///?}
     }
@@ -271,7 +273,7 @@ public final class IngredientResolver {
         return Ingredient.of(items);
     }
 
-    /** 全部已注册物品的快照（neoforge 走 live AnyHolderSet 再拍平，fabric 直接枚举 lookup——两侧都是快照）。 */
+    /** Snapshot of all registered items (neoforge flattens a live AnyHolderSet, fabric enumerates the lookup directly -- both are snapshots). */
     private static Ingredient allItemsSnapshot() {
 //? if neoforge {
         return ingredientOfHolders(new AnyHolderSet<>(ITEM_LOOKUP));
@@ -280,14 +282,14 @@ public final class IngredientResolver {
 *///?}
     }
 
-    /** 两 ingredient 匹配集的交集（快照；neoforge 侧用 IntersectionIngredient，见 intersection）。 */
+    /** Intersection of the match sets of two ingredients (a snapshot; the neoforge side uses IntersectionIngredient, see intersection). */
     @SuppressWarnings("deprecation")
     private static Ingredient intersectItems(Ingredient a, Ingredient b) {
         var set = b.items().map(Holder::value).collect(java.util.stream.Collectors.toSet());
         return Ingredient.of(a.items().map(Holder::value).filter(set::contains).toArray(Item[]::new));
     }
 
-    // ===================== 给 IngredientJS.or() 用的旧 combine（保持兼容）=====================
+    // ===================== Legacy combine used by IngredientJS.or() (kept compatible) =====================
 
     public static Ingredient combine(List<Ingredient> alternatives) {
         List<Ingredient> present = alternatives.stream().filter(i -> i != null && !i.isEmpty()).toList();
@@ -295,18 +297,18 @@ public final class IngredientResolver {
         if (present.size() == 1) return present.getFirst();
         List<Holder<Item>> holders = new ArrayList<>();
         for (Ingredient ingredient : present) {
-            // items() 无等价非废弃 API（getValues().stream() 不含 custom ingredient 展开），保守保留
+            // items() has no equivalent non-deprecated API (getValues().stream() does not expand custom ingredients), so it is kept on purpose
             @SuppressWarnings("deprecation")
             List<Holder<Item>> expanded = ingredient.items().toList();
             holders.addAll(expanded);
         }
         if (holders.isEmpty()) return Ingredient.of();
-        // holders 是 List<Holder<Item>>，必须先 unwrap 成 Item[]，否则 toArray(new Item[0]) 会
-        // 因元素类型是 Holder 而抛 arraycopy: element type mismatch。
+        // holders is List<Holder<Item>> and must be unwrapped into Item[] first, otherwise toArray(new Item[0])
+        // throws arraycopy: element type mismatch because the element type is Holder.
         return Ingredient.of(holders.stream().map(Holder::value).toArray(Item[]::new));
     }
 
-    // ===================== 旧的 id normalize（保留 API，IngredientJS 可能用）=====================
+    // ===================== Legacy id normalize (kept as API, IngredientJS may use it) =====================
 
     public static String normalizeItemId(String raw) {
         String id = normalizeRaw(raw);

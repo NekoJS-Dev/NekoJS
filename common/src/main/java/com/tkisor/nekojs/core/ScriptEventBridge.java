@@ -79,8 +79,9 @@ public interface ScriptEventBridge {
     }
 
     /**
-     * 按 scriptId 前缀反注册监听器（脚本包整体卸载用；前缀见
-     * {@code ScriptPack#scriptIdPrefix(ScriptType)}）。默认空实现，与 {@link #EMPTY} 一致。
+     * Unregisters listeners by scriptId prefix, for unloading a whole script pack; the prefix comes
+     * from {@code ScriptPack#scriptIdPrefix(ScriptType)}. The default implementation does nothing,
+     * like {@link #EMPTY}.
      */
     default void clearListenersByPrefix(ScriptType type, String scriptIdPrefix) {
     }

@@ -12,9 +12,10 @@ import java.util.Set;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * kjs-wrapper-parity 补的全局：注册进 {@code SERVER}
- * 绑定集后必须出现在已知全局集合里——preflight 的"未定义标识符"检查以该集合为事实源，
- * 漏注册会让脚本作者写对名字也报"未定义"。
+ * Globals added for wrapper parity: once registered into the {@code SERVER} binding set they must
+ * appear in the known-globals set. The preflight undefined-identifier check uses that set as its
+ * source of truth, so a missing registration reports "undefined" even when the script author spells
+ * the name correctly.
  */
 class CoreBindingsGlobalsTest {
 
@@ -36,8 +37,9 @@ class CoreBindingsGlobalsTest {
         new NekoJSCorePlugin().registerBinding(registry);
 
         Set<String> names = registry.viewRegistered().keySet();
-        // 既有全局不被 parity 工作破坏——首胜语义下同名注册会静默挤掉后来者。
-        // （Text/NBT/Registry 是 managed facade 全局，不经 registerBinding，不在断言之列）
+        // The existing globals survive the parity work: with first-wins, a second registration under the
+        // same name silently pushes the first one out. (Text, NBT and Registry are managed facade
+        // globals registered outside registerBinding, so they are not asserted here.)
         for (String existing : List.of("Item", "Block", "Utils", "Color", "Direction")) {
             assertTrue(names.contains(existing), "'" + existing + "' 是既有全局，不应被 parity 工作破坏");
         }

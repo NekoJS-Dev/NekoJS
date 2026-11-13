@@ -1,14 +1,15 @@
-// fabric 节点孪生：共享树同名接口整文件 `//? if neoforge` 守卫（总线直传 NeoForge 原生
-// RegisterCommandsEvent/CommandEvent）。fabric 侧 REGISTER 由 FabricCommandEventBindings 挂
-// CommandRegistrationCallback 投递；command（执行拦截）需 mixin Commands#performCommand，
-// 落地后本孪生随之扩。
+// Fabric copy of the shared tree's CommandEvents interface, which is guarded file-wide by
+// `//? if neoforge` and passes bus calls straight to the native NeoForge
+// RegisterCommandsEvent/CommandEvent. On Fabric, REGISTER is delivered by
+// FabricCommandEventBindings through CommandRegistrationCallback. The execution-interception bus
+// (command) needs a mixin on Commands#performCommand; this copy grows once that lands.
 package com.tkisor.nekojs.bindings.event;
 
 import com.tkisor.nekojs.api.event.EventBusJS;
 import com.tkisor.nekojs.api.event.EventGroup;
 import com.tkisor.nekojs.wrapper.event.server.CommandRegistryEventJS;
 
-/** 命令事件组（server 脚本）：命令注册（fabric 子集）。 */
+/** Command event group for server scripts: command registration (the Fabric subset). */
 public interface CommandEvents {
     EventGroup GROUP = EventGroup.of("CommandEvents");
 

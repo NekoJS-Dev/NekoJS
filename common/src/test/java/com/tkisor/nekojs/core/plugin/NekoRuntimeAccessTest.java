@@ -23,9 +23,10 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
 
 /**
- * ticket 05 AC2 可重复测试：NekoRuntimeAccess 是进程级单一插件运行时槽位（进程级例外），
- * 必须可重复验证——set/get 同一实例、事件面路由到当前实例、替换后路由切换，
- * 不构成第二 runtime owner（生产侧只由 {@code NekoPluginRuntime.publish} 写入一次）。
+ * NekoRuntimeAccess is the single process-level plugin runtime slot, so this test repeats the same
+ * checks in any order: set/get returns the same instance, the event methods route to the current
+ * instance, and routing follows a replacement. The slot is not a second runtime owner; in
+ * production only {@code NekoPluginRuntime.publish} writes it, once.
  */
 class NekoRuntimeAccessTest {
 
@@ -54,8 +55,8 @@ class NekoRuntimeAccessTest {
 
     @Test
     void accessSlotRoutesEventsToTheSingleProcessRuntime() {
-        // 槽位是进程级单例：测试必须自愈（保存/还原），否则用例顺序会把槽位状态泄漏给
-        // 其他测试——"可重复测试"（AC2）包含测试自身的可重复性。
+        // The slot is a process singleton, so the test must restore it or the case order leaks slot
+        // state into other tests: a repeatable test also covers the test itself
         IPluginRuntime previous = NekoRuntimeAccess.get();
         try {
         CountingRuntime first = new CountingRuntime();
@@ -70,7 +71,8 @@ class NekoRuntimeAccessTest {
         assertEquals(1, first.initStartup.get());
         assertEquals(1, first.afterInit.get());
 
-        // 槽位是可替换的单例：替换后事件面路由到新实例（生产侧 = reload 语义下 publish 覆盖）
+        // The slot takes a replacement: after set, the event methods route to the new instance
+        // (in production, reload publishes the new one)
         CountingRuntime second = new CountingRuntime();
         NekoRuntimeAccess.set(second);
         assertSame(second, NekoRuntimeAccess.get());

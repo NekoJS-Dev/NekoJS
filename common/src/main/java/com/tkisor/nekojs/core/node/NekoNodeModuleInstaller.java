@@ -25,8 +25,8 @@ public final class NekoNodeModuleInstaller {
     private NekoNodeModuleInstaller() {}
 
     /**
-     * 生产装配入口（W3 显式注入）：module host 与装配侧共享同一个 runtime-owned
-     * prepared 缓存实例。
+     * Production assembly entry point. The module host and the assembly side share the same
+     * runtime-owned prepared cache instance, which the caller injects.
      */
     public static NekoNodeRuntime install(Context context, ScriptType scriptType, NekoModuleResolver resolver, NekoJSPaths paths, ErrorTracker errorTracker, SandboxConfig sandboxConfig, NekoModulePipelineCache preparationCache) {
         NekoScriptModuleLoaderHost moduleLoaderHost = null;
@@ -40,8 +40,9 @@ public final class NekoNodeModuleInstaller {
             // Strict CJS require may enter the special resolver only for ids registered by a
             // plugin. The complete allow-list is installed before any plugin module evaluates.
             moduleLoaderHost.registerSpecialModules(pluginModules.keySet());
-            // 全局 timers 由 manifest 的 modules/timers.ts 注册（manifest 同步加载完毕后才执行任何用户脚本，
-            // 无需在 manifest 之前预装一版会丢弃额外参数的简化实现）
+            // The manifest's modules/timers.ts registers the global timers. The manifest is loaded
+            // synchronously before any user script runs, so no simplified implementation that drops
+            // extra arguments needs to be installed ahead of it
             loadManifest(context, preparationCache);
             loadPluginModules(context, pluginModules);
             return runtime;
@@ -86,16 +87,17 @@ public final class NekoNodeModuleInstaller {
     }
 
     /**
-     * 加载插件通过 {@code registerNodeModules} 注册的 JS 模块：用 CommonJS wrapper 求值
-     * （注入 {@code module}/{@code exports}/{@code require}），再通过 {@code __nekoNodeDefine}
-     * 注册到内置模块表，使 {@code require('moduleId')} 解析到 {@code module.exports}。
+     * Loads the JavaScript modules a plugin registered through {@code registerNodeModules}:
+     * evaluates each with a CommonJS wrapper (injecting {@code module}/{@code exports}/{@code require}),
+     * then registers it in the built-in module table through {@code __nekoNodeDefine} so
+     * {@code require('moduleId')} resolves to {@code module.exports}.
      */
     private static Map<String, String> pluginModules() {
         NekoPluginRuntime runtime;
         try {
             runtime = NekoPluginRuntime.current();
         } catch (IllegalStateException ignored) {
-            return Map.of(); // runtime 未 bootstrap（如独立 install），无插件模块
+            return Map.of(); // The runtime has not bootstrapped (a standalone install, for example), so there are no plugin modules.
         }
         Map<String, String> modules = runtime.nodeModules();
         return modules == null ? Map.of() : modules;
@@ -121,7 +123,10 @@ public final class NekoNodeModuleInstaller {
         }
     }
 
-    /** 单引号 JS 字符串字面量（转义 \ ' 与换行），用于把 moduleId 安全嵌入 wrapper。 */
+    /**
+     * Renders a single-quoted JS string literal, escaping backslash, quote and newline, so a moduleId
+     * can be embedded in a wrapper safely.
+     */
     private static String jsString(String s) {
         StringBuilder sb = new StringBuilder("'");
         for (int i = 0; i < s.length(); i++) {

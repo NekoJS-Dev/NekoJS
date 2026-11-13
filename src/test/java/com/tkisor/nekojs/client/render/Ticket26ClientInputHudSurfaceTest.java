@@ -24,21 +24,24 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * 票 26 输入 / HUD 脚本面 fixture：成员名、成员类型与「注册入口 vs 事件监听」的区分，
- * 全部经<b>生产注册路径</b>（{@link NekoJSCorePlugin#registerEvents} +
- * {@code registerClientEvents}）构造真实 {@link EventGroupRegistry}，再读真实总线 metadata。
+ * Input and HUD script surface fixture: member names, member types, and the difference between a
+ * registration entry and an event listener. Everything is built through the <b>production
+ * registration path</b> ({@link NekoJSCorePlugin#registerEvents} + {@code registerClientEvents}) so
+ * the {@link EventGroupRegistry} is real, and asserted against the real bus metadata.
  *
- * <p>为什么需要它：{@code KeyBindEvents.register(...)} 与 {@code ClientEvents.hudRender(...)}
- * 挂在事件组上但语义是「调用即注册」（直接创建 KeyMapping / 按 id 注册常驻渲染器），
- * 与同级监听总线只有一字之差。若哪天有人把它们改成普通监听（或反之），脚本写法会静默变化
- * ——本 fixture 把这条差异钉成断言（AC3）。
+ * <p>Why it exists: {@code KeyBindEvents.register(...)} and {@code ClientEvents.hudRender(...)}
+ * hang off event groups but register on call (they create a KeyMapping directly, or register a
+ * resident renderer by id). That is one word away from the listener buses next to them. If someone
+ * turns them into plain listeners (or the other way round), the script side changes silently, so
+ * this fixture turns the difference into assertions.
  *
- * <p>断言只走公开面：组成员名、总线实例 identity、{@code eventType()}、{@code canDispatch()}、
- * 运行期类型；不复制一份平行的成员表。
+ * <p>Assertions only use the public surface: group member names, bus instance identity,
+ * {@code eventType()}, {@code canDispatch()} and the runtime type. There is no parallel copy of the
+ * member table.
  */
 class Ticket26ClientInputHudSurfaceTest {
 
-    /** 脚本可见成员名必须是 lowerCamelCase（Java 大写常量只是内部定位符）。 */
+    /** Script-visible member names must be lowerCamelCase; the uppercase Java constant is only an internal locator. */
     private static final Pattern LOWER_CAMEL = Pattern.compile("[a-z][A-Za-z0-9]*");
 
     private static Map<String, EventGroup> productionGroups() {
@@ -65,8 +68,9 @@ class Ticket26ClientInputHudSurfaceTest {
             }
         }
 
-        // 本票的输入成员面：精确集合相等，而不是对被测集合自拼字符串做子串匹配
-        // （子串匹配会被 registerKeyMappings 之类满足 contains("register")，没有区分度）。
+        // The input member surface is compared as an exact set, not by substring-matching a string built
+        // from the same set: a substring check would accept registerKeyMappings for
+        // contains("register") and distinguish nothing.
         assertEquals(Set.of("pressed", "released", "tick", "register"),
                 new TreeSet<>(keyBinds.viewBuses().keySet()),
                 "the input group's script-visible members changed");
@@ -76,7 +80,7 @@ class Ticket26ClientInputHudSurfaceTest {
 
     @Test
     void registrationEntriesAreNotListenerBuses() {
-        // register / hudRender：挂在组上的 EventBusJS 子类，覆写 execute 走注册语义。
+        // register and hudRender are EventBusJS subclasses on the group that override execute to register.
         assertTrue(KeyBindEvents.REGISTER instanceof KeyBindEvents.RegisterBus,
                 "KeyBindEvents.register must stay the direct binding-creation entry, not a listener bus");
         assertTrue(ClientEvents.HUD_RENDER instanceof RenderRegistrationBusJS,
@@ -86,7 +90,8 @@ class Ticket26ClientInputHudSurfaceTest {
         assertFalse(ClientEvents.HUD_RENDER.canDispatch(),
                 "a registration entry is not key-dispatched");
 
-        // 同级监听总线保持普通监听形态：hud 是 PainterJS 的每帧监听，不是注册入口。
+        // The listener buses next to them stay plain listeners: hud is the per-frame PainterJS listener,
+        // not a registration entry.
         assertFalse(RenderRegistrationBusJS.class.isInstance(ClientEvents.HUD),
                 "ClientEvents.hud is the per-frame HUD listener bus, not the renderer registration entry");
         assertEquals(PainterJS.class, ClientEvents.HUD.eventType(),
@@ -94,7 +99,7 @@ class Ticket26ClientInputHudSurfaceTest {
         assertFalse(ClientEvents.HUD.canDispatch(),
                 "ClientEvents.hud is a plain (non-dispatched) listener bus");
 
-        // pressed / released / tick 仍是按绑定 id 定向分发的监听总线。
+        // pressed, released and tick remain listener buses dispatched by binding id.
         for (EventBusJS<KeyBindEvents.KeyBindEventJS, String> bus
                 : java.util.List.of(KeyBindEvents.PRESSED, KeyBindEvents.RELEASED, KeyBindEvents.TICK)) {
             assertTrue(bus.canDispatch(),
@@ -117,7 +122,7 @@ class Ticket26ClientInputHudSurfaceTest {
         assertTrue(clientMembers.containsAll(Set.of("hud", "hudRender", "registerKeyMappings")),
                 "this ticket's HUD / key-mapping members must stay in ClientEvents: " + clientMembers);
 
-        // 目录里的成员就是字段单例（不是复制的一份总线）。
+        // The catalog member is the field singleton, not a copied bus.
         assertSame(ClientEvents.HUD,
                 groups.get("ClientEvents").getBusHolder("hud").getBus(ScriptType.CLIENT));
         assertSame(ClientEvents.HUD_RENDER,
@@ -127,7 +132,7 @@ class Ticket26ClientInputHudSurfaceTest {
         assertSame(ClientEvents.REGISTER_KEY_MAPPINGS,
                 groups.get("ClientEvents").getBusHolder("registerKeyMappings").getBus(ScriptType.CLIENT));
 
-        // client-only：本票成员只对 client_scripts 可见，且没有 server 侧形态。
+        // Client only: these members are visible to client_scripts and have no server-side form.
         for (EventBusJS<?, ?> bus : java.util.List.of(ClientEvents.HUD, ClientEvents.HUD_RENDER,
                 ClientEvents.REGISTER_KEY_MAPPINGS, KeyBindEvents.REGISTER, KeyBindEvents.PRESSED)) {
             assertEquals(ScriptType.CLIENT, bus.scriptType(),
@@ -139,7 +144,8 @@ class Ticket26ClientInputHudSurfaceTest {
     void inputHudSurfaceDoesNotDuplicateOtherDomains() {
         Map<String, EventGroup> groups = productionGroups();
 
-        // 每条总线在全部组里只出现一次（identity）：本票成员不得被复制进第二个组/目录。
+        // Each bus appears exactly once across all groups, by identity: these members must not be copied
+        // into a second group or catalog.
         Set<EventBusJS<?, ?>> identities = new java.util.HashSet<>();
         for (EventGroup group : groups.values()) {
             for (var holder : group.viewBuses().values()) {
@@ -154,7 +160,8 @@ class Ticket26ClientInputHudSurfaceTest {
         assertTrue(identities.contains(ClientEvents.HUD_RENDER) && identities.contains(KeyBindEvents.REGISTER),
                 "this ticket's entries participate in the single registration surface");
 
-        // 不声明第二套 PostEffects / Assets 域（票 28/29 的 owner 不被本票复制）。
+        // No second PostEffects or Assets group is declared: those surfaces keep their own owners and are
+        // not copied here.
         assertFalse(groups.containsKey("PostEffectEvents"),
                 "post-effect declarations stay in ClientEvents.postEffects (ticket 28 owner)");
         assertFalse(groups.containsKey("AssetsEvents"),

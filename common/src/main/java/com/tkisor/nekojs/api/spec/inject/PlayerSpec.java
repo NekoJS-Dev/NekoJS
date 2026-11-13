@@ -4,77 +4,82 @@ import com.tkisor.nekojs.api.annotation.RemapByPrefix;
 import com.tkisor.nekojs.api.spec.PlatformAvailability;
 
 /**
- * Player 跨平台统一扩展规范。
+ * Cross-platform extension specification for Player.
  *
- * <p>各平台的 {@code PlayerExtension} 必须 {@code extends PlayerSpec}，为每个 {@code neko$}
- * 方法提供平台特定的 {@code default} 实现。本接口的 {@code default} 方法体抛
- * {@link UnsupportedOperationException}——若平台 Extension 未覆盖某方法，运行时会明确报错，
- * SpecCoverageProcessor 编译期也会报错。
+ * <p>Each platform's {@code PlayerExtension} must {@code extends PlayerSpec} and override each
+ * {@code neko$} method with its own {@code default} implementation. The {@code default} bodies in
+ * this interface throw {@link UnsupportedOperationException}, so an extension that misses a method
+ * fails at runtime, and {@code SpecCoverageProcessor} reports it at compile time.
  *
- * <p><b>语义约定（不可违反）：</b>
+ * <p><b>Semantics that must not change:</b>
  * <ul>
- *   <li>{@link #neko$addXpLevels(int)} 增加【等级】，不是经验点。
- *       NF 实现 {@code giveExperienceLevels}，CR 实现 {@code addExperienceLevel}。
- *   <li>{@link #neko$addXpPoints(int)} 增加【经验点】，不是等级。
- *       NF 实现 {@code giveExperiencePoints}，CR 实现 {@code addExperience}。
+ *   <li>{@link #neko$addXpLevels(int)} adds levels, not experience points.
+ *       NF implements {@code giveExperienceLevels}, CR implements {@code addExperienceLevel}.
+ *   <li>{@link #neko$addXpPoints(int)} adds experience points, not levels.
+ *       NF implements {@code giveExperiencePoints}, CR implements {@code addExperience}.
  * </ul>
- * 旧的 {@code neko$addXp(int)} 因 NF=等级 / CR=点数 的语义歧义从规范移除。
+ * There is no combined {@code neko$addXp(int)} because the name means different things on the two
+ * platforms (NF = Levels, CR = Points).
  *
- * <p><b>碰撞排除（调研驱动）：</b>以下方法因与原生 {@code Player} 零参同名碰撞（Graal
- * 无法分派，抛 "Multiple applicable overloads"）而<b>不</b>在本 spec 中：
+ * <p><b>Excluded methods:</b> the following are <b>not</b> in this spec because their zero-argument
+ * names collide with native {@code Player} methods; Graal cannot dispatch such a call and throws
+ * "Multiple applicable overloads":
  * <ul>
- *   <li>{@code isCreative()} —— 两平台原生都有零参 {@code isCreative()}，行为一致，JS 直接用原生
- *   <li>{@code sendMessage(Object)} —— CR 原生有 {@code sendMessage(ITextComponent)} 零参碰撞
+ *   <li>{@code isCreative()}: both platforms already have a native zero-argument
+ *       {@code isCreative()} with the same behavior, so JS calls that directly.
+ *   <li>{@code sendMessage(Object)}: CR has a native {@code sendMessage(ITextComponent)},
+ *       which collides at zero arguments.
  * </ul>
  *
- * <p><b>参数类型约定：</b>{@code give(Object)} 的参数是平台原生的 ItemStack——JS 侧 Graal
- * 自动转换，spec 不声明具体 MC 类型以遵守 common-api 边界约束。
+ * <p><b>Parameter types:</b> {@code give(Object)} takes the platform-native ItemStack and Graal
+ * converts it on the JS side. The spec names no MC types to stay within the common-api
+ * constraints.
  */
 @RemapByPrefix("neko$")
 @PlatformAvailability(PlatformAvailability.Scope.ALL)
 public interface PlayerSpec {
 
-    /** 该玩家是否为服务端 OP。 */
+    /** Returns whether this player is a server operator. */
     default boolean neko$isOp() {
         throw new UnsupportedOperationException("PlayerSpec.neko$isOp not implemented");
     }
 
-    /** 发放物品到背包（满则掉落）。参数是平台原生 ItemStack。 */
+    /** Gives an item to the player's inventory (drops if full). The argument is a platform-native ItemStack. */
     default void neko$give(Object stack) {
         throw new UnsupportedOperationException("PlayerSpec.neko$give not implemented");
     }
 
-    /** 设置游戏模式：survival / creative / adventure / spectator。 */
+    /** Sets the game mode: survival, creative, adventure, or spectator. */
     default void neko$setGamemode(String gamemode) {
         throw new UnsupportedOperationException("PlayerSpec.neko$setGamemode not implemented");
     }
 
-    /** 取当前游戏模式名。 */
+    /** Returns the current game mode name. */
     default String neko$getGamemode() {
         throw new UnsupportedOperationException("PlayerSpec.neko$getGamemode not implemented");
     }
 
-    /** 增加经验【等级】（非点数）。各平台必须实现为加等级。 */
+    /** Adds experience [Levels] (not points). Platforms must implement this as adding levels. */
     default void neko$addXpLevels(int levels) {
         throw new UnsupportedOperationException("PlayerSpec.neko$addXpLevels not implemented");
     }
 
-    /** 增加经验【点数】（非等级）。各平台必须实现为加经验点。 */
+    /** Adds experience [Points] (not levels). Platforms must implement this as adding experience points. */
     default void neko$addXpPoints(int points) {
         throw new UnsupportedOperationException("PlayerSpec.neko$addXpPoints not implemented");
     }
 
-    /** 取当前经验等级。 */
+    /** Returns the current experience level. */
     default int neko$getXpLevel() {
         throw new UnsupportedOperationException("PlayerSpec.neko$getXpLevel not implemented");
     }
 
-    /** 设置经验等级。 */
+    /** Sets the experience level. */
     default void neko$setXpLevel(int level) {
         throw new UnsupportedOperationException("PlayerSpec.neko$setXpLevel not implemented");
     }
 
-    /** 踢出玩家。reason 接受 String 或平台原生 Component。 */
+    /** Kicks the player. 'reason' accepts a String or a platform-native Component. */
     default void neko$kick(Object reason) {
         throw new UnsupportedOperationException("PlayerSpec.neko$kick not implemented");
     }

@@ -14,11 +14,11 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Ticket 21 platform wiring: the JSON wire codec must round-trip every protocol
- * message of both directions without a second model — the same string body is what
- * the play-phase payload carries (ticket 17 register-once channel family), so a
- * codec drift is a wire drift. Also pins strict decode: malformed or future-versioned
- * input is rejected with an actionable message instead of silently coerced.
+ * The JSON wire codec must round-trip every protocol message in both directions without a
+ * second model. The same string body is what the play-phase payload carries (the register-once
+ * channel family), so codec drift is wire drift. The test also pins strict decoding: malformed
+ * or future-versioned input is rejected with an actionable message instead of being silently
+ * coerced.
  */
 class DynamicSyncWireCodecTest {
 

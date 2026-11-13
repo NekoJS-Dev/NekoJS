@@ -16,14 +16,16 @@ import java.util.Set;
 import java.util.stream.Stream;
 
 /**
- * 脚本包注册表：持有 GLOBAL（{@code nekojs/packs/}）、WORLD（{@code <world>/nekojs_packs/}，
- * 由平台在服务器启动/停止时激活/卸载）与 SERVER_CACHE（{@code nekojs/server_packs/<bucket>/}，
- * 客户端在多人包分发验签/信任通过后激活、断线时卸载）三批已扫描包，供 {@code ScriptLocator}
- * 发现脚本时并入。
+ * Registry of script packs. It holds three scanned sets: GLOBAL ({@code nekojs/packs/}), WORLD
+ * ({@code <world>/nekojs_packs/}, activated and unloaded by the platform when the server starts and
+ * stops) and SERVER_CACHE ({@code nekojs/server_packs/<bucket>/}, activated by the client once
+ * multiplayer pack distribution passes signature verification and trust, and unloaded on
+ * disconnect). {@code ScriptLocator} merges them in when it discovers scripts.
  *
- * <p>实例可构造（测试注入临时目录），静态默认实例跟随 {@link NekoJSPaths}。GLOBAL 包
- * 在进程内首次访问时懒扫描一次，此后由显式 {@link #refreshGlobalPacks()} 更新
- * （reload 命令在脚本发现前调用，使启用态变化即时生效）。
+ * <p>Instances can be constructed (tests inject a temporary directory); the static default instance
+ * follows {@link NekoJSPaths}. GLOBAL packs are scanned lazily once on the first access in the
+ * process and updated afterwards only by {@link #refreshGlobalPacks()} (the reload command calls it
+ * before script discovery, so an enabled-state change takes effect immediately).
  */
 public final class ScriptPackRegistry {
 
@@ -116,7 +118,10 @@ public final class ScriptPackRegistry {
                 && pack.id().equals(selector.substring(separator + 1));
     }
 
-    /** 全部启用包：GLOBAL（字母序）→ WORLD（字母序）→ SERVER_CACHE（字母序），与脚本加载顺序一致。 */
+    /**
+     * All enabled packs in script load order: GLOBAL, then WORLD, then SERVER_CACHE, alphabetical
+     * within each.
+     */
     public List<ScriptPack> enabledPacks() {
         List<ScriptPack> out = new ArrayList<>(globalPacks.size() + worldPacks.size() + serverCachePacks.size());
         for (ScriptPack pack : globalPacks) if (pack.enabled()) out.add(pack);
@@ -142,12 +147,12 @@ public final class ScriptPackRegistry {
         return worldPacks;
     }
 
-    /** 当前已激活的服务器缓存包（多人包分发，客户端侧调用）。 */
+    /** Server cache packs that are currently active (multiplayer pack distribution, called on the client). */
     public List<ScriptPack> serverCachePacks() {
         return serverCachePacks;
     }
 
-    /** 首次调用时扫描一次全局包；幂等。 */
+    /** Scans global packs on the first call and does nothing on later calls. */
     private void refreshGlobalPacksOnce() {
         if (globalScanned) return;
         synchronized (this) {
@@ -156,12 +161,12 @@ public final class ScriptPackRegistry {
         }
     }
 
-    /** 重扫全局包（reload 命令 / 包切换后调用）。 */
+    /** Rescans global packs; called by the reload command and after packs are switched. */
     public synchronized void refreshGlobalPacks() {
         refreshGlobalPacks(NekoJSPaths.get().packsRoot());
     }
 
-    /** 测试/注入用：按指定根目录重扫全局包。 */
+    /** For tests and injection: rescans global packs under the given root directory. */
     public synchronized void refreshGlobalPacks(Path packsRoot) {
         globalRoot = packsRoot;
         globalScanned = true;
@@ -169,14 +174,14 @@ public final class ScriptPackRegistry {
     }
 
     /**
-     * 激活世界包：扫描 {@code worldDir/nekojs_packs/} 并替换当前世界包集合。
-     * 返回本次激活的全部 WORLD 包（含禁用者，供列表命令展示）。
+     * Activates world packs: scans {@code worldDir/nekojs_packs/} and replaces the current world pack
+     * set. Returns all WORLD packs activated by this call, disabled ones included, for list commands.
      *
-     * <p>worldDir is normalized to an absolute path first: platform entry points may pass a
-     * relative form (a Windows dedicated server was observed handing in {@code .\world\.})
-     * while the nekojs root is always absolute — keeping pack script paths relative makes the
-     * later {@code root.relativize(script.path)} mix absolute and relative inputs, throw IAE,
-     * and fail every WORLD pack script (ticket 03 §3-1 real-code defect, ticket 07 G4).
+     * <p>worldDir is normalized to an absolute path first. Platform entry points may pass a relative
+     * form (a Windows dedicated server was observed passing {@code .\world\.}) while the nekojs root
+     * is always absolute. Keeping pack script paths relative then makes the later
+     * {@code root.relativize(script.path)} mix absolute and relative inputs, throw IAE, and fail every
+     * WORLD pack script.
      */
     public synchronized List<ScriptPack> activateWorldPacks(Path worldDir) {
         worldSession++;
@@ -187,7 +192,7 @@ public final class ScriptPackRegistry {
         return worldPacks;
     }
 
-    /** 卸载世界包（serverStopped / 退出单人），返回被移除的包。 */
+    /** Unloads world packs (serverStopped or leaving single player) and returns the removed packs. */
     public synchronized List<ScriptPack> deactivateWorldPacks() {
         worldSession++;
         List<ScriptPack> removed = worldPacks;
@@ -197,9 +202,10 @@ public final class ScriptPackRegistry {
     }
 
     /**
-     * 激活服务器缓存包（多人包分发，客户端侧）：扫描
-     * {@code nekojs/server_packs/<bucket>/} 并替换当前 SERVER_CACHE 集合。
-     * 服务器缓存包强制启用（manifest 默认值与状态文件均不适用），返回激活的全部包。
+     * Activates server cache packs on the client for multiplayer distribution: scans
+     * {@code nekojs/server_packs/<bucket>/} and replaces the current SERVER_CACHE set. Server cache
+     * packs are forced enabled; neither the manifest default nor the state file applies. Returns all
+     * activated packs.
      */
     public synchronized List<ScriptPack> activateServerCachePacks(Path bucketDir) {
         updateCacheSession(bucketDir);
@@ -210,8 +216,9 @@ public final class ScriptPackRegistry {
     }
 
     /**
-     * 激活指定同步清单中的服务器缓存包；缓存 bucket 中未选中的旧目录不参与扫描，物理文件仍保留。
-     * {@code activePackIds} 使用传输层的 syncId（例如 {@code packs:demo}），而不是 manifest id。
+     * Activates the server cache packs listed in the given sync manifest. Old directories in the cache
+     * bucket that are not selected are not scanned; their files stay on disk. {@code activePackIds}
+     * uses the transport syncId (for example {@code packs:demo}), not the manifest id.
      */
     public synchronized List<ScriptPack> activateServerCachePacks(Path bucketDir,
                                                                     Collection<String> activePackIds) {
@@ -222,7 +229,10 @@ public final class ScriptPackRegistry {
         return serverCachePacks;
     }
 
-    /** 卸载服务器缓存包（断线 / 服务端清空包集），返回被移除的包。缓存文件保留。 */
+    /**
+     * Unloads server cache packs (disconnect, or the server clears the pack set) and returns the removed
+     * packs. Cached files stay on disk.
+     */
     public synchronized List<ScriptPack> deactivateServerCachePacks() {
         cacheSession++; cacheRoot = null;
         List<ScriptPack> removed = serverCachePacks;
@@ -236,7 +246,7 @@ public final class ScriptPackRegistry {
         cacheRoot = normalized;
     }
 
-    /** 重置扫描标记（测试用：让下一次 get() 重新懒扫描）。 */
+    /** Resets the scan flags; for tests, so the next get() scans lazily again. */
     synchronized void resetForTest() {
         modPacks = List.of();
         worldSession++; cacheSession++; cacheRoot = null;
@@ -248,16 +258,21 @@ public final class ScriptPackRegistry {
         serverCachePacks = List.of();
     }
 
-    /** 扫描目录下所有含 manifest.json 的子目录为包；损坏 manifest 跳过，同 scope 重复 id 后者跳过。 */
+    /**
+     * Scans every subdirectory that has a manifest.json as a pack. Corrupt manifests are skipped, and on
+     * a duplicate id in the same scope the later pack is skipped.
+     */
     private static List<ScriptPack> scan(Path root, ScriptPackScope scope) {
         return scan(root, scope, false, null);
     }
 
     /**
-     * 扫描目录下所有含 manifest.json 的子目录为包；损坏 manifest 跳过，同 scope 重复 id 后者跳过。
+     * Scans every subdirectory that has a manifest.json as a pack. Corrupt manifests are skipped, and
+     * on a duplicate id in the same scope the later pack is skipped.
      *
-     * @param forceEnabled true 时忽略 manifest 默认值与状态文件强制启用（SERVER_CACHE 语义：
-     *                     是否执行由验签/信任关口决定，包内启用开关不适用）
+     * @param forceEnabled true ignores the manifest default and the state file and forces the
+     *                     pack enabled (SERVER_CACHE semantics: verification and trust decide whether
+     *                     it runs, so the in-pack enable switch does not apply)
      */
     private static List<ScriptPack> scan(Path root, ScriptPackScope scope, boolean forceEnabled) {
         return scan(root, scope, forceEnabled, null);
@@ -279,7 +294,7 @@ public final class ScriptPackRegistry {
         for (Path dir : dirs) {
             String fallbackId = ScriptPackManifest.sanitizeId(dir.getFileName().toString());
             ScriptPackManifest manifest = ScriptPackManifest.load(dir, fallbackId);
-            if (manifest == null) continue; // 无 manifest（非包）或损坏（已 WARN）
+            if (manifest == null) continue; // No manifest (not a pack) or a corrupt one (already warned about)
             if (manifest.descriptor() != null) {
                 try {
                     manifest.descriptor().validateFiles(dir, com.tkisor.nekojs.core.ScriptFilePolicy.legacyRuntime());

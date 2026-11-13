@@ -112,8 +112,8 @@ public final class DynamicRegistries {
     }
 
     /**
-     * Reload boundary: stale-mark every claim in every registry. Entries stay
-     * registered; scripts currently re-loading will re-claim their ids.
+     * Starts a reload: marks every claim in every registry as stale. Entries stay registered;
+     * the scripts being reloaded re-claim their ids.
      */
     public static void beginServerReload() {
         SOUND_EVENTS.bookkeeping().beginReload();
@@ -148,11 +148,11 @@ public final class DynamicRegistries {
     }
 
     /**
-     * Rollback surgery for the ticket 21 activation adapter: unregisters exactly the
-     * entries a degraded activation attempt newly registered (keyed by registry key
-     * like {@code minecraft:item}) and drops their claims and item specs. Entries the
-     * attempt merely re-claimed keep serving — they were legitimately registered by an
-     * earlier batch. Must be called on the transaction owner thread.
+     * Rolls back a failed activation attempt: unregisters exactly the entries that attempt
+     * newly registered (keyed by registry key such as {@code minecraft:item}) and drops their
+     * claims and item specs. Entries the attempt merely re-claimed keep serving, because an
+     * earlier batch registered them legitimately. Must be called on the transaction owner
+     * thread.
      */
     static void rollbackEntries(Map<String, List<Identifier>> newlyRegisteredByRegistryKey, List<?> initializerCheckpoint) {
         RuntimeException failure = null;

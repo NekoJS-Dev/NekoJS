@@ -1,15 +1,15 @@
 package com.tkisor.nekojs.api.nbt;
 
 /**
- * NBT 二进制编解码的资源上限。
+ * Resource limits for NBT binary encoding and decoding.
  *
- * <p>两个字段均须为正数；{@link #DEFAULT} 为默认上限。
+ * <p>Both fields must be positive; {@link #DEFAULT} holds the default limits.
  *
- * @param maxCompressedBytes 压缩后字节数上限
- * @param maxDecodedBytes    解码后字节数上限
+ * @param maxCompressedBytes maximum size in bytes after compression
+ * @param maxDecodedBytes    maximum size in bytes after decoding
  */
 public record NbtBinaryLimits(int maxCompressedBytes, long maxDecodedBytes) {
-    /** 默认上限：压缩 3 MiB，解码 8 MiB。 */
+    /** Default limits: 3 MiB compressed, 8 MiB decoded. */
     public static final NbtBinaryLimits DEFAULT = new NbtBinaryLimits(3 * 1_048_576, 8L * 1_048_576);
 
     public NbtBinaryLimits {

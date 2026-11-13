@@ -14,25 +14,29 @@ import net.minecraft.world.InteractionResult;
 import net.minecraft.world.level.block.Block;
 
 /**
- * 方块事件面的 fabric 桥：broken（已有）与 rightClicked / leftClicked（26.x fabric-api
- * 的 UseBlockCallback / AttackBlockCallback，均未弃用、serverside+client 双端回调——
- * 绑定处过滤客户端交互，SERVER 总线只收服务端实例）。
+ * Fabric bridge for block events: broken (already present) plus rightClicked / leftClicked
+ * (26.x fabric-api {@code UseBlockCallback} / {@code AttackBlockCallback}, neither deprecated,
+ * both fired on server and client; the binding filters client interactions so the SERVER bus
+ * only sees server instances).
  *
- * <p>26.x 平台事实：PlayerBlockPlaceEvents 已从 fabric-api 删除（placed / entityPlaced /
- * entityMultiPlaced 无现成回调），留 mixin 批次。fabric 的 AttackBlockCallback 只在
- * 生存模式触发（NeoForge 侧全模式），语义差异记入载荷 javadoc。
+ * <p>26.x platform fact: fabric-api removed PlayerBlockPlaceEvents (placed / entityPlaced /
+ * entityMultiPlaced have no ready callback), so those wait for a mixin pass. Fabric's
+ * AttackBlockCallback only fires in survival mode (NeoForge fires in all modes); the difference
+ * is documented in the payload javadoc.
  */
 public final class FabricBlockEventBindings {
 
     private FabricBlockEventBindings() {}
 
-    /** 右键方块（按 Block 分发；可取消——脚本 return true = consume，对应 SUCCESS）。 */
+    /** Right-click on a block, dispatched by Block; cancellable. A script returns true to consume
+     * the interaction, which maps to SUCCESS. */
     private static final EventBusJS<BlockRightClickEventJS, Block> RIGHT_CLICKED =
             BlockEvents.GROUP.add("rightClicked", ScriptType.SERVER, EventBusJS.of(
                     BlockRightClickEventJS.class, true,
                     DispatchKey.of(Block.class, event -> event.getBlock())));
 
-    /** 左键方块（按 Block 分发；可取消——脚本 return true = consume，对应 SUCCESS）。 */
+    /** Left-click on a block, dispatched by Block; cancellable. A script returns true to consume
+     * the interaction, which maps to SUCCESS. */
     private static final EventBusJS<BlockLeftClickEventJS, Block> LEFT_CLICKED =
             BlockEvents.GROUP.add("leftClicked", ScriptType.SERVER, EventBusJS.of(
                     BlockLeftClickEventJS.class, true,

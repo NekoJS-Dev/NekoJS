@@ -21,30 +21,33 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Ticket 25 capability matrix（loader 轴：neoforge / fabric）：
+ * Capability matrix across the loader axis (neoforge / fabric).
  *
- * <p>每行 capability 由<b>真实探针</b>派生（真实插件注册进真实 {@link BindingRegistry}、
- * 真实类可加载性、真实注册路径），status 词汇 = common {@link CapabilityStatus} 三态。
- * loader 轴按运行时可加载性判定（本文件必须经 stonecutter active 节点原文编译，
- * 因此 loader 专属类一律走反射探针，不做编译期引用），派生表与对应 golden 只读对比。
+ * <p>Each capability row comes from a <b>real probe</b>: a real plugin registered into a real
+ * {@link BindingRegistry}, real class loadability and the real registration path. The status
+ * vocabulary is common's three-state {@link CapabilityStatus}. The loader axis is decided by
+ * runtime loadability: this file must compile from the active stonecutter node's sources, so
+ * loader-specific classes are probed by reflection and never referenced at compile time. The
+ * derived table is compared against the matching golden, read-only.
  *
- * <p>golden 更新纪律：capability 变更须先改行为/探针，再更新 golden 并在
- * REPORT golden 差异小节留记录（09 REGENERATE 纪律在本域的落地）。
+ * <p>Golden update rule: change the behavior or the probe first, then update the golden and
+ * record the golden diff in the report.
  */
 class QueryToolCapabilityMatrixTest {
 
     private static final String GOLDEN_NEOFORGE = "/golden/query/capability-matrix-neoforge.txt";
     private static final String GOLDEN_FABRIC = "/golden/query/capability-matrix-fabric.txt";
 
-    /** loader 轴探针：NekoJSCorePlugin（唯一 DataMap 注册者）只在 neoforge 存在。 */
+    /** Loader-axis probe: NekoJSCorePlugin, the only DataMap registrar, exists only on neoforge. */
     private static boolean isNeoForge() {
         return loadClassQuiet("com.tkisor.nekojs.core.NekoJSCorePlugin") != null;
     }
 
     /**
-     * 裸 JUnit 约束（VanillaRegistryProbe 同款事实）：26.x 节点无 FML Loader 时
-     * vanilla/NeoForge 注册表类初始化链会抛错。capability 探针只做**类存在性**判定
-     * （initialize=false），不触发任何 &lt;clinit&gt;。
+     * Bare JUnit constraint (same fact as {@code VanillaRegistryProbe}): on the 26.x node without
+     * an FML Loader, the vanilla/NeoForge registry class init chain throws. Capability probes
+     * therefore check <b>class existence only</b> (initialize=false) and trigger no
+     * &lt;clinit&gt;.
      */
     private static Class<?> loadClassQuiet(String name) {
         try {
@@ -72,9 +75,10 @@ class QueryToolCapabilityMatrixTest {
     // ---- probes ----
 
     /**
-     * DataMap binding 可用性：
-     * neoforge——真实注册进真实 registry（各 ScriptType）；fabric——注册类不存在
-     * （显式 unavailable：脚本侧 preflight 报未定义标识符，非静默 no-op）。
+     * DataMap binding availability: on neoforge the binding registers into the real registry for
+     * each ScriptType. On fabric the registration class does not exist and the row is explicitly
+     * unavailable: the script-side preflight reports an undefined identifier instead of a silent
+     * no-op.
      */
     private static void probeDataMapBinding(Map<String, String> rows, boolean neoforge) {
         if (neoforge) {
@@ -86,11 +90,12 @@ class QueryToolCapabilityMatrixTest {
                 String evidence;
                 CapabilityStatus status;
                 if (type == ScriptType.CLIENT) {
-                    // 裸 JVM 无法初始化 client 绑定分支的 MC client 类（同 VanillaRegistryProbe 事实），
-                    // 也**没有**跑过 client 侧 runtime smoke → 本票只到 source trace 层。
-                    // 工单 25 双轴审查修正：原先这里硬编码 SUPPORTED（自陈不可探），与
-                    // 「每行由真实探针派生」的口径冲突；改为 PARTIAL（= 声明条件下部分成立、
-                    // 差异已记录），并在 evidence 里写明「仅 source trace、未实测」。
+                    // A bare JVM cannot initialize the MC client classes of the client binding
+                    // branch (same fact as VanillaRegistryProbe), and no client-side runtime smoke
+                    // has run, so this row stays at the source-trace level. It is reported as
+                    // PARTIAL: partly true under the stated conditions, with the difference
+                    // recorded, and the evidence states only the source trace was collected and
+                    // the client path was never measured live.
                     status = CapabilityStatus.PARTIAL;
                     evidence = "source trace only: same unconditional registerBinding path, but the "
                             + "client class init is not probeable in a bare JVM and no client runtime "
@@ -120,9 +125,10 @@ class QueryToolCapabilityMatrixTest {
     }
 
     /**
-     * DataMap portable 替代面（Registry facade dataMap 查询）：
-     * neoforge——NeoForgeRegistryQueryService 存在（SUPPORTED）；fabric——IPlatform 默认方法
-     * 未覆写（运行时静默空值，已记录 deviation，owner loader-port/W6）。
+     * DataMap portable alternative (the Registry facade dataMap queries): on neoforge
+     * NeoForgeRegistryQueryService exists (SUPPORTED). On fabric the IPlatform default method is
+     * not overridden, so the query silently returns an empty value at runtime (a recorded
+     * deviation, owner loader-port/W6).
      */
     private static void probeDataMapPortableAlternative(Map<String, String> rows, boolean neoforge) {
         if (neoforge) {
@@ -149,7 +155,7 @@ class QueryToolCapabilityMatrixTest {
                         .getDeclaredMethod("registryQueryService");
                 overridesService = method != null;
             } catch (ClassNotFoundException | NoSuchMethodException ignored) {
-                // 未覆写即默认方法语义
+                // Not overridden means the default method semantics apply.
             }
             rows.put("DataMap|registry-facade-alternative",
                     "DataMap | Registry.get(...).dataMapIds/dataMapValue alternative | "
@@ -160,9 +166,10 @@ class QueryToolCapabilityMatrixTest {
     }
 
     /**
-     * EntitySelectors binding 可用性：共享树 facade（无 loader 守卫）经注册路径可用——
-     * neoforge 走注解扫描发现的 EntitySelectorsPlugin；fabric 经 FabricPluginLoader
-     * 内置清单注册（反射探针验证清单成员）。SERVER/TEST 之外按契约不注册。
+     * EntitySelectors binding availability: the shared-tree facade (no loader guard) is available
+     * through the registration path. neoforge registers EntitySelectorsPlugin, discovered by
+     * annotation scanning; fabric registers it from FabricPluginLoader's built-in list (a
+     * reflection probe verifies the list member). It is not registered outside SERVER/TEST.
      */
     private static void probeEntitySelectorsBinding(Map<String, String> rows, boolean neoforge) throws Exception {
         Class<?> pluginClass = loadClassQuiet("com.tkisor.nekojs.util.selector.EntitySelectorsPlugin");

@@ -1,12 +1,13 @@
 package com.tkisor.nekojs.api.recipe;
 
 /**
- * Recipe API 的宽松类型边界 —— 接收脚本侧任意 JS 值，统一转为 JSON。
+ * Loose value type for the Recipe API: accepts any JS value a script passes and converts it to
+ * JSON.
  *
- * <h2>JS 侧使用方式</h2>
- * <p>脚本中<b>不需要也不应该</b>显式构造 {@code RecipeJsonValue}。
- * GraalVM 通过 {@code RecipeJsonValueAdapter}（注册为 {@code JSTypeAdapter}，
- * {@code getPrecedence() = LOWEST}）自动将 JS 值适配为此类型：</p>
+ * <h2>Usage from JavaScript</h2>
+ * <p>Scripts <b>neither need nor should</b> construct {@code RecipeJsonValue} explicitly.
+ * GraalVM adapts JS values to this type through {@code RecipeJsonValueAdapter} (registered as a
+ * {@code JSTypeAdapter} with {@code getPrecedence() = LOWEST}):</p>
  *
  * <pre>
  * // JS object → RecipeJsonValue → JsonObject
@@ -16,28 +17,27 @@ package com.tkisor.nekojs.api.recipe;
  *     result: ItemJS.of('minecraft:stick', 4)
  * })
  *
- * // 内嵌 NekoJS wrapper 会被 RecipeJsonValueConverter 递归展开并序列化：
+ * // Embedded NekoJS wrappers are expanded recursively by RecipeJsonValueConverter and serialized:
  * //   IngredientJS    → Ingredient.CODEC  → JsonObject { item: "..." }
  * //   ItemStack       → ItemStack.CODEC   → JsonObject { id: "...", count: N }
  * //   FluidWrapper    → FluidStack.CODEC  → JsonObject { fluid: "...", amount: N }
  *
- * // RecipeJsonBuilder 的 setPath/merge/property 也走这个路径：
+ * // RecipeJsonBuilder setPath/merge/property also go through this path:
  * builder.setPath('result.count', 4)                        // number → JsonPrimitive
- * builder.setPath('ingredients.0', Ingredient.of('minecraft:stone'))  // → Codec 序列化
+ * builder.setPath('ingredients.0', Ingredient.of('minecraft:stone'))  // → serialized through the Codec
  * builder.merge({ group: 'nekojs_test' })                   // JS object → JsonObject
  * </pre>
  *
- * <h2>GraalVM 重载匹配</h2>
- * <p>因为 {@code RecipeJsonValueAdapter.getPrecedence() = LOWEST}，
- * handler 的重载方法中 {@code ItemStack} / {@code Ingredient} 等具体类型会优先匹配，
- * {@code RecipeJsonValue} 作为最后的兜底参数。用户传 raw JSON object
- * 时才命中这个 overload：</p>
+ * <h2>Overload matching in GraalVM</h2>
+ * <p>Because {@code RecipeJsonValueAdapter.getPrecedence() = LOWEST}, overloads that take concrete
+ * types such as {@code ItemStack} or {@code Ingredient} match first, and {@code RecipeJsonValue} is
+ * the last fallback. It is only picked when the caller passes a raw JSON object:</p>
  *
  * <pre>
- * // 命中 crafting_shaped(ItemStack, List, Map) — 优先
+ * // matches crafting_shaped(ItemStack, List, Map) - preferred
  * handler.crafting_shaped(ItemJS.of('stick', 4), ['AA','AA'], {A: Ingredient.of('stone')})
  *
- * // 命中 crafting_shaped(RecipeJsonValue) — LOWEST，兜底
+ * // matches crafting_shaped(RecipeJsonValue) - LOWEST, the fallback
  * handler.crafting_shaped({ result: {id:'stick'}, pattern:['AA'], key:{A:{item:'stone'}} })
  * </pre>
  */

@@ -41,7 +41,7 @@ class ScriptEventSourceIdTest {
             ctx.eval("js", "event.register({ group: 'grp', name: 'other_evt' })");
             assertEquals(SCRIPT_ID, captured.get(), "object form must resolve the calling script id");
         } finally {
-            // Context 由 try-with-resources 关闭，注册表条目随 WeakHashMap 回收
+            // The try-with-resources block closes the Context, and the WeakHashMap drops the registry entry
         }
     }
 }

@@ -17,9 +17,10 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * 票 16 AC2/AC3 的 facade 行为（真实 GraalJS + 生产同款 {@link EventGroupJS} 绑定）：
- * 类型直达入口收集、无通用 type catalog（未知 type 字符串不是注册能力）、候选范围封闭、
- * 收集失败毒化整批（AC1「失败不另起写入」的初次触发路径）。
+ * Facade behavior with real GraalJS and the same {@link EventGroupJS} binding production uses: collection
+ * through the direct per-type entry points, no generic type catalog (an unknown type string is not a
+ * registration capability), a closed candidate scope, and a collection failure that poisons the whole batch.
+ * That failure is the first path where a failed batch must not produce its own writes.
  */
 class DynamicRegistryEventFacadeTest {
 
@@ -28,7 +29,7 @@ class DynamicRegistryEventFacadeTest {
         TestPlatformInit.ensureInitialized();
     }
 
-    /** 在真实 GraalJS SERVER 上下文里执行脚本（监听经生产同款组绑定注册），再触发收集。 */
+    /** Runs a script in a real GraalJS SERVER context with the production group binding, then triggers collection. */
     private static DynamicRegistryFacadeRuntime run(String script, String trigger) {
         DynamicRegistryFacadeRuntime runtime = new DynamicRegistryFacadeRuntime();
         try (Context context = Context.newBuilder("js").allowAllAccess(true).build()) {
@@ -37,7 +38,8 @@ class DynamicRegistryEventFacadeTest {
                 context.getBindings("js").putMember("DynamicRegistryEvents",
                         new EventGroupJS(DynamicRegistryEvents.GROUP, ScriptType.SERVER));
                 context.eval("js", script);
-                // 初次候选（生产：server registry ready 触发；本测试在 Context 存活期内驱动）
+                // The initial candidate. Production triggers it when the server registry is ready; this test drives it while
+                // the Context is alive.
                 runtime.collectInitial(trigger);
             } finally {
                 ScriptContextRegistry.unbind(context);
@@ -83,8 +85,9 @@ class DynamicRegistryEventFacadeTest {
 
     @Test
     void unknownTypeNamesAreNotRegistrationCapability() {
-        // 未知 type 字符串：成员解析期拒绝（无通用 catalog）；监听器异常被总线吞掉，
-        // 毒化标记承载「整批失败」——批次不发布
+        // An unknown type string is rejected while the member is parsed, since there is no generic catalog. The bus
+        // swallows the listener exception, and the poison marker records the batch failure, so the batch is not
+        // published.
         DynamicRegistryFacadeRuntime runtime = run("""
                 DynamicRegistryEvents.dynamicRegistry(event => {
                     try { event.block('mymod:x', b => {}) } catch (e) { /* 脚本级吞掉只让脚本继续 */ }
@@ -98,7 +101,8 @@ class DynamicRegistryEventFacadeTest {
                 "未知入口的失败不产生任何定义；合法入口照常收集");
         assertTrue(runtime.store().exposedSnapshot().containsKey("minecraft:item|mymod:good"));
 
-        // 不吞异常的形态：毒化整批（收集错误 → preflight 拒绝 → 不发布）
+        // The form that does not swallow the exception poisons the whole batch: a collection error makes preflight
+        // reject the batch, so it is not published.
         DynamicRegistryFacadeRuntime poisoned = run("""
                 DynamicRegistryEvents.dynamicRegistry(event => {
                     event.item('mymod:bad', b => { b.maxStackSize = 200 });
@@ -115,8 +119,9 @@ class DynamicRegistryEventFacadeTest {
         var holder = DynamicRegistryEvents.GROUP.getBusHolder("dynamicRegistry");
         assertTrue(holder.canApplyOn(ScriptType.SERVER), "SERVER 脚本可监听");
         assertFalse(holder.canApplyOn(ScriptType.CLIENT), "CLIENT 侧不可见");
-        // STARTUP 可见 SERVER 总线是既有 side 语义（与 ServerEvents.recipes 同款——启动脚本
-        // 可以预挂服务器侧监听）；与启动期 RegistryEvents 的分离靠独立组/独立生命周期表达
+        // STARTUP sees the SERVER bus, which follows the existing side rule (the same shape as
+        // ServerEvents.recipes: startup scripts can attach server-side listeners ahead of time).
+        // A separate group with its own lifecycle keeps it apart from the startup RegistryEvents.
         assertTrue(holder.canApplyOn(ScriptType.STARTUP), "STARTUP 侧沿用 SERVER 总线可见性语义");
     }
 
@@ -132,15 +137,16 @@ class DynamicRegistryEventFacadeTest {
                 assertTrue(keys instanceof Object[] array && array.length == 3,
                         "成员目录只有三个冻结入口: " + java.util.Arrays.toString((Object[]) keys));
                 context.getBindings("js").putMember("event", payload);
-                // 调用形态：Graal 在 hasMember=false 时给出 Unknown identifier（可诊断拒绝）
+                // Call form: with hasMember=false Graal raises Unknown identifier, so the rejection is diagnosable.
                 RuntimeException callError = org.junit.jupiter.api.Assertions.assertThrows(
                         RuntimeException.class,
                         () -> context.eval("js", "event.block('x:y', b => {})"));
                 assertTrue(callError.getMessage().contains("block"), callError.getMessage());
-                // 读取形态：ProxyObject hasMember=false 的未知成员读取为 undefined（Graal 语义），
-                // 不产生注册能力；详细成员目录语义由 getMemberKeys（三个冻结入口）与声明面承载
+                // Read form: reading an unknown member of a ProxyObject with hasMember=false yields undefined
+                // (Graal semantics) and grants no registration ability. The member catalog semantics live
+                // in getMemberKeys, with its three frozen entries, and in the declaration surface.
                 context.eval("js", "if (typeof event.block !== 'undefined') throw new Error('block must be undefined')");
-                // Java 侧成员目录（probe/补全/诊断）错误带完整语义说明
+                // The Java-side member catalog (probe, completion, diagnostics) reports errors with the full explanation.
                 RuntimeException hostError = org.junit.jupiter.api.Assertions.assertThrows(
                         RuntimeException.class, () -> payload.getMember("block"));
                 assertTrue(hostError.getMessage().contains("no member 'block'"), hostError.getMessage());
@@ -155,8 +161,8 @@ class DynamicRegistryEventFacadeTest {
 
     @Test
     void typeNamesAndRegistryKeysAreNotInterchangeable() {
-        // 未知 type 字符串（含用目标注册表键冒充 type 的写法）在成员解析期即被拒绝：
-        // 没有「字符串 → 注册能力」的转换通道（AC3）
+        // An unknown type string, including a registry key passed off as a type, is rejected while members
+        // are resolved: no conversion path turns a string into a registration ability.
         try (Context context = Context.newBuilder("js").allowAllAccess(true).build()) {
             ScriptContextRegistry.bind(context, ScriptType.SERVER);
             try {
@@ -172,7 +178,7 @@ class DynamicRegistryEventFacadeTest {
                     assertFalse(java.util.Arrays.asList(keys).contains(probe),
                             "成员目录不含 '" + probe + "'");
                 }
-                // 括号取属性同样是 undefined（ProxyObject hasMember=false 的 Graal 语义）
+                // Bracket property access is undefined too (Graal semantics for a ProxyObject with hasMember=false).
                 context.eval("js", """
                         if (typeof event['minecraft:item'] !== 'undefined') {
                             throw new Error('registry keys must not be members');
@@ -182,7 +188,7 @@ class DynamicRegistryEventFacadeTest {
                 ScriptContextRegistry.unbind(context);
             }
         }
-        // 三个类型直达入口的注册表键就是候选范围的封闭集合
+        // The registry keys of the three typed entry points are the complete closed candidate set.
         assertEquals(java.util.Set.of("minecraft:item", "minecraft:sound_event", "minecraft:mob_effect"),
                 com.tkisor.nekojs.core.dynamic.plan.DynamicDefinition.supportedRegistryKeys());
     }

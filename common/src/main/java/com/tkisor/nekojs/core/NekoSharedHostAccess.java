@@ -20,12 +20,13 @@ public final class NekoSharedHostAccess {
     }
 
     private static HostAccess create(List<JSTypeAdapter<?>> adapters) {
-        // 设计决策（最终）：保持 HostAccess.ALL，永不迁移 HostAccess.EXPLICIT + @Export。
-        // 理由：NekoJS 的脚本绑定面（Utils/Platform/Items/事件回调等）面向整合包作者开放，
-        // EXPLICIT 模式需要给数百个绑定类逐一标注注解，会大面积破坏现有脚本兼容性，
-        // 且安全收益有限——真正的危险面（文件系统/进程/网络/线程/反射/ASM）已由
-        // ClassFilter 黑名单 + VFS 沙盒 + allowCreateProcess(false) 等层拦截。
-        // 脚本仍应视为可信代码（README 已声明）。
+        // Design decision: keep HostAccess.ALL and never migrate to HostAccess.EXPLICIT with @Export.
+        // The NekoJS script bindings (Utils/Platform/Items, event callbacks and so on) are open to
+        // modpack authors, and EXPLICIT mode would need an annotation on each of the hundreds of
+        // binding classes. That would break existing scripts on a large scale for little security
+        // gain: the dangerous operations (file system, process, network, threading, reflection, ASM)
+        // are already blocked by the ClassFilter blacklist, the VFS sandbox and
+        // allowCreateProcess(false). Scripts are still treated as trusted code, as the README says.
         HostAccess.Builder hostBuilder = HostAccess.newBuilder(HostAccess.ALL)
                 .allowPublicAccess(true)
 
@@ -48,8 +49,8 @@ public final class NekoSharedHostAccess {
 
     private static <T> void registerTypeAdapter(HostAccess.Builder builder, JSTypeAdapter<T> adapter) {
         Class<T> target = adapter.getTargetClass();
-        // Graal normalizes adapter ClassCastException into the same signal as a target mismatch.
-        // Preserve execution failures before that boundary so overload dispatch cannot suppress them.
+        // Graal turns an adapter ClassCastException into the same signal as a target mismatch. Catch
+        // execution failures before that so overload dispatch cannot suppress them.
         builder.targetTypeMapping(Value.class, target, value -> {
             try {
                 return adapter.test(value);

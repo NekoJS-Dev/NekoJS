@@ -11,22 +11,23 @@ import java.util.List;
 import java.util.Objects;
 
 /**
- * ApiManifest 生成器：从运行时版本快照 + 冻结的 surface snapshot 导出可序列化 manifest。
+ * Builds an ApiManifest from a runtime version snapshot and a frozen surface snapshot.
  *
- * <p>所有列表输出为字典序（确定性，跨 JVM 运行可复现）：capabilities / modules 按名称、
- * symbols 按 stable id、每个 symbol 的签名按调用键。API 表面冻结以 golden 对比测试守护
- * （{@code ApiManifestGoldenTest}）：符号集合或签名变化必须显式更新 golden 并走破坏性
- * 变更评审（治理细节见本地 ai_arch/API_VERSIONING.md，未入库）。
+ * <p>Every list is sorted for determinism, so separate JVM runs produce the same output:
+ * capabilities and modules by name, symbols by stable id, and the signatures of each symbol by
+ * call key. Golden tests ({@code ApiManifestGoldenTest}) guard the frozen API surface: a changed
+ * symbol set or signature must update the golden file explicitly and go through breaking-change
+ * review.
  */
 public final class ApiManifestGenerator {
 
     private ApiManifestGenerator() {}
 
     /**
-     * @param versions 运行时版本快照（api-runtime.properties）
-     * @param loader   平台 loader 标识（如 {@code neoforge} / {@code fabric}）
-     * @param minecraft Minecraft 版本标识（如 {@code 26.1} / {@code 1.21.1} / {@code 1.12.2}）
-     * @param surface  冻结的 API 表面快照
+     * @param versions  runtime version snapshot
+     * @param loader    platform loader id, such as {@code neoforge} or {@code fabric}
+     * @param minecraft Minecraft version id, such as {@code 26.1}, {@code 1.21.1} or {@code 1.12.2}
+     * @param surface   frozen API surface snapshot
      */
     public static ApiManifest generate(
             ApiRuntimeVersions versions,

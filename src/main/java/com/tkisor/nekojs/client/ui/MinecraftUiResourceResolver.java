@@ -54,7 +54,7 @@ public final class MinecraftUiResourceResolver implements UiResourceResolver, Au
                 MinecraftUiResourceResolver::gameFontOptions);
     }
 
-    /** Headless test seam: no client exists, so conditional providers filter against an empty option set. */
+    /** Headless test constructor: no client exists, so conditional providers filter against an empty option set. */
     MinecraftUiResourceResolver(ResourceManager resources, UiTextureBackend backend, Supplier<?> revision) {
         this(resources, backend, revision, () -> java.util.Set.of());
     }

@@ -12,24 +12,24 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 /^*
- * 在 TagManager 的 loader lambda（参数直接携带注册表 key 与 TagLoader 实例）里把
- * ResourceKey 捕获进 TagLoader 实例（经 {@link NekoTagLoaderRegistry} duck 接口），
- * 供 build 阶段的 tags 事件分发——1.21.1 的 TagLoader 已不持有该字段（见
- * TagLoaderMixin 注释）。
+ * Captures the registry ResourceKey into the TagLoader instance from inside the TagManager loader
+ * lambda, whose parameters carry the registry key and the TagLoader directly. The key goes in
+ * through the {@link NekoTagLoaderRegistry} duck interface and is used for tag event dispatch in the
+ * build stage; the 1.21.1 TagLoader no longer holds this field (see the TagLoaderMixin comment).
  *
- * <p>lambda 名绑定 21.1.227 的编译产物；升级 NeoForge 补丁版本时需复核
- * {@code lambda$createLoader$3} 的序号与签名。</p>
- ^/
+ * <p>The lambda name is tied to the compiled output of 21.1.227; re-check the index and signature of
+ * {@code lambda$createLoader$3} when upgrading the NeoForge patch version.</p>
+^/
 @Mixin(TagManager.class)
 public abstract class TagManagerMixin {
 
-    @Inject(
-            method = "lambda$createLoader$3(Lnet/minecraft/resources/ResourceKey;Lnet/minecraft/tags/TagLoader;Lnet/minecraft/server/packs/resources/ResourceManager;)Lnet/minecraft/tags/TagManager$LoadResult;",
-            at = @At("HEAD")
-    )
-    private static void nekojs$captureRegistryKey(ResourceKey<?> registryKey, TagLoader<?> loader,
-                                                  ResourceManager manager, CallbackInfoReturnable<?> cir) {
-        ((NekoTagLoaderRegistry) loader).nekojs$setRegistryKey(registryKey);
-    }
+@Inject(
+method = "lambda$createLoader$3(Lnet/minecraft/resources/ResourceKey;Lnet/minecraft/tags/TagLoader;Lnet/minecraft/server/packs/resources/ResourceManager;)Lnet/minecraft/tags/TagManager$LoadResult;",
+at = @At("HEAD")
+)
+private static void nekojs$captureRegistryKey(ResourceKey<?> registryKey, TagLoader<?> loader,
+ResourceManager manager, CallbackInfoReturnable<?> cir) {
+((NekoTagLoaderRegistry) loader).nekojs$setRegistryKey(registryKey);
 }
-*///?}
+}
+ *///?}

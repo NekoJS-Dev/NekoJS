@@ -40,9 +40,10 @@ public record BindingCatalogEntry(
         );
     }
 
-    /// 追加额外的 doc 来源类：其 public 成员会被 probe 合并进本绑定的 .d.ts。
-    /// 用于 [com.tkisor.nekojs.js.DelegatingBinding] 代理——valueType 是 helper，
-    /// 但运行时还委托 targetClass 的静态成员，probe 需把后者也纳入补全。
+    /// Returns a copy that adds documentation source classes: the probe merges their public members
+    /// into the .d.ts of this binding. Used for [com.tkisor.nekojs.js.DelegatingBinding] proxies,
+    /// whose valueType is the helper while the proxy also delegates to the static members of
+    /// targetClass, so the probe must include those members in completions too.
     public BindingCatalogEntry withExtraDocTypes(List<Class<?>> extras) {
         return new BindingCatalogEntry(
                 name, scriptType, javaType, staticClass, hostClass, emit,

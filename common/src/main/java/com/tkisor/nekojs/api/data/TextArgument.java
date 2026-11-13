@@ -4,10 +4,12 @@ import java.math.BigDecimal;
 import java.util.Objects;
 
 /**
- * 富文本的插入参数（可变类型），用于 {@code Text.translatable(...)} 等占位符。
+ * An insert argument for rich text, used as a placeholder in calls such as
+ * {@code Text.translatable(...)}.
  *
- * <p>包含字符串 / 数字 / 布尔 / 嵌套文本四类。{@link #displayString()} 返回与语言无关的
- * 展示文本（嵌套文本除外，会抛异常）。
+ * <p>There are four kinds: string, number, boolean and nested text. {@link #displayString()}
+ * returns display text that does not depend on the language; nested text is the exception and
+ * throws.
  */
 public sealed interface TextArgument permits
         TextArgument.StringValue,
@@ -15,10 +17,10 @@ public sealed interface TextArgument permits
         TextArgument.BooleanValue,
         TextArgument.NestedText {
 
-    /** 返回与语言无关的展示字符串。 */
+    /** Returns the display string, which does not depend on the language. */
     String displayString();
 
-    /** 字符串参数。 */
+    /** A string argument. */
     record StringValue(String value) implements TextArgument {
         public StringValue {
             Objects.requireNonNull(value, "value");
@@ -30,7 +32,7 @@ public sealed interface TextArgument permits
         }
     }
 
-    /** 数字参数（保留 {@link JsNumber} 的原始文本表示）。 */
+    /** A number argument. It keeps the original text form of a {@link JsNumber}. */
     record NumberValue(Number value) implements TextArgument {
         public NumberValue {
             Objects.requireNonNull(value, "value");
@@ -51,7 +53,8 @@ public sealed interface TextArgument permits
             return javascriptNumber(value.doubleValue());
         }
 
-        /** 返回数值对应的原生 Number（{@link JsNumber} 解析为 Long/Double，其余返回原值）。 */
+        /** Returns the native Number behind the value: a {@link JsNumber} is resolved to a Long or a
+         * Double, anything else is returned as is. */
         public Number nativeNumber() {
             return value instanceof JsNumber number ? number.nativeNumber() : value;
         }
@@ -75,7 +78,7 @@ public sealed interface TextArgument permits
         }
     }
 
-    /** 布尔参数。 */
+    /** A boolean argument. */
     record BooleanValue(boolean value) implements TextArgument {
         @Override
         public String displayString() {
@@ -83,7 +86,7 @@ public sealed interface TextArgument permits
         }
     }
 
-    /** 嵌套富文本参数（无语言无关展示字符串）。 */
+    /** A nested rich text argument. It has no language-independent display string. */
     record NestedText(TextValue value) implements TextArgument {
         public NestedText {
             Objects.requireNonNull(value, "value");

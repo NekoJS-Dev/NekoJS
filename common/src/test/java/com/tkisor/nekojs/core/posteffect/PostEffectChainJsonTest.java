@@ -10,9 +10,10 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * {@link PostEffectChainJson} 结构校验：生成的 JSON 可解析且字段与目标版本的
- * post-chain 格式一致（26.x {@code PostChainConfig} / 1.21.1 {@code PostChain}），
- * main -> swap -> main 两通道形状与 vanilla invert 链对齐。
+ * Checks the structure of {@link PostEffectChainJson} output: the generated JSON parses, and
+ * its fields match the target version's post-chain format ({@code PostChainConfig} in 26.x,
+ * {@code PostChain} in 1.21.1). The two-pass main -> swap -> main shape matches vanilla's
+ * invert chain.
  */
 class PostEffectChainJsonTest {
 
@@ -25,7 +26,7 @@ class PostEffectChainJsonTest {
         String json = PostEffectChainJson.simpleBlitChainModern("nekojs:post/invert", null);
         JsonObject root = parse(json);
 
-        // targets 是 object map（26.x Codec.unboundedMap），不是数组
+        // targets is an object map (Codec.unboundedMap in 26.x), not an array
         assertTrue(root.getAsJsonObject("targets").has("swap"));
         JsonArray passes = root.getAsJsonArray("passes");
         assertEquals(2, passes.size());
@@ -43,7 +44,8 @@ class PostEffectChainJsonTest {
         assertEquals(PostEffectChainJson.MAIN_TARGET, pass2.get("output").getAsString());
         JsonObject input2 = pass2.getAsJsonArray("inputs").get(0).getAsJsonObject();
         assertEquals(PostEffectChainJson.SWAP_TARGET, input2.get("target").getAsString());
-        // blit 通道的 BlitConfig block 直接映射到条目列表（vanilla invert.json 第二通道）
+        // The blit pass's BlitConfig block maps straight to the list of entries, as in the second
+        // pass of vanilla invert.json
         JsonObject colorModulate = pass2.getAsJsonObject("uniforms").getAsJsonArray("BlitConfig")
                 .get(0).getAsJsonObject();
         assertEquals("ColorModulate", colorModulate.get("name").getAsString());
@@ -105,7 +107,7 @@ class PostEffectChainJsonTest {
         String json = PostEffectChainJson.simpleBlitChainLegacy("minecraft:invert");
         JsonObject root = parse(json);
 
-        // 1.21.1 targets 是字符串数组
+        // In 1.21.1 targets is an array of strings
         assertEquals("swap", root.getAsJsonArray("targets").get(0).getAsString());
         JsonArray passes = root.getAsJsonArray("passes");
         assertEquals(2, passes.size());

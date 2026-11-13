@@ -48,7 +48,8 @@ public final class NekoModuleReadService {
     }
 
     /**
-     * 读已准备字节（W3 显式注入：调用方传入其 runtime-owned 缓存实例；无隐藏静态缓存）。
+     * Reads prepared bytes. The caller passes its runtime-owned cache instance; no static cache is
+     * hidden inside.
      */
     public static Optional<byte[]> readPreparedBytes(Path path, NekoModulePipelineCache preparationCache,
                                                      NekoVirtualModuleView virtualModules) throws IOException {

@@ -10,24 +10,27 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * 生物死亡掉落事件（{@code EntityEvents.drops}）的**加载器中立**载荷。
+ * Loader-neutral payload for the living entity death drops event ({@code EntityEvents.drops}).
  *
- * <p>语义对齐 NeoForge {@code LivingDropsEvent}（26.1.2 中 getDrops 为
- * {@code Collection<ItemEntity>}，本载荷以 {@link #drops}
- * {@code List<ItemStack>} 形态提供——脚本加成物品/drops.clear() 等操作对
- * {@code List<ItemStack>} 更常见）。fabric 侧由 {@code FabricEntityEventBindingsV2} +
- * {@code MixinLivingEntityDeathDrops} 从 {@code LivingEntity#dropAllDeathLoot} 入口转换
- * （fabric-api 的 {@code ServerLivingEntityEvents} 无掉落回调，javap 实证）。
+ * <p>The meaning follows NeoForge {@code LivingDropsEvent}. In 26.1.2 its getDrops returns
+ * {@code Collection<ItemEntity>}, while this payload exposes {@link #drops} as
+ * {@code List<ItemStack>}, because script operations such as adding items or
+ * {@code drops.clear()} are more common on a {@code List<ItemStack>}. On fabric,
+ * {@code FabricEntityEventBindingsV2} + {@code MixinLivingEntityDeathDrops} convert the
+ * {@code LivingEntity#dropAllDeathLoot} entry (fabric-api's
+ * {@code ServerLivingEntityEvents} has no drop callback, as javap shows).
  *
- * <p><b>已知差异（fabric）</b>：原生掉落逻辑（装备 + 死亡战利品表 + 经验球）在
- * {@code dropAllDeathLoot} 内部逐件生成，无法作为集合交给脚本——监听器收到时
- * {@code drops} 恒为空列表（可 push 自定义物品）。取消语义：监听器
- * {@code return true} = 跳过原版掉落（对应 NeoForge setCanceled = 清空掉落），
- * 此时脚本 push 进 {@code drops} 的物品由桥接经
- * {@code LivingEntity#spawnAtLocation} 放出。
+ * <p><b>Known difference on fabric</b>: the native drop logic (equipment, death loot table,
+ * experience orbs) generates each item inside {@code dropAllDeathLoot} and cannot be handed to
+ * a script as a collection, so {@code drops} is always an empty list when a listener receives
+ * the event. The listener can push its own items. Cancel semantics: a listener
+ * {@code return true} skips the vanilla drops (the NeoForge setCanceled equivalent, which
+ * clears the drops); the bridge then spawns the items the script pushed into {@code drops}
+ * through {@code LivingEntity#spawnAtLocation}.
  *
- * <p>数据层面差异：NeoForge 侧脚本可读取原版生成的掉落（已生成 ItemEntity 集合）；
- * fabric 侧无此能力，只有实体/来源/被取消后的自定义掉落。
+ * <p>Data difference: on NeoForge a script can read the vanilla drops (the generated
+ * ItemEntity collection). fabric has no such data, only the entity, the source and the custom
+ * drops provided after cancellation.
  */
 @Doc("Fired when a living entity's death drops are generated (EntityEvents.drops). Dispatched by entity type.")
 @Doc("Cancellable on fabric: return true to skip vanilla death drops (script-provided event.drops are then spawned).")
@@ -41,7 +44,8 @@ public class LivingDropsEventJS {
     private final DamageSource source;
 
     /**
-     * 死亡掉落物品（fabric 侧触发瞬间为空列表；监听器可 push，取消时会被放出生效）。
+     * The death drops. Empty at the moment of the event on fabric; a listener may push items, and
+     * they are spawned when the event is cancelled.
      */
     @Doc("The drops. Empty when fired on fabric (vanilla generates them internally); push items here and cancel the event to spawn them instead.")
     private final List<ItemStack> drops;

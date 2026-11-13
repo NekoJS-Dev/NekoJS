@@ -7,8 +7,9 @@ import net.minecraft.world.item.ItemStack;
 import java.util.Map;
 
 /**
- * 战利品条目包装（JSON-first）。用 {@link #of(Object)} 从物品 id / {@code '#tag'} /
- * ItemStack / JS 对象创建；builder 回调里用 {@code item/type/weight/when/group} 链式设置。
+ * JSON-backed wrapper for a loot entry. Create entries via {@link #of(Object)} from an item id,
+ * {@code '#tag'}, {@link ItemStack}, or JS object, or configure them in builder callbacks with
+ * {@code item}, {@code type}, {@code weight}, {@code when}, and {@code group}.
  */
 public class LootEntryJS {
     private final JsonObject json;
@@ -18,11 +19,11 @@ public class LootEntryJS {
     }
 
     /**
-     * 创建条目：
+     * Creates a loot entry from {@code item}:
      * <ul>
-     *   <li>字符串 {@code 'minecraft:diamond'} → 物品条目（{@code #} 前缀 → 标签条目）</li>
-     *   <li>{@code ItemStack} → 物品条目</li>
-     *   <li>JS 对象 → 按完整 entry JSON 处理（type/name 等字段由脚本给全）</li>
+     *   <li>a string such as {@code 'minecraft:diamond'} creates an item entry (a {@code #} prefix creates a tag entry)</li>
+     *   <li>an {@link ItemStack} creates an item entry</li>
+     *   <li>a JS object is copied as full entry JSON (with {@code type}, {@code name}, etc. supplied by the caller)</li>
      * </ul>
      */
     public static LootEntryJS of(Object item) {
@@ -48,19 +49,19 @@ public class LootEntryJS {
         return entry;
     }
 
-    /** 设条目类型（{@code minecraft:item} / {@code minecraft:tag} / {@code minecraft:group} / ...）。 */
+    /** Sets the entry type (such as {@code minecraft:item}, {@code minecraft:tag}, or {@code minecraft:group}). */
     public LootEntryJS type(String type) {
         json.addProperty("type", type);
         return this;
     }
 
-    /** 设条目指向的 id（物品 / 标签 / 战利品表，取决于 type）。 */
+    /** Sets the target id (item, tag, or loot table, depending on {@code type}). */
     public LootEntryJS name(String id) {
         json.addProperty("name", id);
         return this;
     }
 
-    /** 改为指向某个物品 / 标签 / ItemStack（覆盖 type 与 name）。 */
+    /** Points this entry at the given item, tag, or {@link ItemStack}, overwriting {@code type} and {@code name}. */
     public LootEntryJS item(Object item) {
         JsonObject other = of(item).toJson();
         if (other.has("type")) {
@@ -77,7 +78,7 @@ public class LootEntryJS {
         return this;
     }
 
-    /** 追加条目条件（完整 condition JSON）。 */
+    /** Appends a condition object to this entry's {@code conditions} array. */
     public LootEntryJS when(Object condition) {
         if (!json.has("conditions")) {
             json.add("conditions", new JsonArray());
@@ -86,7 +87,7 @@ public class LootEntryJS {
         return this;
     }
 
-    /** 组条目：把所有子条目包进 {@code minecraft:group}。 */
+    /** Turns this entry into a {@code minecraft:group} containing {@code children}. */
     public LootEntryJS group(Object... children) {
         json.addProperty("type", "minecraft:group");
         JsonArray array = new JsonArray();

@@ -26,22 +26,27 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * AC10 端到端：成功 / 失败 / 重复 / 类型冲突 / 连带缺失 / drain 失败，全部从
- * <b>唯一调用者 Interface</b>（{@code RegistryEvents.register}，经生产同款
- * {@link EventGroupJS} 绑定 + 真实 GraalJS 监听）贯穿到 Runtime 抽干的可观察结果
- * （{@link StartupRegistryRuntime.DrainResult}：定义、注册表、节点、错误来源），
- * 不读私有仓库字段。
+ * End-to-end coverage of success, failure, duplicate, type conflict, missing
+ * co-registration and drain failure. Every case runs from the only caller-facing
+ * interface ({@code RegistryEvents.register}, bound through the production
+ * {@link EventGroupJS} plus a real GraalJS listener) through to the observable result of
+ * a Runtime drain ({@link StartupRegistryRuntime.DrainResult}: definition, registry, node
+ * and error origin). The test never reads private repository fields.
  *
- * <p>事件 payload 用测试内构造的 infos/types（同一 {@link RegistryEventJS} 类与
- * 生产构造路径，只是扩展点产物换成 fixture 输入——collectOnce(RegistryEventJS)
- * 是公开 seam）。sink 是记录式注册器（立即执行 supplier，fabric 直注同款形状；
- * NeoForge 的延迟 supplier 形状由 validatedSupplier 包装同一校验）。
+ * <p>The event payload uses infos/types built inside the test with the same
+ * {@link RegistryEventJS} class and the production construction path; only the
+ * extension-point output is replaced with fixture input, and
+ * {@code collectOnce(RegistryEventJS)} is public. The sink is a recording registerer that
+ * runs the supplier immediately, the same shape as a Fabric direct registration; the
+ * deferred supplier shape of NeoForge puts the same validation behind
+ * {@code validatedSupplier}.
  */
 class StartupRegistryRuntimeEndToEndTest {
 
     private static final String NODE = "e2e-test-node";
 
-    /** 记录式 sink：立即执行 supplier（可观察对象与校验错误），记录 (registry, id)。 */
+    /** Recording sink: runs the supplier immediately so the built object and any validation
+     * error are observable, and records each (registry, id). */
     private static class RecordingSink implements StartupRegistryRuntime.RegistrySink {
         final List<String> registered = new ArrayList<>();
         final Map<String, Object> built = new LinkedHashMap<>();
@@ -59,7 +64,9 @@ class StartupRegistryRuntimeEndToEndTest {
         }
     }
 
-    /** 供 JS 记录收集期错误（EventBusJS 捕获监听器异常，不向上抛——测试侧自行观察）。public：Graal host 访问要求。 */
+    /** Lets JS record collection-time errors; EventBusJS catches listener exceptions and does
+     * not rethrow them, so the test observes them here. Public because Graal host access
+     * requires it. */
     public static final class ErrorLog {
         final List<String> messages = new ArrayList<>();
 
@@ -81,32 +88,37 @@ class StartupRegistryRuntimeEndToEndTest {
         RegistryTypesPoint.RegistryTypesCollector collector = new RegistryTypesPoint.RegistryTypesCollector();
         collector.registerType(Registries.SOUND_EVENT, "basic", SoundEventBuilder.class, SoundEventBuilder::new);
         collector.setDefault(Registries.SOUND_EVENT, "basic");
-        // 全局唯一的类型名（custom 的合法解析路径）
+        // A globally unique type name, which is the valid resolution path for custom.
         collector.registerType(Registries.VILLAGER_TYPE, "art", VillagerTypeBuilder.class, VillagerTypeBuilder::new);
         collector.registerType(Registries.VILLAGER_TYPE, "basic", VillagerTypeBuilder.class, VillagerTypeBuilder::new);
         collector.setDefault(Registries.VILLAGER_TYPE, "basic");
         collector.registerType(Registries.ITEM, "basic", ItemBuilder.class, ItemBuilder::new);
         collector.setDefault(Registries.ITEM, "basic");
-        // 测试专用：同名类型挂在两个注册表下（custom 的跨注册表歧义路径）
+        // Test-only: the same type name under two registries, which is the ambiguous
+        // cross-registry path for custom.
         collector.registerType(Registries.BLOCK, "ambiguous", BlockBuilder.class, BlockBuilder::new);
         collector.registerType(Registries.ITEM, "ambiguous", ItemBuilder.class, ItemBuilder::new);
         return new RegistryTypesPoint.RegistryTypes(collector.byRegistry, collector.defaults, collector.builderClasses);
     }
 
-    /** 驱动一轮完整收集：脚本经生产同款 EventGroupJS 绑定监听 register 总线（post 在 Context 存活期内）。 */
+    /** Drives one full collection: the script installs its listener through the production
+     * EventGroupJS binding on the register bus, and the post happens while the Context is
+     * still alive. */
     private static StartupRegistryRuntime collect(String script, ErrorLog errors) {
         StartupRegistryRuntime runtime = new StartupRegistryRuntime(NODE);
         try (Context context = Context.newBuilder("js").allowAllAccess(true).build()) {
-            // 生产同款：STARTUP 脚本上下文（EventBusJS 的 scriptType 记账依赖此绑定）
+            // Same as production: a STARTUP script context. EventBusJS relies on this binding to
+            // record the scriptType.
             com.tkisor.nekojs.script.ScriptContextRegistry.bind(context, ScriptType.STARTUP);
             try {
                 context.getBindings("js").putMember("RegistryEvents", new EventGroupJS(RegistryEvents.GROUP, ScriptType.STARTUP));
                 context.getBindings("js").putMember("errors", errors);
                 context.eval("js", script);
-                // 收集事件在脚本监听挂好后、Context 仍存活时投递（生产里由首 pass 前的 adapter 触发）
+                // The collection event is posted after the script installed its listeners and while the
+                // Context is still alive. In production the adapter fires it before the first pass.
                 runtime.collectOnce(new RegistryEventJS(runtime.repository(), NODE, testInfos(), testTypes()));
             } finally {
-                // 断言失败也不泄漏静态绑定（审查 F5）
+                // Unbind even when an assertion fails, so no static binding leaks.
                 com.tkisor.nekojs.script.ScriptContextRegistry.unbind(context);
             }
         }
@@ -114,7 +126,7 @@ class StartupRegistryRuntimeEndToEndTest {
     }
 
     // ------------------------------------------------------------------
-    // 成功：糖方法 / 命名类型 / custom / 裸 supplier 全部到达 Runtime 请求
+    // Success: sugar methods, named types, custom and bare suppliers all reach the Runtime request
     // ------------------------------------------------------------------
 
     @Test
@@ -138,7 +150,7 @@ class StartupRegistryRuntimeEndToEndTest {
         RecordingSink sink = new RecordingSink();
         StartupRegistryRuntime.DrainResult drained = runtime.drainFor(Registries.SOUND_EVENT, sink);
         assertEquals(2, drained.registered().size());
-        // 可观察结果包含定义、注册表、节点、请求来源与指纹
+        // The observable result carries the definition, registry, node, request origin and fingerprint.
         StartupRegistryRuntime.RegistrationRecord record = drained.registered().get(0);
         assertEquals("mymod:boom", record.definition().toString());
         assertEquals("minecraft:sound_event", record.registry().identifier().toString());
@@ -158,7 +170,8 @@ class StartupRegistryRuntimeEndToEndTest {
     }
 
     // ------------------------------------------------------------------
-    // 重复：同批同 id fail-fast（仓库 add 期），先到者保留
+    // Duplicate: the same id in one batch fails fast while the repository add runs, and the first
+    // entry is kept
     // ------------------------------------------------------------------
 
     @Test
@@ -180,7 +193,7 @@ class StartupRegistryRuntimeEndToEndTest {
     }
 
     // ------------------------------------------------------------------
-    // 类型冲突：未知类型名 / custom 跨注册表歧义 / 未知注册表
+    // Type conflict: unknown type name, custom ambiguity across registries, unknown registry
     // ------------------------------------------------------------------
 
     @Test
@@ -206,7 +219,7 @@ class StartupRegistryRuntimeEndToEndTest {
     }
 
     // ------------------------------------------------------------------
-    // 裸 supplier：返回值 / 实际类型 / 重复 ID 校验
+    // Bare supplier: return value, actual type and duplicate id validation
     // ------------------------------------------------------------------
 
     @Test
@@ -224,10 +237,11 @@ class StartupRegistryRuntimeEndToEndTest {
                         });
                         """);
                 runtime.collectOnce(new RegistryEventJS(runtime.repository(), NODE, testInfos(), testTypes()));
-                // supplier 的 JS 函数绑定在 Context 上：抽干必须在 Context 存活期内（生产由 pass 驱动）
+                // The supplier holds a JS function bound to the Context, so the drain must happen while the
+                // Context is alive. In production the pass drives it.
                 drained = runtime.drainFor(Registries.ITEM, new RecordingSink());
             } finally {
-                // 断言失败也不泄漏静态绑定（审查 F5）
+                // Unbind even when an assertion fails, so no static binding leaks.
                 com.tkisor.nekojs.script.ScriptContextRegistry.unbind(context);
             }
         }
@@ -242,10 +256,11 @@ class StartupRegistryRuntimeEndToEndTest {
     }
 
     // ------------------------------------------------------------------
-    // 连带注册：目标 pass 投递 / 抑制 / 目标 pass 已过
+    // Co-registration: delivered on the target pass, suppressed, or target pass already done
     // ------------------------------------------------------------------
 
-    /** 测试用 builder：主对象 + 可开关的连带派生（复用生产 handleAdditionalObjects 通道）。 */
+    /** Test builder: a main object plus a co-registration that can be switched on or off, reusing
+     * the production handleAdditionalObjects channel. */
     public static final class GadgetBuilder extends RegistryObjectBuilder<String> {
         public final boolean withExtra;
 
@@ -279,7 +294,8 @@ class StartupRegistryRuntimeEndToEndTest {
         assertEquals(2, villagerPass.registered().size());
         assertTrue(villagerSink.built.containsKey("minecraft:villager_type|mymod:with_extra"));
 
-        // 连带派生等目标注册表自己的 pass（连带缺失 = suppressed builder 无派生条目）
+        // The co-registered object waits for its target registry's own pass. A missing co-registration
+        // means the builder was suppressed and has no derived entry.
         RecordingSink soundSink = new RecordingSink();
         StartupRegistryRuntime.DrainResult soundPass = runtime.drainFor(Registries.SOUND_EVENT, soundSink);
         assertEquals(List.of("minecraft:sound_event|mymod:with_extra"), soundSink.registered,
@@ -290,13 +306,15 @@ class StartupRegistryRuntimeEndToEndTest {
     @Test
     void coRegistrationTargetingAnAlreadyPassedRegistryIsReportedNotRegistered() {
         RegistryRepository repository = new RegistryRepository();
-        // 主对象住 VILLAGER_TYPE，连带派生指向 SOUND_EVENT——但 SOUND_EVENT 的 pass 先发生
+        // The main object lives in VILLAGER_TYPE and its co-registration points at SOUND_EVENT, but
+        // the SOUND_EVENT pass happens first.
         repository.add(Registries.VILLAGER_TYPE, new GadgetBuilder(Identifier.parse("mymod:late"), true), "basic", "test");
         StartupRegistryRuntime runtime = new StartupRegistryRuntime(NODE, repository);
 
-        // SOUND_EVENT 先抽干（目标注册表先于来源）
+        // Drain SOUND_EVENT first, so the target registry is already past when the source is drained.
         runtime.drainFor(Registries.SOUND_EVENT, new RecordingSink());
-        // 主对象在 VILLAGER_TYPE 抽干时投递连带 → 目标已过：记错误、不注册
+        // Draining VILLAGER_TYPE delivers the co-registered object, and its target pass is already
+        // done: the runtime records an error and does not register it.
         RecordingSink sink = new RecordingSink();
         StartupRegistryRuntime.DrainResult drained = runtime.drainFor(Registries.VILLAGER_TYPE, sink);
 
@@ -314,8 +332,10 @@ class StartupRegistryRuntimeEndToEndTest {
 
     @Test
     void additionalCollidingWithAnUnrelatedMainEntryIsRejectedAtCollection() {
-        // AC2：additional 不与「来源对象外」的同 id 冲突——目标注册表里已有**别的来源**的
-        // 同 id 主对象时，连带投递在收集期 fail-fast（可观察错误），不是静默覆盖
+        // An additional object does not clash with the same id outside its source object. When the
+        // target registry already holds a main entry with that id from a different source, the
+        // co-registration fails fast during collection and reports an observable error instead of
+        // silently overwriting it.
         RegistryRepository repository = new RegistryRepository();
         repository.add(Registries.SOUND_EVENT,
                 new SoundEventBuilder(Identifier.parse("mymod:clash")), "basic", "soundEvent:minecraft:sound_event");
@@ -323,7 +343,8 @@ class StartupRegistryRuntimeEndToEndTest {
                 new GadgetBuilder(Identifier.parse("mymod:clash"), true), "basic", "test");
         StartupRegistryRuntime runtime = new StartupRegistryRuntime(NODE, repository);
 
-        // 先抽干 VILLAGER_TYPE：gadget 投递连带 (SOUND_EVENT, mymod:clash) → 与未抽干的主对象冲突
+        // Drain VILLAGER_TYPE first: the gadget delivers a co-registered (SOUND_EVENT, mymod:clash)
+        // entry, which clashes with a main object that has not been drained yet.
         StartupRegistryRuntime.DrainResult drained = runtime.drainFor(Registries.VILLAGER_TYPE, new RecordingSink());
         assertEquals(1, drained.registered().size(), "主对象本身照常注册");
         assertEquals(1, drained.errors().size(), "冲突的连带投递被拒绝: " + drained.errors());
@@ -333,7 +354,8 @@ class StartupRegistryRuntimeEndToEndTest {
         assertEquals("additional-collect", error.source());
         assertTrue(error.message().contains("collides with a main entry"), error.message());
 
-        // 被冲突保护的主对象不受影响，照常在自己的 pass 注册
+        // The main object protected by the clash check is unaffected and registers on its own pass
+        // as usual.
         RecordingSink soundSink = new RecordingSink();
         StartupRegistryRuntime.DrainResult soundPass = runtime.drainFor(Registries.SOUND_EVENT, soundSink);
         assertEquals(List.of("minecraft:sound_event|mymod:clash"), soundSink.registered);
@@ -343,7 +365,8 @@ class StartupRegistryRuntimeEndToEndTest {
     }
 
     // ------------------------------------------------------------------
-    // drain 失败：平台注册动作失败按条隔离，可观察、不静默丢失
+    // Drain failure: a failing platform registration is isolated per entry, observable, and never
+    // silently dropped
     // ------------------------------------------------------------------
 
     @Test
@@ -380,7 +403,7 @@ class StartupRegistryRuntimeEndToEndTest {
     }
 
     // ------------------------------------------------------------------
-    // 收集恰好一次：重复 collectOnce 不再投递
+    // Collection happens exactly once: a repeated collectOnce delivers nothing
     // ------------------------------------------------------------------
 
     @Test
@@ -391,7 +414,7 @@ class StartupRegistryRuntimeEndToEndTest {
                 """, errors);
         int afterFirst = runtime.undrainedLiveView().get(Registries.SOUND_EVENT).size();
 
-        // 第二次 collectOnce（模拟后续 pass 再入）必须 no-op
+        // The second collectOnce, simulating re-entry on a later pass, must be a no-op.
         runtime.collectOnce(new RegistryEventJS(runtime.repository(), NODE, testInfos(), testTypes()));
         assertEquals(afterFirst, runtime.undrainedLiveView().get(Registries.SOUND_EVENT).size(),
                 "收集事件在首轮 pass 前恰好投递一次");
@@ -399,7 +422,7 @@ class StartupRegistryRuntimeEndToEndTest {
         RecordingSink sink = new RecordingSink();
         runtime.drainFor(Registries.SOUND_EVENT, sink);
         assertEquals(List.of("minecraft:sound_event|mymod:once"), sink.registered);
-        // 再 drain 同一注册表：每 pass 只 drain 一次，无重复交付
+        // Drain the same registry again: each pass drains a registry once, so nothing is delivered twice.
         assertEquals(0, runtime.drainFor(Registries.SOUND_EVENT, new RecordingSink()).registered().size());
     }
 }

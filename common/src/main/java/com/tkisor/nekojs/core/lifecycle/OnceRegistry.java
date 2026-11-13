@@ -4,55 +4,58 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * run-once 守卫（{@code once} / {@code clearOnce} 绑定）的核心标记表。
+ * Core marker table behind the run-once guard (the {@code once} / {@code clearOnce} bindings).
  *
- * <p>标记刻意<b>跨脚本 reload 存活</b>（进程级内存，不持久化）：reload 会重建 Context，
- * 但初始化探针、一次性迁移等操作不应因 reload 而重复执行。需要重跑时用
- * {@code clearOnce(key)}（移除单个）或 {@code clearOnce()}（清空全部）。
+ * <p>Markers <b>survive a script reload</b> on purpose. They live in process memory and are not
+ * persisted: a reload rebuilds the Context, but one-time work such as init probes and migrations
+ * must not run again because of it. Call {@code clearOnce(key)} to remove one key, or
+ * {@code clearOnce()} to clear them all.
  *
- * <p>{@link #runOnce(String)} 基于 {@link ConcurrentHashMap#newKeySet()} 的原子 add 实现
- * check-and-set，多 Context 并发调用同一 key 时恰好一个返回 true。
+ * <p>{@link #runOnce(String)} implements check-and-set with the atomic add of
+ * {@link ConcurrentHashMap#newKeySet()}. When several Contexts call it concurrently with the same
+ * key, exactly one call returns true.
  */
 public final class OnceRegistry {
 
-    /** 进程级共享实例：所有 ScriptType 的 {@code once} 绑定共用，标记随进程存活。 */
+    /** Shared instance for every ScriptType's {@code once} binding; markers live for the whole process. */
     public static final OnceRegistry SHARED = new OnceRegistry();
 
     private final Set<String> markers = ConcurrentHashMap.newKeySet();
 
     /**
-     * 原子 check-and-set：首次见到该 key 时记录标记并返回 {@code true}（调用方应执行回调），
-     * 之后所有调用返回 {@code false}。
+     * Atomic check-and-set: the first call with a key records the marker and returns {@code true}, so
+     * the caller runs the callback. Every later call returns {@code false}.
      */
     public boolean runOnce(String key) {
         return markers.add(resolveKey(key));
     }
 
-    /** 该 key 的标记是否存在（即 {@link #runOnce} 已返回过 true）。 */
+    /** Returns whether the marker for this key exists, meaning {@link #runOnce} already returned true for it. */
     public boolean has(String key) {
         return markers.contains(resolveKey(key));
     }
 
-    /** 移除单个 key 的标记（下次 {@link #runOnce} 重新返回 true）。返回标记是否原本存在。 */
+    /** Removes the marker for one key, so the next {@link #runOnce} returns true again. Returns whether it existed. */
     public boolean clear(String key) {
         return markers.remove(resolveKey(key));
     }
 
-    /** 清空全部标记（所有 key 下次 {@link #runOnce} 重新返回 true）。 */
+    /** Clears every marker, so all keys return true again on their next {@link #runOnce} call. */
     public void clearAll() {
         markers.clear();
     }
 
-    /** 当前标记数量。 */
+    /** Number of markers currently held. */
     public int size() {
         return markers.size();
     }
 
     /**
-     * key 解析缝（seam）：v1 key 全局，直接原样返回。
+     * Resolves a key. In v1 keys are global, so this returns the key unchanged.
      *
-     * <p>后续按脚本所有者隔离（同 key 不同脚本互不干扰）时，只需在这里加上
-     * 当前脚本 id 前缀——绑定层与 {@link #clear}/{@link #has} 无需改动。
+     * <p>To isolate keys per script owner later, so the same key in different scripts does not collide,
+     * prefix the current script id here. The binding layer and {@link #clear}/{@link #has} need no
+     * change.
      */
     public String resolveKey(String key) {
         if (key == null || key.isBlank()) {

@@ -4,9 +4,11 @@ import java.util.List;
 import java.util.Objects;
 
 /**
- * API 符号的一个可调用签名：参数列表、返回类型、是否为构造器。
+ * One callable signature of an API symbol: the parameter list, the return type and whether it is a
+ * constructor.
  *
- * <p>构造时校验：可变参数必须位于末位、必填参数不能出现在可选参数之后。
+ * <p>The constructor rejects a varargs parameter that is not last and a required parameter that
+ * follows an optional one.
  */
 public record ApiSignature(
         List<ApiParameter> parameters,
@@ -29,17 +31,17 @@ public record ApiSignature(
         }
     }
 
-    /** 构造普通函数签名。 */
+    /** Creates the signature of a plain function. */
     public static ApiSignature function(List<ApiParameter> parameters, ApiTypeRef returnType) {
         return new ApiSignature(parameters, returnType, false);
     }
 
-    /** 构造构造器签名。 */
+    /** Creates the signature of a constructor. */
     public static ApiSignature constructor(List<ApiParameter> parameters, ApiTypeRef returnType) {
         return new ApiSignature(parameters, returnType, true);
     }
 
-    /** 返回调用键（仅参数形状，不含返回类型），用于 JS 重载去重。 */
+    /** Returns the call key (parameter shape only, no return type), used to deduplicate JS overloads. */
     public String callKey() {
         StringBuilder sb = new StringBuilder();
         sb.append('(');
@@ -54,7 +56,7 @@ public record ApiSignature(
         return sb.toString();
     }
 
-    /** 返回兼容性键（调用键 + 返回类型）。 */
+    /** Returns the compatibility key (call key plus return type). */
     public String compatibilityKey() {
         return callKey() + ":" + returnType().compatibilityKey();
     }

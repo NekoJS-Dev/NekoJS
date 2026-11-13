@@ -10,9 +10,9 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Ticket 44 node-side check: the common controlled id grammar stays compatible
- * with vanilla resource locations on this node — every id the UI contract accepts
- * is also a legal vanilla location, and the security-relevant rejections hold.
+ * Node-side check that the shared controlled id grammar stays compatible with vanilla resource
+ * locations on this node: every id the UI accepts is also a legal vanilla location, and the
+ * security-relevant rejections hold.
  */
 class Ticket44ResourceIdParityTest {
     private static final List<String> ACCEPTED = List.of(

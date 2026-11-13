@@ -10,21 +10,23 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.Level;
 
 /**
- * {@code DamageSource} 工厂 helper（绑定全局 {@code DamageSource}，成员委托
- * {@link DamageSource} 类——该类没有静态工厂，{@code of} 系列全部走本 helper）。
+ * Factory helper for {@code DamageSource} (bound as the global {@code DamageSource}, with its
+ * members delegating to the {@link DamageSource} class — that class has no static factories, so
+ * every {@code of} overload goes through this helper).
  *
- * <p>{@code DamageSource.of(level, 'minecraft:explosion')}——伤害类型 id 经
- * {@code Identifier} 适配器自动从字符串转换。
+ * <p>{@code DamageSource.of(level, 'minecraft:explosion')} — the damage type id is converted from a
+ * string automatically by the {@code Identifier} adapter.
  */
 public class DamageSourceJS {
 
-    /** 从注册表 id（如 {@code "minecraft:explosion"}）解析伤害类型并构造 DamageSource。 */
+    /** Resolves a damage type from its registry id (for example {@code "minecraft:explosion"}) and
+     * builds a DamageSource. */
     public DamageSource of(Level level, Identifier damageTypeId) {
         ResourceKey<DamageType> key = ResourceKey.create(Registries.DAMAGE_TYPE, damageTypeId);
         return level.damageSources().source(key);
     }
 
-    /** 指定直接来源实体的伤害（如生物近战）。 */
+    /** Damage from the given direct source entity, such as a mob melee attack. */
     public DamageSource of(Level level, Identifier damageTypeId, Entity causingEntity) {
         ResourceKey<DamageType> key = ResourceKey.create(Registries.DAMAGE_TYPE, damageTypeId);
         return level.damageSources().source(key, causingEntity);
@@ -42,8 +44,8 @@ public class DamageSourceJS {
         return level.damageSources().explosion(null);
     }
 
-    // drowning()/starvation() 这类 DamageSources 便捷方法各版本有无不一，
-    // 统一走 DamageTypes 键构造——语义等价且全版本可用
+    // Convenience methods such as drowning()/starvation() on DamageSources differ between versions, so
+    // every case builds from a DamageTypes key: same semantics and available on all versions.
     public DamageSource drowning(Level level) {
         return level.damageSources().source(DamageTypes.DROWN);
     }

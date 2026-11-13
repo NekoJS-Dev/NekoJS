@@ -9,38 +9,38 @@ import java.util.List;
 import java.util.Objects;
 
 /**
- * 配方查看器条目事件的对象（{@code RecipeViewerEvents.addEntries} /
- * {@code removeEntries}）。
+ * Event object for {@code RecipeViewerEvents.addEntries} / {@code removeEntries}.
  *
- * <p>脚本按条目类型定向（{@code 'item'} / {@code 'fluid'}），通过
- * {@code event.add(...)} 收集条目（物品 id 字符串、ItemStack 等，由平台层
- * 解析为查看器可识别的对象），事件结束后平台层一次性应用到查看器运行时。
+ * <p>An event targets one entry type ({@code 'item'} or {@code 'fluid'}). Scripts collect
+ * entries with {@code event.add(...)}: item id strings, ItemStacks and similar values that the
+ * platform resolves into objects the viewer understands. After the event, the platform applies
+ * them to the viewer as one batch.
  */
 @Doc("Event object for RecipeViewerEvents.addEntries/removeEntries, targeted at 'item' or 'fluid' entries.")
 public final class RecipeViewerEntryListJS {
     private final String type;
     private final List<Object> entries = new ArrayList<>();
 
-    /** 以条目类型构造（{@code 'item'} / {@code 'fluid'}）。 */
+    /** Creates an event for one entry type ({@code 'item'} or {@code 'fluid'}). */
     public RecipeViewerEntryListJS(String type) {
         this.type = Objects.requireNonNull(type, "type");
     }
 
-    /** 条目类型（{@code 'item'} / {@code 'fluid'}）。 */
+    /** Returns the entry type ({@code 'item'} or {@code 'fluid'}). */
     @Doc("Returns the entry type this event is targeted at.")
     @Return("'item' or 'fluid'")
     public String getType() {
         return type;
     }
 
-    /** 添加条目（物品 id 字符串 / ItemStack 等）。 */
+    /** Adds one entry, such as an item id string or an ItemStack. */
     @Doc("Adds an entry to be applied to the viewer after the event.")
     @Param(name = "entry", value = "item id string, ItemStack-like value, or other platform-resolvable entry")
     public void add(Object entry) {
         entries.add(Objects.requireNonNull(entry, "entry"));
     }
 
-    /** 已收集的条目（只读视图）。 */
+    /** Returns a read-only view of the collected entries. */
     @Doc("Returns the entries collected so far.")
     @Return("a copy of the collected entries")
     public List<Object> entries() {

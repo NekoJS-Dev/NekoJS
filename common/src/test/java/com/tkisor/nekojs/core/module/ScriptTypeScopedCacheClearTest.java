@@ -32,14 +32,15 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * runtime-owned prepared 缓存按 {@link ScriptType} 分区的回归测试（直接测缓存，不经 Graal Context）。
+ * Regression tests for partitioning the runtime-owned prepared cache by {@link ScriptType}. The tests
+ * drive the cache directly, without a Graal Context.
  *
- * <p>背景缺陷：prepared 缓存曾是进程级静态缓存且无 ScriptType 维度，单机 CLIENT 触发 reload
- * 会误清 SERVER 等其它类型已编译的模块。修复后 {@code clear(ScriptType)} 按类型局部清除，
- * 本测试直接验证独立性，并验证跨类型共享条目（node_modules / 裸包名 moduleId）不受影响。
+ * <p>A reload of one script type must not clear compiled modules of another type, so
+ * {@code clear(ScriptType)} removes only entries of the given type. The tests also check that
+ * entries shared across types (moduleIds from node_modules or bare package names) survive.
  *
- * <p>prepared entries、source maps 与 native ESM sources 都由本实例持有；清理边界通过
- * 同一 owner 与独立 owner 的可观察结果验证。
+ * <p>One instance owns its prepared entries, source maps and native ESM sources; clearing is
+ * verified through what the same owner and a separate owner can observe.
  */
 class ScriptTypeScopedCacheClearTest {
 
@@ -187,7 +188,8 @@ class ScriptTypeScopedCacheClearTest {
 
     @Test
     void pipelineCacheInstancesAreIsolatedAcrossOwners() throws Exception {
-            // runtime-owned 语义：两个 owner 的缓存实例互不可见；一方 clear 不影响另一方。
+            // Runtime-owned semantics: the two owners' cache instances cannot see each other, and clearing one
+            // leaves the other untouched.
             NekoModulePipelineCache other = new NekoModulePipelineCache(
                 new NekoModulePipeline(new NekoCompilationPipeline(), ScriptCompilerRegistry.createRuntimeRegistry(),
                         SandboxConfig.defaultConfig()), new SourceMapRegistry(NekoJSPaths.get().root()),

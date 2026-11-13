@@ -1,5 +1,6 @@
-// 26.x 实现，本文件不应再出现版本守卫。1.21.1 的实现是 versions/1.21.1/src 下的同名文件，
-// 改本文件行为时须同步它。
+// 26.x implementation, so this file must not contain version guards. The 1.21.1 implementation
+// is the same-named file under versions/1.21.1/src; changing this file's behavior means
+// updating that one too.
 //? if neoforge {
 package com.tkisor.nekojs.client.render;
 
@@ -12,15 +13,16 @@ import net.neoforged.neoforge.client.event.RenderGuiEvent;
 import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
 
 /**
- * 脚本渲染器分发钩子（26.x）：RenderGuiEvent.Pre/Post 驱动 HUD 层，分阶段
- * RenderLevelStageEvent 子类驱动世界层。每帧先做 hasListeners 快路径检查，
- * 无注册渲染器时零分配。
+ * Dispatch hooks for script renderers (26.x): RenderGuiEvent.Pre/Post drives the HUD layers and
+ * the phased RenderLevelStageEvent subclasses drive the world layers. Each frame first checks
+ * hasListeners as a fast path, so no registered renderer means no allocation.
  *
- * <p>层映射：HUD {@code background} → RenderGuiEvent.Pre（原版 HUD 之前）；
- * {@code normal}/{@code foreground} → RenderGuiEvent.Post（之后，按层+优先级顺序）。
- * 世界 {@code early} → AfterTranslucentBlocks，{@code normal} → AfterWeather，
- * {@code late} → AfterLevel。26.x 无 getCamera()/getPartialTick()，相机位置取
- * {@code LevelRenderState.cameraRenderState}，partialTick 取 {@code Minecraft#getDeltaTracker}。
+ * <p>Layer mapping: HUD {@code background} renders on RenderGuiEvent.Pre (before the vanilla
+ * HUD); {@code normal}/{@code foreground} render on RenderGuiEvent.Post (after it, ordered by
+ * layer then priority). World {@code early} maps to AfterTranslucentBlocks, {@code normal} to
+ * AfterWeather, {@code late} to AfterLevel. 26.x has no getCamera()/getPartialTick(): the camera
+ * position comes from {@code LevelRenderState.cameraRenderState} and partialTick from
+ * {@code Minecraft#getDeltaTracker}.
  */
 @EventBusSubscriber(modid = NekoJS.MODID, value = Dist.CLIENT)
 public class ClientRenderEvents {
@@ -43,7 +45,7 @@ public class ClientRenderEvents {
         if (!normal && !foreground) {
             return;
         }
-        // ctx 不可变：normal 与 foreground 层复用同一实例
+        // ctx is immutable: the normal and foreground layers reuse the same instance
         HudRenderContextJS ctx = new HudRenderContextJS(event.getGuiGraphics(), partialTickOf(event));
         if (normal) {
             ClientRenderRegistry.dispatchHud(ClientRenderRegistry.HudLayer.NORMAL, ctx, event.getGuiGraphics());

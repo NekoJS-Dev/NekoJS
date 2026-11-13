@@ -3,13 +3,13 @@ package com.tkisor.nekojs.core.compiler;
 import java.nio.file.Path;
 
 /**
- * NekoJS 脚本编译器扩展接口
+ * Extension interface for NekoJS script compilers.
  */
 public interface IScriptCompiler {
-    /// 匹配文件后缀 (如 ".ts", ".tsx")
+    /// Matches a file extension (for example ".ts", ".tsx").
     boolean canCompile(String extension);
 
-    /// 接收原始文件和源码，返回编译后的 JS 字符串
+    /// Takes the source file and its source code, and returns the compiled JS string.
     String compile(Path file, String sourceCode) throws Exception;
 
     default ScriptCompileResult compileDetailed(Path file, String sourceCode) throws Exception {

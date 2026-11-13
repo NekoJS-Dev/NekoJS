@@ -8,20 +8,21 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 可移植 SNBT 解析器（{@link NbtSnbtSerializer} 的逆运算）。
+ * Portable SNBT parser, the inverse of {@link NbtSnbtSerializer}.
  *
- * <p>解析 Mojang 的字符串 NBT 格式（{@code TagParser} 兼容）：
+ * <p>Parses Mojang's string NBT format (compatible with {@code TagParser}):
  * <pre>
  *   {key:value, "quoted key":1b}
  *   [1, 2, 3]            // list
  *   [B;1B,2B,3B]         // byte array
  *   [I;1,2,3]            // int array
  *   123 / 123l / 1.5f / 1.5d / true / false
- *   "字符串" / unquoted
+ *   "quoted string" / unquoted
  * </pre>
  *
- * <p>强制与 {@link NbtValue} 一致的深度 / 节点 / 字符串长度上限；
- * 超限或语法错误抛 {@link IllegalArgumentException}，由 facade 转成 API 错误。
+ * <p>Enforces the same depth, node and string-length limits as {@link NbtValue}.
+ * Exceeding a limit or a syntax error throws {@link IllegalArgumentException}, and the
+ * facade turns that into an API error.
  */
 public final class NbtSnbtParser {
     private NbtSnbtParser() {
@@ -91,11 +92,11 @@ public final class NbtSnbtParser {
 
     private NbtValue listOrArray(int depth) {
         expect('[');
-        // 数组前缀：[B; ...] / [I; ...] / [L; ...]（L 转成长数组，但目前 NbtValue 不支持 long array，按错误处理）
+        // Array prefix: [B; ...] / [I; ...] / [L; ...] (L would become a long array, but NbtValue has no long array type, so it is an error)
         if (peekNextNonWhitespace() == ';') {
             char prefix = Character.toUpperCase(peek());
             if (prefix == 'B' || prefix == 'I') {
-                advance(); // 字母
+                advance(); // the prefix letter
                 skipWhitespace();
                 expect(';');
                 return prefix == 'B' ? parseByteArray() : parseIntArray();
@@ -140,7 +141,7 @@ public final class NbtSnbtParser {
             NbtValue element = parseValue(0);
             byte value = (byte) coerceIntegral(element, Byte.MIN_VALUE, Byte.MAX_VALUE, "byte array");
             elements.add(value);
-            consumeOptionalSuffix(); // 允许 1B 的尾 B
+            consumeOptionalSuffix(); // allow the trailing B of 1B
             skipWhitespace();
             char next = peek();
             if (next == ',') {
@@ -182,7 +183,7 @@ public final class NbtSnbtParser {
         }
     }
 
-    /** 解析裸标量（数字带后缀 / true / false）或无引号字符串。 */
+    /** Parses a bare scalar (a number with a suffix / true / false) or an unquoted string. */
     private NbtValue parsePrimitiveOrString() {
         int start = position;
         char current = peek();
@@ -200,7 +201,7 @@ public final class NbtSnbtParser {
         if (token.isEmpty()) throw error("empty token");
         if (token.equalsIgnoreCase("true")) return NbtValue.byteValue((byte) 1);
         if (token.equalsIgnoreCase("false")) return NbtValue.byteValue((byte) 0);
-        // 带后缀的数字
+        // A number with a suffix
         char last = token.charAt(token.length() - 1);
         if (isNumber(token)) {
             return parsePlainNumber(token);
@@ -215,11 +216,11 @@ public final class NbtSnbtParser {
                     case 'l': return NbtValue.longValue(Long.parseLong(body));
                     case 'f': return NbtValue.floatValue(Float.parseFloat(body));
                     case 'd': return NbtValue.doubleValue(Double.parseDouble(body));
-                    default: // 无后缀但可解析为数字则按字面量；否则视作字符串
+                    default: // no suffix: a value that parses as a number is a literal, anything else stays a string
                         break;
                 }
             } catch (NumberFormatException ignored) {
-                // 后缀但数值无法解析 → 当作普通字符串
+                // suffix present but the value does not parse -> treat the token as a plain string
             }
         }
         return NbtValue.string(token);
@@ -231,7 +232,7 @@ public final class NbtSnbtParser {
                 return NbtValue.doubleValue(Double.parseDouble(token));
             }
             long parsed = Long.parseLong(token);
-            // 无后缀整数：int 范围内按 int（对标 vanilla TagParser），否则 long
+            // Integer without a suffix: int when it fits the int range (matching the vanilla TagParser), long otherwise
             if (parsed >= Integer.MIN_VALUE && parsed <= Integer.MAX_VALUE) {
                 return NbtValue.intValue((int) parsed);
             }
@@ -275,7 +276,7 @@ public final class NbtSnbtParser {
     }
 
     private String readQuoted(char quote) {
-        advance(); // 开引号
+        advance(); // the opening quote
         StringBuilder builder = new StringBuilder();
         while (true) {
             char current = peek();

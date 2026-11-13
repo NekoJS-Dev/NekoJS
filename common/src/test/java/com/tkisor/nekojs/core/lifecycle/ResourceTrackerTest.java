@@ -19,12 +19,13 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
 /**
- * {@link ResourceTracker} 的关闭语义与并发安全。
+ * Closing semantics and concurrency safety of {@link ResourceTracker}.
  *
- * <p>修复契约：track/cleanup/size/isEmpty 全部 synchronized；close 在锁内只做
- * 幂等标记 + 快照 + 清空，用户清理动作在锁外按 LIFO 执行，单条失败继续执行并
- * 最终重抛首个 Throwable；close 之后 track/cleanup（含 null 输入）必须抛
- * {@link IllegalStateException}，而不是登记一个永远不会执行的清理动作。
+ * <p>track, cleanup, size and isEmpty are all synchronized. Inside the lock, close only marks the
+ * tracker closed, takes a snapshot and clears the list; the user cleanups then run outside the
+ * lock in LIFO order. A failing cleanup does not stop the others, and the first Throwable is
+ * rethrown at the end. After close, track and cleanup (including a null argument) must throw
+ * {@link IllegalStateException} instead of registering a cleanup that would never run.
  */
 class ResourceTrackerTest {
 
@@ -115,8 +116,9 @@ class ResourceTrackerTest {
     }
 
     /**
-     * close 必须只在锁内完成「标记 + 快照 + 清空」，然后释放锁再运行用户清理动作。
-     * 若 close 全程持锁，本测试中 blocked cleanup 等待 release 期间，size() 会阻塞。
+     * close must only mark the tracker closed, take the snapshot and clear the list under the
+     * lock, then release the lock before running the user cleanups. If close held the lock for the
+     * whole call, size() would block here while the blocked cleanup waits for release.
      */
     @Test
     void closeReleasesMonitorBeforeRunningCleanups() throws Exception {

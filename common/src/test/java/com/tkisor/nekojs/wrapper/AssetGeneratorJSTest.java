@@ -23,7 +23,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Unit tests for {@link AssetGeneratorJS}（绑定名 {@code Assets}）。
+ * Unit tests for {@link AssetGeneratorJS} (binding name {@code Assets}).
  *
  * <p>All writes go through a temporary root inside the injected platform game dir, so
  * {@link com.tkisor.nekojs.core.fs.NekoJSPaths#get()} resolves to the test game dir.
@@ -200,7 +200,7 @@ class AssetGeneratorJSTest {
         assertTrue(Files.walk(root).noneMatch(Files::isRegularFile), "no file may be written for invalid ids");
     }
 
-    /** 校验占位 PNG：PNG 魔数、16x16 尺寸、洋红色像素。 */
+    /** Checks a placeholder PNG: signature, 16x16 size and magenta pixels. */
     private static void assertPlaceholderPng(Path file) throws IOException {
         assertTrue(Files.isRegularFile(file), "expected placeholder texture at " + file);
         byte[] bytes = Files.readAllBytes(file);

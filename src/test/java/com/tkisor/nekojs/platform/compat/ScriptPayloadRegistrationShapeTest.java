@@ -30,18 +30,19 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 
 /**
- * 票 17 AC1/AC3 的 NeoForge compat seam fixture（26.x 形态）：脚本自定义通道
- * {@link NekoScriptPayload} 的注册面经 {@link McPlatformCompat.Impl#registerScriptPayload}
- * 恰好注册一个 bidirectional payload，注册时携带的两个 handler 都按「网络线程 →
- * enqueueWork → 中立投递」的既有形状工作。
+ * NeoForge compat fixture (26.x shape) for the script custom channel: registering
+ * {@link NekoScriptPayload} through {@link McPlatformCompat.Impl#registerScriptPayload} registers
+ * exactly one bidirectional payload, and both handlers it carries work in the existing shape of
+ * network thread -> {@code enqueueWork} -> neutral delivery.
  *
- * <p>「注册只发生在 loader 原生初始化时机（RegisterPayloadHandlersEvent）」的时机面由
- * {@code NetworkRegistrationSourceTraceTest} 的源码 trace 钉住；平台对该 event 的
- * 一次性触发属 loader 契约，不在 JVM 单测范围（见 REPORT characterization）。
+ * <p>{@code NetworkRegistrationSourceTraceTest} pins by source trace that registration happens only
+ * at the loader's native initialisation point ({@code RegisterPayloadHandlersEvent}). The loader
+ * firing that event exactly once is a loader contract and is out of scope for a JVM unit test.
  */
 class ScriptPayloadRegistrationShapeTest {
 
-    /** 记录 playBidirectional 调用的 registrar 桩：不触平台注册表，只留证。 */
+    /** Registrar stub that records {@code playBidirectional} calls. It never touches the platform
+     * registry; it only keeps evidence. */
     static final class RecordingRegistrar extends PayloadRegistrar {
         record Bidirectional(String id, IPayloadHandler<?> serverHandler, IPayloadHandler<?> clientHandler) {}
 
@@ -63,9 +64,11 @@ class ScriptPayloadRegistrationShapeTest {
     }
 
     /**
-     * IPayloadContext 桩：enqueueWork 立即执行（模拟主线程切换），player 无。
-     * {@code enqueueWorkCalls} 记录 hop 次数——handler 若回归为绕过 enqueueWork 直投总线，
-     * 该计数不增长，用例据此刻断言「事件命中必经 hop」。
+     * {@link IPayloadContext} stub: {@code enqueueWork} runs immediately (simulating the switch to
+     * the main thread), and there is no player. {@code enqueueWorkCalls} counts the hops, so a
+     * handler that regresses to posting on the bus directly and bypasses {@code enqueueWork} leaves
+     * the count unchanged; the tests then use that count to assert that handling a hit always takes
+     * the hop.
      */
     static final class ImmediateContext implements IPayloadContext {
         int enqueueWorkCalls;
@@ -156,8 +159,10 @@ class ScriptPayloadRegistrationShapeTest {
         assertEquals(1, serverHits.get(),
                 "serverbound packet must reach the SERVER bus after the enqueueWork hop");
 
-        // clientbound handler 同形状：enqueueWork 后投 CLIENT 总线（本 JVM 无 CLIENT 监听器，
-        // 断言不抛即「主线程任务不炸」；CLIENT 总线路由由 NetworkGenerationRoutingTest 覆盖）
+        // The clientbound handler has the same shape: it posts to the CLIENT bus after enqueueWork.
+        // This JVM has no CLIENT listeners, so the assertion is only that nothing throws, meaning
+        // the main-thread task does not blow up; CLIENT bus routing is covered by
+        // NetworkGenerationRoutingTest.
         assertDoesNotThrow(() ->
                 ((IPayloadHandler<NekoScriptPayload>) registration.clientHandler()).handle(payload, context));
         assertEquals(2, context.enqueueWorkCalls,

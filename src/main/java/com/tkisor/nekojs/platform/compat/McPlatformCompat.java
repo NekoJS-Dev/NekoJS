@@ -1,6 +1,7 @@
 //? if neoforge {
-// NeoForge 侧门面:签名引用 NeoForge 专属类型(PayloadRegistrar),fabric 节点不编译本文件
-// (fabric 的网络通道走 FabricPlayNetwork 自有实现)。
+// NeoForge-side facade: its signatures reference NeoForge-only types (PayloadRegistrar), so the
+// fabric node does not compile this file (fabric's network channel uses FabricPlayNetwork's own
+// implementation).
 package com.tkisor.nekojs.platform.compat;
 
 import net.minecraft.world.entity.player.Player;
@@ -9,21 +10,24 @@ import net.neoforged.neoforge.network.registration.PayloadRegistrar;
 import java.util.ServiceLoader;
 
 /**
- * 双端（client+server）通用符号差异的版本门面（从 NekoJSNetwork 的
- * 内联守卫收拢而来）。覆盖三类差异：
+ * Version facade for symbol differences shared by both sides (client and server). It covers three
+ * kinds of differences:
  * <ul>
- *   <li>dist 检查：26.x 是 {@code FMLEnvironment.getDist()}、1.21.1 是字段
- *       {@code FMLEnvironment.dist}；</li>
- *   <li>OP 权限检查：26.x 用 {@code Commands.LEVEL_GAMEMASTERS.check(permissions())}、
- *       1.21.1 是 {@code Player#hasPermissions(2)}；</li>
- *   <li>NekoScriptPayload 的双向注册：26.x 的 {@code playBidirectional} 是 4 参（分别指定
- *       两端 handler），1.21.1 只有 3 参（handler 收 flow 判别）——整个注册操作下沉到实现。</li>
+ *   <li>dist check: {@code FMLEnvironment.getDist()} in 26.x, the {@code FMLEnvironment.dist} field
+ *       in 1.21.1;</li>
+ *   <li>OP check: {@code Commands.LEVEL_GAMEMASTERS.check(permissions())} in 26.x,
+ *       {@code Player#hasPermissions(2)} in 1.21.1;</li>
+ *   <li>bidirectional registration of NekoScriptPayload: {@code playBidirectional} takes 4
+ *       arguments in 26.x (one handler per direction) and only 3 in 1.21.1 (the handler tells the
+ *       direction from the flow), so the whole registration moves down into the implementation.</li>
  * </ul>
- * 实现在各版本（{@code Nf1211PlatformCompat} / {@code Nf261PlatformCompat} /
- * {@code Nf262PlatformCompat}，类名刻意不同——drift 比较对不允许同名不同体），经
- * {@code META-INF/services} 由 ServiceLoader 在首次取用时解析。
+ * The implementations live in the per-version modules ({@code Nf1211PlatformCompat} /
+ * {@code Nf261PlatformCompat} / {@code Nf262PlatformCompat}, deliberately with different class
+ * names because the drift comparison forbids the same name with a different body) and are resolved
+ * by ServiceLoader through {@code META-INF/services} on first use.
  *
- * <p>签名只引用两端都存在且双端可加载的类型；客户端专属符号走 {@link McClientCompat}。
+ * <p>The signatures only reference types that exist on both sides and load on both sides;
+ * client-only symbols go through {@link McClientCompat}.
  */
 public final class McPlatformCompat {
 
@@ -40,13 +44,22 @@ public final class McPlatformCompat {
     }
 
     public interface Impl {
-        /** 当前进程是否客户端侧（26.x：{@code FMLEnvironment.getDist()}；1.21.1：{@code FMLEnvironment.dist}）。 */
+        /**
+         * Whether the current process is on the client side (26.x: {@code FMLEnvironment.getDist()};
+         * 1.21.1: {@code FMLEnvironment.dist}).
+         */
         boolean isClientDist();
 
-        /** 是否游戏管理员（26.x：{@code Commands.LEVEL_GAMEMASTERS.check}；1.21.1：{@code hasPermissions(2)}）。 */
+        /**
+         * Whether the player is a game master (26.x: {@code Commands.LEVEL_GAMEMASTERS.check};
+         * 1.21.1: {@code hasPermissions(2)}).
+         */
         boolean isGameMaster(Player player);
 
-        /** NekoScriptPayload 的双向注册（注册形状整操作下沉到各版本实现）。 */
+        /**
+         * Bidirectional registration of NekoScriptPayload; the whole registration shape moves down into each
+         * version's implementation.
+         */
         void registerScriptPayload(PayloadRegistrar registrar);
 
         /**

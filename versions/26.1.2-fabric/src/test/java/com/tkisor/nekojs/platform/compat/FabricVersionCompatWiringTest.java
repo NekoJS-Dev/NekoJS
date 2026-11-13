@@ -1,8 +1,10 @@
-// fabric 节点本地 wiring 测试（票 31）：镜像 NeoForge 侧 McVersionCompatWiringTest 的
-// 用途——ServiceLoader 缺 provider 时首次调用只抛 IllegalStateException，编译期不可见。
-// 不放共享测试树的原因：`//? if fabric` 守卫对 active 节点（26.1.2 NeoForge，直编共享树
-// 磁盘）是惰性注释，会在错误平台上编译执行；节点本地 test 树由标准 source set 布局挂载，
-// 天然只属于本节点。两 fabric 节点各一份同名同体测试（同 golden fixture 的节点分发先例）。
+// Fabric node-local wiring test: mirrors the purpose of McVersionCompatWiringTest on the NeoForge
+// side. When ServiceLoader has no provider, the first call throws only IllegalStateException, which
+// the compiler cannot catch. It is not in the shared test tree because the `//? if fabric` guard is
+// a lazy comment for the active node (26.1.2 NeoForge, which compiles the shared tree directly from
+// disk) and would compile and run on the wrong platform. A node-local test tree is mounted by the
+// standard source set layout, so it belongs to this node only. Both fabric nodes carry one copy of
+// the same test, following the same-body node distribution used for golden fixtures.
 package com.tkisor.nekojs.platform.compat;
 
 import org.junit.jupiter.api.Test;
@@ -12,11 +14,13 @@ import java.util.ServiceLoader;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * 26.1.2-fabric 的 {@link McVersionCompat} 接线回归：本节点 jar/test classpath 必须携带
- * {@code Fabric261VersionCompat} services 条目——共享树 {@code inject.MixinLevel} 注入的
- * {@code LevelExtension.neko$spawnLightning} 经该门面取闪电实体类型，缺 provider 即
- * ServiceLoader 潜伏初始化崩溃（d.ts 已宣传 spawnLightning）。不触发 MC 类初始化
- *（provider 实例化是惰性解析方法体）。
+ * Checks that {@link McVersionCompat} is wired on 26.1.2-fabric: this node's jar and test classpath
+ * must carry the {@code Fabric261VersionCompat} services entry.
+ * {@code LevelExtension.neko$spawnLightning}, injected by {@code inject.MixinLevel} in the shared
+ * tree, gets the lightning entity type through this facade; without a provider that call crashes
+ * the ServiceLoader step of McVersionCompat static initialization, and nothing catches it at that
+ * point. The d.ts already advertises spawnLightning. The test does not trigger MC class
+ * initialization, because instantiating the provider only resolves the method body lazily.
  */
 class FabricVersionCompatWiringTest {
 

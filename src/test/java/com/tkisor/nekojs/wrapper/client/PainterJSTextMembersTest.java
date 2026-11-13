@@ -10,10 +10,10 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Direct contracts of the {@code PainterJS} text measurement members (ticket 44):
- * {@code textWidth}, {@code wrapText} and {@code lineHeight} delegate to the shared
- * {@code TextLayouter} over the painter's {@link FontAdapter}. Runs without a live client
- * through the measurement-only constructor; real-client execution is NOT RUN here.
+ * Direct checks of the {@code PainterJS} text measurement members: {@code textWidth},
+ * {@code wrapText} and {@code lineHeight} delegate to the shared {@code TextLayouter} over the
+ * painter's {@link FontAdapter}. They run without a live client through the measurement-only
+ * constructor; execution against a real client is NOT RUN here.
  */
 class PainterJSTextMembersTest {
 

@@ -28,14 +28,16 @@ import java.util.Set;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * {@link ClassEditor} + {@link ProbeModifyTypeEventJS} 的参数级编辑单测：
- * 反射 → 编辑 IR → 渲染，验证改名/改类型/隐藏/加参数/可选参数/import 收集均生效。
+ * Tests for parameter-level edits through {@link ClassEditor} and {@link ProbeModifyTypeEventJS}: reflect, edit the IR,
+ * render, and check that renaming, type changes, hiding, added parameters, optional parameters and import
+ * collection all take effect.
  *
- * <p>不依赖 -parameters 编译标志：按索引定位参数，按需从 IR 动态读取参数名。
+ * <p>The tests do not rely on the -parameters compiler flag: they address parameters by index and read the parameter
+ * names from the IR when needed.
  */
 class ModifyTypeEditorTest {
 
-    /** 反射用的样本类（public 方法 + public 字段，确保反射可见）。 */
+    /** Sample class for reflection. Its methods and fields are public so reflection sees them. */
     public static class Sample {
         public String nameField;
         public String greet(String name) { return "hi " + name; }
@@ -127,7 +129,7 @@ class ModifyTypeEditorTest {
     @Test
     void missingMember_isSilentNoOp() {
         TypeDecl d = reflector.reflect(Sample.class);
-        // 不存在的成员：no-op，不抛、不置 mutated
+        // A member that does not exist is a no-op: nothing is thrown and mutated stays false
         new ClassEditor(d).renameMethod("nope", "x").hideField("absent");
         assertFalse(d.mutated);
     }
@@ -139,7 +141,7 @@ class ModifyTypeEditorTest {
         TypeDecl d = reflector.reflect(Sample.class);
         new ClassEditor(d).changeReturnType("compute", "java.lang.String");
         String rendered = renderer.render(d);
-        // compute 的返回类型由 number 改为 $String
+        // compute's return type changes from number to $String
         assertTrue(rendered.contains("compute(") && rendered.contains("$String"));
     }
 
@@ -149,11 +151,11 @@ class ModifyTypeEditorTest {
         new ClassEditor(d).changeParamType("compute", 0, "java.lang.String");
 
         String rendered = renderer.render(d);
-        // 编辑参数与反射参数语义一致：input 位置应用别名放宽（java.lang.String → string）。
-        // （旧双轨渲染 ref 裸渲染为 $String，与反射参数的 string 不一致——合并后修正）
+        // Edited parameters behave like reflected ones: an input position applies alias widening
+        // (java.lang.String becomes string)
         assertTrue(rendered.contains("compute(x: string"), "edited param should widen like reflected params: " + rendered);
 
-        // import 收集：compute 的首个参数改为 java.lang.String（跨包），应被收集
+        // Import collection: compute's first parameter becomes java.lang.String from another package, so it is collected
         Set<String> imps = ProbeModifyTypeEventJS.collectEditedSymbolFqns(d, pkgOf(d.fqn));
         assertTrue(imps.contains("java.lang.String"));
     }
@@ -161,7 +163,7 @@ class ModifyTypeEditorTest {
     @Test
     void changeParamType_excludesSamePackageSymbol() {
         TypeDecl d = reflector.reflect(Sample.class);
-        // 改成一个与 Sample 同包的「合成」类型名（仅验证同包剔除逻辑，无需真实类）
+        // Use a made-up type in Sample's package. This only exercises the same-package exclusion, so no real class is needed
         d.methods.stream().filter(m -> m.name.equals("compute")).findFirst()
                 .ifPresent(m -> m.params.get(0).type = ProbeModifyTypeEventJS.override(m.params.get(0).type, pkgOf(d.fqn) + ".Sibling"));
         Set<String> imps = ProbeModifyTypeEventJS.collectEditedSymbolFqns(d, pkgOf(d.fqn));
@@ -176,7 +178,7 @@ class ModifyTypeEditorTest {
         MethodDecl compute = d.methods.stream().filter(m -> m.name.equals("compute")).findFirst().orElseThrow();
         String last = compute.params.get(compute.params.size() - 1).name;
 
-        // 可选参数必须居尾：标记最后一个参数
+        // Optional parameters must come last, so mark the last one
         new ClassEditor(d).markOptional("compute", last);
 
         assertTrue(renderer.render(d).contains(last + "?:"),
@@ -189,7 +191,7 @@ class ModifyTypeEditorTest {
         MethodDecl compute = d.methods.stream().filter(m -> m.name.equals("compute")).findFirst().orElseThrow();
         String first = compute.params.get(0).name;
 
-        // compute(x, y)：把首参标记可选会让第二参成为「可选后的必选」→ 非法 TS 签名
+        // compute(x, y): making the first parameter optional leaves the second required, which is not a valid TS signature
         IllegalStateException ex = assertThrows(IllegalStateException.class,
                 () -> new ClassEditor(d).markOptional("compute", first));
         assertTrue(ex.getMessage().contains("optional"),
@@ -215,7 +217,7 @@ class ModifyTypeEditorTest {
         String last = compute.params.get(compute.params.size() - 1).name;
         new ClassEditor(d).markOptional("compute", last);
 
-        // 已有可选参数，再追加必选参数 → 非法 TS 签名
+        // Adding a required parameter after an optional one is not a valid TS signature
         IllegalStateException ex = assertThrows(IllegalStateException.class,
                 () -> new ClassEditor(d).addParam("compute", "flag", "boolean"));
         assertTrue(ex.getMessage().contains("addParam"),
@@ -254,7 +256,7 @@ class ModifyTypeEditorTest {
     @Test
     void renameClass_reflectsInTsRender() {
         TypeDecl d = reflector.reflect(Sample.class);
-        // Sample 是嵌套类：原名按 外层$Simple 命名
+        // Sample is a nested class, so its original name is Outer$Simple
         String before = renderer.render(d);
         assertTrue(before.contains("export class $ModifyTypeEditorTest$Sample"), before);
 
@@ -292,7 +294,7 @@ class ModifyTypeEditorTest {
         new ClassEditor(d).changeSuper("number");
 
         String out = renderer.render(d);
-        // superType 改写为 TS 原始类型 → extends 子句省略（class $X extends number 非法）
+        // Rewriting superType to a TS primitive drops the extends clause, because class $X extends number is not valid
         assertTrue(out.contains("export class $ModifyTypeEditorTest$Sample {"),
                 "extends clause must be omitted for primitive super type:\n" + out);
         assertFalse(out.contains("extends number"), out);
@@ -303,7 +305,7 @@ class ModifyTypeEditorTest {
     @Test
     void addMethod_emitsInstanceMethodWithParams() {
         TypeDecl d = reflector.reflect(Sample.class);
-        // "a:string" 具名参数 + "int" 纯类型（参数名自动 arg1）
+        // "a:string" is a named parameter and "int" is a bare type whose name becomes arg1 automatically
         new ClassEditor(d).addMethod("foo", "boolean", "a:string", "int");
 
         String out = renderer.render(d);
@@ -336,14 +338,14 @@ class ModifyTypeEditorTest {
         assertThrows(IllegalArgumentException.class, () -> new ClassEditor(d).addMethod("foo", "boolean", (Object) 42));
     }
 
-    // ---------------- C5a：隐藏类残留清理（TS backend 集成） ----------------
+    // ---------------- Cleanup of hidden-class leftovers (TS backend integration) ----------------
 
     @Test
     void hiddenClass_removedFromTsImports(@TempDir Path temp) throws Exception {
         TestPlatformInit.ensureInitialized();
 
-        // IR：Path 被 hide()（mutated + hidden）。java.io.File 的反射 import 收集引用
-        // java.nio.file.Path（toPath()），隐藏后该 import 必须被过滤，否则悬空。
+        // IR: Path is hidden with hide() (mutated + hidden). Reflected import collection for java.io.File
+        // references java.nio.file.Path through toPath(), so that import must be filtered out or it dangles.
         TypeDecl pathDecl = new TypeDecl(TypeDecl.Kind.INTERFACE, null, "java.nio.file.Path");
         new ClassEditor(pathDecl).hide();
 
@@ -358,19 +360,19 @@ class ModifyTypeEditorTest {
         ProbeBackend.GenerateResult res = new TypeScriptProbeBackend().generate(ctx);
         assertTrue(res.success(), "generate failed: " + res.message());
 
-        // java/io 模块：File 的反射 import 里 Path 被剔除，其余跨包 import（URI/URL）不受影响
+        // java/io module: Path is dropped from File's reflected imports; the other cross-package imports (URI/URL) stay
         String ioModule = Files.readString(out.resolve("@package/java/io/index.d.ts"));
         assertFalse(ioModule.contains("import { $Path }"),
                 "hidden class must not be imported: " + ioModule);
         assertTrue(java.util.regex.Pattern.compile("import \\{[^}]*\\$URI(?:,| )[^}]*\\$URL(?:,| )[^}]*} from \\\"java:java/net\\\";")
                 .matcher(ioModule).find(), ioModule);
 
-        // Path 自身模块：声明已被覆盖为空，类名不得出现
+        // Path's own module: its declaration was overridden to empty, so the class name must not appear
         String fileModule = Files.readString(out.resolve("@package/java/nio/file/index.d.ts"));
         assertFalse(java.util.regex.Pattern.compile("(?<![\\w$])\\$Path(?![\\w$])").matcher(fileModule).find(),
                 "The exact hidden class must not be declared: " + fileModule);
 
-        // 整个产物树：任何 import 语句都不得出现隐藏类名
+        // Whole output tree: no import statement may mention the hidden class name
         try (var files = Files.walk(out)) {
             for (Path f : files.filter(Files::isRegularFile).toList()) {
                 for (String line : Files.readAllLines(f)) {

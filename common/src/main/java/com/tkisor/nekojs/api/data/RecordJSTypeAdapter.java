@@ -18,19 +18,24 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
- * 通用 record 适配器：JS 对象字面量按 record component 名逐字段取值构造 record 实例
- * （KubeJS Rhino 原生 record 映射的对标——GraalJS 没有这层）。
+ * A generic record adapter. It reads fields from a JS object literal by record component name
+ * and builds a record instance. This is the counterpart of KubeJS Rhino's native record
+ * mapping, which GraalJS does not provide.
  *
- * <p>字段值经 {@code Value.as(字段类型)} 递归走 targetTypeMapping 管线，嵌套的
- * ItemStack/ID 等按已注册的适配器转换；枚举字段显式支持字符串名（大小写不敏感）。
- * 字段缺失：有声明默认值（注册时提供）用默认值，否则抛 {@link ValueConversionException}；
- * 对象字面量里的未知字段一律报错（typo 早暴露）。host 传入的 record 实例原样通过。
+ * <p>Each field value goes through {@code Value.as} with the component type and so recurses
+ * through the targetTypeMapping pipeline; nested types such as ItemStack and IDs use their
+ * registered adapters. Enum fields also accept a string name, case-insensitively. A missing
+ * field falls back to its declared default, supplied at registration, otherwise a
+ * {@link ValueConversionException} is thrown. An unknown field in the object literal always
+ * fails, so typos surface early. Record instances passed in from the host pass through as is.
  *
- * <p>probe 面：自动产出 {@link AdapterInputShape#object(Slot...)} 形状（有默认值的字段为可选槽位），
- * 使 {@code $Foo_} 别名与运行时接受范围一致。
+ * <p>Probe shape: the adapter reports {@link AdapterInputShape#object(Slot...)} automatically,
+ * with defaulted fields as optional slots, so the {@code $Foo_} alias matches the range the
+ * runtime accepts.
  *
- * <p>注册经 platform 侧 {@code TypeAdapterDsl.registerRecord}——Graal targetTypeMapping 按
- * 精确类匹配，"通用"指转换逻辑通用，注册仍是每 record 一行。
+ * <p>Registration goes through {@code TypeAdapterDsl.registerRecord} on the platform side.
+ * Graal's targetTypeMapping matches on the exact class, so "generic" describes the conversion
+ * logic only; registration is still one line per record.
  */
 public final class RecordJSTypeAdapter<T extends Record> implements JSTypeAdapter<T> {
     private final Class<T> recordClass;
@@ -140,7 +145,7 @@ public final class RecordJSTypeAdapter<T extends Record> implements JSTypeAdapte
         return Optional.of("object literal: " + objectShapeDescription());
     }
 
-    // ===================== 内部 =====================
+    // ===================== Internals =====================
 
     private Object convertMember(RecordComponent component, Value memberValue) {
         Class<?> type = component.getType();
@@ -171,7 +176,8 @@ public final class RecordJSTypeAdapter<T extends Record> implements JSTypeAdapte
                 .map(Enum::name).collect(Collectors.joining(", ")) + ")");
     }
 
-    /** 字段类型的统一分类：probe 形状与报错文本共用一份映射，不会漂移。 */
+    /** One classification of field types. The probe shape and the error text share this mapping, so
+     * they cannot drift apart. */
     private enum FieldShapeKind {
         STRING, BOOLEAN, NUMBER, ENUM, HOST
     }

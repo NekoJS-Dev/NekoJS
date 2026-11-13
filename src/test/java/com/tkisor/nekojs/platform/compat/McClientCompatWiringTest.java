@@ -1,4 +1,5 @@
-// TODO(fabric): fabric 侧还没有对应实现，整文件守卫等移植完成后去掉
+// TODO(fabric): the fabric side has no matching implementation yet; remove this whole-file guard
+// once the port is done
 //? if neoforge {
 package com.tkisor.nekojs.platform.compat;
 
@@ -9,13 +10,15 @@ import java.util.ServiceLoader;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * 客户端 compat 接线回归：共享代码经 ServiceLoader 取 per-version compat 实现，
- * services 文件缺失时首次调用只会抛 IllegalStateException——编译期完全不可见，
- * 到运行期才炸（错误面板 toast / 主机码 / 闪电生成全部失效）。这里在测试 classpath
- * 上直接验证 provider 存在；不触发 MC 类初始化（provider 实例化是惰性解析方法体）。
+ * Wiring regression for the client compat layer: shared code gets the per-version compat
+ * implementation through ServiceLoader. When the services file is missing, the first call throws
+ * only IllegalStateException, which the compiler cannot see at all; it fails at runtime (the error
+ * panel toast, host codes and lightning spawning all stop working). This test checks directly on
+ * the test classpath that the provider exists. It triggers no MC class initialisation, because
+ * instantiating the provider only resolves the method bodies lazily.
  *
- * <p>本测试在三个 NeoForge 平台（1.21.1/26.1/26.2）的测试任务里各跑一遍——
- * 每个平台的 jar 只应携带自己版本的 services 条目。
+ * <p>The test runs once per test task on all three NeoForge platforms (1.21.1/26.1/26.2). Each
+ * platform's jar should carry only its own version's services entry.
  */
 class McClientCompatWiringTest {
 

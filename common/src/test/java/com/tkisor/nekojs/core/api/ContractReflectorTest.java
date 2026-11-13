@@ -25,17 +25,17 @@ class ContractReflectorTest {
         Map<String, ApiSymbol> byId = symbols.stream()
                 .collect(Collectors.toMap(s -> s.id().value(), s -> s));
 
-        // global:Text 存在
+        // global:Text exists
         assertNotNull(byId.get("global:Text"));
 
-        // member:Text.of 存在，签名正确
+        // member:Text.of exists with the right signature
         ApiSymbol of = byId.get("member:Text.of");
         assertNotNull(of);
         assertEquals(1, of.signatures().getFirst().parameters().size());
         assertEquals("text", of.signatures().getFirst().parameters().getFirst().name());
         assertEquals(ApiTypeRef.Kind.PRIMITIVE, of.signatures().getFirst().parameters().getFirst().type().kind());
         assertEquals("string", of.signatures().getFirst().parameters().getFirst().type().name());
-        // 返回 UNION(type:TextValue, null)——TextValue 作为返回类型被 proxy 包裹
+        // returns UNION(type:TextValue, null) — TextValue as a return type is wrapped by the proxy
         ApiTypeRef ofReturn = of.signatures().getFirst().returnType();
         assertEquals(ApiTypeRef.Kind.UNION, ofReturn.kind());
         assertTrue(ofReturn.arguments().stream()
@@ -48,7 +48,7 @@ class ContractReflectorTest {
         Map<String, ApiSymbol> byId = symbols.stream()
                 .collect(Collectors.toMap(s -> s.id().value(), s -> s));
 
-        // ID.of 有两个重载：(String) 和 (String, String)
+        // ID.of has two overloads: (String) and (String, String)
         ApiSymbol of = byId.get("member:ID.of");
         assertNotNull(of);
         assertEquals(2, of.signatures().size(), "ID.of should have 2 overloads");
@@ -60,8 +60,9 @@ class ContractReflectorTest {
         Map<String, ApiSymbol> byId = symbols.stream()
                 .collect(Collectors.toMap(s -> s.id().value(), s -> s));
 
-        // JsonIO.parse(String) → 返回 JsonValue，作为返回类型是 UNION(type:JsonValue, null)
-        // （被 proxy 包裹成 JS 对象，可继续 .toString()；nullable 因失败返回 null）
+        // JsonIO.parse(String) → returns JsonValue, which as a return type is
+        // UNION(type:JsonValue, null) (the proxy wraps it as a JS object, so .toString() works;
+        // nullable because a failure returns null)
         ApiSymbol parse = byId.get("member:JsonIO.parse");
         assertNotNull(parse);
         ApiTypeRef parseReturn = parse.signatures().getFirst().returnType();
@@ -69,14 +70,14 @@ class ContractReflectorTest {
         assertTrue(parseReturn.arguments().stream()
                 .anyMatch(a -> a.kind() == ApiTypeRef.Kind.SYMBOL && "type:JsonValue".equals(a.name())));
 
-        // JsonIO.toString(JsonValue) → String；返回类型 nullable UNION(string, null)
+        // JsonIO.toString(JsonValue) → String; the return type is the nullable UNION(string, null)
         ApiSymbol toString = byId.get("member:JsonIO.toString");
         assertNotNull(toString);
         assertEquals("json", toString.signatures().getFirst().parameters().getFirst().type().name());
         assertTrue(returnContainsPrimitive(toString, "string"));
     }
 
-    /** 返回类型（nullable UNION 或直接 PRIMITIVE）是否含指定 primitive 分支。 */
+    /** Whether the return type (a nullable UNION or a plain PRIMITIVE) contains the named primitive branch. */
     private static boolean returnContainsPrimitive(ApiSymbol symbol, String primitiveName) {
         ApiTypeRef rt = symbol.signatures().getFirst().returnType();
         if (rt.kind() == ApiTypeRef.Kind.PRIMITIVE) return primitiveName.equals(rt.name());
@@ -90,7 +91,7 @@ class ContractReflectorTest {
         Map<String, ApiSymbol> byId = symbols.stream()
                 .collect(Collectors.toMap(s -> s.id().value(), s -> s));
 
-        // Text.translatable(String, List<Object>) — 第二参数应为 UNION
+        // Text.translatable(String, List<Object>) — the second parameter should be a UNION
         ApiSymbol translatable = byId.get("member:Text.translatable");
         assertNotNull(translatable);
         assertEquals(2, translatable.signatures().getFirst().parameters().size());
@@ -113,7 +114,7 @@ class ContractReflectorTest {
 
     @Test
     void reflectDataTypeHandlesRecordAccessors() {
-        // NbtEntry 是 record(key, value)
+        // NbtEntry is record(key, value)
         List<ApiSymbol> symbols = ContractReflector.reflectDataType("NbtEntry", NbtEntry.class);
         Map<String, ApiSymbol> byId = symbols.stream()
                 .collect(Collectors.toMap(s -> s.id().value(), s -> s));
@@ -121,12 +122,12 @@ class ContractReflectorTest {
         ApiSymbol key = byId.get("member:NbtEntry.key");
         assertNotNull(key);
         assertEquals(0, key.signatures().getFirst().parameters().size(), "record accessor is zero-arg");
-        // 返回类型 nullable UNION(string, null)
+        // return type is the nullable UNION(string, null)
         assertTrue(returnContainsPrimitive(key, "string"));
 
         ApiSymbol value = byId.get("member:NbtEntry.value");
         assertNotNull(value);
-        // NbtValue 作为返回类型 → UNION(type:NbtValue, null)（被 proxy 包裹）
+        // NbtValue as a return type → UNION(type:NbtValue, null) (wrapped by the proxy)
         ApiTypeRef valueReturn = value.signatures().getFirst().returnType();
         assertTrue(valueReturn.arguments().stream()
                         .anyMatch(a -> a.kind() == ApiTypeRef.Kind.SYMBOL && "type:NbtValue".equals(a.name())),
@@ -135,7 +136,7 @@ class ContractReflectorTest {
 
     @Test
     void reflectDataTypeHandlesInterfaceMethods() {
-        // RegistryView 是接口，扫描声明的实例方法
+        // RegistryView is an interface, so its declared instance methods are scanned
         List<ApiSymbol> symbols = ContractReflector.reflectDataType("RegistryView", RegistryView.class);
         Map<String, ApiSymbol> byId = symbols.stream()
                 .collect(Collectors.toMap(s -> s.id().value(), s -> s));
@@ -149,8 +150,9 @@ class ContractReflectorTest {
 
     @Test
     void contractNameOverrideAppliedToSymbolRef() {
-        // ModInfoValue → 契约名 ModInfo；PlatformFacade.getInfo 返回 ModInfoValue
-        // → UNION(type:ModInfo, null)（契约名 ModInfo，非类名 ModInfoValue）
+        // ModInfoValue → contract name ModInfo; PlatformFacade.getInfo returns ModInfoValue,
+        // so the type is UNION(type:ModInfo, null) (contract name ModInfo, not the class name
+        // ModInfoValue)
         List<ApiSymbol> symbols = ContractReflector.extractSymbols("Platform", PlatformFacade.class);
         Map<String, ApiSymbol> byId = symbols.stream()
                 .collect(Collectors.toMap(s -> s.id().value(), s -> s));
@@ -169,7 +171,7 @@ class ContractReflectorTest {
         Map<String, ApiSymbol> byId = symbols.stream()
                 .collect(Collectors.toMap(s -> s.id().value(), s -> s));
 
-        // JsonFacade.toString(JsonValue) → receiver 双产出 member:JsonValue.toString
+        // JsonFacade.toString(JsonValue) → the receiver produces both members, including member:JsonValue.toString
         assertNotNull(byId.get("member:JsonValue.toString"), "JsonValue receiver-dual");
         assertNotNull(byId.get("member:JsonValue.toPrettyString"), "JsonValue receiver-dual");
     }

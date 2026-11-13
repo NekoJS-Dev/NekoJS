@@ -57,21 +57,22 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * 票 18 generation 边界与 reload 保留域 fixture（票 17 NetworkGenerationRoutingTest 的
- * harness 先例）：PData mirror 与 ClientData store 是<b>进程级</b>客户端状态——接收面
- * （acceptClientSync / ClientDataStore.accept）只写 Java 状态、从不进入任何 Graal Context，
- * 因此 SERVER/CLIENT reload、candidate 失败与 root close 都不触碰它们；清空只由平台
- * 域钩子（断线/离开旧世界）发起。脚本侧经绑定读取同一状态，reload 前后读取结果不变
- * （「NekoJS 自有 reload 不回滚世界副作用」的数据面投影）。
+ * Fixture for generation boundaries and reload-retained state: the PData mirror and the ClientData
+ * store are <b>process-level</b> client state. The receive side (acceptClientSync /
+ * ClientDataStore.accept) only writes Java state and never enters any Graal Context, so a
+ * SERVER/CLIENT reload, a failed candidate and root close all leave them alone. Only platform
+ * domain hooks (disconnect, leaving the old world) clear them. Scripts read the same state through
+ * their bindings, so reads give the same results before and after a reload.
  *
- * <p>实体 pdata（服务端持久化容器）同样跨 reload 保留：脚本写入的容器数据随实体存档，
- * reload 只重建脚本环境——「SERVER reload 前后玩家/实体持久化数据与脚本读取结果对照」
- * 的 JVM 可达面在本测试钉住（真实实体/存档的 joinLevel 窗口与落盘见节点本地与
- * characterization）。
+ * <p>Entity pdata (the server-side persistent container) likewise survives reloads: container data
+ * a script writes is saved with the entity, and a reload only rebuilds the script environment. This
+ * test pins the JVM-reachable part of that by comparing player/entity persistent data and script
+ * reads before and after a SERVER reload. The joinLevel window and saving to disk with real
+ * entities and saves are covered by node-local and characterization tests.
  */
 class DataSyncGenerationBoundaryTest {
 
-    // ---- 测试绑定对象 ----
+    // ---- Test binding objects ----
 
     public static final class Recorder {
         private final Map<String, AtomicInteger> hits = new ConcurrentHashMap<>();
@@ -102,7 +103,8 @@ class DataSyncGenerationBoundaryTest {
         }
     }
 
-    /** 实体 pdata 门面：把内存容器（id 面）暴露给脚本读写（生产面等价：EntityExtension#neko$pdata）。 */
+    /** Entity pdata facade: exposes the in-memory container (by id) for scripts to read and write.
+     * The production equivalent is EntityExtension#neko$pdata. */
     public static final class PDataFacade {
         private final int entityId;
 
@@ -114,7 +116,7 @@ class DataSyncGenerationBoundaryTest {
             return EntityPDataStore.get().get(entityId, EntityExtension.NEKO_PDATA_KEY);
         }
 
-        /** 版本无关的整数读（26.x getIntOr / 1.21.1 getInt）。 */
+        /** Version-independent int read (26.x getIntOr, 1.21.1 getInt). */
         public int read(String key) {
 //? if >=26 {
             return tag().getIntOr(key, -1);
@@ -183,7 +185,7 @@ class DataSyncGenerationBoundaryTest {
         @Override public Object managedApiImplementation(com.tkisor.nekojs.api.surface.ApiSymbolId globalId) { return null; }
     }
 
-    // ---- 装配（NetworkGenerationRoutingTest harness 同形复刻） ----
+    // ---- Assembly (same shape as the NetworkGenerationRoutingTest harness) ----
 
     @BeforeAll
     static void initPlatform() {
@@ -239,7 +241,8 @@ class DataSyncGenerationBoundaryTest {
         EntityPDataStore.install(memoryAccess());
     }
 
-    /** 内存容器（id 面；EntityPDataStoreTest 同形）：joinLevel 窗口语义不在本测试面（见 trace/节点 fixture）。 */
+    /** In-memory container keyed by id, the same shape as EntityPDataStoreTest. The joinLevel window
+     * semantics are outside this test; see the trace tests and node fixtures. */
     private static EntityPDataStore.Access memoryAccess() {
         Map<Integer, CompoundTag> containers = new HashMap<>();
         return new EntityPDataStore.Access() {
@@ -300,8 +303,8 @@ class DataSyncGenerationBoundaryTest {
             NekoSandboxFactory sandboxFactory = new NekoSandboxFactory(core, paths,
                     compilers, pluginRuntime, cache);
             ScriptEnvironmentFactory environmentFactory =
-                    // ticket 10 起 ScriptEnvironmentFactory 需要 root 拥有的状态域（4 参构造器）；
-                    // 本测试不覆盖 global/shared 面，传独立空 store。
+                    // Since ScriptEnvironmentFactory takes the root-owned state domains (4-arg constructor).
+                    // This test does not cover the global/shared side, so pass a separate empty store.
                     new ScriptEnvironmentFactory(bridge, pluginRuntime, sandboxFactory,
                             new com.tkisor.nekojs.core.state.GlobalStateStores());
             this.manager = new ScriptManager(scriptType, bridge, pluginRuntime,
@@ -383,8 +386,9 @@ class DataSyncGenerationBoundaryTest {
     // ---- fixture ----
 
     /**
-     * AC7 + reload 保留：SERVER reload 前后，ClientData store 与 pdata mirror（进程级客户端
-     * 状态）保留，脚本读取结果不变——reload 只重建脚本环境，不触碰数据同步域。
+     * Reload retention: the ClientData store and the pdata mirror (process-level client state) stay
+     * in place across a SERVER reload, and script reads give the same result. A reload only rebuilds
+     * the script environment and never touches the data sync domain.
      */
     @Test
     void serverReloadKeepsClientStoresAndScriptReadsStable() throws Exception {
@@ -411,7 +415,7 @@ class DataSyncGenerationBoundaryTest {
         }
     }
 
-    /** CLIENT 侧 reload（F3+T 资源重载同型）同样不清空 store。 */
+    /** A CLIENT reload (the same shape as an F3+T resource reload) does not clear the stores either. */
     @Test
     void clientReloadKeepsClientStores() throws Exception {
         try (ManagerHarness harness = new ManagerHarness(ScriptType.CLIENT)) {
@@ -464,9 +468,11 @@ class DataSyncGenerationBoundaryTest {
     }
 
     /**
-     * root close 边界：close 只关脚本环境；接收面（acceptClientSync / ClientDataStore.accept）
-     * 不依赖任何 Context——close 后到达的包仍安全写入、可读、不抛，已关闭 Context 不被触碰。
-     * mirror/store 的正式清空只由平台域钩子（断线/离开旧世界）发起，不归 root close。
+     * Root close: close only shuts the script environment. The receive side (acceptClientSync /
+     * ClientDataStore.accept) depends on no Context, so a packet that arrives after close is still
+     * written safely, can be read back and does not throw; the closed Context is never touched. Only
+     * platform domain hooks (disconnect, leaving the old world) clear the mirror/store for real, not
+     * root close.
      */
     @Test
     void closeKeepsReceiveFaceSafeAndNeverTouchesClosedContext() throws Exception {
@@ -479,7 +485,8 @@ class DataSyncGenerationBoundaryTest {
             Context closedContext = currentContext(harness.manager);
             harness.manager.close();
 
-            // close 后「在途包」到达接收面：安全、不抛、写入仍然生效（进程级状态）
+            // An in-flight packet reaches the receive side after close: safe, no exception, and the
+            // write still takes effect because the state is process-level
             CompoundTag mirrorTag = new CompoundTag();
             mirrorTag.putInt("mana", 9);
             assertDoesNotThrow(() -> PDataSyncService.acceptClientSync(
@@ -488,7 +495,8 @@ class DataSyncGenerationBoundaryTest {
             assertTrue(PDataSyncService.hasPendingClientData(7), "mirror write after close is safe");
             assertEquals(1L, ClientDataStore.SHARED.get("late:key"), "client data write after close is safe");
 
-            // 脚本回调面（进 Context 的面）随 close 消失：包被丢弃、已关闭 Context 不复活
+            // The script callback side, which enters the Context, is gone after close: the packet is
+            // dropped and the closed Context does not come back
             assertDoesNotThrow(harness::postServerProbe);
             assertEquals(0, harness.recorder.hitsOf("l1"), "no callback may fire after close");
             assertThrows(Exception.class, () -> closedContext.eval("js", "1 + 1"),
@@ -497,8 +505,9 @@ class DataSyncGenerationBoundaryTest {
     }
 
     /**
-     * 「reload 不回滚世界副作用」数据面：脚本写入的实体 pdata（持久化容器，随实体存档）
-     * 跨 reload 保留，脚本读取结果对照一致——reload 只重建脚本环境，不回滚容器数据。
+     * Data side of "a reload does not roll back world side effects": entity pdata a script writes is
+     * a persistent container saved with the entity, so it survives a reload and script reads match
+     * across it. A reload only rebuilds the script environment; it does not roll back container data.
      */
     @Test
     void serverReloadDoesNotRollBackEntityPData() throws Exception {
@@ -520,8 +529,9 @@ class DataSyncGenerationBoundaryTest {
     }
 
     /**
-     * 接收面与脚本环境的正交性总查：accept 写入的 mirror 对脚本可见（经绑定面），
-     * 且 revision 去重语义不受 reload 影响（域语义与 generation 无耦合）。
+     * Checks that the receive side and the script environment are independent: a mirror accept
+     * writes is visible to scripts through their bindings, and the revision deduplication semantics
+     * do not change with a reload, so the domain semantics are not coupled to a generation.
      */
     @Test
     void receiveFaceFeedsMirrorsIndependentOfGenerations() throws Exception {
@@ -533,7 +543,7 @@ class DataSyncGenerationBoundaryTest {
             assertEquals(-1, harness.recorder.valueOf("before"),
                     "nothing synced yet: clientData.get reads back as script null (recorded as -1)");
 
-            // 服务端推包到达（PData + ClientData 两域同批）
+            // The server pushes a packet that arrives here (PData and ClientData in the same batch)
             CompoundTag mirrorTag = new CompoundTag();
             mirrorTag.putInt("mana", 12);
             PDataSyncService.acceptClientSync(new com.tkisor.nekojs.network.PDataSyncPacket(7, 2, mirrorTag));
@@ -545,7 +555,8 @@ class DataSyncGenerationBoundaryTest {
             harness.reload();
             assertEquals(12, harness.recorder.valueOf("after"), "synced data must be visible to the new generation");
 
-            // stale revision 拒绝在 reload 后依旧成立（域语义不受 generation 影响）
+            // A stale revision is still rejected after the reload; the domain semantics do not depend
+            // on the generation
             CompoundTag staleTag = new CompoundTag();
             staleTag.putInt("mana", 99);
             PDataSyncService.acceptClientSync(new com.tkisor.nekojs.network.PDataSyncPacket(7, 1, staleTag));
@@ -554,7 +565,8 @@ class DataSyncGenerationBoundaryTest {
         }
     }
 
-    /** PersistentDataJS 的服务端写入面（dirty/syncer 装配）在 reload 后仍指向同一容器。 */
+    /** The server-side write face of PersistentDataJS (the dirty/syncer wiring) still points at the
+     * same container after a reload. */
     @Test
     void persistentDataJSKeepsServingTheSameContainerAcrossReloads() throws Exception {
         try (ManagerHarness harness = new ManagerHarness(ScriptType.SERVER)) {
@@ -567,7 +579,7 @@ class DataSyncGenerationBoundaryTest {
             pdata.putInt("k", 1);
             assertEquals(1, dirty.get());
 
-            harness.reload(); // 无脚本改动的事务 reload 也走完整 candidate/commit
+            harness.reload(); // A transaction reload with no script change also runs the full candidate/commit path
 
             pdata.putInt("k", 2);
             assertEquals(2, dirty.get(), "the write face keeps working after reload");

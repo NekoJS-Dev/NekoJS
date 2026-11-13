@@ -4,9 +4,9 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * Structured difference report between a reference inspector snapshot and an actual one
- * (ticket 45). Entries are ranked by deviation, largest first, so the first entry names
- * the node/property that drifted the most; structural breaks (a node missing or added)
+ * Structured difference report between a reference inspector snapshot and an actual one.
+ * Entries are ranked by deviation, largest first, so the first entry names the
+ * node/property that drifted the most; structural breaks (a node missing or added)
  * outrank any measurement drift. Provenance fields retain the inputs (both snapshot
  * sources), the environments, both profiles and viewports, the reference image id, and
  * the actual capture metadata.

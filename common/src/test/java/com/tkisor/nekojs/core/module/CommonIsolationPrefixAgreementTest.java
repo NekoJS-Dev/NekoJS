@@ -14,24 +14,30 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * 票 33 review F1：common 的"零 MC/loader import"不变量有**三个强制点**，
- * 它们的前缀表必须同集合，否则"只跑其中一个门禁"会比聚合门禁弱：
+ * The rule that common imports no Minecraft or loader class is enforced in three places, and all
+ * three prefix lists must hold the same set. Running only one of the gates is weaker than the
+ * combined check when the lists disagree:
  *
  * <ol>
- *   <li>{@code common/build.gradle} 的 {@code checkCommonIsolation.forbiddenPrefixes}（:common:check）</li>
- *   <li>{@code stonecutter.gradle.kts} 的 {@code guardLint} {@code mcLoaderImport}（:guardLint）</li>
- *   <li>{@link ModulePipelineIsolationTest} 的 {@code scan()} 禁止项（本包测试）</li>
+ *   <li>{@code checkCommonIsolation.forbiddenPrefixes} in {@code common/build.gradle}
+ *       (:common:check)</li>
+ *   <li>{@code mcLoaderImport} in {@code guardLint} in {@code stonecutter.gradle.kts}
+ *       (:guardLint)</li>
+ *   <li>the forbidden list in {@code scan()} in {@link ModulePipelineIsolationTest} (the test in
+ *       this package)</li>
  * </ol>
  *
- * <p>修订前 ① 只有 3 个前缀（漏 {@code net.fabricmc} / {@code com.mojang}），
- * ② 只有 4 个（漏 {@code com.mojang}），③ 有 5 个 —— 即 common 里新增一个只 import
- * {@code net.fabricmc} 的文件时，只跑 {@code :common:check} 不会红。
+ * <p>The lists did not agree: the Gradle gate had 3 prefixes (missing {@code net.fabricmc} and
+ * {@code com.mojang}), the second had 4 (missing {@code com.mojang}) and the third had 5, so a new
+ * file in common that imported only {@code net.fabricmc} passed {@code :common:check}.
  *
- * <p>本测试从三个文件的**实际文本**解析前缀表并断言同集合，因此任何一处再被改窄都会红。
+ * <p>This test parses the prefix list out of the actual text of all three files and asserts they
+ * are the same set, so narrowing any one of them fails.
  */
 class CommonIsolationPrefixAgreementTest {
 
-    /** 期望集合的唯一事实源（三处解析结果都必须等于它）；按字典序排列以匹配解析结果的归一化。 */
+    /** The single source of truth for the expected set: the result parsed from each of the three
+    files must equal it. Sorted alphabetically to match the normalization the parsers apply. */
     private static final List<String> EXPECTED = List.of(
             "com.mojang", "net.fabricmc", "net.minecraft", "net.minecraftforge", "net.neoforged");
 
@@ -56,7 +62,7 @@ class CommonIsolationPrefixAgreementTest {
                 ":common:check 必须仍然挂上 checkCommonIsolation（否则隔离门禁静默失效）");
     }
 
-    // ---- 三个强制点的文本解析 ----
+    // ---- Text parsing for the three enforcement points ----
 
     private static List<String> parseGradlePrefixes() throws IOException {
         String text = read("common/build.gradle");
@@ -71,8 +77,9 @@ class CommonIsolationPrefixAgreementTest {
 
     private static List<String> parseGuardLintPrefixes() throws IOException {
         String text = read("stonecutter.gradle.kts");
-        // 用字面量定位而不是正则：待匹配文本自身含大量转义，正则里再嵌一层极易写错
-        // （第一版就在这里静默匹配失败）。这里只切出第一对 "(...)" 里的前缀组。
+        // Locate the declaration by literal text, not by a regex: the text being matched is full of
+        // escapes, and nesting another regex inside it is easy to get wrong and fails silently. Cutting
+        // out the first "(...)" group is enough to get the prefix list.
         int marker = text.indexOf("val mcLoaderImport = Regex(");
         assertTrue(marker >= 0, "stonecutter.gradle.kts 里找不到 mcLoaderImport 声明");
         int open = text.indexOf("(", text.indexOf("\"\"\"", marker));

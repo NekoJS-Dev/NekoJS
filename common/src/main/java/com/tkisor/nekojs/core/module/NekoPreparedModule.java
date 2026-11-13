@@ -6,24 +6,27 @@ import com.tkisor.nekojs.core.module.esm.NekoEsmModuleAst;
 
 
 /**
- * 不可变 prepared module：Script Preparation 的输出，Module Resolution/Cache 与
- * Script Execution Environment 的输入。
+ * An immutable prepared module: the output of script preparation and the input to module
+ * resolution/cache and to the script execution environment.
  *
- * <p>票据 11 要求调用者可观察语义包含 language id、module mode、code/IR、source map、
- * 原始诊断位置（{@link #sourcePath()}）和稳定 cache key（{@link #cacheKey()}），且保持
- * 不可变：本类型是 record（类与全部组件 final），{@link CjsModuleRecord} 的依赖表在构造时
- * 即拷贝为不可变 {@link java.util.List}。Resolution/Cache 如需“修改”只能构造新实例——
- * 新实例的 {@link #cacheKey()} 必然不同（key 覆盖 path/language/mode/code/sourceMap），
- * 篡改旧实例在编译期不可能（final 组件无 setter），反射改 final 字段会抛异常。
+ * <p>Callers can observe the language id, module mode, code/IR, source map, original diagnostic
+ * location ({@link #sourcePath()}) and stable cache key ({@link #cacheKey()}). The type stays
+ * immutable: it is a record, so the class and all its components are final, and the dependency
+ * list of {@link CjsModuleRecord} is copied into an immutable {@link java.util.List} in the
+ * constructor. Resolution/cache code that wants to "modify" a module can only build a new
+ * instance, whose {@link #cacheKey()} is necessarily different because the key covers
+ * path/language/mode/code/sourceMap. Changing the old instance is impossible at compile time
+ * (final components have no setter); reflection on a final field throws.
  *
- * <p>稳定 cache key 口径（{@link #stableCacheKey}）：{@code SHA-256("nekojs-prepared/v2" +
- * sourcePath + languageId + mode + code + sourceMap)}。路径是模块身份的一部分，避免两个
- * 路径上的同内容模块在后续 key-based cache 中发生身份碰撞。
+ * <p>The stable cache key ({@link #stableCacheKey}) is {@code SHA-256("nekojs-prepared/v2" +
+ * sourcePath + languageId + mode + code + sourceMap)}. The path is part of the module identity,
+ * so two modules with the same content at different paths do not collide in later key-based
+ * caches.
  */
 public record NekoPreparedModule(
-        /** 语言 id：如 {@code javascript}、{@code typescript}、{@code python}、{@code legacy:<ext>}。 */
+        /** Language id, such as {@code javascript}, {@code typescript}, {@code python} or {@code legacy:<ext>}. */
         String languageId,
-        /** 准备来源路径（诊断原点；合成模块可为 null）。 */
+        /** Source path used for preparation, the origin for diagnostics; null for synthetic modules. */
         String sourcePath,
         String code,
         String sourceMap,
@@ -31,7 +34,7 @@ public record NekoPreparedModule(
         NekoEsmModuleAst esmAst,
         CjsModuleRecord cjsRecord,
         int prependedLineCount,
-        /** 稳定 cache key（见类注口径；构造时若为空则按口径计算）。 */
+        /** Stable cache key (see the class javadoc); the constructor computes it when left empty. */
         String cacheKey
 ) {
     public NekoPreparedModule {
@@ -49,8 +52,8 @@ public record NekoPreparedModule(
     }
 
     /**
-     * 稳定 cache key：由 source path、language id、mode、code、sourceMap 共同决定；
-     * 任一输入变化即产生不同 key（篡改即变红的判定基础）。
+     * Stable cache key derived from source path, language id, mode, code and sourceMap. A change to
+     * any one input produces a different key.
      */
     static String stableCacheKey(String sourcePath, String languageId, NekoModuleMode mode,
                                  String code, String sourceMap) {
@@ -68,12 +71,18 @@ public record NekoPreparedModule(
         return commonJs(code, sourceMap, CjsModuleRecord.EMPTY);
     }
 
-    /** CJS 模块：附带静态分析结果（依赖/导出形状，见 {@link CjsStaticAnalyzer}）。 */
+    /**
+     * A CommonJS module with its static analysis result: dependencies and export shape,
+     * see {@link CjsStaticAnalyzer}.
+     */
     public static NekoPreparedModule commonJs(String code, String sourceMap, CjsModuleRecord cjsRecord) {
         return new NekoPreparedModule("unknown", null, code, sourceMap, NekoModuleMode.COMMONJS, null, cjsRecord, 0, null);
     }
 
-    /** 显式语言/来源的 CJS 模块（管线生产路径用；旧三参工厂默认 language=unknown、来源 null）。 */
+    /**
+     * CommonJS module with an explicit language and source, as the pipeline produces. The three-arg
+     * factory defaults to language=unknown and a null source.
+     */
     static NekoPreparedModule commonJs(String languageId, String sourcePath, String code,
                                        String sourceMap, CjsModuleRecord cjsRecord) {
         return new NekoPreparedModule(languageId, sourcePath, code, sourceMap, NekoModuleMode.COMMONJS, null, cjsRecord, 0, null);
@@ -83,7 +92,7 @@ public record NekoPreparedModule(
         return new NekoPreparedModule("unknown", null, code, sourceMap, NekoModuleMode.ESM, ast, null, 0, null);
     }
 
-    /** 显式语言/来源的 ESM 模块（管线生产路径用）。 */
+    /** ESM module with an explicit language and source, as the pipeline produces. */
     static NekoPreparedModule esm(String languageId, String sourcePath, String code,
                                   String sourceMap, NekoEsmModuleAst ast) {
         return new NekoPreparedModule(languageId, sourcePath, code, sourceMap, NekoModuleMode.ESM, ast, null, 0, null);

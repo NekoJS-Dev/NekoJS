@@ -35,12 +35,15 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * AC4（ticket 09）：契约能力（supported/partial/unavailable）带 loader/版本/运行上下文
- * 条件，条件在 surface 解析时真实生效；不可用能力显式记录（DECLARED_UNAVAILABLE /
- * UNAVAILABLE），不静默 no-op；manifest 只暴露 active 能力结论（派生一致）。
+ * A contract capability (supported/partial/unavailable) can carry loader, version and runtime
+ * conditions, and those conditions take effect during surface resolution. An unavailable
+ * capability is recorded explicitly as DECLARED_UNAVAILABLE or UNAVAILABLE and never silently
+ * becomes a no-op; the manifest only exposes the active capability results, derived from the same
+ * state.
  *
- * <p>全部断言穿过公开 Seam（{@code JsApiSurfaceResolver.resolve} → surface snapshot →
- * {@code ApiManifestGenerator}；resolver 直调仅用于核验 unavailable 显式记录），不测试私有状态。
+ * <p>All assertions go through the public path ({@code JsApiSurfaceResolver.resolve} → surface
+ * snapshot → {@code ApiManifestGenerator}); the resolver is called directly only to check that
+ * unavailable capabilities are recorded. The test does not inspect private state.
  */
 class ManagedSurfaceCapabilityConditionsTest {
 
@@ -51,7 +54,8 @@ class ManagedSurfaceCapabilityConditionsTest {
         return new EnvironmentScope(null, null, Set.of(), Set.of(loaderIds), null, null);
     }
 
-    /** 单能力契约：owner 固定 nekojs-core/PORTABLE，便于复用 requirePortable。 */
+    /** Contract with a single capability; the owner is fixed to nekojs-core/PORTABLE so
+     *  requirePortable can be reused. */
     private static VerifiedContractSet contractWith(NormativeApiContract.ContractCapability... capabilities) {
         NormativeApiContract contract = new NormativeApiContract(
                 2,
@@ -71,7 +75,8 @@ class ManagedSurfaceCapabilityConditionsTest {
                 "sha256:compatibility"));
     }
 
-    /** 契约能力 → resolver 定义的映射（与 JsApiSurfaceResolver.collectCapabilityDefinitions 一致）。 */
+    /** Maps a contract capability to a resolver capability definition, matching
+     *  JsApiSurfaceResolver.collectCapabilityDefinitions. */
     private static List<CapabilityDefinition> definitionsOf(VerifiedContractSet contracts) {
         List<CapabilityDefinition> definitions = new java.util.ArrayList<>();
         for (NormativeApiContract.ContractCapability cap : contracts.requirePortable("nekojs-core")
@@ -84,7 +89,8 @@ class ManagedSurfaceCapabilityConditionsTest {
         return definitions;
     }
 
-    /** provider 注册表：owner 必须与契约 owner 一致（nekojs-core），CORE_ONLY 策略接受核内 owner。 */
+    /** Provider registry: the owner must match the contract owner (nekojs-core), because the
+     *  CORE_ONLY policy accepts a core-owned provider. */
     private static ApiContributionRegistry providerRegistry(VerifiedContractSet contracts) {
         return ApiContributionRegistry.ownedBy(
                 new PluginIdentity("nekojs-core", "capability-test-provider", CODE_SOURCE), contracts);
@@ -143,8 +149,9 @@ class ManagedSurfaceCapabilityConditionsTest {
 
     @Test
     void contractConditionsGateEvenWhenProviderDeclaresNoScope() {
-        // review 发现的负样本：契约声明 neoforge-only，但 provider 自己不声明 scope——
-        // 契约条件是权威 gate，fabric 上必须 UNAVAILABLE（不能因 provider 无 scope 而激活）。
+        // Contract declares neoforge-only, but the provider declares no scope of its own. The
+        // contract condition is authoritative, so fabric must report UNAVAILABLE; a provider
+        // without a scope must not activate it.
         VerifiedContractSet contracts = contractWith(
                 new NormativeApiContract.ContractCapability("neoforgeOnly", ">=1.0.0",
                         CapabilityStatus.SUPPORTED, loaderScope("neoforge"), "neoforge only"));
@@ -163,16 +170,18 @@ class ManagedSurfaceCapabilityConditionsTest {
 
     @Test
     void contractConditionsAuthoritativeWhenProviderScopeIsWider() {
-        // provider 声明了更宽的 scope（fabric+neoforge），契约只允许 neoforge：
-        // 契约条件仍是权威 gate（provider scope 只能比契约更窄，不能替契约放宽）。
+        // The provider declares a wider scope (fabric and neoforge) while the contract allows only
+        // neoforge. The contract condition is still authoritative: a provider scope may narrow the
+        // contract, never widen it.
         VerifiedContractSet contracts = contractWith(
                 new NormativeApiContract.ContractCapability("neoforgeOnly", ">=1.0.0",
                         CapabilityStatus.SUPPORTED, loaderScope("neoforge"), "neoforge only"));
         ApiContributionRegistry providers = providerRegistry(contracts);
         registerProvider(providers, "neoforgeOnly", loaderScope("fabric", "neoforge"), "impl-nf");
 
-        // provider 比 contract 更宽 → Step 4 包含校验直接 fail-fast（SCOPE_NOT_CONTAINED），
-        // 不会走到激活裁定——两条防线（包含校验 + 契约条件 gate）各有分工。
+        // A wider provider scope fails fast in the Step 4 containment check (SCOPE_NOT_CONTAINED)
+        // and never reaches activation. The containment check and the contract condition check are
+        // two separate defenses.
         ApiContributionRegistry finalProviders = providers;
         ApiResolutionException rejected = assertThrows(ApiResolutionException.class,
                 () -> resolveRaw(contracts, finalProviders, "fabric", "1.0.0"));
@@ -201,12 +210,13 @@ class ManagedSurfaceCapabilityConditionsTest {
         ApiContributionRegistry providers = providerRegistry(contracts);
         registerProvider(providers, "neoforgeOnly", loaderScope("neoforge"), "impl-nf");
 
-        // fabric 环境不满足声明条件：能力不激活（surface 侧）
+        // The fabric environment does not satisfy the declared conditions, so the capability stays
+        // inactive on the surface side.
         FrozenApiRegistry fabricRegistry = resolve(contracts, providers, "fabric", "1.0.0");
         assertTrue(fabricRegistry.environmentSnapshot().surfaceSnapshot().activeCapabilityNames().isEmpty(),
                 "capability must not activate outside its declared loader conditions");
 
-        // 解析结果侧显式记录 unavailable（非静默缺失）
+        // The resolution result records the capability as unavailable instead of dropping it silently.
         CapabilityResolution resolution = resolveRaw(contracts, providers, "fabric", "1.0.0");
         assertEquals(1, resolution.unavailable().size());
         assertEquals("neoforgeOnly", resolution.unavailable().getFirst().name());
@@ -225,7 +235,8 @@ class ManagedSurfaceCapabilityConditionsTest {
         FrozenApiRegistry registry = resolve(contracts, providers, "neoforge", "1.0.0");
         assertEquals(Set.of("partialEverywhere"),
                 registry.environmentSnapshot().surfaceSnapshot().activeCapabilityNames());
-        // 声明状态保持可观察：契约侧 PARTIAL 结论不被解析过程改写
+        // The declared status stays observable: resolution never rewrites the PARTIAL result
+        // recorded in the contract.
         assertEquals(CapabilityStatus.PARTIAL, contracts.requirePortable("nekojs-core")
                 .contract().capabilities().getFirst().status());
     }

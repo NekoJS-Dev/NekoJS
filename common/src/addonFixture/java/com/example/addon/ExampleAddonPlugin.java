@@ -45,7 +45,7 @@ public final class ExampleAddonPlugin implements NekoPluginExtensionProvider, Gr
     public static final AtomicReference<NekoPluginExtensionHandle<Greetings>> GREETINGS_HANDLE =
             new AtomicReference<>();
 
-    /** Accumulator handed to the last collection round (frozen-seal observation seam). */
+    /** Accumulator handed to the last collection round. */
     public static final AtomicReference<GreetingAccumulator> LAST_ACCUMULATOR =
             new AtomicReference<>();
 

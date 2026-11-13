@@ -75,8 +75,9 @@ public final class DefaultTextFacade implements TextFacade {
         return TextValue.sequence(interleaved);
     }
 
-    // —— 富文本样式：链式合并 ——
-    // 若 receiver 已是 Styled，则在其 style 基础上派生；否则套用新空样式。
+    // ---- Rich text styles: merged in a chain ----
+    // If receiver is already Styled, the change is applied on top of its style; otherwise a
+    // fresh empty style is used.
 
     @Override
     public TextValue bold(TextValue receiver, boolean value) {
@@ -114,7 +115,7 @@ public final class DefaultTextFacade implements TextFacade {
         return applyStyle(receiver, b -> b.color(color));
     }
 
-    // —— 16 色 KubeJS 风格快捷方法：等价于 .color('<命名色>') ——
+    // ---- 16 named-color shortcuts in KubeJS style: each is equivalent to .color('<name>') ----
     @Override public TextValue black(TextValue r) { return color(r, "black"); }
     @Override public TextValue darkBlue(TextValue r) { return color(r, "dark_blue"); }
     @Override public TextValue darkGreen(TextValue r) { return color(r, "dark_green"); }

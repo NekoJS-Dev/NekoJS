@@ -17,10 +17,11 @@ import java.util.stream.Collectors;
 public final class CapabilityResolver {
 
     /**
-     * 核内 owner 词表（ticket 09 review 裁决）：契约 owner 与 addon modid 历史上用了两种拼写
-     * （nekojs-core / nekojs），CORE_ONLY/ALLOWLIST 校验必须同时接受。词表**只在此处定义**，
-     * 新代码引用常量，不要散落字面量；若维护者裁定收敛为单一拼写，属契约语义变更，
-     * 需走 NormativeApiContract regenerate + 审阅。
+     * Core owner vocabulary. Contract owners and the addon modid use two different spellings
+     * ({@code nekojs-core} and {@code nekojs}), and the CORE_ONLY and ALLOWLIST checks must accept
+     * both. These constants are defined only here; new code references them instead of repeating
+     * the literals. Collapsing them into a single spelling changes contract semantics and needs a
+     * {@code NormativeApiContract} regenerate plus a review.
      */
     public static final String CORE_OWNER_ID = "nekojs-core";
     public static final String CORE_MODID = "nekojs";
@@ -57,8 +58,9 @@ public final class CapabilityResolver {
 
         // Process each definition
         for (CapabilityDefinition def : definitions) {
-            // 契约显式声明 UNAVAILABLE 的能力：不激活、以 DECLARED_UNAVAILABLE 显式报告，
-            // 即使存在看似可用的 provider（声明与真实外部行为一致，不允许静默 no-op）。
+            // A capability the contract declares UNAVAILABLE is not activated and is reported as
+            // DECLARED_UNAVAILABLE, even when a provider looks usable. The declaration must match
+            // real external behavior, so a silent no-op is not allowed.
             if (def.declaredStatus() == CapabilityStatus.UNAVAILABLE) {
                 unavailable.add(new CapabilityResolution.UnavailableCapability(
                         def.name(), "DECLARED_UNAVAILABLE"));
@@ -193,8 +195,9 @@ public final class CapabilityResolver {
 
         switch (def.providerPolicy()) {
             case CORE_ONLY -> {
-                // 核内 owner 的两种既有拼写（nekojs-core = CoreManagedApiBootstrap/bootstrap 契约 owner；
-                // nekojs = 能力 fixture/历史词汇）。addon owner 一律拒绝。
+                // The two spellings core owners use: nekojs-core is the contract owner of
+                // CoreManagedApiBootstrap/bootstrap, and nekojs is the spelling used for capability
+                // fixtures. An addon owner is always rejected.
                 if (!CORE_MODID.equals(identity.ownerId()) && !CORE_OWNER_ID.equals(identity.ownerId())) {
                     throw new ApiResolutionException("CORE_ONLY_VIOLATION",
                             "Addon '" + identity.ownerId() + "' cannot provide core capability '"
@@ -217,10 +220,11 @@ public final class CapabilityResolver {
     }
 
     /**
-     * 激活裁定的**权威 gate 是契约声明的 conditions**（{@code def.environmentScope()}）：契约声明
-     * 不匹配当前环境时，该能力在环境内不可用（UNAVAILABLE），即使 provider 自己没有声明 scope 或
-     * 声明了更宽的 scope——provider scope 只能比契约更窄（Step 4 的包含校验），不能替契约放宽。
-     * provider 自身 scope 再做一次环境匹配（provider 可以比契约更窄）。
+     * The deciding gate is the conditions the contract declares ({@code def.environmentScope()}).
+     * When they do not match the current environment, the capability is unavailable in that
+     * environment, even if the provider declares no scope or a wider one: a provider scope may
+     * only be narrower than the contract (the containment check), never wider. The provider scope
+     * is then matched against the environment as well, so it can be narrower still.
      */
     private static boolean isEligible(
             CapabilityDefinition def,

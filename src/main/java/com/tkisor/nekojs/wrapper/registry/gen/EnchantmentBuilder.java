@@ -1,5 +1,5 @@
-// 26.x 实现，本文件不应再出现版本守卫。1.21.1 的实现是 versions/1.21.1/src 下的同名文件，
-// 改本文件行为时须同步它。
+// 26.x implementation. Version guards should not appear in this file again. The 1.21.1 implementation
+// is the file of the same name under versions/1.21.1/src; when changing behavior here, update it too.
 package com.tkisor.nekojs.wrapper.registry.gen;
 
 import com.tkisor.nekojs.wrapper.registry.TaggableBuilder;
@@ -14,11 +14,12 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.enchantment.Enchantment;
 
 /**
- * 附魔 builder：1.21+ 的 {@link Enchantment} 是 record，由
- * {@link Enchantment.EnchantmentDefinition} 描述属性。脚本仅提供基础数值与一个
- * 物品标签 id（决定可附魔物品集合），build 期从 {@link BuiltInRegistries#ITEM}
- * 解析（与 RegisterEvent.getRegistry 同一注册表实例）。
- * 默认不挂 effects（注册成功、可被附魔/书本/互斥，但无实际效果）。
+ * Enchantment builder. In 1.21+ {@link Enchantment} is a record, and
+ * {@link Enchantment.EnchantmentDefinition} describes its properties. Scripts supply only the base
+ * numbers and one item tag id that sets the enchantable items; build resolves that tag from
+ * {@link BuiltInRegistries#ITEM}, the same registry instance as RegisterEvent.getRegistry.
+ * No effects are attached by default, so the enchantment registers, can be applied to items and
+ * books, and takes part in exclusivity, but has no actual effect.
  * <pre>
  * event.enchantment('mymod:venom', b =&gt; { b.supportedItems = 'minecraft:enchantable/weapon'; b.maxLevel = 3 })
  * </pre>
@@ -26,25 +27,28 @@ import net.minecraft.world.item.enchantment.Enchantment;
 public class EnchantmentBuilder extends RegistryObjectBuilder<Enchantment>
         implements TaggableBuilder<EnchantmentBuilder> {
 
-    /** 支持附魔的物品标签 id（如 'minecraft:enchantable/weapon'，'#' 前缀 tolerated）。默认空集合。 */
+    /** Item tag id of the enchantable items (for example 'minecraft:enchantable/weapon'; a leading '#'
+     * is tolerated). Defaults to empty. */
     private String supportedItems = null;
     private int weight = 1;
     private int maxLevel = 1;
-    /** 最小消耗：{@code minCostBase + minCostPerLevel * (level - 1)}。 */
+    /** Minimum cost: {@code minCostBase + minCostPerLevel * (level - 1)}. */
     private int minCostBase = 1;
     private int minCostPerLevel = 0;
-    /** 最大消耗：{@code maxCostBase + maxCostPerLevel * (level - 1)}。 */
+    /** Maximum cost: {@code maxCostBase + maxCostPerLevel * (level - 1)}. */
     private int maxCostBase = 1;
     private int maxCostPerLevel = 0;
     private int anvilCost = 0;
-    /** 生效槽位组：any/armor/chest/feet/head/legs/hand/mainhand/offhand（默认 mainhand）。 */
+    /** Slot groups where the enchantment applies: any/armor/chest/feet/head/legs/hand/mainhand/offhand
+     * (default mainhand). */
     private String slots = "mainhand";
 
     public EnchantmentBuilder(Identifier id) {
         super(id);
     }
 
-    /** {@link TaggableBuilder}：附魔 tag（如 {@code minecraft:treasure}）归属 ENCHANTMENT 注册表。 */
+    /** {@link TaggableBuilder}: the enchantment tag (such as {@code minecraft:treasure}) belongs to the
+     * ENCHANTMENT registry. */
     @Override
     public ResourceKey<? extends net.minecraft.core.Registry<?>> getTagRegistry() {
         return Registries.ENCHANTMENT;
@@ -55,9 +59,10 @@ public class EnchantmentBuilder extends RegistryObjectBuilder<Enchantment>
         return id;
     }
 
-    // ---- 数据属性：显式 setter 与 JavaBean property 同一写入点（ticket 15） ----
+    // ---- Data properties: the explicit setter and the JavaBean property write through the same path ----
 
-    /** 支持附魔的物品标签 id（已归一化：空白视为未声明——build 期本来就走同一分支）。 */
+    /** Item tag id of the enchantable items. Normalized: blank means undeclared, which follows the same
+     * branch at build time anyway. */
     public String getSupportedItems() {
         return supportedItems;
     }
@@ -122,7 +127,7 @@ public class EnchantmentBuilder extends RegistryObjectBuilder<Enchantment>
         this.anvilCost = anvilCost;
     }
 
-    /** 生效槽位组（已归一化小写）。 */
+    /** Slot groups where the enchantment applies, normalized to lower case. */
     public String getSlots() {
         return slots;
     }
@@ -153,7 +158,8 @@ public class EnchantmentBuilder extends RegistryObjectBuilder<Enchantment>
         if (tagId == null) {
             return HolderSet.empty();
         }
-        // 26.x: Registry<T> implements HolderGetter；ENCHANTMENT 注册晚于 ITEM 注册与物品标签绑定
+        // 26.x: Registry<T> implements HolderGetter; ENCHANTMENT registers after ITEM registration and item tag
+        // binding
         return BuiltInRegistries.ITEM.getOrThrow(TagKey.create(Registries.ITEM, tagId));
     }
 

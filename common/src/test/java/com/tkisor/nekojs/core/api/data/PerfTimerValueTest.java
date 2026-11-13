@@ -10,7 +10,7 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * {@link PerfTimerValue} 纯 JDK 语义测试（无需 Graal Context）。
+ * Tests the pure JDK semantics of {@link PerfTimerValue}; no Graal Context is needed.
  */
 class PerfTimerValueTest {
 
@@ -34,7 +34,7 @@ class PerfTimerValueTest {
         PerfTimerValue t0 = PerfTimerValue.start("load");
         Thread.sleep(2);
         PerfTimerValue t1 = t0.mark("parse");
-        // 原 t0 不可变：未被 mark 改动
+        // t0 is immutable: mark() left it unchanged
         assertEquals(0, t0.marks().size());
         assertEquals(1, t1.marks().size());
         assertEquals("parse", t1.marks().getFirst().label());
@@ -50,7 +50,8 @@ class PerfTimerValueTest {
         double first = t.elapsedMillis();
         Thread.sleep(3);
         double second = t.elapsedMillis();
-        // ended 后 elapsedMillis 不再增长（基于最后一个 mark 的时刻，无 mark 即 start 时刻）
+        // elapsedMillis() stops growing after end; it is measured from the last mark, or from start
+        // when there is no mark
         assertEquals(first, second, 0.001);
     }
 

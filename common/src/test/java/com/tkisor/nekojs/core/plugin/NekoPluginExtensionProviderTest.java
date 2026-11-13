@@ -18,19 +18,22 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * {@link NekoPluginExtensionProvider} 冒烟测试：证明「第三方插件注册自定义扩展点」机制真实可用。
+ * Smoke test for {@link NekoPluginExtensionProvider}: the mechanism that lets a third-party
+ * plugin register a custom extension point really works.
  *
  * <ul>
- *   <li>provider 注册的自定义扩展点在 bootstrap 中对全部插件按列表顺序逐个收集（含定义者自己）；</li>
- *   <li>自定义 id 之间重复、以及自定义 id 与内置 {@code nekojs:*} id 冲突时，
- *       bootstrap fail-fast 抛 {@link IllegalArgumentException}；</li>
- *   <li>collectExtensions 窗口关闭（freeze）后，registry 再接受注册抛 {@link IllegalStateException}。</li>
+ *   <li>During bootstrap, the custom point registered by the provider collects every plugin in
+ *       list order, including the one that defines it;</li>
+ *   <li>When custom ids repeat or collide with a built-in {@code nekojs:*} id, bootstrap fails
+ *       fast with {@link IllegalArgumentException};</li>
+ *   <li>After the collectExtensions window closes (freeze), the registry throws
+ *       {@link IllegalStateException} on further registration.</li>
  * </ul>
  *
- * <p>harness 与 {@code NekoProbeBuiltinPluginTest} 相同：@BeforeAll 初始化测试 Platform；
- * probe_backends 扩展点的 finisher 会 {@code ProbeBackendRegistry.setInstance}（全局单例，
- * 现为 reload 可替换语义），@BeforeEach 反射清空 {@code ProbeBackendRegistry.INSTANCE}
- * 保证各测试可独立跑 bootstrap。
+ * <p>The harness matches {@code NekoProbeBuiltinPluginTest}: @BeforeAll initializes the test
+ * Platform. The probe_backends finisher calls {@code ProbeBackendRegistry.setInstance} (a global
+ * singleton that a reload replaces), so @BeforeEach clears {@code ProbeBackendRegistry.INSTANCE}
+ * by reflection to let each test bootstrap on its own.
  */
 class NekoPluginExtensionProviderTest {
 
@@ -100,7 +103,10 @@ class NekoPluginExtensionProviderTest {
                 .build();
     }
 
-    /** 同时实现 NekoJSPlugin + NekoPluginExtensionProvider：注册 "test:custom" 并记录被收集的插件类名。 */
+    /**
+     * Implements NekoJSPlugin and NekoPluginExtensionProvider: registers "test:custom" and records
+     * the collected plugin class names.
+     */
     private static final class RecordingProviderPlugin implements NekoPluginExtensionProvider {
         final List<String> collected = new ArrayList<>();
         public void registerPluginExtensionPoints(NekoPluginExtensionRegistry registry) {
@@ -114,7 +120,7 @@ class NekoPluginExtensionProviderTest {
         }
     }
 
-    /** 普通插件（不实现 provider）：验证自定义扩展点对非定义者插件同样收集。 */
+    /** Plain plugin (not a provider): the custom point also collects plugins that do not define it. */
     private static final class PlainPlugin implements NekoJSPlugin {
     }
 }

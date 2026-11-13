@@ -1,5 +1,6 @@
-// 1.21.1 实现，与版本树 src/ 下的同名 26.x 文件成对。内容等于那份文件在本节点求值后的形态。
-// 26.x 侧行为变更时须同步本文件。
+// 1.21.1 implementation, paired with the same-named 26.x file under src/ in the version tree.
+// Its content equals that file evaluated at this node. Keep this file in sync when the 26.x
+// side changes behavior.
 package com.tkisor.nekojs.wrapper.registry.gen;
 
 import net.minecraft.core.registries.Registries;
@@ -15,17 +16,18 @@ import net.neoforged.neoforge.registries.NeoForgeRegistries;
 import java.util.function.Supplier;
 
 /**
- * 流体 builder（ADR-0005 四子连带注册）：一次 {@code event.fluid(id, cb)} 注册
+ * Builds a fluid. One {@code event.fluid(id, cb)} call registers four objects:
  * <ul>
- *   <li>FluidType（{@code neoforge:fluid_types}，GameData 序在 FLUID 之后）</li>
- *   <li>source（{@code id}）+ flowing（{@code flowing_<id>}）（FLUID 注册表）</li>
- *   <li>LiquidBlock（BLOCK，id = 流体 id）—— {@code noBlock()} 抑制</li>
- *   <li>BucketItem（ITEM，{@code <id>_bucket}）—— {@code noBucket()} 抑制</li>
+ *   <li>the FluidType ({@code neoforge:fluid_types}, which GameData orders after FLUID)</li>
+ *   <li>the source fluid ({@code id}) and the flowing fluid ({@code flowing_<id>}) in FLUID</li>
+ *   <li>a LiquidBlock (BLOCK, id = fluid id), suppressed by {@code noBlock()}</li>
+ *   <li>a BucketItem (ITEM, {@code <id>_bucket}), suppressed by {@code noBucket()}</li>
  * </ul>
- * 依赖 GameData 固定序 FLUID → BLOCK → ITEM →（modded 字母尾）FLUID_TYPES：
- * 四子全部经 {@link #handleAdditionalObjects} 投给 FLUID 之后的 pass；
- * 循环引用（fluid→bucket/block、block→fluid、bucket→fluid）经子 builder 的
- * {@code Supplier} 懒解析（{@link RegistryObjectBuilder#get()}），抽干期不触发互构。
+ * All four reach the pass after FLUID through {@link #handleAdditionalObjects}, following the
+ * fixed GameData order FLUID, then BLOCK, then ITEM, then (modded alphabetical tail) FLUID_TYPES.
+ * Circular references (fluid to bucket/block, block to fluid, bucket to fluid) resolve lazily
+ * through the sub-builders' {@code Supplier} ({@link RegistryObjectBuilder#get()}), so draining
+ * one builder never builds another.
  *
  * <pre>
  * event.fluid('mymod:molten_iron', b =&gt; { b.density = 3000; b.lightLevel = 15; b.noBucket() })
@@ -38,7 +40,7 @@ public class FluidBuilder extends RegistryObjectBuilder<Fluid> {
     private int temperature = 300;
     private int viscosity = 1000;
     private int lightLevel = 0;
-    /** 是否可无限生成源（对标原版水在 1.21 默认关闭）。 */
+    /** Whether the fluid can create infinite source blocks; off by default, like vanilla water in 1.21. */
     private boolean canConvertToSource = false;
 
     private int slopeFindDistance = 4;
@@ -84,9 +86,9 @@ public class FluidBuilder extends RegistryObjectBuilder<Fluid> {
         return additionalBuilders;
     }
 
-    // ---- 数据属性：显式 setter 与 JavaBean property 同一写入点（ticket 15） ----
+    // ---- Data properties: explicit setters and JavaBean properties share one write path ----
 
-    /** 显示名（已归一化：空白视为未声明——build 期本来就走同一分支）。 */
+    /** Display name, normalized on write: blank means undeclared, the same branch the build path takes. */
     @com.tkisor.nekojs.api.annotation.ScriptNullable
     public String getDisplayName() {
         return displayName;
@@ -196,22 +198,22 @@ public class FluidBuilder extends RegistryObjectBuilder<Fluid> {
         this.block = block;
     }
 
-    /** 抑制自动桶物品（{@code <id>_bucket}）连带注册（与 {@code b.bucket = false} 同一写入点）。 */
+    /** Skips the automatic bucket item ({@code <id>_bucket}); writes the same state as {@code b.bucket = false}. */
     public void noBucket() {
         setBucket(false);
     }
 
-    /** 抑制自动液体方块连带注册（与 {@code b.block = false} 同一写入点）。 */
+    /** Skips the automatic liquid block; writes the same state as {@code b.block = false}. */
     public void noBlock() {
         setBlock(false);
     }
 
-    /** flowing 流体的 id：{@code flowing_<path>}（同 namespace）。 */
+    /** Returns the flowing fluid id, {@code flowing_<path>} in the same namespace. */
     public ResourceLocation getFlowingId() {
         return ResourceLocation.fromNamespaceAndPath(id.getNamespace(), "flowing_" + id.getPath());
     }
 
-    /** 桶物品 id：{@code <path>_bucket}。 */
+    /** Returns the bucket item id, {@code <path>_bucket}. */
     public ResourceLocation getBucketId() {
         return ResourceLocation.fromNamespaceAndPath(id.getNamespace(), id.getPath() + "_bucket");
     }
@@ -225,7 +227,8 @@ public class FluidBuilder extends RegistryObjectBuilder<Fluid> {
         return source;
     }
 
-    /** 四子连带注册：flowing（FLUID 同 pass 追加）/ block（BLOCK）/ bucket（ITEM）/ type（FLUID_TYPES）。 */
+    /** Registers the four companion objects: flowing (appended to the same FLUID pass), block (BLOCK),
+     * bucket (ITEM) and type (FLUID_TYPES). */
     @Override
     public void handleAdditionalObjects(RegistryObjectBuilder.AdditionalObjectRegistry registry) {
         AdditionalBuilders builders = additionalBuilders();
@@ -239,7 +242,8 @@ public class FluidBuilder extends RegistryObjectBuilder<Fluid> {
         registry.additional(NeoForgeRegistries.FLUID_TYPES.key(), id, this::createType);
     }
 
-    /** 创建（并缓存）FluidType 单例：FLUID_TYPES 注册与流体 Properties 共用同一实例。 */
+    /** Creates and caches the single FluidType: the FLUID_TYPES registration and the fluid Properties
+     * share that one instance. */
     public FluidType createType() {
         if (cachedType != null) {
             return cachedType;
@@ -274,7 +278,8 @@ public class FluidBuilder extends RegistryObjectBuilder<Fluid> {
         return props;
     }
 
-    /** 液体方块：引用 source 流体；noCollision + 高抗爆 + 无 loot（对标 vanilla 水/岩浆）。 */
+    /** Liquid block for the source fluid: no collision, high blast resistance and no loot table, like
+     * vanilla water and lava. */
     private LiquidBlock createLiquidBlock() {
         BlockBehaviour.Properties props = BlockBehaviour.Properties.of()
                 .noCollission()
@@ -287,7 +292,7 @@ public class FluidBuilder extends RegistryObjectBuilder<Fluid> {
         return liquid;
     }
 
-    /** 桶物品：引用 source 流体；stacksTo(1)。 */
+    /** Bucket item for the source fluid; stacks to 1. */
     private BucketItem createBucketItem() {
         Item.Properties props = new Item.Properties().stacksTo(1);
         return new BucketItem(get(), props);

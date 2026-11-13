@@ -4,19 +4,23 @@ import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.EntityTypes;
 
 /**
- * fabric 26.2 侧 {@link McVersionCompat.Impl}（票 31）：与 NeoForge 侧
- * {@code Nf262VersionCompat} 同构——{@code LIGHTNING_BOLT} 常量 26.2 移到了
- * {@link EntityTypes}（26.1 在 {@code EntityType}），raw root（src/fabric）不经
- * stonecutter 预处理，版本漂移常量只能按节点 override 落位（交接单 W8：版本差异由
- * compat facade 或 versions/&lt;node&gt; override 承担）。
+ * Fabric implementation of {@link McVersionCompat.Impl} for 26.2, built the same way as
+ * {@code Nf262VersionCompat} on the NeoForge side. The {@code LIGHTNING_BOLT} constant moved to
+ * {@link EntityTypes} in 26.2; 26.1 had it in {@code EntityType}. The raw root (src/fabric) does
+ * not go through stonecutter preprocessing, so a constant that shifts between versions can only be
+ * placed by a per-node override; version differences belong in the compat facade or in
+ * versions/&lt;node&gt;.
  *
- * <p>背景：共享树 {@code inject.MixinLevel} 让 Level 实现 {@code LevelExtension}，
- * {@code neko$spawnLightning} 经本门面取闪电实体类型；此前 fabric 两节点零 provider，
- * 该调用会触发 {@code McVersionCompat} 静态初始化的 ServiceLoader 失败（潜伏崩溃，
- * d.ts 又已宣传该方法）。本 impl 把它转为可用。
+ * <p>Why it exists: {@code inject.MixinLevel} in the shared tree makes Level implement
+ * {@code LevelExtension}, and {@code neko$spawnLightning} gets the lightning entity type through
+ * this facade. Without a provider on either fabric node, that call fails inside the ServiceLoader
+ * step of {@code McVersionCompat} static initialization, a crash nothing catches, while the d.ts
+ * already advertises the method. This class makes the call work.
  *
- * <p>注册：{@code META-INF/services/com.tkisor.nekojs.platform.compat.McVersionCompat$Impl}
- *（与 NeoForge 节点同机制）。类名与 26.1 侧刻意不同——drift 比较对不允许同名不同体。
+ * <p>Registered through
+ * {@code META-INF/services/com.tkisor.nekojs.platform.compat.McVersionCompat$Impl}, the same
+ * mechanism as the NeoForge nodes. The class name deliberately differs from the 26.1 side, because
+ * the drift comparison pair does not allow the same name with a different body.
  */
 public final class Fabric262VersionCompat implements McVersionCompat.Impl {
 

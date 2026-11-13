@@ -62,12 +62,13 @@ public class NekoJSMod extends NekoJS {
         // (AddressArgument in /nekojs trust); console dispatch alone never exercises it.
         NekoJSArgumentTypes.register(modEventBus);
         registerEventListeners(modEventBus);
-        // 新一轮启动的注册 epoch：丢弃并诊断上一轮残留（ticket 15 AC2）
+        // Registration epoch for the new startup: discard and diagnose residue from the previous round
         RegistryEventAdapter.beginBoot();
         initializeWorkspace();
         com.tkisor.nekojs.mixinjs.MixinWorkspace.prepare();
-        // root 只由本 entry 构造期持有（final local），不落任何 static 字段：
-        // 生命周期 handle 经 bind/register 注入各边界（AC3/AC10：无公开 static root）
+        // Root is held only by this entry's constructor (a final local) and no static fields are set.
+        // Lifecycle handles are injected into other code through bind/register; there is no public
+        // static root.
         NekoRuntimeRoot root = initializeScripts();
         com.tkisor.nekojs.mixinjs.MixinPlatform.install(root);
         NeoForge.EVENT_BUS.addListener((RegisterCommandsEvent event) -> NekoJSCommands.register(event, root));
@@ -79,19 +80,20 @@ public class NekoJSMod extends NekoJS {
 
     private static void registerEventListeners(IEventBus modEventBus) {
         modEventBus.addListener(NekoJSMod::onCommonSetup);
-        // 通用注册表适配：收集（首 pass 前一次）→ 逐 pass 抽干 → 属性/创造页后置
+        // General registry adaptation: Collection (once before first pass) -> Drain per pass -> Property/creative page post-processing
         modEventBus.addListener(RegistryEventAdapter::onRegister);
         modEventBus.addListener(RegistryEventAdapter::onEntityAttributeCreation);
         modEventBus.addListener(RegistryEventAdapter::onBuildCreativeTabContents);
         modEventBus.addListener(NekoJSMod::onRegisterCapabilities);
-        // （命令监听器在构造期 root 就绪后注册，见构造函数）
-        // GoalRegistry 钩子已中立化（Entity+Level 签名），这里解包原生事件
+        // (Command listener registered after root is ready in constructor, see constructor)
+        // GoalRegistry hook is neutralized (Entity+Level signature), native events are unwrapped here
         NeoForge.EVENT_BUS.addListener(EntityJoinLevelEvent.class,
                 event -> GoalRegistry.onEntityJoinLevel(event.getEntity(), event.getLevel()));
-        // 实体持久化数据存取桥：NeoForge 容器 = Entity#getPersistentData()。
-        // 实体引用面直接解引用（调用现场持有实体）——EntityJoinLevelEvent 窗口内实体尚未
-        // 进入 level 实体索引，按 id 反查会静默丢弃脚本写入（票 03 §3-3，票 18 修复）；
-        // id 面保留 server 反查，供同步/镜像层按 id 记账
+        // Entity persistent data access bridge: on NeoForge the container is Entity#getPersistentData().
+        // Entity references are dereferenced directly (the call site holds the entity). Entities
+        // inside the EntityJoinLevelEvent window are not yet in the level entity index, so an id
+        // lookup would silently drop script writes. Id lookups from the server are kept for the
+        // bookkeeping done by the sync/mirror layer.
         com.tkisor.nekojs.api.inject.EntityPDataStore.install(new com.tkisor.nekojs.api.inject.EntityPDataStore.Access() {
             @Override
             public net.minecraft.nbt.CompoundTag get(int entityId, String key) {
@@ -137,14 +139,16 @@ public class NekoJSMod extends NekoJS {
         modEventBus.addListener(NekoJSMod::onLoadComplete);
     }
 
-    /** 能力注册：先跑脚本（startup 脚本在 mod 构造期已加载监听），再应用 pending。 */
+    /** Capability registration: run the scripts first (startup scripts have already loaded their
+     * listeners during mod construction), then apply the pending registrations. */
     private static void onRegisterCapabilities(RegisterCapabilitiesEvent event) {
         CapabilityRegistryEventJS eventJS = new CapabilityRegistryEventJS();
         CapabilityEvents.REGISTER.postForCollection(eventJS);
         eventJS.apply(event);
     }
 
-    /** 实体 id → 持久化容器（NeoForge 容器挂实体上；id→实体经全维度查表，仅服务器线程调用）。 */
+    /** Entity id to persistent container. On NeoForge the container lives on the entity; the id is
+     * resolved by scanning all levels. Server thread only. */
     private static net.minecraft.nbt.CompoundTag pdataContainer(int entityId) {
         var server = net.neoforged.neoforge.server.ServerLifecycleHooks.getCurrentServer();
         if (server == null) return null;
@@ -165,9 +169,11 @@ public class NekoJSMod extends NekoJS {
 
     private NekoRuntimeRoot initializeScripts() {
         NeoForgePluginLoader.loadAnnotatedPlugins();
-        // 共享装配序列（两 loader 同构）：插件 bootstrap → 事件面接线 → 引擎上下文/沙盒工厂/
-        // 模块管线绑定 → root 构造 → manager 创建+discover → STARTUP load → fireInitStartup。
-        // loader 差异（插件发现、接线顺序）留在本类；产物由本 entry 私有持有。
+        // Shared assembly sequence, the same on both loaders: plugin bootstrap, event surface wiring,
+        // engine context and sandbox factory and module pipeline binding, root construction, manager
+        // creation and discover, STARTUP load, fireInitStartup. Loader-specific parts (plugin
+        // discovery, wiring order) stay in this class, and the result is held privately by this
+        // entry.
         NekoRuntimeRoot root = NekoRuntimeAssembly.assemble(
                 this.scriptEventBridge,
                 this.scriptProperties,
@@ -176,46 +182,54 @@ public class NekoJSMod extends NekoJS {
                     this.scriptEventsRegistrar.bindRuntime(pluginRuntime);
                     ((DefaultScriptEventBridge) this.scriptEventBridge).setPluginRuntime(pluginRuntime);
                 }).root();
-        // 票 39：Item/Block modification domain owner 注册进 root（进程级基线由 root
-        // 生命周期持有；收集/应用挂 reload 的 DOMAIN_PLAN 阶段与服务器启动收集点）。
+        // Registers the Item/Block modification domain owner with the root. The root lifetime holds the
+        // process-level baseline; collection and application hang off the reload DOMAIN_PLAN phase
+        // and the server-start collection point.
         root.installAuthoringControlHost(new com.tkisor.nekojs.authoring.MinecraftAuthoringControlHost(
                 root, net.neoforged.neoforge.server.ServerLifecycleHooks::getCurrentServer,
                 McPlatformCompat.get().isClientDist()
                         ? com.tkisor.nekojs.authoring.AuthoringClientPlatform.create(root) : null));
         root.registerDomainCollector(new com.tkisor.nekojs.wrapper.event.server.ModificationDomainOwner());
-        // 票 16：动态注册 facade 的候选域收集器（进程级单例）注册进同一 root 接缝——
-        // reload 的 DOMAIN_PLAN 阶段统一收集 inert 定义计划。facade 是 26.x NeoForge 面
-        // （fabric 未移植），故整行带版本守卫。
-//? if >=26 {
+        // Registers the candidate domain collector of the dynamic registration facade (a process-level
+        // singleton) on the same root: the reload DOMAIN_PLAN phase collects the inert definition
+        // plans together. The facade is a 26.x NeoForge surface that has not been ported to Fabric,
+        // so the line is version-guarded.
+        //? if >=26 {
         root.registerDomainCollector(com.tkisor.nekojs.dynamic.DynamicRegistryFacade.runtime());
 //?}
-        // 票 22：Villager Trades domain owner（事件收集 + 合法 commit 点的注册表 mutation 都在
-        // Adapter 内；domain 账本由 root 生命周期持有）。节点差异只体现在实现：26.x 走
-        // VILLAGER_TRADE / TRADE_SET 可重载注册表，1.21.1 的成对 owner 走经典静态交易池。
+// Villager trades domain owner: event collection and the registry mutation at the legal
+// commit point both live in the Adapter, and the root lifetime holds the domain ledger. The
+// node difference is only in the implementation: 26.x uses the VILLAGER_TRADE / TRADE_SET
+// reloadable registries, and the paired owner on 1.21.1 uses the classic static trade pool.
         com.tkisor.nekojs.wrapper.event.server.VillagerTradeDomainOwner villagerTrades =
                 new com.tkisor.nekojs.wrapper.event.server.VillagerTradeDomainOwner();
         root.registerDomainCollector(villagerTrades);
-        // 只读 query 的过程级查表接缝（binding 无状态；install 只在装配期发生一次）
+        // Process-level lookup for read-only queries (the binding is stateless; install happens once,
+        // during assembly)
         com.tkisor.nekojs.core.villager.VillagerTradesFacade.install(villagerTrades.state());
         GoalEvents.postRegister();
         return root;
     }
 
     private static void registerClient(IEventBus modEventBus, NekoRuntimeRoot root) {
-        // dist 访问器的版本差异由 McPlatformCompat 门面承载（本文件 neoforge 面，门面可用）
+        // McPlatformCompat carries the version differences of the dist accessor; this file is the
+        // NeoForge side, where the facade is available
         if (McPlatformCompat.get().isClientDist()) {
-            // 票 28：后处理声明域 owner 注册进 root（只有客户端 dist 注册——收集器只在
-            // CLIENT 候选的 DOMAIN_PLAN 阶段与客户端初始加载收集点被调用；dedicated
-            // server 不注册入口、不加载 client 类）。运行时 set/clear/toggle/current 仍是
-            // PostEffects binding，不经此 owner。
+            // Registers the post-effect declaration domain owner with the root. It is only registered on the
+            // client dist: the collector runs only in the DOMAIN_PLAN phase of the CLIENT candidate
+            // and at the client initial-load collection point, and a dedicated server registers no
+            // entry and loads no client classes. Runtime set/clear/toggle/current still go through
+            // the PostEffects binding, not this owner.
             root.registerDomainCollector(new com.tkisor.nekojs.client.posteffect.PostEffectDomainOwner());
-            // 票 26：HUD / 世界渲染器注册域的收集器（同上，仅客户端 dist）。它保证「本代
-            // 无渲染器注册」时也提交一个空批次，从而在 commit 点退役旧 generation 的渲染器
-            // ——没有这个收集器，空批次永远不到 commit，旧表就换不掉。
+            // Collector for the HUD / world renderer registration domain (likewise client dist only). It
+            // also submits an empty batch when this generation registers no renderer, so the commit
+            // point retires the previous generation's renderers. Without this collector the empty
+            // batch never reaches the commit and the old table is never replaced.
             root.registerDomainCollector(new com.tkisor.nekojs.client.render.ClientRenderDomainOwner());
-            // 票 21：动态注册批事务的客户端接线（断线丢弃 staged prepare 的 hook 安装）。
-            // 守卫理由与上方 facade 注册行同款：动态注册面是 >=26 NeoForge 面。
-//? if >=26 {
+            // Client wiring for the dynamic registration batch transaction (dropping staged prepare hooks
+            // when the connection is lost). The guard reason matches the facade registration line
+            // above: the dynamic registration surface is a >=26 NeoForge surface.
+            //? if >=26 {
             com.tkisor.nekojs.dynamic.DynamicRegistryClientSync.install();
 //?}
             NekoJSClient.register(modEventBus, root);

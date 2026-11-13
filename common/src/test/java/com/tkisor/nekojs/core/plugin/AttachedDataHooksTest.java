@@ -20,14 +20,17 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * {@code attachServerData} / {@code attachLevelData} / {@code attachPlayerData} 三个插件钩子的冒烟测试。
+ * Smoke tests for the {@code attachServerData}, {@code attachLevelData} and
+ * {@code attachPlayerData} plugin hooks.
  *
- * <p>这三个钩子由平台层 mixin 在首次访问 {@code host.data} 时经
- * {@link AttachedDataHooks#fireAttachServer} 等入口触发（common 集中实现、三个平台模块复用），
- * 但此前没有任何内置插件实现它们。本测试向 {@link NekoJSBasePluginManager} 登记录制插件后
- * 触发 fire 入口，证明链路确实会调用插件：同一 {@link AttachedData} 实例送达、宿主引用
- * （{@code getParent()}）原样保留、插件在钩子内写入的条目留在容器上、三个钩子间不串扰、
- * 且单个插件异常被隔离不中断后续插件。
+ * <p>The platform mixin triggers these hooks on the first access to {@code host.data} through
+ * entry points such as {@link AttachedDataHooks#fireAttachServer}. The implementation lives in
+ * common and all three platform modules reuse it. This test registers recording plugins with
+ * {@link NekoJSBasePluginManager} and then fires those entry points to show that the call
+ * reaches the plugins: the same {@link AttachedData} instance arrives, the host reference
+ * ({@code getParent()}) is kept as it was, entries a plugin adds inside the hook stay on the
+ * container, the three hooks do not leak into each other, and an exception from one plugin is
+ * isolated and does not stop the plugins after it.
  */
 class AttachedDataHooksTest {
 
@@ -123,7 +126,8 @@ class AttachedDataHooksTest {
 
     @Test
     void throwingPluginIsIsolatedAndDoesNotBlockLaterPlugins() {
-        // priority 1001 > 1000：抛异常的插件必然先于录制插件触发（同优先级顺序不稳定，见注解契约）
+        // priority 1001 > 1000, so the throwing plugin always fires before the recording plugin; the
+        // order within one priority is not stable.
         NekoJSBasePluginManager.registerClass(ThrowingAttachPlugin.class);
         NekoJSBasePluginManager.registerClass(RecordingAttachPlugin.class);
         AttachedData<Object> server = new AttachedData<>(new Object());
@@ -142,7 +146,8 @@ class AttachedDataHooksTest {
                 "前序插件抛异常不应中断后续插件的 attachPlayerData");
     }
 
-    /** 记录三个 attach 钩子调用并向容器写入标记条目（实例由插件管理器创建，录制走静态状态）。 */
+    /** Records calls to the three attach hooks and adds a marker entry to the container. The plugin
+     * manager creates the instance, so recording uses static state. */
     @RegisterNekoJSPlugin(priority = 1000)
     public static class RecordingAttachPlugin implements NekoJSPlugin {
         static final List<AttachedData<?>> serverCalls = new CopyOnWriteArrayList<>();
@@ -174,7 +179,7 @@ class AttachedDataHooksTest {
         }
     }
 
-    /** 三个 attach 钩子全部抛异常，验证 fire 入口的异常隔离语义。 */
+    /** Throws from all three attach hooks to test how the fire entry points isolate exceptions. */
     @RegisterNekoJSPlugin(priority = 1001)
     public static class ThrowingAttachPlugin implements NekoJSPlugin {
         @Override

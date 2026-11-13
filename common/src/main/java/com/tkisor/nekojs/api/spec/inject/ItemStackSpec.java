@@ -4,16 +4,20 @@ import com.tkisor.nekojs.api.annotation.RemapByPrefix;
 import com.tkisor.nekojs.api.spec.PlatformAvailability;
 
 /**
- * ItemStack 跨平台统一扩展规范（核心子集）。
+ * Cross-platform extension interface for ItemStack, limited to the core subset.
  *
- * <p>只含 CR 也能实现的、且无原生碰撞的方法。各平台 {@code ItemStackExtension}
- * 必须 {@code extends ItemStackSpec}。
+ * <p>It holds only methods CR can also implement and that have no native collision. Each
+ * platform's {@code ItemStackExtension} must {@code extends ItemStackSpec}.
  *
- * <p><b>碰撞排除（调研驱动）：</b>以下方法因原生零参碰撞而不在 spec 中：
+ * <p><b>Excluded to avoid collisions:</b> these methods are not in the spec because their native
+ * no-arg counterparts collide:
  * <ul>
- *   <li>{@code copy()} / {@code getItem()} —— 两平台原生均有同名零参方法，行为一致，JS 用原生
- *   <li>{@code setCount(int)} —— 两平台原生均有；链式扩展使用平台侧唯一名称 {@code setCountAndReturn}
- *   <li>{@code enchant(...)} / {@code isEnchanted()} —— 原版已有同名入口；按 id 附魔和 NekoJS 光效语义使用平台侧唯一名称
+ *   <li>{@code copy()} / {@code getItem()} — both platforms have a no-arg method of the same name
+ *       with the same behavior, so JS uses the native one
+ *   <li>{@code setCount(int)} — both platforms have it; chained extension uses the platform-unique
+ *       name {@code setCountAndReturn}
+ *   <li>{@code enchant(...)} / {@code isEnchanted()} — vanilla already has an entry point of the
+ *       same name; enchanting by id and the NekoJS glow semantics use platform-unique names
  * </ul>
  */
 @RemapByPrefix("neko$")
@@ -25,32 +29,35 @@ public interface ItemStackSpec {
         throw new UnsupportedOperationException("ItemStackSpec.neko$pdata not implemented");
     }
 
-    /** 返回指定数量的副本（不修改原 ItemStack）。 */
+    /** Returns a copy with the given count; the original ItemStack is not modified. */
     default Object neko$withCount(int count) {
         throw new UnsupportedOperationException("ItemStackSpec.neko$withCount not implemented");
     }
 
-    /** 返回该堆栈物品的注册表 id（如 {@code minecraft:stone}）。 */
+    /** Registry id of the item in this stack (for example {@code minecraft:stone}). */
     default String neko$getId() {
         throw new UnsupportedOperationException("ItemStackSpec.neko$getId not implemented");
     }
 
-    /** 检查是否拥有指定附魔。enchId 如 "minecraft:sharpness"。 */
+    /**
+     * Whether the stack has the given enchantment at the given level. enchId is like
+     * "minecraft:sharpness".
+     */
     default boolean neko$hasEnchantment(String enchId, int level) {
         throw new UnsupportedOperationException("ItemStackSpec.neko$hasEnchantment not implemented");
     }
 
-    /** 是否不可破坏。 */
+    /** Whether the stack is unbreakable. */
     default boolean neko$isUnbreakable() {
         throw new UnsupportedOperationException("ItemStackSpec.neko$isUnbreakable not implemented");
     }
 
-    /** 设置不可破坏。 */
+    /** Sets whether the stack is unbreakable. */
     default void neko$setUnbreakable(boolean value) {
         throw new UnsupportedOperationException("ItemStackSpec.neko$setUnbreakable not implemented");
     }
 
-    /** 检查是否与另一个 ItemStack 匹配（物品类型一致）。 */
+    /** Whether this stack matches another ItemStack (same item type). */
     default boolean neko$matches(Object other) {
         throw new UnsupportedOperationException("ItemStackSpec.neko$matches not implemented");
     }

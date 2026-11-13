@@ -4,13 +4,13 @@ import java.util.Collection;
 import java.util.Collections;
 
 /**
- * {@link JsValueView} 的 null 实现（单例）。
+ * Null implementation of {@link JsValueView}, a singleton.
  *
- * <p>除 {@link #isNull()} 返回 {@code true} 外，其余类型判断均为 {@code false}，
- * 读取值的方法抛 {@link UnsupportedOperationException}。
+ * <p>Every type check returns {@code false} except {@link #isNull()}, which returns {@code true};
+ * the value readers throw {@link UnsupportedOperationException}.
  */
 public final class NullJsValueView implements JsValueView {
-    /** 共享单例。 */
+    /** The shared instance. */
     public static final NullJsValueView INSTANCE = new NullJsValueView();
 
     private NullJsValueView() {}

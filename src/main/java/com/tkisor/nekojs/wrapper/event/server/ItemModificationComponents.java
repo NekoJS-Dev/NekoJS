@@ -22,28 +22,31 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * {@link ItemModificationJS} 的 food / tool / attackDamage / attackSpeed 四个属性到
- * 26.x 数据组件的映射实现。属性存取在 {@link ItemModificationJS}，构造、默认值与
- * 校验集中在这里，保持事件类本身只关心写入顺序。
+ * Maps the {@code food}, {@code tool}, {@code attackDamage}, and {@code attackSpeed} properties on
+ * {@link ItemModificationJS} to 26.x data components. {@link ItemModificationJS} holds the pending
+ * values, while parsing, defaults, validation, and component construction live here.
  *
- * <h2>26.x 组件模型（与 1.21.1 的差异）</h2>
+ * <h2>26.x component model (differences from 1.21.1)</h2>
  * <ul>
- *   <li>食物 = {@code FOOD}（营养价值，{@link FoodProperties}）+ {@code CONSUMABLE}
- *       （进食动画/时长，{@link Consumable}）。只写 {@code FOOD} 不会让物品可食用：
- *       {@code Item#use} 只认 {@code CONSUMABLE}；进食秒数（KubeJS 的 eatSeconds）
- *       在 26.x 属于 {@code CONSUMABLE#consumeSeconds}，不在 {@code FoodProperties} 上。</li>
- *   <li>攻击属性 = {@code ATTRIBUTE_MODIFIERS} 里的
- *       {@code minecraft:base_attack_damage} / {@code minecraft:base_attack_speed}
- *       修饰符（{@link AttributeModifier.Operation#ADD_VALUE}，主手），语义与
- *       KubeJS 的 attackDamage/attackSpeed 相同：只替换同名属性的条目，其余修饰符原样保留。</li>
- *   <li>工具 = {@code TOOL}（{@link Tool}）。26.x 物品侧没有挖掘等级（等级在方块组件上），
- *       “对全部方块生效”用 direct {@link HolderSet} 枚举方块注册表实现
- *       （vanilla 没有 all-blocks tag；默认组件序列化的是 patch，不会把整个集合写进 NBT）。</li>
+ *   <li>Food combines {@code FOOD} (nutrition values via {@link FoodProperties}) and
+ *       {@code CONSUMABLE} (eating animation and duration via {@link Consumable}). Writing
+ *       {@code FOOD} alone does not make an item edible because {@code Item#use} checks
+ *       {@code CONSUMABLE}, and {@code eatSeconds} maps to {@code CONSUMABLE#consumeSeconds}
+ *       rather than {@code FoodProperties}.</li>
+ *   <li>Attack attributes map to the {@code minecraft:base_attack_damage} and
+ *       {@code minecraft:base_attack_speed} modifiers in {@code ATTRIBUTE_MODIFIERS}
+ *       ({@link AttributeModifier.Operation#ADD_VALUE} on mainhand). Matching KubeJS's
+ *       {@code attackDamage}/{@code attackSpeed}, only entries for those attributes are replaced
+ *       while all other modifiers are preserved.</li>
+ *   <li>Tool maps to {@code TOOL} ({@link Tool}). In 26.x, mining tiers live on block components
+ *       rather than items; "effective on all blocks" is represented by a direct {@link HolderSet}
+ *       listing the block registry (vanilla has no all-blocks tag, and default components serialize
+ *       only patches rather than writing the full set to NBT).</li>
  * </ul>
  *
- * <p>JS 侧的对象字面量经 GraalJS 默认转换以 {@code Map<String, Object>} 到达
- * {@code setter(Object)}；解析只接受对象（拒绝裸数字等），未知键直接报错并列出合法键，
- * 与 {@code rarity} 解析的报错风格一致。
+ * <p>Script object literals arrive at {@code setter(Object)} as {@code Map<String, Object>} via
+ * GraalJS conversion. Parsers accept only map objects (rejecting bare numbers and other primitives)
+ * and fail on unknown keys with the list of valid keys, matching {@code rarity} error messages.
  */
 public final class ItemModificationComponents {
 
@@ -53,9 +56,9 @@ public final class ItemModificationComponents {
     private ItemModificationComponents() {}
 
     /**
-     * 食物配置。{@code saturation} 是 26.x builder 语义的“饱和度系数”
-     * （绝对饱和度 = nutrition × saturation × 2），与 KubeJS 的 saturation 字段一致。
-     * {@code eatSeconds} 为 {@code null} 表示不改动进食时长。
+     * Parsed food options. {@code saturation} is the 26.x builder's saturation modifier
+     * (total saturation = {@code nutrition * saturation * 2}), matching KubeJS's {@code saturation}
+     * field. A {@code null} {@code eatSeconds} leaves the eating duration unchanged.
      */
     public record FoodSpec(int nutrition, float saturation, boolean canAlwaysEat, @Nullable Float eatSeconds) {
 
@@ -69,7 +72,7 @@ public final class ItemModificationComponents {
             return builder.build();
         }
 
-        /** 规范化声明值（纯 JVM；ticket 39 候选计划的载体形态）。 */
+        /** Converts this spec into a normalized plain-Java map for {@code ModificationCandidatePlan}. */
         public Map<String, Object> toNormalized() {
             Map<String, Object> map = new java.util.LinkedHashMap<>();
             map.put("nutrition", nutrition);
@@ -81,7 +84,7 @@ public final class ItemModificationComponents {
             return map;
         }
 
-        /** 从规范化声明值重建（commit 点 Adapter 侧；已通过收集期校验）。 */
+        /** Reconstructs a {@code FoodSpec} from a normalized declaration map already validated during collection. */
         public static FoodSpec fromNormalized(Map<String, Object> map) {
             int nutrition = ((Number) map.getOrDefault("nutrition", 1)).intValue();
             float saturation = ((Number) map.getOrDefault("saturation", 0.1F)).floatValue();
@@ -92,7 +95,7 @@ public final class ItemModificationComponents {
         }
     }
 
-    /** 工具配置：全方块生效的挖掘速度 + 每方块耐久损耗。 */
+    /** Parsed tool options: mining speed across all blocks and durability damage per block. */
     public record ToolSpec(float miningSpeed, int damagePerBlock, boolean canDestroyBlocksInCreative) {
 
         Tool toTool() {
@@ -104,7 +107,7 @@ public final class ItemModificationComponents {
                 this.canDestroyBlocksInCreative);
         }
 
-        /** 规范化声明值（纯 JVM；ticket 39 候选计划的载体形态）。 */
+        /** Converts this spec into a normalized plain-Java map for {@code ModificationCandidatePlan}. */
         public Map<String, Object> toNormalized() {
             Map<String, Object> map = new java.util.LinkedHashMap<>();
             map.put("miningSpeed", miningSpeed);
@@ -113,7 +116,7 @@ public final class ItemModificationComponents {
             return map;
         }
 
-        /** 从规范化声明值重建（commit 点 Adapter 侧）。 */
+        /** Reconstructs a {@code ToolSpec} from a normalized declaration map. */
         public static ToolSpec fromNormalized(Map<String, Object> map) {
             float miningSpeed = ((Number) map.get("miningSpeed")).floatValue();
             int damagePerBlock = ((Number) map.getOrDefault("damagePerBlock", 1)).intValue();
@@ -144,8 +147,9 @@ public final class ItemModificationComponents {
     }
 
     /**
-     * 写入 FOOD，并保证物品可食用：显式 eatSeconds 时替换 CONSUMABLE（默认动画/音效）；
-     * 否则物品已有 CONSUMABLE 就沿用（保留药水等自定义效果），没有则补一个默认 1.6 秒的。
+     * Writes {@code FOOD} and ensures the item is edible: replaces {@code CONSUMABLE} (using
+     * default animation and sound) when {@code eatSeconds} is set; otherwise keeps any existing
+     * {@code CONSUMABLE} (preserving custom potion effects, etc.) or adds a default 1.6-second one.
      */
     static void applyFood(DataComponentMap.Builder builder, DataComponentMap base, FoodSpec food) {
         builder.set(DataComponents.FOOD, food.toProperties());
@@ -157,8 +161,9 @@ public final class ItemModificationComponents {
     }
 
     /**
-     * 移除食物：FOOD 总是移除；原本就是食物（base 有 FOOD）的物品连 CONSUMABLE 一起移除，
-     * 否则右键仍会播放进食动画并消耗物品。只有 CONSUMABLE 没有 FOOD 的物品（药水）不受影响。
+     * Removes {@code FOOD}, and also removes {@code CONSUMABLE} if {@code base} originally had
+     * {@code FOOD} (otherwise right-clicking would still play the eating animation and consume the
+     * item). Items that only had {@code CONSUMABLE} without {@code FOOD} (such as potions) keep it.
      */
     static void removeFood(DataComponentMap.Builder builder, DataComponentMap base) {
         builder.set(DataComponents.FOOD, null);
@@ -194,9 +199,9 @@ public final class ItemModificationComponents {
     // ---------------------------------------------------------- attributes
 
     /**
-     * 替换 base_attack_damage / base_attack_speed 修饰符：其余条目（含另一项攻击属性、
-     * 护甲等）原样保留，被替换条目的 tooltip display 也保留（首个命中者），与 KubeJS 8 的
-     * attackDamage/attackSpeed 语义一致。
+     * Replaces {@code base_attack_damage} and/or {@code base_attack_speed} modifiers while keeping
+     * all other attribute entries (including the other attack attribute and armor) and reusing the
+     * first replaced entry's tooltip display, matching KubeJS 8's {@code attackDamage}/{@code attackSpeed}.
      */
     static void applyAttributes(DataComponentMap.Builder builder, DataComponentMap base,
                                 @Nullable Double attackDamage, @Nullable Double attackSpeed) {

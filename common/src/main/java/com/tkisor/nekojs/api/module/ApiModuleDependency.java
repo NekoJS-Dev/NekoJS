@@ -5,11 +5,11 @@ import com.tkisor.nekojs.api.surface.ApiVersionRange;
 import java.util.Objects;
 
 /**
- * 模块依赖声明：目标模块 id、版本区间与依赖类型。
+ * Declaration of a module dependency: the target module id, the version range and the dependency type.
  *
- * @param moduleId     目标模块 id，不能为 {@code null}
- * @param versionRange 版本区间（可为 {@code null}，取决于依赖类型）
- * @param type         依赖类型，不能为 {@code null}
+ * @param moduleId     target module id, never {@code null}
+ * @param versionRange version range, may be {@code null} depending on the dependency type
+ * @param type         dependency type, never {@code null}
  */
 public record ApiModuleDependency(
         String moduleId,
@@ -21,13 +21,13 @@ public record ApiModuleDependency(
         Objects.requireNonNull(type, "type");
     }
 
-    /** 依赖类型。 */
+    /** Kind of dependency. */
     public enum DependencyType {
-        /** 模块依赖。 */
+        /** Depends on another module. */
         MODULE,
-        /** 能力依赖。 */
+        /** Depends on a capability. */
         CAPABILITY,
-        /** portable 稳定契约依赖。 */
+        /** Depends on a portable stable contract. */
         PORTABLE_STABLE
     }
 }

@@ -9,17 +9,18 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 
 /**
- * 方块随机 tick 事件（{@code BlockEvents.randomTick}）的**加载器中立**载荷。
+ * Loader-neutral payload for the block random tick event ({@code BlockEvents.randomTick}).
  *
- * <p>成员名与 NeoForge 侧原生载荷 {@code RandomTickEvent}（NF Event 子类）
- * 同形（level/pos/state/random）——两加载器脚本面一致，载荷类各自持有
- * （NF 侧经 NF 总线投递，fabric 侧 mixin 直投 {@code EventBusJS}，孪生决策见
- * 移植台账第 14 批）。
+ * <p>The member names match the NeoForge native payload {@code RandomTickEvent} (an NF Event
+ * subclass): level/pos/state/random. The script surface is the same on both loaders, but each
+ * loader owns its payload class: NeoForge posts through its own bus, fabric posts straight to
+ * {@code EventBusJS} from the mixin.
  *
- * <p>触发点：{@code BlockBehaviour#randomTick} HEAD（两加载器同点）。原版只对
- * {@code isRandomlyTicking()} 的方块调用，且被子类覆写的方块不经过基类实现
- * ——语义与 NeoForge 侧既有 mixin 一致。不可取消。高频通道：无监听器时零
- * 事件对象。
+ * <p>Fires at the HEAD of {@code BlockBehaviour#randomTick}, the same point on both loaders.
+ * Vanilla only calls it for blocks where {@code isRandomlyTicking()} is true, and blocks whose
+ * subclass overrides the method never reach the base implementation, which matches the
+ * existing mixin on the NeoForge side. Not cancellable. High-frequency channel: no event
+ * object is built when nothing is listening.
  */
 @Doc("Fired when a block gets a random tick (crop growth, leaf decay, etc).")
 @Getter

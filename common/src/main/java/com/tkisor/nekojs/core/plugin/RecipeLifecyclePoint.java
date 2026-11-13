@@ -9,23 +9,25 @@ import java.util.Objects;
 import java.util.function.Consumer;
 
 /**
- * 内置扩展点 {@code nekojs:recipe_lifecycle}（ADR-0001 自包含 Point 文件）。
- * merge 策略 {@link MergePolicy#append}（钩子列表收集，无键冲突）。
+ * Built-in extension point {@code nekojs:recipe_lifecycle}. The merge policy is
+ * {@link MergePolicy#append}: it collects hook lists, so no keys can conflict.
  */
 public final class RecipeLifecyclePoint {
 
-    /** 扩展点 id（observable 契约）。 */
+    /** Extension point id. */
     public static final String ID = "nekojs:recipe_lifecycle";
 
     private RecipeLifecyclePoint() {
     }
 
-    /** 显式声明形态（与直接覆写 NekoJSPlugin 对应钩子等价收集）：插件被 {@code nekojs:recipe_lifecycle} 扩展点收集。 */
+    /** Explicit declaration form: the plugin is collected by the {@code nekojs:recipe_lifecycle} extension point, the
+     * same result as overriding the matching NekoJSPlugin hook directly. */
     public interface Contributor extends NekoJSPlugin {
 
         /**
-         * 注册配方生命周期钩子。默认实现注册 {@code beforeRecipeLoading} 与 {@code afterRecipes}
-         * （NekoJSPlugin 便捷钩子），插件按需覆盖这两个便捷方法即可。
+         * Registers recipe lifecycle hooks. The default implementation registers
+         * {@code beforeRecipeLoading} and {@code afterRecipes}, the convenience hooks on NekoJSPlugin;
+         * a plugin overrides those two methods when it needs different behavior.
          */
         default void registerRecipeLifecycleHooks(RecipeLifecycleRegister registry) {
             registry.beforeRecipeLoading(this::beforeRecipeLoading);
@@ -42,7 +44,7 @@ public final class RecipeLifecyclePoint {
         }
     }
 
-    /** 累积器：两个钩子列表；snapshot 后密封。 */
+    /** Accumulator holding the two hook lists. It is sealed after snapshot. */
     static final class Bucket implements RecipeLifecycleRegister, Sealable {
         private final List<Consumer<RecipeLifecycleContext>> beforeRecipeLoadingHooks = new ArrayList<>();
         private final List<Consumer<RecipeLifecycleContext>> afterRecipesHooks = new ArrayList<>();
@@ -77,7 +79,7 @@ public final class RecipeLifecyclePoint {
         }
     }
 
-    /** 扩展点定义（由 {@link NekoBuiltinPointsPlugin} 清单注册）。 */
+    /** The extension point definition, registered from the {@link NekoBuiltinPointsPlugin} list. */
     public static final NekoPluginExtensionPoint<NekoJSPlugin, Bucket, RecipeLifecycleHooks> POINT =
             NekoPluginExtensionPoint.<NekoJSPlugin, Bucket, RecipeLifecycleHooks>builder(ID, NekoJSPlugin.class)
                     .merge(MergePolicy.append())

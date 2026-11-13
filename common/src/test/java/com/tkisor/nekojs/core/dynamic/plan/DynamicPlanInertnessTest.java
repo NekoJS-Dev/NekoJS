@@ -20,22 +20,24 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * 票 16 AC7 的<b>结构性</b>证据：候选计划面在类型层面就不可能修改 live registry、
- * 挂生产 callback 或发布对外 binding。
+ * <b>Structural</b> evidence that the candidate plan surface cannot, at the type level, modify the
+ * live registry, attach production callbacks or publish public bindings.
  *
- * <p>与行为断言（{@code DynamicCandidatePlanSemanticsTest}、{@code
- * DynamicRegistryReloadPipelineTest}）互补：行为断言证明「本次候选没有写账/没有挂
- * 回调」，本测试证明「即使代码改坏也写不出去」——计划/store/Adapter 请求的全部公开
- * 成员里没有 platform 执行通道（Supplier/Consumer/Function/Runnable/ProxyExecutable/
- * Binding）、没有 Minecraft/loader 类型，Adapter 请求的动作集合只有 {@code register}。
+ * <p>It complements the behavior assertions in {@code DynamicCandidatePlanSemanticsTest} and
+ * {@code DynamicRegistryReloadPipelineTest}: those prove that this candidate wrote no ledger entries
+ * and attached no callbacks, while this test proves that even broken code could not write anything.
+ * None of the public members of the plan, the store or the adapter request exposes a platform
+ * execution channel (Supplier/Consumer/Function/Runnable/ProxyExecutable/Binding) or a
+ * Minecraft/loader type, and the only action an adapter request carries is {@code register}.
  *
- * <p>模块级保证是更外层的同类事实：{@code common} 编译期不依赖 Minecraft/loader
- * （{@code :common:checkCommonIsolation} + guardLint L1/L2），计划包住在 common。
- * 本测试把该事实收紧到计划包自身的签名面。
+ * <p>The module-level guarantee is the same fact one level out: {@code common} does not depend on
+ * Minecraft or the loader at compile time ({@code :common:checkCommonIsolation} plus guardLint
+ * L1/L2), and the plan package lives in common. This test narrows that fact to the signatures of the
+ * plan package itself.
  */
 class DynamicPlanInertnessTest {
 
-    /** 计划包的公开面（含 facade 侧读计划用的观察类型）。 */
+    /** Public surface of the plan package, including the observation types the facade reads plans through. */
     private static final List<Class<?>> PLAN_TYPES = List.of(
             DynamicCandidateRegistryPlan.class,
             DynamicDefinition.class,
@@ -78,11 +80,11 @@ class DynamicPlanInertnessTest {
                 assertNoPlatformType(field.getGenericType().getTypeName());
             }
             for (Method method : type.getDeclaredMethods()) {
-                // toGenericString 覆盖参数化类型（如 List<DynamicAdapterRequest> 的实参）
+                // toGenericString also covers parameterized types, such as the List<DynamicAdapterRequest> type argument.
                 assertNoPlatformType(method.toGenericString());
             }
         }
-        // 唯一外部形状依赖是 common 自己的 catalog 条目（渲染器的输入），不是 MC 类型
+        // The only external shape it depends on is common's own catalog entry, the renderer's input, not an MC type.
         assertEquals("com.tkisor.nekojs.api.catalog.RegistryBuilderSurfaceEntry",
                 RegistryBuilderSurfaceEntry.class.getName(),
                 "计划包只依赖 common 结构化条目承载声明派生输入");
@@ -125,7 +127,7 @@ class DynamicPlanInertnessTest {
                 DynamicDefinition.supportedRegistryKeys());
         assertEquals("[item, soundEvent, mobEffect]", DynamicDefinitionType.apiNameDirectory(),
                 "成员目录冻结为票面三个类型直达入口名");
-        // 未知 type 名（含用注册表键冒充 type 的写法）不解析为注册能力
+        // An unknown type name does not resolve to a registrable type, including a registry key passed off as a type name.
         assertTrue(DynamicDefinitionType.byApiName("entity_type").isEmpty());
         assertTrue(DynamicDefinitionType.byApiName("minecraft:item").isEmpty());
         assertTrue(DynamicDefinitionType.byApiName(null).isEmpty());

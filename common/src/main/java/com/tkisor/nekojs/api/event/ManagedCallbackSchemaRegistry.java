@@ -19,7 +19,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public final class ManagedCallbackSchemaRegistry {
 
-    /** 契约 payload 字段的类型信息：PORTABLE 有可移植类型；NATIVE 类型不承诺。 */
+    /** Type information for a contract payload field: PORTABLE carries a portable type, NATIVE promises no type. */
     public enum ContractFieldKind {
         PORTABLE, NATIVE
     }
@@ -68,15 +68,18 @@ public final class ManagedCallbackSchemaRegistry {
     }
 
     /**
-     * 把运行时反射的事件（{@code EventContractReflector} 从 {@code EventGroup} 派生）注入回调 schema。
+     * Injects events reflected at runtime (derived from {@code EventGroup} by {@code EventContractReflector})
+     * into the callback schema.
      *
-     * <p>键按 {@code (group, eventName)} 映射——与 {@link EventCallbackSourceValidator}
-     * 的查询一致（现有 {@link #install(Map)} 从契约符号提取的映射键是
-     * {@code (globalName, payloadTypeName)}，与事件查询键不匹配，实际不命中事件回调）。
-     * 成员集合为契约 payload 字段名（PORTABLE/NATIVE 均为脚本可访问的属性名）。
+     * <p>Keys map by {@code (group, eventName)}, which is what {@link EventCallbackSourceValidator}
+     * queries. The keys that the existing {@link #install(Map)} extracts from contract symbols are
+     * {@code (globalName, payloadTypeName)}, so they never match an event query and never hit an event
+     * callback. The member set holds the contract payload field names; for both PORTABLE and NATIVE
+     * these are the property names scripts can access.
      *
-     * <p>契约字段是跨平台承诺：即使某平台事件类反射缺该成员（实现缺口），
-     * 契约字段仍放行——这正是"契约即权威"的意义。
+     * <p>Contract fields are a cross-platform promise: a contract field is still accepted when a
+     * platform event class lacks that member through a reflection gap. That is what makes the contract
+     * authoritative.
      */
     public static void installContractEvents(List<NormativeApiContract.ContractEvent> events) {
         if (events == null || events.isEmpty()) return;

@@ -47,7 +47,8 @@ import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-/** Real addon resources use shared native parents, the native Graal boundary and genuine vanilla codecs. */
+/** These tests use real addon resources: shared native parents, the native Graal boundary and
+genuine vanilla codecs. */
 @Tag("fixtures")
 class NativeParentRecipePipelineTest {
     private static final List<String> SPECIAL = List.of("bin_extract", "bin_insert", "clear_configuration");

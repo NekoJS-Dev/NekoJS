@@ -12,8 +12,8 @@ import java.util.Set;
 import static com.tkisor.nekojs.api.AdapterInputShape.*;
 
 /**
- * 把脚本输入适配为 {@link Vec3}：接受 {@code Vec3}、{@code BlockPos}、{@code {x,y,z}} 对象、
- * {@code [x,y,z]} 数组，坐标保留小数。
+ * Adapts script input to a {@link Vec3}: accepts a {@code Vec3}, a {@code BlockPos}, an {@code {x,y,z}}
+ * object, or an {@code [x,y,z]} array, keeping fractional coordinates.
  *
  * <pre>
  * someApi({ x: 1.5, y: 64.0, z: -2.25 })

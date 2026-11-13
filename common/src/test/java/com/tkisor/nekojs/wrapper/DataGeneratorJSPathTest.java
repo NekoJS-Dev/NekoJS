@@ -18,7 +18,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Path-boundary regression tests for {@link DataGeneratorJS#resolve(String)}.
+ * Regression tests for path handling in {@link DataGeneratorJS#resolve(String)}.
  *
  * <p>All writes go through a temporary root inside the injected platform game dir, so
  * {@link com.tkisor.nekojs.core.fs.NekoJSPaths#get()} resolves to the test game dir.

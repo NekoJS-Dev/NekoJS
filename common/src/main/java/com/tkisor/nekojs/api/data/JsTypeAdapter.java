@@ -5,31 +5,35 @@ import com.tkisor.nekojs.api.AdapterInputShape;
 import java.util.List;
 
 /**
- * 类型转换适配器接口（新 API）：把脚本侧 JS 值转换为 Java 目标类型。
+ * Adapter interface that converts a script-side JS value to a Java target type.
  *
- * <p>与旧式 {@link com.tkisor.nekojs.api.JSTypeAdapter} 对应，但通过 {@link JsValueView}
- * 抽象 JS 值，避免直接依赖 GraalVM {@code Value}，使转换逻辑可脱离引擎测试。
+ * <p>It corresponds to {@link com.tkisor.nekojs.api.JSTypeAdapter}, but hides the JS value
+ * behind {@link JsValueView} instead of depending on GraalVM {@code Value} directly, so
+ * conversion logic can be tested without the engine.
  *
- * <p>实现应保证 {@link #supports(JsValueView, ConversionContext)} 为 {@code true} 时
- * {@link #convert(JsValueView, ConversionContext)} 能成功转换；转换失败应抛
- * {@link ValueConversionException} 而非返回 {@code null}。
+ * <p>An implementation must make {@link #convert(JsValueView, ConversionContext)} succeed
+ * whenever {@link #supports(JsValueView, ConversionContext)} returns {@code true}. On failure
+ * it must throw {@link ValueConversionException}, never return {@code null}.
  *
- * @param <T> 目标 Java 类型
+ * @param <T> target Java type
  */
 public interface JsTypeAdapter<T> {
-    /** 目标 Java 类型。 */
+    /** Returns the target Java type. */
     Class<T> targetType();
 
-    /** 判断给定 JS 值能否转换为目标类型。 */
+    /** Returns whether the given JS value can be converted to the target type. */
     boolean supports(JsValueView value, ConversionContext context);
 
-    /** 把给定 JS 值转换为目标类型；失败抛 {@link ValueConversionException}。 */
+    /** Converts the given JS value to the target type; throws {@link ValueConversionException} on failure. */
     T convert(JsValueView value, ConversionContext context);
 
-    /** 转换优先级；多个 adapter 同时支持时优先级高者胜出。 */
+    /** Returns the conversion precedence; when several adapters support a value, the higher precedence wins. */
     ConversionPrecedence precedence();
 
-    /** 声明此适配器接受的输入形状，供 probe 生成 TypeScript 输入别名；默认空。 */
+    /**
+     * Declares the input shapes this adapter accepts; probe uses them to build the TypeScript
+     * input alias. Empty by default.
+     */
     default List<AdapterInputShape> inputShapes() {
         return List.of();
     }

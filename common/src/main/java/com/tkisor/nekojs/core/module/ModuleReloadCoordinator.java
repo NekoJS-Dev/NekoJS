@@ -9,26 +9,27 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * 模块 reload 失效顺序协调器：统一 ESM record cache、link cache、CJS runtime cache、
- * virtual module registry 与 dependency graph 的失效顺序；prepared/source-map 路径由 host
- * 根据其 runtime-owned module path observation 负责失效。
+ * Coordinates module reload invalidation to ensure a consistent sequence across
+ * ESM record cache, link cache, CJS runtime cache, virtual module registry, and dependency graph.
+ * Prepared module paths and source maps are invalidated by the host based on its runtime-owned
+ * module path observations.
  *
- * <p>从 {@link NekoScriptModuleLoaderHost} 的 {@code clearCache} / {@code clearRuntimeCache} /
- * {@code invalidateModules} 失效逻辑下沉而来。
+ * <p>Extracted from {@link NekoScriptModuleLoaderHost}.
  *
- * <p>失效顺序（统一规则）：
+ * <p>Invalidation sequence:
  * <ol>
- *   <li>bump revision（标记新版本，cache key 隔离）</li>
- *   <li>moduleCache.remove（CJS exports cache）</li>
- *   <li>esmRecordCache.removeAll（ESM record + evaluation state）</li>
- *   <li>esmLinkCache.removeAll（link metadata）</li>
- *   <li>dependencyGraph.removeModule / clearDependencies（依赖图节点/边）</li>
- *   <li>注入的 runtime-owned virtual-module registry invalidate（virtual URI generation）</li>
- *   <li>host 按 module path 失效 runtime-owned pipeline cache 与 source map（避免隐式 global root）</li>
+ *   <li>Bump revision (marks new version, isolates cache keys)</li>
+ *   <li>{@code moduleCache.remove} (CJS exports cache)</li>
+ *   <li>{@code esmRecordCache.removeAll} (ESM record and evaluation state)</li>
+ *   <li>{@code esmLinkCache.removeAll} (link metadata)</li>
+ *   <li>{@code dependencyGraph.removeModule} or {@code clearDependencies} (graph nodes/edges)</li>
+ *   <li>Invalidate runtime-owned virtual-module registry (virtual URI generation)</li>
+ *   <li>Host invalidates runtime-owned pipeline cache and source maps by module path</li>
  * </ol>
  *
- * <p>明确失败语义：entry 重新执行失败后错误状态指向新源码；event listener/timer 不自动恢复旧版本；
- * cache 不混用旧/新 revision。targeted reload 和 full reload 复用同一 coordinator。
+ * <p>Failure semantics: If an entry re-executes and fails, its error state points to the new source.
+ * Event listeners and timers do not automatically restore old versions. Caches do not mix old and new
+ * revisions. Targeted reloads and full reloads reuse this coordinator.
  */
 public final class ModuleReloadCoordinator {
     private final Map<String, ModuleState> moduleCache;
@@ -55,8 +56,9 @@ public final class ModuleReloadCoordinator {
     }
 
     /**
-     * 清空本 host 的 per-Context 状态。prepared/source-map/virtual-module 的 runtime-owned
-     * 注册表由 {@link NekoScriptModuleLoaderHost} 按自身 ScriptType 分区清理。
+     * Clears per-Context state for this host. Runtime-owned registries for prepared modules,
+     * source maps, and virtual modules are partitioned and cleared by {@link NekoScriptModuleLoaderHost}
+     * according to their {@link ScriptType}.
      */
     public void clearAll() {
         moduleCache.clear();
@@ -66,7 +68,7 @@ public final class ModuleReloadCoordinator {
         dependencyGraph.clear();
     }
 
-    /** 同 {@link #clearAll()}，但保留依赖图（运行缓存清理，依赖关系仍有效）。 */
+    /** Clears runtime caches, similar to {@link #clearAll()}, but retains the dependency graph. */
     public void clearRuntimeCache() {
         moduleCache.clear();
         esmRecordCache.clear();

@@ -9,10 +9,12 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * 适配器目录条目：携带 {@link JSTypeAdapter} 的目标类型、声明的输入形状与优先级。
+ * An adapter catalog entry: the target type of a {@link JSTypeAdapter}, its declared input shapes
+ * and its precedence.
  *
- * <p>纯内存传输（不序列化），由 {@code NekoScriptCatalog.adapters()} 构建，
- * 经 {@code NekoScriptCatalogSnapshot} 传给 probe，由 {@code AdapterAliasGenerator} 消费。
+ * <p>It stays in memory and is never serialized. {@code NekoScriptCatalog.adapters()} builds these
+ * entries, {@code NekoScriptCatalogSnapshot} hands them to the probe, and
+ * {@code AdapterAliasGenerator} consumes them.
  */
 public record AdapterCatalogEntry(
         Class<?> targetType,

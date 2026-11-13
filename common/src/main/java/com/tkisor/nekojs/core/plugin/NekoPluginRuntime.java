@@ -41,11 +41,14 @@ import java.util.Map;
 import java.util.function.Consumer;
 
 /**
- * bootstrap 的结果容器：持有全部扩展点产物（{@code pointId → finisher 产物}），
- * 公开访问器均为产物的类型化派生视图。
+ * Result container of a bootstrap: it holds every extension point product, keyed from pointId
+ * to the finisher product, and its public accessors are typed views derived from those
+ * products.
  *
- * <p>runtime 不再参与收集（收集由 {@link NekoPluginBootstrap} 的点优先执行序完成），
- * 仅消费不可变产物；除少量装配副作用（如 {@code publishRecipeSchemaOverrides}）外构造后只读。
+ * <p>The runtime no longer collects anything; {@link NekoPluginBootstrap} does that in
+ * point-first execution order, and the runtime only consumes the immutable products. Apart
+ * from a few assembly side effects (such as {@code publishRecipeSchemaOverrides}) it is
+ * read-only after construction.
  */
 public final class NekoPluginRuntime implements IPluginRuntime {
     private static NekoPluginRuntime current;
@@ -163,9 +166,11 @@ public final class NekoPluginRuntime implements IPluginRuntime {
         if (!snapshots.isEmpty()) {
             ManagedCallbackSchemaRegistry.install(snapshots);
         }
-        // 事件回调 schema：从运行时 EventGroup 反射派生（替代从 portable-core JSON events 读取）。
-        // ContractEvent 的 payload 字段从 bus.eventType() 反射，字段名跨平台由 mixin 注入的
-        // neko$ 别名统一（如 BlockEventExtension.neko$getLevel）。平台反射仅作补充（见 EventCallbackSourceValidator）。
+        // Event callback schema, derived by reflecting the runtime EventGroups (instead of
+        // reading the portable-core JSON events). ContractEvent payload fields come from
+        // bus.eventType(); field names are made uniform across platforms by mixin-injected
+        // neko$ aliases (for example BlockEventExtension.neko$getLevel). Platform reflection
+        // only supplements this (see EventCallbackSourceValidator).
         List<NormativeApiContract.ContractEvent> contractEvents =
                 com.tkisor.nekojs.core.api.EventContractReflector.extractEvents(runtime.eventGroups().values());
         ManagedCallbackSchemaRegistry.installContractEvents(contractEvents);
@@ -221,9 +226,10 @@ public final class NekoPluginRuntime implements IPluginRuntime {
     }
 
     /**
-     * 插件经 {@code registerRecipeSchemas} 注册（或覆盖）的配方 schema 快照
-     * （namespace → type → definition，已冻结）。此前只能经
-     * {@code RecipeTypeDefinitionStorage} 的合并视图间接观测，补一个直接访问器。
+     * Snapshot of the recipe schemas that plugins registered or overrode through
+     * {@code registerRecipeSchemas}, frozen, keyed by namespace and then by type. The same data
+     * is reachable through the merged view of {@code RecipeTypeDefinitionStorage}; this
+     * accessor returns it directly.
      */
     public Map<String, Map<String, RecipeTypeDefinition>> recipeSchemaOverrides() {
         return recipeSchemaOverrides;
@@ -301,14 +307,16 @@ public final class NekoPluginRuntime implements IPluginRuntime {
         return apiRuntimeProvider;
     }
 
-    /** 全部扩展点产物（pointId → finisher 产物）的只读视图，自定义扩展点的产物也在其中。 */
+    /** Read-only view of every extension point product (pointId to finisher product), including
+     * the products of custom points. */
     public Map<String, Object> extensionProducts() {
         return extensionProducts;
     }
 
     /**
-     * 按扩展点 id 取产物（含自定义扩展点）。该点未执行、被环境跳过或产物为 null 时返回
-     * {@code null}；产物类型与期望不符时抛 {@link IllegalStateException}。
+     * Returns the product for an extension point id, including custom points. Returns
+     * {@code null} when the point did not run, was skipped by the environment, or produced null;
+     * throws {@link IllegalStateException} when the product type does not match.
      */
     public <R> R extensionProduct(String pointId, Class<R> type) {
         Object product = extensionProducts.get(pointId);
@@ -323,7 +331,8 @@ public final class NekoPluginRuntime implements IPluginRuntime {
         return type.cast(product);
     }
 
-    /** type_docs 与 node_type_docs 两点产物的合并：按 priority 稳定排序（同优先级 type_docs 在前）。 */
+    /** Merges the type_docs and node_type_docs products: stable sort by priority, so entries of
+     * the same priority keep type_docs first. */
     private List<TypeDocCatalogEntry> mergedTypeDocs() {
         List<TypeDocCatalogEntry> merged = new ArrayList<>(
                 typeDocsSnapshot(TypeDocsPoint.ID).docs());
@@ -364,7 +373,8 @@ public final class NekoPluginRuntime implements IPluginRuntime {
         return classDeclarations;
     }
 
-    /** type_docs 与 node_type_docs 两点 builder 契约条目的合并（ticket 15，与手写声明同序合并）。 */
+    /** Merges the builder contract entries of the type_docs and node_type_docs points, in the same
+     * order used for handwritten declarations. */
     private List<BeanMethodProjectionCatalogEntry> mergedBeanMethodProjections() {
         List<BeanMethodProjectionCatalogEntry> merged = new ArrayList<>(
                 typeDocsSnapshot(TypeDocsPoint.ID).beanMethodProjections());

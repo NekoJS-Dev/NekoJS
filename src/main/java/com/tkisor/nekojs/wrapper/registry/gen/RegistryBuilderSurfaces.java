@@ -15,12 +15,13 @@ import net.minecraft.core.Registry;
 import net.minecraft.resources.ResourceKey;
 
 /**
- * typed Builder 契约条目的派生器（ticket 15，AC7/AC9）：
- * 以 {@code registry_types} 扩展点产物里登记的 builder 类为<b>唯一契约输入</b>，
- * 经 {@link RegistryBuilderContract} 反射出成员目录，转成结构化 catalog 条目
- * （{@link RegistryBuilderSurfaceEntry}）交给 probe TS/Python 后端渲染——
- * runtime member（{@link BuilderSurface}）、definition fingerprint、TS/Python
- * declaration 与 contract/golden 全部同源，不手写第二份成员表。
+ * Derives the contract entries for typed builders. The builder classes registered in the
+ * {@code registry_types} extension point output are the <b>only contract input</b>;
+ * {@link RegistryBuilderContract} reflects their members into a catalogue of
+ * {@link RegistryBuilderSurfaceEntry} entries, and the probe TS/Python backends render those.
+ * Runtime members ({@link BuilderSurface}), definition fingerprints, TS/Python declarations and
+ * contract/golden files all come from the same source, so there is no second member table written
+ * by hand.
  *
  * <p>Addon factories without builder class metadata keep untyped event overloads.
  */
@@ -28,7 +29,8 @@ public final class RegistryBuilderSurfaces {
 
     private RegistryBuilderSurfaces() {}
 
-    /** 把 {@code registry_types} 产物派生成结构化契约条目（确定性排序：注册表键 → 类型名）。 */
+    /** Derives the structured contract entries from the {@code registry_types} output (deterministic
+     * order: registry key, then type name). */
     public static List<RegistryBuilderSurfaceEntry> derive(RegistryTypesPoint.RegistryTypes types) {
         List<RegistryBuilderSurfaceEntry> entries = new ArrayList<>();
         var classes = types.builderClasses().values().stream().flatMap(named -> named.values().stream())
@@ -57,7 +59,7 @@ public final class RegistryBuilderSurfaces {
         return List.copyOf(entries);
     }
 
-    /** 登记进 type_docs（NekoRegistryPointsPlugin.registerTypeDocs 调用）。 */
+    /** Registers the derived entries into type_docs; NekoRegistryPointsPlugin.registerTypeDocs calls it. */
     public static void register(TypeDocsRegister registry, RegistryTypesPoint.RegistryTypes types) {
         derive(types).forEach(registry::registerRegistryBuilderSurface);
     }
@@ -128,7 +130,8 @@ public final class RegistryBuilderSurfaces {
                 "Nested food configuration derived from the callback's public host methods."));
     }
 
-    /** 糖方法名（与 RegistryEventJS 的 bySugar 派生同规则：path snake_case → lowerCamelCase）。 */
+    /** Sugar method name, derived by the same rule as RegistryEventJS' bySugar keys: the path in
+     * snake_case becomes lowerCamelCase. */
     private static String sugarOf(ResourceKey<? extends Registry<?>> key) {
         String[] parts = key.identifier().getPath().split("_");
         StringBuilder name = new StringBuilder(parts[0]);

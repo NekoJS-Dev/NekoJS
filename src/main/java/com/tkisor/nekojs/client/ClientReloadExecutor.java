@@ -5,25 +5,30 @@ import net.minecraft.client.Minecraft;
 import com.tkisor.nekojs.platform.compat.McPlatformCompat;
 
 /**
- * CLIENT 脚本 reload 的线程归属：客户端 Context 的所有权线程是客户端主线程
- * （Render 线程）——事件分发、timers flush、F3+T 资源 reload 全在那里。单人游戏中
- * {@code /nekojs reload client} 在集成服务器线程执行，原地 reload 会让同一 Context
- * 被两个线程先后触碰（外部 synchronized 保住了顺序，但每次新增入口都要重新推理）；
- * 这里统一转投客户端主线程，让「CLIENT 的 Context 只有一个所有者线程」结构成立。
+ * Thread ownership for a CLIENT script reload. The client Context is owned by the client main thread
+ * (the render thread): event dispatch, timer flush and the F3+T resource reload all happen there.
+ * In single player, {@code /nekojs reload client} runs on the integrated server thread, and reloading
+ * in place would let two threads touch the same Context one after the other (the external synchronized
+ * keeps the order, but every new entry point has to reason about it again). This class hands the work
+ * to the client main thread instead, so a CLIENT Context has exactly one owner thread.
  *
- * <p>dedicated server 上 {@link #isClientDist()} 为 false，调用方不会走 {@link #execute}；
- * {@code Minecraft} 只在 execute 内被触碰，本类在服务器侧类初始化安全。
+ * <p>On a dedicated server {@link #isClientDist()} is false and callers do not go through
+ * {@link #execute}; {@code Minecraft} is only touched inside execute, so initializing this class is
+ * safe on the server side.
  */
 public final class ClientReloadExecutor {
 
     private ClientReloadExecutor() {}
 
     public static boolean isClientDist() {
-        // dist 访问器的版本差异由 McPlatformCompat 门面承载（本文件 neoforge 面）
+        // McPlatformCompat hides the per-version differences of the dist accessor (this file is the neoforge side)
         return McPlatformCompat.get().isClientDist();
     }
 
-    /** 转投客户端主线程执行；命令侧立即返回，结果反馈由 reload 流程自身的广播/日志承担。 */
+    /**
+     * Runs the task on the client main thread. The command side returns immediately; the reload
+     * flow reports the result through its own broadcast and logs.
+     */
     public static void execute(Runnable task) {
         Minecraft.getInstance().execute(task);
     }

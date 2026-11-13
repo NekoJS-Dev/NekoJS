@@ -12,8 +12,9 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 加载 {@code <game>/nekojs/config/probe.toml}，模式与 {@code SandboxConfigLoader} 一致：
- * {@code CommentedFileConfig} + autosave + 按需写入默认值与注释；任何异常回退 {@link ProbeConfig#defaultConfig()}。
+ * Loads {@code <game>/nekojs/config/probe.toml} the same way {@code SandboxConfigLoader} does:
+ * {@code CommentedFileConfig} with autosave, writing default values and their comments when a key is
+ * missing. Any exception falls back to {@link ProbeConfig#defaultConfig()}.
  */
 public final class ProbeConfigLoader {
 
@@ -37,10 +38,11 @@ public final class ProbeConfigLoader {
                     " Package whitelist applied to Java class scanning. Entries are literal package prefixes (fqn startsWith 'prefix.') or regexes written as 're:<pattern>' (full-match against the fqn, e.g. re:com\\.example\\..*\\.api\\..*). If non-empty, FULLY OVERRIDES the platform defaults. Empty = use defaults (java, com.tkisor.nekojs, plus the platform's MC/loader packages).");
             setup(config, "scan.extraIncludePackages", List.of(),
                     " Extra package rules APPENDED to the effective whitelist (literal prefixes or 're:' regexes). Use this to add e.g. com.mojang or a mod's packages without retyping the defaults.");
-            // 默认值与 ProbeConfig.ScanConfig.defaultScan() 共用同一来源（DEFAULT_EXCLUDE_PACKAGES，
-            // 镜像 ClassFilter 整包黑名单）：否则新写出的 probe.toml 会拿到空 exclude，绕过默认排除。
-            // setup 只在键缺失时写默认值——已有文件里显式的空列表（excludePackages = []）是用户
-            // 的覆盖语义，保持为空（exclude 关闭），不会被默认值回填。
+            // The defaults come from the same source as ProbeConfig.ScanConfig.defaultScan()
+            // (DEFAULT_EXCLUDE_PACKAGES, which mirrors the ClassFilter whole-package blacklist). Otherwise a
+            // freshly written probe.toml would get an empty exclude list and bypass the default excludes.
+            // setup only writes a default when the key is missing. An explicit empty list in an existing
+            // file (excludePackages = []) is the user's override: it stays empty and excludes are off.
             setup(config, "scan.excludePackages", ProbeConfig.ScanConfig.defaultScan().excludePackages(),
                     " Package rules to EXCLUDE even when matched by the whitelist (deny-list, evaluated last; literal prefixes or 're:' regexes). Defaults mirror the ClassFilter package blacklist (nekojs core, java.desktop UI, JNDI/RMI, JDBC, Graal/Truffle) - scripts can never Java.type classes under those prefixes. Set to an explicit empty list [] to disable exclusions.");
             setup(config, "scan.forceScanMods", List.of("minecraft"),
@@ -70,7 +72,8 @@ public final class ProbeConfigLoader {
                     languages);
         } catch (Throwable e) {
             if (java.nio.file.Files.exists(probeConfig)) {
-                // 文件存在但解析失败 = probe.toml 损坏：给用户明确提示（缺失时静默用默认是正常的）
+                // The file exists but does not parse, so probe.toml is corrupt and the user gets an explicit warning.
+                // A missing file falling back to the defaults silently is normal.
                 NekoJS.LOGGER.warn("probe.toml is corrupt ({}); falling back to the default probe config. "
                         + "Fix or delete the file to silence this warning.", probeConfig, e);
             }
@@ -84,9 +87,10 @@ public final class ProbeConfigLoader {
     }
 
     /**
-     * 旧 {@code ProbeOrchestrator.isRelevantClass(String)} 的等价默认判定：
-     * 用 {@link ProbeConfig#defaultConfig()} + 当前平台默认包做过滤。
-     * 供不便拿到 {@link ProbeContext} 的旧代码路径（如 {@code EventDeclarationGenerator}）过渡使用。
+     * Equivalent default filter of {@code ProbeOrchestrator.isRelevantClass(String)}: it filters a fully
+     * qualified class name with {@link ProbeConfig#defaultConfig()} and the current platform default
+     * packages. It serves call paths that cannot easily obtain a {@link ProbeContext}, such as
+     * {@code EventDeclarationGenerator}.
      */
     public static boolean isRelevantClassDefault(String fqn) {
         return ProbeConfig.defaultConfig().isRelevantClass(fqn, platformDefaultPackages());
@@ -100,8 +104,10 @@ public final class ProbeConfigLoader {
     }
 
     /**
-     * 直接把 {@code enabled} 写进 probe.toml（与 {@link #load} 相同的 builder 写法：sync + preserveInsertionOrder + autosave）。
-     * 供 {@code /nekojs probe enable|disable} 命令经 {@link ProbeCoordinator#setEnabled} 调用；异常向上抛（调用方 debug 吞掉）。
+     * Writes {@code enabled} directly into probe.toml, using the same builder options as {@link #load}
+     * (sync, preserveInsertionOrder, autosave). The {@code /nekojs probe enable|disable} command reaches
+     * it through {@link ProbeCoordinator#setEnabled}. Exceptions propagate; the caller swallows them at
+     * debug level.
      */
     static void setEnabled(Path configFile, boolean enabled) {
         try (CommentedFileConfig config = CommentedFileConfig.builder(configFile)
@@ -124,8 +130,10 @@ public final class ProbeConfigLoader {
     }
 
     /**
-     * 解析 {@code [languages.<languageId>]} 表：先取 {@code languages} 子表，再遍历其键（每个值应为嵌套 Config）。
-     * 键不存在（或值不是表）时返回空 Map——语言级配置全部缺省，回退到「输出目录 = 语言 id / 注册表默认 backend」。
+     * Parses the {@code [languages.<languageId>]} table: takes the {@code languages} sub-table and walks
+     * its keys, each of which should hold a nested Config. Returns an empty Map when the key is missing
+     * or its value is not a table, which leaves every language option at its default (output directory =
+     * language id, backend = registry default).
      */
     private static Map<String, ProbeConfig.LanguageConfig> languages(CommentedFileConfig config) {
         Object raw = config.get("languages");
@@ -135,7 +143,7 @@ public final class ProbeConfigLoader {
         Map<String, ProbeConfig.LanguageConfig> result = new LinkedHashMap<>();
         for (Config.Entry entry : table.entrySet()) {
             if (!(entry.getValue() instanceof Config langTable)) {
-                continue; // 值不是表（如误写成字符串）→ 忽略该语言条目
+                continue; // The value is not a table (a string was written by mistake), so this language entry is ignored
             }
             Object backendRaw = langTable.get("backend");
             Object outputDirRaw = langTable.get("outputDir");

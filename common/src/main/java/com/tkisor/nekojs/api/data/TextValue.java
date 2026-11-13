@@ -19,7 +19,8 @@ public sealed interface TextValue permits TextValue.Literal, TextValue.Translata
         return new Translatable(key, null, arguments);
     }
 
-    /** 可翻译文本带 fallback：翻译键缺失时显示 fallback（null 表示无 fallback）。 */
+    /** A translatable text with a fallback: when the translation key is missing, the fallback is
+     * shown. A {@code null} fallback means there is none. */
     static TextValue translatable(String key, String fallback, List<TextArgument> arguments) {
         return new Translatable(key, fallback, arguments);
     }
@@ -52,14 +53,15 @@ public sealed interface TextValue permits TextValue.Literal, TextValue.Translata
         return new Sequence(flattened);
     }
 
-    /** 给 {@code value} 套上一层 {@link TextStyle}。 */
+    /** Wraps {@code value} in a {@link TextStyle}. */
     static TextValue styled(TextValue value, TextStyle style) {
         Objects.requireNonNull(value, "value");
         Objects.requireNonNull(style, "style");
         if (style.isEmpty()) {
             return value;
         }
-        // 透传空值；保留 Styled 包装即使内部为空，以便样式信息（如纯点击事件）不丢失
+        // Pass empty values through, but keep the Styled wrapper even when the inner value is empty,
+        // so style information such as a click event alone is not lost
         return new Styled(value, style);
     }
 
@@ -90,7 +92,8 @@ public sealed interface TextValue permits TextValue.Literal, TextValue.Translata
         }
     }
 
-    /** 按键绑定（如 {@code "key.attack"}），渲染时解析为玩家当前的按键名。 */
+    /** A key binding such as {@code "key.attack"}. It resolves to the player's current key name when
+     * rendered. */
     record Keybind(String keybind) implements TextValue {
         @Override
         public boolean isEmpty() {
@@ -98,7 +101,8 @@ public sealed interface TextValue permits TextValue.Literal, TextValue.Translata
         }
     }
 
-    /** 记分板分数：{@code name} 是持有者名（可填 {@code "*"} 取触发者），{@code objective} 是目标名。 */
+    /** A scoreboard score. {@code name} is the holder name ({@code "*"} means the triggering
+     * entity) and {@code objective} is the objective name. */
     record Score(String name, String objective) implements TextValue {
         @Override
         public boolean isEmpty() {
@@ -106,7 +110,7 @@ public sealed interface TextValue permits TextValue.Literal, TextValue.Translata
         }
     }
 
-    /** 实体选择器（如 {@code "@p"}、{@code "@a[type=zombie]"}）。 */
+    /** An entity selector such as {@code "@p"} or {@code "@a[type=zombie]"}. */
     record Selector(String pattern) implements TextValue {
         @Override
         public boolean isEmpty() {
@@ -132,8 +136,9 @@ public sealed interface TextValue permits TextValue.Literal, TextValue.Translata
     }
 
     /**
-     * 带 {@link TextStyle} 的文本（粗体/颜色/点击事件等）。包装一个基础 {@link TextValue}
-     * （字面量 / 可翻译 / 序列）。序列化到 MC 组件时，把样式应用到对应的组件上。
+     * Text with a {@link TextStyle} (bold, color, click events and so on). It wraps a base
+     * {@link TextValue} (literal, translatable or sequence). When it is serialized to an MC
+     * component, the style is applied to that component.
      */
     record Styled(TextValue value, TextStyle style) implements TextValue {
         public Styled {

@@ -98,7 +98,8 @@ class NekoModuleResolverTest {
     void resolveForRequireRejectsUnknownBareSpecifier() throws Exception {
         NekoModuleResolver resolver = resolverFor(gameDir);
 
-        // require.resolve 语义：bare 未命中抛 MODULE_NOT_FOUND，而不是降级为 SPECIAL
+        // require.resolve semantics: an unmatched bare specifier throws MODULE_NOT_FOUND instead of falling
+        // back to SPECIAL.
         IOException error = assertThrows(IOException.class,
                 () -> resolver.resolveForRequire("nekojs/server_scripts/main.js", "unknown-package"));
         assertTrue(error.getMessage().contains("unknown-package"), error::getMessage);
@@ -111,11 +112,11 @@ class NekoModuleResolverTest {
         Files.createDirectories(module.getParent());
         Files.writeString(module, "export const jsx = () => null;");
 
-        // builtin / java: 是合法 special，require.resolve 应正常返回
+        // builtin and java: are valid special specifiers, so require.resolve returns them normally.
         assertEquals("fs", resolver.resolveForRequire("nekojs/server_scripts/main.js", "fs").specifier());
         assertEquals("java:example/Widget",
                 resolver.resolveForRequire("nekojs/server_scripts/main.js", "java:example/Widget").specifier());
-        // 文件模块（含 node_modules 命中）正常解析
+        // A file module resolves normally, including a hit inside node_modules.
         assertEquals(NekoModuleKind.SCRIPT,
                 resolver.resolveForRequire("nekojs/server_scripts/main.js", "nekojs/user-lib").kind());
     }

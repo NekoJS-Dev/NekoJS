@@ -8,7 +8,7 @@ import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.CommandEvent;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
 
-/** 命令事件组（server 脚本）：命令注册与命令执行。 */
+/** Command event group (server scripts): command registration and command execution. */
 public interface CommandEvents {
     EventGroup GROUP = EventGroup.of("CommandEvents");
 

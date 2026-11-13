@@ -1,7 +1,8 @@
-// fabric 节点本地 registration-once 测试（票 17）：`//? if fabric` 守卫对 active 节点
-// （26.1.2 NeoForge，直编共享树磁盘）是惰性注释，会在错误平台上编译执行，所以放节点本地
-// test 树（标准 source set 布局，天然只属于本节点）。两 fabric 节点各一份同名同体测试
-// （FabricVersionCompatWiringTest 的节点分发先例）。
+// Fabric node-local registration-once test. The `//? if fabric` guard is a lazy comment for the
+// active node (26.1.2 NeoForge, which compiles the shared tree from disk), so it would compile and
+// run on the wrong platform; the test therefore lives in the node-local test tree, which the
+// standard source set layout mounts for this node only. Both fabric nodes carry one copy of the
+// same-body test, following the FabricVersionCompatWiringTest precedent.
 package com.tkisor.nekojs.fabric;
 
 import com.tkisor.nekojs.network.PlayPacketDispatchers;
@@ -12,18 +13,23 @@ import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 /**
- * 票 17 AC1 的 fabric 侧 JVM fixture：{@link FabricPlayNetwork#registerServer()} 的
- * payload 类型注册是「平台只允许一次」——第二次注册同一 payload type 被 fabric-api
- * 以 {@link IllegalArgumentException} 拒绝（duplicate registration）。这把「重复注册不可能
- * 静默发生」钉在平台 API 契约上；「registerServer 只从 mod entrypoint 调用一次」由共享树
- * {@code NetworkRegistrationSourceTraceTest} 的源码 trace 钉住，平台 event/enipoint 的
- * 单次触发属 loader 契约（REPORT characterization）。
+ * Fabric JVM fixture for the first registration-once point. Registering a payload type through
+ * {@link FabricPlayNetwork#registerServer()} is allowed once per platform: a second registration of
+ * the same payload type is rejected by fabric-api with {@link IllegalArgumentException} (duplicate
+ * registration). That pins "duplicate registration cannot happen silently" to the platform API
+ * contract. "registerServer is called exactly once, from the mod entrypoint" is pinned by the
+ * source trace in {@code NetworkRegistrationSourceTraceTest} in the shared tree; a single fire of
+ * the platform event/endpoint is a loader contract (report characterization).
  *
- * <p>本测试只触碰 fabric-api 的静态注册表（测试 JVM 私有），不启动游戏。
+ * <p>This test only touches the fabric-api static registry, which is private to the test JVM, and
+ * never starts the game.
  */
 class FabricNetworkRegistrationOnceTest {
 
-    /** registerServer 会把真实 FabricDispatcher 装进全局 PlayPacketDispatchers——测后恢复 NOOP，不留静态装配泄漏。 */
+    /**
+     * registerServer installs the real FabricDispatcher into the global PlayPacketDispatchers, so the
+     * test restores NOOP afterwards and leaves no static wiring behind.
+     */
     @AfterEach
     void restoreNoopDispatcher() {
         PlayPacketDispatchers.install(PlayPacketDispatchers.NOOP);

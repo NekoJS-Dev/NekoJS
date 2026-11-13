@@ -20,17 +20,19 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * 票 16 AC12：隔离测试 harness 可运行的候选计划 fixture——演示类型直达入口、
- * setter/property parity、同 key 冲突与 stale 查询。
+ * Candidate plan fixture that runs on the isolated test harness: it demonstrates the typed entry
+ * points, setter/property parity, same-key conflicts and stale queries.
  *
- * <p>示例脚本经真实 GraalJS + 事务式 reload 管线跑通。<b>仅本地 inert 计划、尚未公开激活</b>
- * ——不作为生产脚本使用指南；生产示例与迁移材料归票 21（事务/同步 gate 通过后发布）。
+ * <p>The example script runs through real GraalJS and the transactional reload pipeline. It only
+ * produces local inert plans and is not active in public, so it is not a guide for production
+ * scripts; production examples and migration material ship after the transaction and sync gate
+ * passes.
  */
 class DynamicRegistryInertPlanExampleTest {
 
     /**
-     * 与 baseline examples/dynamic-registry-inert-plan.js 的脚本段一致（不含注释头；人工同步，
-     * 见类注释「联动口径」）。
+     * Matches the script section of the baseline examples/dynamic-registry-inert-plan.js, without
+     * its comment header. Kept in sync by hand; see the sync notes in the class Javadoc.
      */
     static final String EXAMPLE_SCRIPT = """
             DynamicRegistryEvents.dynamicRegistry(event => {
@@ -63,7 +65,7 @@ class DynamicRegistryInertPlanExampleTest {
     @Test
     void exampleRunsThroughTheIsolatedHarnessAndDemosAllFourScenarios() throws Exception {
         try (FacadeTestHarness harness = new FacadeTestHarness(ScriptType.SERVER)) {
-            // ---- 场景 1+2：类型直达入口 + setter/property parity ----
+            // ---- Scenarios 1 and 2: typed entry points and setter/property parity ----
             harness.writeScript("dynamic_registry.js", EXAMPLE_SCRIPT);
             harness.manager.discoverScripts();
             harness.manager.loadScripts();
@@ -79,13 +81,13 @@ class DynamicRegistryInertPlanExampleTest {
             assertTrue(harness.facade.store().exposedEntry("minecraft:mob_effect|mymod:wither_touch")
                     .definition().hasReading("color", "9109504"), "0x8B0000 = 9109504（ARGB int）");
 
-            // 重复 reload 相同定义：同 fingerprint → 重 claim，不冲突
+            // Reloading the same definitions again gives the same fingerprints, so claims are renewed without conflict.
             harness.manager.reloadScripts();
             assertEquals(4, harness.facade.store().lastCommittedBatch().size(), "同定义重复 reload 幂等");
             assertEquals(2, harness.facade.store().committedGeneration(),
                     "store 批次 generation 随每次成功 commit 递增（初次=1，本次 reload=2）");
 
-            // ---- 场景 2b：setter/property parity（同一 id、同一定义、不同写法） ----
+            // ---- Scenario 2b: setter/property parity (same id, same definition, different syntax) ----
             List<String> rubyPropertyReadings = ruby.readings();
             harness.writeScript("dynamic_registry.js", """
                     DynamicRegistryEvents.dynamicRegistry(event => {
@@ -103,7 +105,7 @@ class DynamicRegistryInertPlanExampleTest {
                     "同 id 同定义换写法 ⇒ fingerprint 不变（重 claim，不冲突）");
             assertEquals(3, harness.facade.store().committedGeneration(), "parity 轮成功 commit");
 
-            // ---- 场景 3：同 key 冲突（第一版整批失败，旧 active 继续服务） ----
+            // ---- Scenario 3: same-key conflict (the whole batch fails, the old active definition keeps serving) ----
             harness.writeScript("dynamic_registry.js", """
                     DynamicRegistryEvents.dynamicRegistry(event => {
                       event.item('mymod:ruby', b => { b.maxStackSize = 32; b.rarity = 'epic' });
@@ -119,7 +121,7 @@ class DynamicRegistryInertPlanExampleTest {
                     .definition().hasReading("maxStackSize", "16"), "旧 active（16）继续服务");
             assertEquals(3, harness.facade.store().committedGeneration(), "冲突轮只耗批次号不提交");
 
-            // ---- 场景 4：stale 查询（脚本不再声明 → stale/retired，不物理删除） ----
+            // ---- Scenario 4: stale query (the script no longer declares it, so it becomes stale/retired, not deleted) ----
             harness.writeScript("dynamic_registry.js", """
                     DynamicRegistryEvents.dynamicRegistry(event => {
                       event.item('mymod:ruby', b => { b.maxStackSize = 16; b.rarity = 'epic' });
@@ -134,7 +136,7 @@ class DynamicRegistryInertPlanExampleTest {
                     "retired 查询可观察");
             assertFalse(harness.facade.store().claimOf(DynamicDefinitionType.MOB_EFFECT, "mymod:wither_touch")
                     .stale(), "仍声明的项 claim 刷新");
-            // 批次号：初次 1 → 幂等 2 → parity 3 → 冲突轮 4（未提交）→ 本轮 5
+            // Batch numbers: initial 1, idempotent 2, parity 3, conflict round 4 (not committed), this round 5.
             assertEquals(5, harness.facade.store().committedGeneration(),
                     "store 批次 generation 只随成功 commit 推进（冲突轮未推进 committed）");
         }

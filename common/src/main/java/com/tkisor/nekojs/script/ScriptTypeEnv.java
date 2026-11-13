@@ -12,17 +12,18 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 
 /**
- * {@link ScriptType} 的引擎侧环境（契约抽薄，ADR-0007）：脚本目录、logger 与
- * 日志文件的解析原先内嵌在 {@code ScriptType}（枚举常量类初始化期捕获
- * {@code NekoJSPaths}），现全部迁到本引擎类——契约枚举只留名称与谓词语义，
- * 引擎包依赖归零后即可平移 common-api。
+ * Engine-side environment for {@link ScriptType}. Script directories, loggers and log file
+ * resolution used to live inside {@code ScriptType} (the enum constant class captured
+ * {@code NekoJSPaths} during initialization) and now all live in this engine class. The contract
+ * enum keeps only names and predicate semantics, so the engine package can move to common-api
+ * once its dependencies are gone.
  */
 public final class ScriptTypeEnv {
 
     private ScriptTypeEnv() {
     }
 
-    /** 该脚本类型的脚本目录（{@code nekojs/<type>_scripts}）。 */
+    /** Returns the script directory for a script type ({@code nekojs/<type>_scripts}). */
     public static Path scriptsDir(ScriptType type) {
         var paths = NekoJSPaths.get();
         return switch (type) {
@@ -33,12 +34,12 @@ public final class ScriptTypeEnv {
         };
     }
 
-    /** 该脚本类型的 logger。 */
+    /** Returns the logger for a script type. */
     public static Logger logger(ScriptType type) {
         return NekoJSLoggers.createLogger(type.name);
     }
 
-    /** 该脚本类型的日志文件（logs/nekojs/<type>.log，旧 .txt 自动迁移）。 */
+    /** The log file for a script type (logs/nekojs/<type>.log); an older .txt file is migrated. */
     public static Path logFile(ScriptType type) {
         var dir = Platform.getGameDir().resolve("logs/nekojs");
         var file = dir.resolve(type.name + ".log");
@@ -64,7 +65,7 @@ public final class ScriptTypeEnv {
         return file;
     }
 
-    /** 按脚本文件绝对路径创建平台无关标识符（原 {@code ScriptType#makeId}）。 */
+    /** Creates a platform-independent id for a script file from its absolute path ({@code ScriptType#makeId}). */
     public static ScriptId makeId(ScriptType type, Path file) {
         Path relativePath = scriptsDir(type).relativize(file);
         String cleanPath = relativePath.toString().replace('\\', '/');

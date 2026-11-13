@@ -16,7 +16,8 @@ public interface BlockExtension extends BlockSpec {
         return BuiltInRegistries.BLOCK.getKey(self()).toString();
     }
 
-    /** 返回该方块的描述键。不进 spec——NF 原生 getName() 零参碰撞。 */
+    /** Returns the description key of this block. It is not exposed to scripts because NF's native
+     * zero-argument getName() collides with it. */
     default String neko$getName() {
         return self().getDescriptionId();
     }

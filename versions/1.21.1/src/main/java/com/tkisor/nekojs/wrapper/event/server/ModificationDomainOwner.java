@@ -1,6 +1,7 @@
-// 1.21.1 实现，与版本树 src/ 下的同名 26.x 文件成对（block 半边是 26.x 独有——本节点
-// 无 BlockEvents.modification 总线；组件发布走 Item.components 反射字段；
-// fireResistant 是 FIRE_RESISTANT:Unit 组件，无需 damage type registry）。
+// 1.21.1 implementation, paired with the 26.x file of the same name under the version tree's src/.
+// The block half exists only on 26.x: this node has no BlockEvents.modification bus, publishes
+// components through the reflective Item.components field, and models fireResistant as the
+// FIRE_RESISTANT:Unit component, so no damage type registry is needed.
 package com.tkisor.nekojs.wrapper.event.server;
 
 import com.tkisor.nekojs.NekoJS;
@@ -24,44 +25,49 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Item modification 的 domain owner 与平台 Adapter（ticket 39，1.21.1 成对文件）。
- * 语义契约见 26.x 同名文件；本节点的差异（见 ticket 39 REPORT 五节点差异表）：
+ * Domain owner and platform adapter for item modification; the 1.21.1 twin of the 26.x file,
+ * which carries the shared semantics. This node differs in:
  * <ul>
- *   <li>无 block 半边（1.21.1 无 {@code BlockEvents.modification}）；</li>
- *   <li>组件发布走反射写 {@code Item#components}（26.x 是
- *       {@code Holder.Reference#bindComponents}）；</li>
- *   <li>fireResistant 是 {@code FIRE_RESISTANT:Unit} 组件（26.x 是 DAMAGE_RESISTANT
- *       + IS_FIRE HolderSet，需要 server 的 damage type registry）——本节点无需
- *       server 绑定，{@link #bindServer(MinecraftServer)} 只保留对称生命周期。</li>
+ *   <li>no block half (1.21.1 has no {@code BlockEvents.modification});</li>
+ *   <li>components are published by writing the {@code Item#components} field reflectively
+ *       (26.x calls {@code Holder.Reference#bindComponents});</li>
+ *   <li>fireResistant is the {@code FIRE_RESISTANT:Unit} component (26.x uses DAMAGE_RESISTANT
+ *       plus an IS_FIRE HolderSet, which needs the server's damage type registry). This node
+ *       needs no server binding, so {@link #bindServer(MinecraftServer)} only keeps the
+ *       lifecycle symmetric.</li>
  * </ul>
  */
 public final class ModificationDomainOwner implements CandidateDomainCollector, ModificationApplier, AutoCloseable {
 
-    /** 收集器标识（与 {@code ModificationCandidatePlan.DOMAIN} 对齐）。 */
+    /** Collector id, aligned with {@code ModificationCandidatePlan.DOMAIN}. */
     public static final String DOMAIN = ModificationCandidatePlan.DOMAIN;
 
-    /** 与 26.x 对齐的组件上限（1.21.1 无 ABSOLUTE_MAX_STACK_SIZE 常量，取同值）。 */
+    /** Stack size limit aligned with 26.x; 1.21.1 has no ABSOLUTE_MAX_STACK_SIZE constant, so the
+     *  same value is used here. */
     private static final int MAX_STACK_SIZE_LIMIT = 99;
 
-    /** item 原始组件基线（进程级例外：默认组件注册期冻结；实例字段，root 持有）。 */
+    /** Original component baseline per item (process-wide exception: frozen while the default
+     *  components are registered; an instance field owned by the root). */
     private final Map<String, DataComponentMap> itemBaselines = new java.util.LinkedHashMap<>();
-    /** 最近一次结局（诊断公开面：区分 active / blocked / recovery-failed / restored）。 */
+    /** Outcome of the last run, exposed for diagnostics: tells active, blocked, recovery-failed and
+     *  restored apart. */
     private volatile Diagnostics lastDiagnostics = new Diagnostics(Outcome.INITIAL, "none", 0, 0, List.of(), null);
-    /** 最近成功应用的计划指纹（初始 generation 收集的等价跳过依据）。 */
+    /** Fingerprint of the plan that was applied last successfully; the initial generation uses it to
+     *  skip an identical plan. */
     private volatile String lastAppliedFingerprint;
 
     public ModificationDomainOwner() {
     }
 
-    /** 对称生命周期占位（本节点 fireResistant 无 registry 依赖）。 */
+    /** Symmetric lifecycle placeholder: fireResistant on this node has no registry dependency. */
     public void bindServer(MinecraftServer server) {
     }
 
-    /** 对称生命周期占位。 */
+    /** Symmetric lifecycle placeholder. */
     public void clearServer() {
     }
 
-    // ---- CandidateDomainCollector（DOMAIN_PLAN 阶段） ----
+    // ---- CandidateDomainCollector (DOMAIN_PLAN stage) ----
 
     @Override
     public String domain() {
@@ -80,9 +86,9 @@ public final class ModificationDomainOwner implements CandidateDomainCollector, 
         handle.registerPlan(plan);
     }
 
-    // ---- 初始 generation（服务器启动收集点） ----
+    // ---- Initial generation (collection point at server startup) ----
 
-    /** 初始 generation 的收集 + 预检 + 应用（与 26.x 同语义；无 block 半边）。 */
+    /** Collects, preflights and applies the initial generation (same semantics as 26.x; no block half). */
     public void applyInitialPlan(MinecraftServer server) {
         bindServer(server);
         ModificationCandidatePlan plan = new ModificationCandidatePlan(this);
@@ -112,7 +118,7 @@ public final class ModificationDomainOwner implements CandidateDomainCollector, 
         apply(plan.declarations(), "startup");
     }
 
-    // ---- ModificationApplier：联合预检 / 应用 ----
+    // ---- ModificationApplier: preflight and apply ----
 
     @Override
     public String adapterId() {
@@ -159,8 +165,10 @@ public final class ModificationDomainOwner implements CandidateDomainCollector, 
     }
 
     /**
-     * 应用（commit 点 / 初始 generation）：恢复全部 NekoJS 持有基线 → 按声明顺序应用
-     * 完整新计划。意外抛出时尽力恢复、诊断 RECOVERY_FAILED、异常上抛（与 26.x 同）。
+     * Applies a plan, at the commit point or for the initial generation: restores every baseline
+     * NekoJS holds, then applies the complete new plan in declaration order. If something throws
+     * unexpectedly, it restores as far as it can, records RECOVERY_FAILED and rethrows the
+     * exception (same as 26.x).
      */
     @Override
     public void apply(List<ModificationDeclaration> declarations) {
@@ -197,7 +205,8 @@ public final class ModificationDomainOwner implements CandidateDomainCollector, 
             } catch (Throwable suppressed) {
                 t.addSuppressed(suppressed);
             }
-            // 失败批次不产生「最近成功应用」：复位指纹（与 26.x 同语义，见 AC7 注释）
+            // A failed batch does not count as a successful application, so reset the fingerprint
+            // (same semantics as 26.x).
             lastAppliedFingerprint = null;
             lastDiagnostics = new Diagnostics(Outcome.RECOVERY_FAILED, source,
                     countKind(declarations, "item"), 0, List.copyOf(restored), String.valueOf(t));
@@ -253,14 +262,15 @@ public final class ModificationDomainOwner implements CandidateDomainCollector, 
         return (int) declarations.stream().filter(d -> d.kind().equals(kind)).count();
     }
 
-    // ---- 诊断（公开观察面） ----
+    // ---- Diagnostics (public view) ----
 
-    /** 最近一次收集/应用结局。 */
+    /** Outcome of the last collection or application. */
     public Diagnostics lastDiagnostics() {
         return lastDiagnostics;
     }
 
-    /** root close：恢复全部持有基线并清空（独立测试 root 从干净状态开始）。 */
+    /** Closes the root: restores every held baseline and clears them, so an independent test root
+     *  starts from a clean state. */
     @Override
     public void close() {
         try {
@@ -274,12 +284,12 @@ public final class ModificationDomainOwner implements CandidateDomainCollector, 
         }
     }
 
-    /** 修改域结局（与 26.x 同一枚举；block 计数恒 0）。 */
+    /** Modification outcomes, the same enum as 26.x; the block count is always 0 on this node. */
     public enum Outcome {
         INITIAL, APPLIED, RESTORED, SKIPPED_IDENTICAL, BLOCKED, RECOVERY_FAILED
     }
 
-    /** 修改域最近一次结局的观察记录（公开诊断面）。 */
+    /** Record of the most recent modification outcome, exposed as diagnostics. */
     public record Diagnostics(Outcome outcome, String source, int itemDeclarations, int blockDeclarations,
                               List<String> restoredTargets, String detail) {
     }

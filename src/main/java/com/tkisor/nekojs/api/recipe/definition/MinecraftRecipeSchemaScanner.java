@@ -1,6 +1,7 @@
 //? if neoforge {
 //~ mc_legacy_api
-// 本文件启用文件级 mc_legacy_api（26.x 活形态无 .identifier()，1.21.1 求值形态无 .identifier()）。
+// This file turns on file-level mc_legacy_api: the 26.x live form has no .identifier(), and the
+// 1.21.1 evaluated form has none either.
 package com.tkisor.nekojs.api.recipe.definition;
 
 import com.mojang.serialization.Codec;

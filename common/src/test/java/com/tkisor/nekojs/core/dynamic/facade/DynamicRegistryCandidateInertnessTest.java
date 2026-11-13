@@ -23,16 +23,19 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * 票 16 AC1/AC7 的 inert 候选行为（真实 GraalJS + 事务式 reload + 候选域收集器挂入
- * {@code ScriptManager}）：
+ * Inert candidate behavior with real GraalJS, a transactional reload, and the candidate domain collector
+ * plugged into {@code ScriptManager}:
  * <ul>
- *   <li>成功 reload 的候选期收集<b>可观察</b>（{@link DynamicRegistryFacadeRuntime#lastCandidateCollection()}）
- *       且只在 commit 点发布；</li>
- *   <li>失败候选既<b>不挂生产 callback</b>（毒化批次的监听器从未上总线）也<b>不写账本</b>
- *       （store 零写入、旧 active 继续服务、修正后可再成功）；</li>
- *   <li>候选期收集器自身崩坏按 {@code domain-plan-collection:<domain>} 归因为候选失败
- *       （不静默降级成空计划）；</li>
- *   <li>域参与范围：SERVER-only（CLIENT 候选跳过）、未使用域零参与。</li>
+ *   <li>A successful reload makes the candidate collection <b>observable</b> through
+ *       {@link DynamicRegistryFacadeRuntime#lastCandidateCollection()}, and it is published only at the
+ *       commit point.</li>
+ *   <li>A failed candidate <b>never attaches its production callback</b> (the listeners of a poisoned batch
+ *       never reach the bus) and <b>never writes the ledger</b>: the store is untouched, the previous active
+ *       state keeps serving, and a corrected reload succeeds again.</li>
+ *   <li>A crash inside the candidate collector is attributed to the candidate failure as
+ *       {@code domain-plan-collection:<domain>} instead of silently degrading to an empty plan.</li>
+ *   <li>Domain participation is SERVER-only (CLIENT candidates are skipped), and an unused domain takes no
+ *       part.</li>
  * </ul>
  */
 class DynamicRegistryCandidateInertnessTest {
@@ -98,14 +101,15 @@ class DynamicRegistryCandidateInertnessTest {
     @Test
     void poisonedCandidateNeverAttachesItsListenerAndNeverWritesTheLedger() throws Exception {
         try (FacadeTestHarness harness = new FacadeTestHarness(ScriptType.SERVER)) {
-            // 旧 active generation 根本没有本域监听器：失败候选若提前挂上总线可被直接观察到
+            // The previous active generation has no listener for this domain, so a failed candidate that reached the bus
+            // early would be directly observable.
             harness.writeScript("main.js", "console.log('no dynamic registry usage')");
             harness.manager.discoverScripts();
             harness.manager.loadScripts();
             long generationBefore = harness.manager.generationId();
             assertFalse(DynamicRegistryEvents.DYNAMIC_REGISTRY.hasListeners(), "前置：生产总线无本域监听器");
 
-            // 候选：一条合法定义 + 一条非法 id（毒化整批）
+            // Candidate: one valid definition plus one invalid id, which poisons the whole batch.
             harness.writeScript("main.js", """
                     DynamicRegistryEvents.dynamicRegistry(event => {
                         event.item('mymod:good', b => { b.maxStackSize = 16 });
@@ -126,7 +130,7 @@ class DynamicRegistryCandidateInertnessTest {
                     "毒化批次仍被观察到（失败清理＝计划不可达，不是静默丢弃）");
             assertTrue(record.failureDetail().contains("MyMod:Bad"), record.failureDetail());
 
-            // 修正后可再次成功 reload（候选失败不留持久损伤）
+            // A corrected script reloads successfully again; a candidate failure leaves no lasting damage.
             harness.writeScript("main.js", """
                     DynamicRegistryEvents.dynamicRegistry(event => {
                         event.item('mymod:good', b => { b.maxStackSize = 16 });
@@ -174,7 +178,8 @@ class DynamicRegistryCandidateInertnessTest {
 
     @Test
     void domainParticipationIsServerOnlyAndSkippedWhenUnused() throws Exception {
-        // SERVER：脚本不使用本域 → 候选不参与、不挂空计划
+        // SERVER: the script does not use this domain, so the candidate does not participate and no empty plan is
+        // attached.
         try (FacadeTestHarness harness = new FacadeTestHarness(ScriptType.SERVER)) {
             harness.writeScript("main.js", "console.log('unused')");
             harness.manager.discoverScripts();
@@ -184,9 +189,9 @@ class DynamicRegistryCandidateInertnessTest {
             assertFalse(harness.facade.lastCandidateCollection().participated());
             assertTrue(harness.facade.store().isEmpty());
         }
-        // CLIENT：SERVER-only 域绝不被调用（票 39/16 统一接缝后由 reload 管线按收集器声明的
-        // scriptType 在调用前过滤——连内部「跳过」记录都不会产生，比原内部守卫更强），
-        // 绝不因其它类型 reload 触碰账本
+        // CLIENT: a SERVER-only domain is never called. The reload pipeline filters by the scriptType the collector
+        // declares before the call, so not even an internal "skipped" record is produced. The ledger is never
+        // touched by a reload of another type.
         try (FacadeTestHarness harness = new FacadeTestHarness(ScriptType.CLIENT)) {
             harness.writeScript("client.js", "console.log('client reload')");
             harness.manager.discoverScripts();
@@ -226,7 +231,8 @@ class DynamicRegistryCandidateInertnessTest {
             assertEquals(goneFingerprint, harness.facade.store()
                             .exposedEntry("minecraft:item|mymod:gone").definition().fingerprint(),
                     "普通 reload 不物理删除：定义与指纹保留");
-            // claim/stale/mode 经 Registry Runtime 观察面可读，且 stale 项仍参与冲突检测
+            // claim, stale, and mode are readable through the Registry Runtime view, and a stale entry still takes part
+            // in conflict detection.
             var claim = harness.facade.store().claimOf(DynamicDefinitionType.ITEM, "mymod:gone");
             assertTrue(claim.stale(), "stale 可观察");
             assertTrue(claim.ownerScriptId().contains("main.js"),

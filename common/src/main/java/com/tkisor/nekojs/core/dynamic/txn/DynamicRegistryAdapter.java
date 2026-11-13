@@ -5,32 +5,29 @@ import com.tkisor.nekojs.core.dynamic.plan.DynamicAdapterRequest;
 import java.util.List;
 
 /**
- * Execution boundary between the Dynamic Registry transaction coordinator and the
- * platform/version Adapter (ticket 21, AC5): numeric ids, registry surgery, claim
- * bookkeeping, cleanup and platform differences are executed <b>only</b> by Adapter
- * implementations of this interface. The common coordinator and the event facade
- * hold no Minecraft types and no reflection channel — they only hand over inert
+ * Performs the platform and version work for the Dynamic Registry transaction coordinator:
+ * numeric ids, registry surgery, claim bookkeeping, cleanup and platform differences run
+ * <b>only</b> in Adapter implementations of this interface. The common coordinator and the event
+ * facade hold no Minecraft types and no reflection channel — they only hand over inert
  * {@link DynamicAdapterRequest} descriptions.
  *
- * <p>Contract:
+ * <p>Rules for implementations:
  * <ul>
- *   <li>{@link #prepareActivation(List)} validates a batch (configuration gate,
- *       supported types, server/registry availability) and may throw to reject the
- *       <b>whole batch</b> — the rejection aborts the transaction before any client
- *       traffic is sent;</li>
- *   <li>{@link #activate(List)} performs the surgery. It is only called after a
- *       successful {@code prepareActivation} of the same requests and must not throw;
- *       if an implementation violates that, the coordinator records a degraded
- *       activation failure and demands {@link #rollbackActivation(List)} so no partial
- *       registration survives (the ledger keeps serving the previously activated
- *       state) instead of pretending success;</li>
- *   <li>{@link #rollbackActivation(List)} restores the live registry to the last
- *       successfully activated state after a degraded {@code activate}; it is called
- *       exactly once per failed activation with the same requests and must not throw —
- *       a rollback that fails anyway becomes part of the recorded degradation detail;</li>
- *   <li>implementations must be idempotent per {@code (key, fingerprint)}: the same
- *       request arriving again (retry batch, client catch-up) re-claims the entry
- *       instead of double-registering.</li>
+ *   <li>{@link #prepareActivation(List)} validates a batch (configuration gate, supported types,
+ *       server/registry availability) and may throw to reject the <b>whole batch</b>; the
+ *       rejection aborts the transaction before any client traffic is sent;</li>
+ *   <li>{@link #activate(List)} performs the surgery. It is only called after a successful
+ *       {@code prepareActivation} of the same requests and must not throw. If an implementation
+ *       violates that, the coordinator records a degraded activation failure and demands
+ *       {@link #rollbackActivation(List)} so no partial registration survives (the ledger keeps
+ *       serving the last activated state) instead of pretending success;</li>
+ *   <li>{@link #rollbackActivation(List)} restores the live registry to the last successfully
+ *       activated state after a degraded {@code activate}. It is called exactly once per failed
+ *       activation with the same requests and must not throw; a rollback that fails anyway
+ *       becomes part of the recorded degradation detail;</li>
+ *   <li>implementations must be idempotent per {@code (key, fingerprint)}: the same request
+ *       arriving again (retry batch, client catch-up) re-claims the entry instead of
+ *       double-registering.</li>
  * </ul>
  */
 public interface DynamicRegistryAdapter {

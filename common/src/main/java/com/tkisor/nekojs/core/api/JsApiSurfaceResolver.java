@@ -225,11 +225,13 @@ public final class JsApiSurfaceResolver {
         for (VerifiedApiContract contract : contracts.all()) {
             NormativeApiContract normative = contract.contract();
             for (NormativeApiContract.ContractCapability cap : normative.capabilities()) {
-                // 契约能力条件（loader/版本/运行上下文）在此真实接线：EnvironmentScope 交给
-                // CapabilityResolver 做激活裁定：契约 conditions（environmentScope/status）与
-                // provider scope 都不匹配环境时 → 显式 unavailable（DECLARED_UNAVAILABLE/UNAVAILABLE），
-                // 见 CapabilityResolver.isEligible——契约条件是权威 gate，provider scope 只能更窄。
-                // 声明的 supported/partial/unavailable 状态随定义传递。
+                // Contract capability conditions (loader, version, runtime context) are wired in here.
+                // EnvironmentScope goes to CapabilityResolver, which decides activation: when neither the
+                // contract conditions (environmentScope/status) nor the provider scope match the
+                // environment, the capability becomes explicitly unavailable
+                // (DECLARED_UNAVAILABLE/UNAVAILABLE), see CapabilityResolver.isEligible. Contract
+                // conditions are the authoritative gate and a provider scope can only narrow them. The
+                // declared supported/partial/unavailable status is passed along with the definition.
                 definitions.add(new CapabilityDefinition(
                         cap.id(),
                         contract.identity().version(),

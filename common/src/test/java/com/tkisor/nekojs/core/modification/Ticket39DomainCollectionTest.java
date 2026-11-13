@@ -46,30 +46,34 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * 工单 39 领域计划机制 fixture（common 层，零 MC）：DOMAIN_PLAN 收集阶段、候选期 inert、
- * 与 global/shared 写集的联合预检/联合成败（AC2/AC3/AC4/AC9 的机制面）。
+ * Fixture for the domain plan mechanism in the common layer, with no Minecraft dependency: the
+ * DOMAIN_PLAN collection phase, candidates staying inert until commit, and the joint preflight and
+ * joint commit with the global/shared write sets.
  *
- * <p>用真实 {@link NekoRuntimeRoot} + 真实 Graal 管线 + <b>合成</b>领域收集器/Adapter
- * （synthetic:target 的数值存储，实现与真实 Item/Block Adapter 相同的
- * 「恢复基线 → 按声明序应用」契约）。真实 MC Adapter 的行为面归版本树 fixture
- * （26.x E2E 与 1.21.1 成对文件）；本文件固定的是 root 拥有的收集挂载点与联合边界语义。
+ * <p>It uses a real {@link NekoRuntimeRoot}, a real Graal pipeline and <b>synthetic</b> domain
+ * collector and Adapter (a numeric store for synthetic:target that follows the same "restore the
+ * baseline, then apply in declaration order" contract as the real Item/Block Adapters). Behavior of
+ * the real Minecraft adapters belongs to the version tree fixtures (the 26.x E2E and 1.21.1 paired
+ * files); this file pins the root-owned collection mount point and how the plans commit together.
  *
- * <p>断言全部走公开 seam：reload 成败结果、合成 Adapter 的公开计数/存储、
- * root.globalState() 的已提交读回；不读私有字段。
+ * <p>Every assertion goes through public entry points: reload results, the synthetic Adapter's
+ * public counters and store, and committed reads through root.globalState(); no private fields are
+ * read.
  */
 class Ticket39DomainCollectionTest {
 
-    /** 合成事件总线：脚本侧 ModEvents.modification(event => ...)。 */
+    /** Synthetic event bus backing the script-side ModEvents.modification(event => ...). */
     static final EventGroup GROUP = EventGroup.of("ModEvents");
     static final EventBusJS<CollectingEvent, Void> MODIFICATION =
             GROUP.server("modification", CollectingEvent.class);
 
-    /** key-dispatch 总线（票 39 F8：收集派发必须显式拒绝带 dispatch key 的总线）。 */
+    /** Key-dispatch bus; domain collection must explicitly reject buses that carry a dispatch key. */
     static final EventBusJS<CollectingEvent, String> DISPATCHED =
             GROUP.server("dispatched", CollectingEvent.class,
                     com.tkisor.nekojs.api.event.DispatchKey.of(String.class, event -> "synthetic:alpha"));
 
-    /** 收集事件载荷：modify(target, cb) 产出一条规范化声明进计划。 */
+    /** Payload of the collection event: modify(target, cb) records one normalized declaration in the
+     * plan. */
     public static final class CollectingEvent {
         private final ModificationCandidatePlan plan;
 
@@ -100,7 +104,8 @@ class Ticket39DomainCollectionTest {
         }
     }
 
-    /** 合成属性视图（显式 setter；parity 面归版本树 fixture）。 */
+    /** Synthetic property view with explicit setters; parity with the real properties is covered by
+     * the version tree fixtures. */
     public static final class PropView {
         Integer power;
         String label;
@@ -115,8 +120,9 @@ class Ticket39DomainCollectionTest {
     }
 
     /**
-     * 合成 Adapter：模拟平台目标存储与「恢复基线 → 按声明序应用」契约；
-     * preflight 可注入失败，apply 计数与存储是公开观察面。
+     * Synthetic Adapter: mimics the platform target store and the "restore the baseline, then apply
+     * in declaration order" contract. Preflight failure can be injected; the apply counter and the
+     * store are the public observation points.
      */
     static final class SyntheticApplier implements ModificationApplier {
         final Map<String, Integer> targets = new LinkedHashMap<>();
@@ -155,7 +161,7 @@ class Ticket39DomainCollectionTest {
         @Override
         public void apply(List<ModificationDeclaration> declarations) {
             applyCount++;
-            // AC7 契约：先恢复全部 NekoJS 持有基线，再按声明顺序应用完整新计划
+            // Restore every baseline held by NekoJS first, then apply the full new plan in declaration order.
             targets.putAll(baselines);
             for (ModificationDeclaration declaration : declarations) {
                 if ("power".equals(firstKey(declaration))) {
@@ -169,7 +175,8 @@ class Ticket39DomainCollectionTest {
         }
     }
 
-    /** 领域收集器：把收集事件派发进候选并注册计划（与真实 Item/Block 收集器同构）。 */
+    /** Domain collector: dispatches the collection events of this candidate and registers the plan,
+     * structured like the real Item/Block collectors. */
     static final class SyntheticCollector implements CandidateDomainCollector {
         final SyntheticApplier applier;
 
@@ -222,7 +229,7 @@ class Ticket39DomainCollectionTest {
         @Override public Object managedApiImplementation(com.tkisor.nekojs.api.surface.ApiSymbolId globalId) { return null; }
     }
 
-    /** 真实 root 装配（SERVER 单类型 + 合成收集器注册）。 */
+    /** Real root assembly: the SERVER script type only, with the synthetic collector registered. */
     static final class Harness implements AutoCloseable {
         final Engine engine = Engine.newBuilder().build();
         final SyntheticApplier applier = new SyntheticApplier();
@@ -280,7 +287,7 @@ class Ticket39DomainCollectionTest {
         }
     }
 
-    // ==================== AC2/AC3：候选期 inert，commit 点应用一次 ====================
+    // ==================== Candidates stay inert until the commit applies the plan once ====================
 
     @Test
     void candidateCollectsInertPlanAndAppliesExactlyOnceAtCommit() throws Exception {
@@ -296,7 +303,8 @@ class Ticket39DomainCollectionTest {
                     })
                     """);
             harness.root.scriptManagerOf(ScriptType.SERVER).loadScripts();
-            // 初始 load 是非事务路径：没有候选 → DOMAIN_PLAN 不跑（收集器只参与事务 reload）。
+            // The initial load is non-transactional: there is no candidate, so DOMAIN_PLAN does not run.
+            // The collector only takes part in a transactional reload.
             assertEquals(0, harness.applier.applyCount, "initial non-transactional load must not run domain collection");
             assertEquals(1, harness.applier.targets.get("synthetic:alpha"));
 
@@ -312,8 +320,9 @@ class Ticket39DomainCollectionTest {
 
     @Test
     void candidatePlanIsInertUntilCommit() throws Exception {
-        // 第一次 reload 已应用 7；第二次候选构建期间（收集派发后、commit 前）目标存储
-        // 必须保持旧 active 值——注册一个 probe 收集器在 DOMAIN_PLAN 阶段记录观察值。
+        // The first reload has applied 7. While the second candidate is being built (after collection
+        // dispatch, before commit), the target store must still hold the old active value. A probe
+        // collector records what it sees during DOMAIN_PLAN.
         try (Harness harness = new Harness()) {
             harness.applier.seed("synthetic:alpha", 1);
             harness.writeServerScript("mod.js", "ModEvents.modification(e => e.modify('synthetic:alpha', p => p.setPower(7)))");
@@ -326,8 +335,9 @@ class Ticket39DomainCollectionTest {
                 @Override public String domain() { return "probe"; }
                 @Override public ScriptType scriptType() { return ScriptType.SERVER; }
                 @Override public void collect(Handle handle) {
-                    // synthetic 收集器在本 probe 之前注册、已经 dispatch 过本轮声明——
-                    // 此刻存储仍必须是旧 active 值（收集派发对 live 目标零副作用）
+                    // The synthetic collector was registered before this probe and has already dispatched this
+                    // round's declarations, yet the store must still hold the old active value: collection
+                    // dispatch has no side effect on live targets.
                     seenDuringCandidate.add(harness.applier.targets.get("synthetic:alpha"));
                 }
             };
@@ -341,7 +351,7 @@ class Ticket39DomainCollectionTest {
         }
     }
 
-    // ==================== AC4：收集失败/预检失败 → 整批失败保留旧 active ====================
+    // ==================== Collection or preflight failure keeps the old active plan ====================
 
     @Test
     void collectionListenerErrorFailsTheCandidateAndKeepsOldActivePlan() throws Exception {
@@ -353,7 +363,7 @@ class Ticket39DomainCollectionTest {
             assertEquals(1, harness.applier.applyCount);
             assertEquals(7, harness.applier.targets.get("synthetic:alpha"));
 
-            // 新一轮：收集回调抛出 → DOMAIN_PLAN 失败
+            // New round: the collection callback throws, so DOMAIN_PLAN fails.
             harness.writeServerScript("mod.js", "ModEvents.modification(e => { throw new Error('boom in collector') })");
             NekoReloadException failure = assertThrows(NekoReloadException.class,
                     () -> harness.root.reload(ScriptType.SERVER));
@@ -371,8 +381,9 @@ class Ticket39DomainCollectionTest {
     void planMarkedFailedDuringCollectionFailsJointPreflightWithoutPartialApply() throws Exception {
         try (Harness harness = new Harness()) {
             harness.applier.seed("synthetic:alpha", 1);
-            // 未知目标（合法 id 形态）：收集期记录声明，Adapter preflight 拒绝 →
-            // STATE_PLAN 联合预检失败（domain 归因到领域计划），无部分应用
+            // An unknown target with a well-formed id: collection records the declaration, the Adapter
+            // preflight rejects it, and the joint STATE_PLAN preflight fails with the domain attributed
+            // to the domain plan. Nothing is applied partially.
             harness.writeServerScript("mod.js", "ModEvents.modification(e => e.modify('synthetic:missing', p => p.setPower(5)))");
             harness.root.scriptManagerOf(ScriptType.SERVER).loadScripts();
 
@@ -383,15 +394,17 @@ class Ticket39DomainCollectionTest {
             assertTrue(failure.report().domain().contains("state-plan-preflight"),
                     "domain=" + failure.report().domain());
 
-            // 值域拒绝（power > 100）同样走联合预检，而不是收集期或应用期
+            // A range rejection (power > 100) also goes through the joint preflight, not through collection
+            // or apply.
             harness.writeServerScript("mod.js", "ModEvents.modification(e => e.modify('synthetic:alpha', p => p.setPower(500)))");
             NekoReloadException second = assertThrows(NekoReloadException.class,
                     () -> harness.root.reload(ScriptType.SERVER));
             assertEquals(ReloadPhase.STATE_PLAN, second.report().phase(),
                     "range validation joins the preflight, not the apply path");
 
-            // 收集期 fail 标记（非法 target 文本：无命名空间）：post 不中断（旧可观察顺序），
-            // 但计划在联合预检必然失败——静默 stale 不算成功
+            // A failure mark recorded during collection (invalid target text with no namespace): the post
+            // phase is not interrupted, which keeps the existing observable order, but the plan must fail
+            // at the joint preflight. Leaving it silently stale is not a success.
             harness.writeServerScript("mod.js", "ModEvents.modification(e => e.modify('no-namespace', p => p.setPower(5)))");
             NekoReloadException third = assertThrows(NekoReloadException.class,
                     () -> harness.root.reload(ScriptType.SERVER));
@@ -405,7 +418,7 @@ class Ticket39DomainCollectionTest {
         }
     }
 
-    // ==================== AC7（机制面）：声明移除 = 恢复基线；空计划也参与 commit ====================
+    // ==================== Removed declarations restore the baseline; an empty plan still commits ====================
 
     @Test
     void removedDeclarationsRestoreBaselinesViaAnEmptyPlanAtCommit() throws Exception {
@@ -416,7 +429,8 @@ class Ticket39DomainCollectionTest {
             harness.root.reload(ScriptType.SERVER);
             assertEquals(7, harness.applier.targets.get("synthetic:alpha"));
 
-            // 声明消失：空计划在 commit 应用（恢复基线），不是静默 stale
+            // The declaration is gone: the empty plan still applies at commit and restores the baseline
+            // instead of leaving it stale.
             harness.writeServerScript("mod.js", "global.noModification = true");
             harness.root.reload(ScriptType.SERVER);
 
@@ -426,13 +440,14 @@ class Ticket39DomainCollectionTest {
         }
     }
 
-    // ==================== AC9：与 global 写集联合预检、联合成败 ====================
+    // ==================== Joint preflight and joint commit with the global write set ====================
 
     @Test
     void domainPlanAndGlobalWriteSetCommitJointlyOrNotAtAll() throws Exception {
         try (Harness harness = new Harness()) {
             harness.applier.seed("synthetic:alpha", 1);
-            // 同一脚本：global 顶层写 + 修改声明 —— 成功方向：两边一起发布
+            // One script does both a top-level global write and a modification declaration. Success case:
+            // both are published together.
             harness.writeServerScript("mod.js", """
                     global.answer = 42
                     ModEvents.modification(e => e.modify('synthetic:alpha', p => p.setPower(7)))
@@ -442,7 +457,8 @@ class Ticket39DomainCollectionTest {
             assertEquals(42, harness.root.globalState().storeFor(ScriptType.SERVER).get("answer"));
             assertEquals(7, harness.applier.targets.get("synthetic:alpha"));
 
-            // 失败方向：Adapter preflight 拒绝 → global 写集也不发布，旧 active 保留
+            // Failure case: the Adapter preflight rejects, so the global write set is not published either
+            // and the old active plan stays.
             harness.applier.failPreflightWith = "adapter cannot prove recoverability";
             harness.writeServerScript("mod.js", """
                     global.answer = 99
@@ -463,8 +479,9 @@ class Ticket39DomainCollectionTest {
 
     @Test
     void dispatchKeyedBusIsRejectedByDomainCollectionInsteadOfSilentlyBroadcasting() throws Exception {
-        // F8：按 key 定向分发的总线需要 key 才能判定投递子集，收集派发没有 key 上下文 →
-        // 显式拒绝（UnsupportedOperationException）而不是「忽略 key 全量派发」静默降级。
+        // A key-dispatched bus needs the key to decide which listeners receive the event, and collection
+        // dispatch has no key context. Reject it explicitly with UnsupportedOperationException instead
+        // of silently ignoring the key and broadcasting to every listener.
         try (Harness harness = new Harness()) {
             harness.applier.seed("synthetic:alpha", 1);
             harness.root.registerDomainCollector(new CandidateDomainCollector() {
@@ -496,7 +513,8 @@ class Ticket39DomainCollectionTest {
             harness.root.reload(ScriptType.SERVER);
             assertEquals(7, harness.applier.targets.get("synthetic:alpha"));
 
-            // AutoCloseable 收集器在 root close 时被关闭（真实域的基线恢复），注册表清空
+            // root close closes AutoCloseable collectors, restoring the real domain baseline, and clears the
+            // collector registry.
             List<String> closed = new ArrayList<>();
             harness.root.registerDomainCollector(new AutoCloseableCandidateDomainCollector(closed));
             harness.root.closeSilently();
@@ -505,7 +523,7 @@ class Ticket39DomainCollectionTest {
         }
     }
 
-    /** AutoCloseable 收集器最小实现（close 观察面）。 */
+    /** Minimal AutoCloseable collector that records close. */
     static final class AutoCloseableCandidateDomainCollector implements CandidateDomainCollector, AutoCloseable {
         private final List<String> closed;
 

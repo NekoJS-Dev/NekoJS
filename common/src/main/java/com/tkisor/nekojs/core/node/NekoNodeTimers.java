@@ -25,16 +25,23 @@ import java.util.concurrent.atomic.AtomicInteger;
  * Reload cancels all timers registered by the old script.
  */
 public final class NekoNodeTimers implements AutoCloseable {
-    /** ready 队列上限：游戏线程被阻塞时 1ms interval 会不限速堆积，超限直接丢弃新回调并记录。 */
+    /**
+     * Size limit of the ready queue. While the game thread is blocked, a 1ms interval piles up without
+     * bound; past the limit a new callback is dropped and recorded.
+     */
     private static final int MAX_READY_QUEUE_SIZE = 4096;
-    /** 单次 flush 最多执行的回调数：防止一次 tick 内无限处理导致 tick 冻结。 */
+    /**
+     * Maximum callbacks run in one flush, so one tick cannot keep processing callbacks and freeze the tick.
+     */
     private static final int MAX_CALLBACKS_PER_FLUSH = 256;
     /**
-     * 并发注册 timer 数上限：{@code while(true){setInterval(()=>{},1000)}} 会在 50M 语句上限
-     * 触发前向 {@code tasks} 无限塞入条目（每个持有 JS 回调 Value 与调度句柄）导致 OOM。
-     * 1024 远超正常脚本需求（沙盒里 timer 是长期资源而非吞吐工具），且小于 ready 队列上限
-     * （每个 interval 会反复向该队列投递）。超限直接抛 {@link IllegalStateException} 给脚本，
-     * 与 STARTUP 拒绝延迟 timer 的 {@link #rejectStartupTimer} 机制一致。
+     * Limit on the number of timers that can be registered at once.
+     * {@code while(true){setInterval(()=>{},1000)}} would otherwise stuff entries into {@code tasks}
+     * without bound (each holds a JS callback Value and a schedule handle) and exhaust memory before
+     * the 50M statement limit fires. 1024 is far above normal script needs (timers are a long-lived
+     * resource in the sandbox, not a throughput tool) and stays below the ready queue limit, since
+     * every interval keeps posting to that queue. Past the limit an {@link IllegalStateException} is
+     * thrown to the script, the same way {@link #rejectStartupTimer} rejects delayed timers in STARTUP.
      */
     private static final int MAX_SCHEDULED_TIMERS = 1024;
 
@@ -109,9 +116,10 @@ public final class NekoNodeTimers implements AutoCloseable {
     }
 
     /**
-     * 注册数上限拒绝：在分配 id / 调度之前检查，超限抛 {@link IllegalStateException}
-     * （异常会沿 JS 调用栈抛回脚本，经既有错误上报路径记录）。clearTimeout/clearInterval
-     * 或一次性 timer 被 flush 后释放名额即可继续注册。
+     * Rejects a registration past the limit. The check runs before an id is allocated or the timer is
+     * scheduled and throws {@link IllegalStateException}; the exception travels back up the JS call
+     * stack to the script and is recorded by the normal error reporting path.
+     * clearTimeout/clearInterval or a flushed one-shot timer frees a slot and registration can go on.
      */
     private void rejectTimerOverflow() {
         if (tasks.size() >= MAX_SCHEDULED_TIMERS) {
@@ -138,8 +146,9 @@ public final class NekoNodeTimers implements AutoCloseable {
     }
 
     /**
-     * 按 scriptId 前缀取消 timer（脚本包整体卸载用；包内脚本 id 统一携带
-     * {@code packs/<id>/} / {@code worldpacks/<id>/} 前缀，见 ScriptPack#idPathPrefix）。
+     * Cancels every timer whose script id starts with the given scriptIdPrefix, used when a whole script
+     * pack is unloaded. Scripts inside a pack carry the {@code packs/<id>/} or
+     * {@code worldpacks/<id>/} prefix; see ScriptPack#idPathPrefix.
      */
     public synchronized void cancelScriptByPrefix(String scriptIdPrefix) {
         if (scriptIdPrefix == null || scriptIdPrefix.isBlank()) return;
@@ -166,7 +175,10 @@ public final class NekoNodeTimers implements AutoCloseable {
         }
     }
 
-    /** 有界入队：队列已满时丢弃新回调并记一次错误（ErrorTracker 按签名去重，不会刷屏）。 */
+    /**
+     * Enqueues with a bound: when the queue is full a new callback is dropped and one error is recorded
+     * (ErrorTracker deduplicates by signature, so this does not flood the log).
+     */
     private synchronized void enqueueReady(TimerCallback callback) {
         if (closed || !tasks.containsKey(callback.id)) return;
         if (ready.size() >= MAX_READY_QUEUE_SIZE) {
@@ -233,8 +245,9 @@ public final class NekoNodeTimers implements AutoCloseable {
         if (closed || callback == null) return;
         Context context = callback.getContext();
         if (ScriptManager.isContextDead(context)) {
-            // Context 已被 Graal 关闭（语句上限等）：回调闭包指向死环境，静默跳过，
-            // 避免每次 tick 都在死 Context 上抛错刷屏；所属 ScriptManager 会在下次取用时重建
+            // The Context has already been closed by Graal (statement limit and so on): the callback closure
+            // points at a dead environment, so skip it silently. Throwing on a dead Context every tick
+            // would flood the log; the owning ScriptManager rebuilds the environment on next use.
             return;
         }
         if (!callback.canExecute()) return;
@@ -246,8 +259,8 @@ public final class NekoNodeTimers implements AutoCloseable {
             if (scriptId != null && !scriptId.isBlank()) {
                 activeScriptIds.put(context, scriptId);
             }
-            // 票 07 回调内 reload 契约：与 EventBusJS 分发点一致，timer 回调执行
-            // 期间同线程 lifecycle 请求明确拒绝（见 ScriptManager#noteCallbackEnter）。
+            // A lifecycle request on the same thread is rejected while a timer callback runs, matching the
+            // dispatch point in EventBusJS; see ScriptManager#noteCallbackEnter.
             ScriptManager.noteCallbackEnter();
             try {
                 callback.executeVoid(args == null ? new Object[0] : args);
@@ -257,8 +270,9 @@ public final class NekoNodeTimers implements AutoCloseable {
                 finally { ScriptManager.noteCallbackExit(); }
             }
         } catch (Throwable e) {
-            // 语句上限关闭 Context 的 kill 在稳态下只能从回调路径发现（入口早已执行完）：
-            // 上报所属 ScriptManager，使其在下次取用时自动重建环境，而不是静默死亡
+            // A kill by the statement limit only shows up on the callback path in steady state (the entry has
+            // long finished): report it to the owning ScriptManager so it rebuilds the environment on next
+            // use instead of leaving the script silently dead.
             ScriptManager.reportContextKilled(context, e);
             errorTracker.recordCallbackError(context, scriptType, "timer", e);
         }

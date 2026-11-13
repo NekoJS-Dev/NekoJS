@@ -57,7 +57,8 @@ public interface CancellableEventBus<E> extends EventBus<E> {
     @Override
     boolean post(E event);
 
-    // 自类型收窄：E_ extends E，运行时类型不变，仅擦除层面的强制转换
+    // Self-type narrowing: E_ extends E. The runtime type does not change; this only casts away the
+    // erasure
     @SuppressWarnings("unchecked")
     @Override
     default <E_ extends E> CancellableEventBus<E_> cast() {

@@ -29,7 +29,7 @@ public final class JavaGenericTypes {
         return Object.class;
     }
 
-    /** Returns outer parameters before member parameters, stopping capture at static boundaries. */
+    /** Returns outer parameters before member parameters and stops collecting at static boundaries. */
     public static List<TypeVariable<?>> parameters(Class<?> type) {
         if (!capturesOwner(type)) return List.of(type.getTypeParameters());
         List<TypeVariable<?>> parameters = new ArrayList<>(parameters(type.getDeclaringClass()));

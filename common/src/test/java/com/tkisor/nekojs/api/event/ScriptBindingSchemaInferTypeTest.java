@@ -10,12 +10,14 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
 /**
- * 回归：{@link ScriptBindingSchema#inferType} 必须识别脚本包布局。
+ * Regression test: {@link ScriptBindingSchema#inferType} must recognize the packed-script layout.
  *
- * <p>包脚本（GLOBAL {@code <root>/packs/<id>/<type>_scripts/…}、WORLD
- * {@code <world>/nekojs_packs/<id>/<type>_scripts/…}、SERVER_CACHE
- * {@code …/server_packs/…}）不在任何类型根之下。旧实现只做类型根前缀判定，
- * 包路径恒返回 null → 预检 schema 为空 → 成员/事件回调校验对包脚本整体静默失效。
+ * <p>Pack scripts are not under any type root: GLOBAL uses
+ * {@code <root>/packs/<id>/<type>_scripts/…}, WORLD uses
+ * {@code <world>/nekojs_packs/<id>/<type>_scripts/…} and SERVER_CACHE uses
+ * {@code …/server_packs/…}. A check that only matches type-root prefixes returns null for
+ * these paths; the precheck schema is then empty and member and event callback validation is
+ * silently skipped for every pack script.
  */
 class ScriptBindingSchemaInferTypeTest {
     @Test
@@ -34,7 +36,8 @@ class ScriptBindingSchemaInferTypeTest {
 
     @Test
     void worldPackScriptOutsideNekojsRootInfersType() {
-        // WORLD 包在 <world>/nekojs_packs/<id>/… —— 任意世界目录，nekojs root 前缀不可用
+        // A WORLD pack lives in <world>/nekojs_packs/<id>/…: the world directory is arbitrary,
+        // so the nekojs root prefix does not apply
         Path worldPack = Path.of("some-world")
                 .resolve("nekojs_packs")
                 .resolve("wp").resolve("client_scripts").resolve("hud.js");

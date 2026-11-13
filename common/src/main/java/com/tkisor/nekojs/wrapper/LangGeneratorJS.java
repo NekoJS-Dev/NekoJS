@@ -18,11 +18,12 @@ import java.util.Map;
 import java.util.Objects;
 
 /**
- * 语言生成事件的对象（{@code ClientEvents.lang}）。
+ * Event object for {@code ClientEvents.lang}.
  *
- * <p>脚本通过 {@code event.add(key, value)} 收集翻译条目；聚合后由
- * {@link #writeTo(Path, String)} 合并写入 {@code <gameDir>/nekojs/assets/lang/<lang>.json}
- * （保留已有条目，新条目覆盖）。
+ * <p>Scripts collect translation entries with {@code event.add(key, value)}. Once the event is
+ * over, {@link #writeTo(Path, String)} merges them into
+ * {@code <gameDir>/nekojs/assets/lang/<lang>.json}: existing entries are kept and new entries
+ * overwrite them.
  */
 @Doc("Event object for ClientEvents.lang; collects translation entries and merges them into the lang JSON.")
 public final class LangGeneratorJS {
@@ -30,14 +31,15 @@ public final class LangGeneratorJS {
     @Doc("Size cap for the merged lang JSON text, in bytes (16 MiB).")
     public static final int MAX_GENERATED_FILE_BYTES = 16 * 1024 * 1024;
 
-    /** 合法语言代码：字母/数字/下划线，1..64 字符。 */
+    /** Valid language code: letters, digits and underscore, 1 to 64 characters. */
     private static final java.util.regex.Pattern VALID_LANG_CODE =
             java.util.regex.Pattern.compile("^[A-Za-z0-9_]{1,64}$");
 
     /**
-     * 语言代码是否合法（{@code [A-Za-z0-9_]{1,64}}）。供平台在写入任何语言文件之前预检
-     * 整批语言集合；{@link #writeTo(Path, String)} 用同一判据，故预检通过的语言不会被写入
-     * 阶段以另一套规则拒绝。
+     * Tells whether a language code is valid ({@code [A-Za-z0-9_]{1,64}}). Platforms use it to
+     * pre-check a whole batch of language codes before writing any language file.
+     * {@link #writeTo(Path, String)} applies the same check, so a code that passes the pre-check is
+     * never rejected later while writing.
      */
     public static boolean isValidLangCode(String lang) {
         return lang != null && VALID_LANG_CODE.matcher(lang).matches();
@@ -46,19 +48,19 @@ public final class LangGeneratorJS {
     private final String lang;
     private final Map<String, String> entries = new LinkedHashMap<>();
 
-    /** 以语言代码构造（null 视为空字符串）。 */
+    /** Creates a generator for the given language code; {@code null} becomes an empty string. */
     public LangGeneratorJS(String lang) {
         this.lang = lang == null ? "" : lang;
     }
 
-    /** 语言代码（如 {@code en_us}）；未指定时为空字符串。 */
+    /** Returns the language code, such as {@code en_us}; empty string when unspecified. */
     @Doc("Returns the language code this generator collects entries for.")
     @Return("lang code such as 'en_us', or empty string when unspecified")
     public String getLang() {
         return lang;
     }
 
-    /** 添加翻译条目；key 形如 {@code minecraft:item.foo}。 */
+    /** Adds one translation entry; the key looks like {@code minecraft:item.foo}. */
     @Doc("Adds one translation entry.")
     @Param(name = "key", value = "translation key such as 'minecraft:item.foo'")
     @Param(name = "value", value = "translated text")
@@ -68,7 +70,7 @@ public final class LangGeneratorJS {
         entries.put(key, value);
     }
 
-    /** 批量添加翻译条目。 */
+    /** Adds every entry from a map of translation keys to translated texts. */
     @Doc("Adds all entries from a map of translation keys to texts.")
     @Param(name = "values", value = "map of translation key to translated text")
     public void addAll(Map<String, String> values) {
@@ -76,14 +78,15 @@ public final class LangGeneratorJS {
         entries.putAll(values);
     }
 
-    /** 已收集的条目（只读视图）。 */
+    /** Returns a read-only copy of the entries collected so far. */
     @Doc("Returns the entries collected so far.")
     @Return("a copy of the collected entries; later additions are not reflected")
     public Map<String, String> entries() {
         return Map.copyOf(entries);
     }
 
-    /** 合并写入指定语言的 lang JSON 文件（保留已有条目，新条目覆盖）。 */
+    /** Merges the collected entries into the lang JSON file for one language; existing entries
+     * are kept and matching keys are overwritten. */
     @Doc("Merges the collected entries into the lang JSON file, keeping existing entries.")
     @Param(name = "assetsRoot", value = "assets root directory to write under, e.g. <gameDir>/nekojs/assets")
     @Param(name = "lang", value = "language code like 'en_us'; letters, digits and underscore only")

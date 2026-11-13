@@ -46,14 +46,14 @@ public final class CompoundTagAdapter implements JSTypeAdapter<CompoundTag> {
         if (val.isNull()) return StringTag.valueOf("");
         if (val.isBoolean()) return ByteTag.valueOf(val.asBoolean());
         if (val.isNumber()) {
-            // B5: 分级 int / long / double，避免大整数精度丢失
+            // Grades int / long / double in that order so large integers keep their precision
             if (val.fitsInInt()) return IntTag.valueOf(val.asInt());
             if (val.fitsInLong()) return LongTag.valueOf(val.asLong());
             return DoubleTag.valueOf(val.asDouble());
         }
         if (val.isString()) return StringTag.valueOf(val.asString());
 
-        // 如果遇到嵌套数组：转成 ListTag
+        // Nested array: convert to ListTag
         if (val.hasArrayElements()) {
             ListTag list = new ListTag();
             for (long i = 0; i < val.getArraySize(); i++) {
@@ -62,7 +62,7 @@ public final class CompoundTagAdapter implements JSTypeAdapter<CompoundTag> {
             return list;
         }
 
-        // 如果遇到嵌套对象：递归转成 CompoundTag
+        // Nested object: convert recursively to CompoundTag
         if (val.hasMembers()) {
             return apply(val);
         }

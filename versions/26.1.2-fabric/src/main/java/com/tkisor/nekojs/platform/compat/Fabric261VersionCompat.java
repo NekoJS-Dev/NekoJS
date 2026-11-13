@@ -3,19 +3,22 @@ package com.tkisor.nekojs.platform.compat;
 import net.minecraft.world.entity.EntityType;
 
 /**
- * fabric 26.1 侧 {@link McVersionCompat.Impl}（票 31）：与 NeoForge 侧
- * {@code Nf261VersionCompat} 同构——{@code LIGHTNING_BOLT} 常量 26.1 仍在
- * {@link EntityType}、26.2 移到了 {@code EntityTypes}，raw root（src/fabric）不经
- * stonecutter 预处理，版本漂移常量只能按节点 override 落位（交接单 W8：版本差异由
- * compat facade 或 versions/&lt;node&gt; override 承担）。
+ * {@link McVersionCompat.Impl} for fabric 26.1, mirroring the NeoForge {@code Nf261VersionCompat}:
+ * the {@code LIGHTNING_BOLT} constant still lives in {@link EntityType} on 26.1, but moved to
+ * {@code EntityTypes} on 26.2. The raw root (src/fabric) is not preprocessed by stonecutter, so a
+ * constant that drifts between versions can only be placed per node. Version differences belong in
+ * a compat facade or a versions/&lt;node&gt; override.
  *
- * <p>背景：共享树 {@code inject.MixinLevel} 让 Level 实现 {@code LevelExtension}，
- * {@code neko$spawnLightning} 经本门面取闪电实体类型；此前 fabric 两节点零 provider，
- * 该调用会触发 {@code McVersionCompat} 静态初始化的 ServiceLoader 失败（潜伏崩溃，
- * d.ts 又已宣传该方法）。本 impl 把它转为可用。
+ * <p>The shared {@code inject.MixinLevel} makes Level implement {@code LevelExtension}, and
+ * {@code neko$spawnLightning} gets the lightning entity type through this facade. With no
+ * provider on either fabric node, that call would fail in the {@code McVersionCompat} static
+ * initializer's ServiceLoader lookup, a latent crash even though the d.ts already advertised the
+ * method. This implementation makes the call usable.
  *
- * <p>注册：{@code META-INF/services/com.tkisor.nekojs.platform.compat.McVersionCompat$Impl}
- *（与 NeoForge 节点同机制）。类名与 26.2 侧刻意不同——drift 比较对不允许同名不同体。
+ * <p>Registered through
+ * {@code META-INF/services/com.tkisor.nekojs.platform.compat.McVersionCompat$Impl}, the same
+ * mechanism the NeoForge node uses. The class name deliberately differs from the 26.2 side: the
+ * drift comparison rejects the same name with a different body.
  */
 public final class Fabric261VersionCompat implements McVersionCompat.Impl {
 

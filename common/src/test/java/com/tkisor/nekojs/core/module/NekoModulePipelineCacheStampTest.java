@@ -27,18 +27,19 @@ import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * 回归测试：{@link NekoModulePipelineCache} 的 {@code FileStamp} 必须包含内容指纹与
- * 语言/mode 身份（票据 11 AC4）。
+ * Regression test: {@code FileStamp} in {@link NekoModulePipelineCache} must include a content
+ * fingerprint and the language and mode identity.
  *
- * <p>背景缺陷：FileStamp 只包含 (modifiedMillis, size)，在时间戳粒度较粗的文件系统上，
- * 同一毫秒内对等长文件的重写会被误判为未变化，导致 prepare 继续返回旧的已编译模块。
- * 修复后 FileStamp 增加 contentHash（从已读取的源码计算 SHA-256），等 mtime+size 但
- * 内容不同时必须失效；W3 追加 languageId/requestedMode：同一路径在语言插件替换或
- * requested mode 变化时同样失效。本测试还通过真实文件重写 + 显式恢复 mtime 验证
- * 行为层面确实重编译。
+ * <p>The bug it covers: FileStamp only held (modifiedMillis, size). On file systems with coarse
+ * timestamps, rewriting a file of the same length within the same millisecond looked unchanged, so
+ * prepare returned the old compiled module. FileStamp now adds a contentHash, a SHA-256 of the
+ * source that was read, so a file with equal mtime and size but different content is invalidated.
+ * languageId and requestedMode were added as well: the same path is also invalidated when a
+ * language plugin replaces it or the requested mode changes. The test also rewrites a real file,
+ * restores its mtime explicitly, and verifies that the module is actually recompiled.
  *
- * <p>W3 接缝说明：缓存是 runtime owner 持有的实例（构造器注入 pipeline），不再有
- * process-wide static；本测试经实例 seam 观察行为。
+ * <p>The cache is an instance owned by the runtime (the pipeline is passed to its constructor),
+ * so there is no process-wide static; the test observes behavior through that instance.
  */
 class NekoModulePipelineCacheStampTest {
 
@@ -118,14 +119,15 @@ class NekoModulePipelineCacheStampTest {
         assertEquals(3, attempts.get());
     }
 
-    // ---- 行为回归：等长覆盖 + 显式恢复 mtime 仍必须重新编译 ----
+    // ---- Behavior regression: same-length overwrite with the mtime restored must recompile ----
 
     @Test
     void prepareRecompilesWhenOnlyContentChanges() throws Exception {
         Path script = NekoJSPaths.get().testScripts().resolve("stamp_invalidation_test.cjs");
         Files.createDirectories(script.getParent());
 
-        // .cjs 走 CommonJS 原生分支，prepared.code() 即原始源码，便于断言新旧内容。
+        // .cjs takes the native CommonJS branch, so prepared.code() is the original source and old and new
+        // content are easy to assert.
         String first = "module.exports = 'AAAA1111';\n";
         String second = "module.exports = 'BBBB2222';\n";
         assertEquals(first.length(), second.length(), "测试前提：两次写入必须等长");
@@ -149,7 +151,7 @@ class NekoModulePipelineCacheStampTest {
         }
     }
 
-    // ---- AC4: path / mode / language identity participate in observable identity ----
+    // ---- Path, mode and language identity are part of the observable identity ----
 
     @Test
     void sameContentAtDifferentPathsCachesIndependently() throws Exception {
@@ -166,7 +168,8 @@ class NekoModulePipelineCacheStampTest {
             assertNotEquals(preparedA.cacheKey(), preparedB.cacheKey(), "不同 sourcePath 必须有不同模块身份 key");
 
             cache.invalidate(first);
-            // 失效其一不影响另一：second 仍命中旧条目（code 一致即命中证据）。
+            // Invalidating one entry leaves the other alone: second still hits its old entry, and an unchanged
+            // code is the evidence of the hit.
             NekoPreparedModule preparedBAgain = cache.prepare(second);
             assertEquals(preparedB.cacheKey(), preparedBAgain.cacheKey());
             assertTrue(preparedBAgain.code().contains("PATH"));
@@ -227,8 +230,9 @@ class NekoModulePipelineCacheStampTest {
             NekoPreparedModule before = cache.prepare(script);
             assertEquals("javascript", before.languageId());
 
-            // 同一 registry 替换同扩展名语言（模拟插件变更）：同一 pipeline/同一缓存实例
-            // 必须因 language identity 变化而失效旧条目。
+            // The same registry replaces the language for the same extension, as a plugin change would: with
+            // the same pipeline and the same cache instance, the language identity change must invalidate the
+            // old entry.
             IScriptCompiler legacy = new IScriptCompiler() {
                 @Override
                 public boolean canCompile(String extension) {

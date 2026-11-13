@@ -3,19 +3,20 @@ package com.tkisor.nekojs.core.lifecycle;
 import com.tkisor.nekojs.api.ScriptType;
 
 /**
- * reload 失败的对外结构化结果（工单 06 AC3）。
+ * Structured failure result of a reload, as exposed to callers.
  *
- * <p>外部可见字段：generation（失败候选的 generation 序号）、phase（失败阶段）、
- * sourceLocation（失败脚本位置，null 表示阶段级失败与环境无关）、owner（失败环境的
- * owner 标识）、domain（失败所属子系统描述）。错误结果不携带修复指引，也不把内部锁
- * 或私有对象当契约——消费方只读本 record 的字段与 {@link #describe()} 文本。
+ * <p>The visible fields are generation (sequence number of the failed candidate), phase (where it
+ * failed), sourceLocation (location of the failed script; null for a failure not tied to one),
+ * owner (owner id of the failed environment) and domain (subsystem the failure belongs to). A
+ * failure result carries no repair instructions and exposes no internal lock or private object:
+ * consumers read the record fields and the {@link #describe()} text only.
  *
- * @param generation     失败候选的 generation 序号（单调递增，0 表示首个环境）
- * @param phase          失败发生的阶段
- * @param sourceLocation 失败脚本位置（{@code server_scripts/foo.js} 风格），阶段级失败为 null
- * @param owner          失败环境 owner 标识（如 {@code ScriptManager[SERVER]}）
- * @param domain         失败所属子系统（如 {@code candidate-context} / {@code script-execution}）
- * @param error          原始异常
+ * @param generation     Sequence number of the failed candidate (monotonic; 0 is the first environment)
+ * @param phase          Stage the failure happened in
+ * @param sourceLocation Failed script location ({@code server_scripts/foo.js} style); null for a stage-level failure
+ * @param owner          Owner id of the failed environment (e.g. {@code ScriptManager[SERVER]})
+ * @param domain         Subsystem the failure belongs to (e.g. {@code candidate-context} / {@code script-execution})
+ * @param error          Original exception
  */
 public record ReloadFailureReport(
         ScriptType type,
@@ -33,7 +34,7 @@ public record ReloadFailureReport(
         java.util.Objects.requireNonNull(domain, "domain");
     }
 
-    /** 单行结构化描述（命令/日志外部可见文本；不含修复指引）。 */
+    /** One-line structured description for commands and logs. Contains no repair instructions. */
     public String describe() {
         return "reload failed: type=" + type.name
                 + " generation=" + generation

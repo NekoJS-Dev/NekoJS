@@ -16,10 +16,12 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * {@link RecordJSTypeAdapter}：对象字面量 → record 的字段映射、默认值、严格性、probe 形状。
+ * Covers {@link RecordJSTypeAdapter}: mapping object literal fields onto a record, defaults,
+ * strictness and the probe shape.
  *
- * <p>嵌套字段用 host 对象直传（裸 JVM 无 targetTypeMapping 管线，ID 字符串等深转换由
- * in-game 引擎覆盖——见 BlockPosAdapterTest 的同款接缝说明）。
+ * <p>Nested fields are passed in as host objects directly. A bare JVM has no
+ * targetTypeMapping pipeline, so deep conversions such as id strings are only covered by the
+ * in-game engine; {@code BlockPosAdapterTest} notes the same limitation.
  */
 class RecordJSTypeAdapterTest {
 
@@ -31,7 +33,7 @@ class RecordJSTypeAdapterTest {
 
     record Lenient(int count, String label) {}
 
-    /** 非 record 夹具：构造期拒绝路径用。 */
+    /** A fixture that is not a record; used by the construction-time rejection path. */
     static class NonRecord {}
 
     private static Value literal(Context context, Object... kv) {

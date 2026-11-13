@@ -35,26 +35,30 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * AC11（ticket 09）：一个真实脚本调用穿透完整派生链的证据——
- * contract 反射 → manifest → Probe TS declaration → 运行时调用（Python declaration 的
- * IR 侧证据由 {@code PythonDeclarationDeterminismParityTest} 承载）。
+ * Evidence that one real script call travels the whole derivation chain: contract reflection →
+ * manifest → Probe TS declaration → runtime call. The Python declaration IR evidence lives in
+ * {@code PythonDeclarationDeterminismParityTest}.
  *
- * <p>脚本只使用契约反射承诺的 managed symbol（Text/ID/NBT facade），每个用到的符号
- * 都被断言存在于 manifest 与 TS declaration——runtime 调用、契约承诺与派生产物三段一致。
- * Context 按 {@code NekoSandboxFactory} 的生产接线（真实 {@link NekoSharedHostAccess} +
- * {@link ClassFilter}）+ 契约 {@link ApiFacadeProxy} 门面。
+ * <p>The script only uses managed symbols promised by the contract (the Text/ID/NBT facades), and
+ * every symbol it uses is asserted to exist in both the manifest and the TS declaration, so the
+ * runtime call, the contract promise and the generated artifacts agree.
+ * The Context follows the production wiring of {@code NekoSandboxFactory} (real
+ * {@link NekoSharedHostAccess} + {@link ClassFilter}) with the contract {@link ApiFacadeProxy}
+ * facade.
  */
 class ManagedSurfaceEndToEndChainTest {
 
     private static final URI CODE_SOURCE = URI.create("file:///test-nekojs-chain.jar");
 
     /**
-     * 最小可运行示例（AC7）：只使用已通过 gate 且经契约 invoker 验证的 managed 能力
-     * （ID / Text / NBT 值构造与序列化）。
+     * Minimal runnable example. It only uses managed capabilities that already pass the gate and
+     * are verified through the contract invokers (ID / Text / NBT value construction and
+     * serialization).
      *
-     * <p>注意：{@code NBT.compound()}（CompoundBuilder host object）虽然被契约与声明承诺，
-     * 但当前经契约 invoker 返回 host object 会触发 NATIVE_TYPE_LEAK（既有不一致，见本票
-     * REPORT「问题与处理」），示例因此使用 {@code NBT.of(...)} 值路径。
+     * <p>{@code NBT.compound()} (the CompoundBuilder host object) is promised by the contract and
+     * the declaration, but the contract invoker currently triggers NATIVE_TYPE_LEAK when it
+     * returns a host object. That inconsistency is still open, so the example uses the
+     * {@code NBT.of(...)} value path instead.
      */
     static final String MINIMAL_EXAMPLE_SCRIPT = """
             // NekoJS managed API 最小示例：只用契约反射承诺的符号
@@ -77,7 +81,7 @@ class ManagedSurfaceEndToEndChainTest {
     @Test
     @Tag("nbt-smoke")
     void scriptCallTraversesContractManifestDeclarationChain() {
-        // ---- 段 1：NormativeApiContract 反射（唯一规范源） ----
+        // ---- Step 1: NormativeApiContract reflection, the single normative source ----
         VerifiedApiContract contract = CoreManagedApiBootstrap.buildContract(CODE_SOURCE);
         Set<String> contractIds = contract.contract().symbols().stream()
                 .map(s -> s.id().value()).collect(Collectors.toSet());
@@ -92,7 +96,7 @@ class ManagedSurfaceEndToEndChainTest {
         assertTrue(contractIds.contains("member:NBT.of"), "contract must promise NBT value construction");
         assertTrue(contractIds.contains("member:NBT.toSnbt"), "contract must promise NBT.toSnbt");
 
-        // ---- 段 2：manifest 派生（冻结 surface） ----
+        // ---- Step 2: manifest derivation (the frozen surface) ----
         CoreManagedApiBootstrap.CoreManagedApi core = CoreManagedApiBootstrap.load(
                 new FixturePlatform(gameDir), CODE_SOURCE);
         FrozenApiRegistry registry = JsApiSurfaceResolver.resolve(
@@ -107,7 +111,7 @@ class ManagedSurfaceEndToEndChainTest {
                         "global:NBT", "member:NBT.of", "member:NBT.toSnbt")),
                 "manifest must derive from the same contract: missing " + manifestIds);
 
-        // ---- 段 3：TS declaration 派生（同一 surface） ----
+        // ---- Step 3: TS declaration derivation (from the same surface) ----
         String ts = new ManagedApiDeclarationGenerator()
                 .generate(Map.of(ScriptType.SERVER, registry.environmentSnapshot()), ScriptType.SERVER);
         assertTrue(ts.contains("const Text: $Text;"), "TS declaration must expose Text global:\n" + ts);
@@ -116,20 +120,20 @@ class ManagedSurfaceEndToEndChainTest {
         assertTrue(ts.contains("of("), "TS declaration must declare Text.of/ID.of/NBT.of members");
         assertTrue(ts.contains("toSnbt("), "TS declaration must declare NBT.toSnbt member");
 
-        // ---- 段 4：Python declaration 派生（IR 反射侧证据） ----
+        // ---- Step 4: Python declaration derivation (IR reflection evidence) ----
         TypeDecl pythonIr = new TypeReflector().reflect(ChainFixture.class);
         assertEquals("com.tkisor.nekojs.core.api.ManagedSurfaceEndToEndChainTest$ChainFixture", pythonIr.fqn,
                 "python declaration derives from runtime members via reflection");
         assertTrue(pythonIr.methods.stream().anyMatch(m -> "chainMethod".equals(m.name)),
                 "runtime member must be reflectable into the python declaration IR");
 
-        // ---- 段 5：真实脚本调用（Graal，契约 invoker 门面） ----
+        // ---- Step 5: real script call (Graal, contract invoker facades) ----
         String snbt = runMinimalExampleScript(core, registry);
         assertEquals("{id:\"nekojs:chain\",label:\"chain-example\",count:3}", snbt,
                 "script result must round-trip through the managed contract invokers");
     }
 
-    /** 运行最小示例脚本（单次 eval，脚本尾表达式返回 SNBT）。 */
+    /** Runs the minimal example script once and returns the SNBT from its trailing expression. */
     private String runMinimalExampleScript(CoreManagedApiBootstrap.CoreManagedApi core,
                                            FrozenApiRegistry registry) {
         NekoSharedHostAccess hostAccess = new NekoSharedHostAccess(List.of());
@@ -160,7 +164,7 @@ class ManagedSurfaceEndToEndChainTest {
         }
     }
 
-    /** 文档示例对应的反射宿主（python IR 段使用）。 */
+    /** Reflection host for the documented example; used by the Python IR step. */
     public static final class ChainFixture {
         public String chainMethod() { return "chain"; }
     }

@@ -1,8 +1,9 @@
 package com.tkisor.nekojs.probe.events;
 
 /**
- * {@code probe.snippets} 事件收集的编辑器片段（VSCode {@code .code-snippets} 格式字段）。
- * 当前仅 TS backend 消费（写入 {@code nekojs/.vscode/nekojs.code-snippets}）。
+ * An editor snippet collected by the {@code probe.snippets} event (the fields of the VSCode
+ * {@code .code-snippets} format). Only the TS backend consumes it today, writing it to
+ * {@code nekojs/.vscode/nekojs.code-snippets}.
  */
 public record Snippet(String name, String prefix, String body, String description) {
     public Snippet {

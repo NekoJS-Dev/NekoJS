@@ -47,13 +47,15 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * 工单 10（global/shared 候选写集）逐 AC fixture：root 拥有的按 ScriptType backing store、
- * 显式 shared 入口、候选写集（read-your-writes / 失败丢弃 / 冲突检测 / 联合提交）、
- * 生命周期保留、guest Value 失效、global vs globalThis 分工、旧跨类型迁移。
+ * Covers the global and shared candidate write set: the backing store per ScriptType owned by
+ * the root, the explicit shared entry, candidate write sets (read-your-writes, discard on
+ * failure, conflict detection, joint commit), state retention across the root lifetime, guest
+ * Value expiry, the split between global and globalThis, and the old cross-type migration.
  *
- * <p>断言走公开 seam：脚本 eval/reload 的可观察结果 + root 拥有的
- * {@link GlobalStateStores}（Java 侧「其他 writer」与读回观察点）+ Marker 绑定记录的
- * 脚本侧读回；不触碰私有 Map/锁字段。
+ * <p>Assertions go through public APIs: the observable results of script eval and reload, the
+ * root-owned {@link GlobalStateStores} (the Java-side "other writer" and the read-back point),
+ * and what scripts read back through the Marker binding. The tests never touch private Map or
+ * lock fields.
  */
 class Ticket10GlobalStateTest {
 
@@ -91,7 +93,7 @@ class Ticket10GlobalStateTest {
     }
 
 
-    // ==================== 测试绑定（公开 seam 的最小载体） ====================
+    // ==================== Test bindings (the smallest public API surface) ====================
 
     public static final class Marker {
         public final List<String> hits = new ArrayList<>();
@@ -110,8 +112,9 @@ class Ticket10GlobalStateTest {
     }
 
     /**
-     * 脚本侧的已提交状态读写 + 候选计划注册 seam（「其他 writer」经 root 拥有的
-     * GlobalStateStores 公开 API 直接提交，不经过任何 generation 视图）。
+     * Reads and writes committed state from the script side and registers candidate plans. The
+     * "other writer" commits directly through the public API of the root-owned
+     * GlobalStateStores, without going through any generation view.
      */
     public static final class StateTool {
         private final GlobalStateStores stores;
@@ -133,20 +136,23 @@ class Ticket10GlobalStateTest {
             };
         }
 
-        /** 读<b>已提交</b>状态（绕过当前 generation 写集——观察 commit 前的真实已发布值）。 */
+        /** Reads <b>committed</b> state, bypassing the current generation's write set, so a test can
+         * observe the value actually published before commit. */
         public String read(String scope, String key) {
             Object value = store(scope).get(key);
             return value == null ? null : String.valueOf(value);
         }
 
-        /** 「其他 writer」直接写已提交 store（Java 侧 seam；版本/epoch 随之 bump）。 */
+        /** The "other writer" writes the committed store directly from Java. The store version and
+         * epoch bump with the write. */
         public void write(String scope, String key, String value) {
             store(scope).put(key, value);
         }
 
         /**
-         * 候选执行期间注册联合计划（mode：fail-preflight / publish-throw / pass /
-         * other-writer-preflight）。经 ScriptManager.registerCandidatePlan 公开 seam。
+         * Registers a joint plan while the candidate runs. mode is one of fail-preflight,
+         * publish-throw, pass or other-writer-preflight. Goes through the public
+         * ScriptManager.registerCandidatePlan.
          */
         public boolean plan(String domain, String mode) {
             Context current = Context.getCurrent();
@@ -157,8 +163,9 @@ class Ticket10GlobalStateTest {
                         throw new IllegalStateException("plan preflight boom: " + domain);
                     }
                     if ("other-writer-preflight".equals(mode)) {
-                        // 模拟「STATE_PLAN 与 commit 之间闯入的其他 writer」：写集校验已经
-                        // 跑完，这里的已提交写入只能由 commit 点的锁内复验捕获。
+                        // Simulates another writer slipping in between STATE_PLAN and commit: the write-set check has
+                        // already run, so only the re-check under the lock at the commit point can catch this
+                        // committed write.
                         stores.sharedStore().put("backstopKey", "other-writer");
                     }
                 }
@@ -205,7 +212,8 @@ class Ticket10GlobalStateTest {
         @Override public Object managedApiImplementation(com.tkisor.nekojs.api.surface.ApiSymbolId globalId) { return null; }
     }
 
-    /** 多类型 manager 装配：一个 root 状态域 + 真实 Graal 环境（无事件组，专注状态语义）。 */
+    /** Wires up managers for several script types: one root state domain plus a real Graal
+     * environment. No event groups are involved, so the tests focus on state semantics. */
     static final class Harness implements AutoCloseable {
         final Engine engine = Engine.newBuilder().build();
         final GlobalStateStores stores = new GlobalStateStores();
@@ -268,7 +276,8 @@ class Ticket10GlobalStateTest {
     }
 
     private static SandboxConfig testConfig() {
-        // 5s 墙钟 + 100k 语句上限：失败注入靠语句上限烧尽（票 06 实证档位）
+        // 5 s of wall clock plus a 100k statement limit. Failure injection works by exhausting the
+        // statement limit.
         return new SandboxConfig(false, false, false, false, true, true, false, true);
     }
 
@@ -282,7 +291,7 @@ class Ticket10GlobalStateTest {
         return impl;
     }
 
-    // ==================== AC1：同类型共享 / 四类型隔离 ====================
+    // ==================== Same type shares state; the four types stay isolated ====================
 
     @Test
     void sameTypeFilesShareGlobalAndAllFourTypesReadBackIndependentValues() throws Exception {
@@ -303,13 +312,14 @@ class Ticket10GlobalStateTest {
             harness.load(ScriptType.CLIENT);
             harness.runTests();
 
-            // 同类型多文件共享：b.js 读到 a.js 的写入（count 累加、same 已就位）
+            // Files of the same type share state: b.js reads what a.js wrote (count accumulates and same
+            // is already set).
             assertEquals("b-sees-a:server", harness.marker.first("b-sees-a").orElseThrow(),
                     "second file of the same type must see the first file's global writes");
             assertEquals("client-sees-server:undefined", harness.marker.first("client-sees-server").orElseThrow(),
                     "CLIENT must not observe SERVER's private global (per-type backing store)");
 
-            // 四类型同名 key 读回彼此独立
+            // Each of the four types reads back its own value for the same key
             assertEquals("startup", harness.stores.storeFor(ScriptType.STARTUP).get("same"));
             assertEquals("server", harness.stores.storeFor(ScriptType.SERVER).get("same"));
             assertEquals("client", harness.stores.storeFor(ScriptType.CLIENT).get("same"));
@@ -319,7 +329,7 @@ class Ticket10GlobalStateTest {
         }
     }
 
-    // ==================== AC2：read-your-writes / 成功发布 / 失败丢弃 ====================
+    // ==================== Read-your-writes, publish on success, discard on failure ====================
 
     @Test
     void candidateReadsYourWritesAndSuccessfulCommitPublishes() throws Exception {
@@ -328,14 +338,16 @@ class Ticket10GlobalStateTest {
                     "global.keep = 'v1'; global.a = 1; global.b = 2");
             harness.load(ScriptType.SERVER);
 
-            // 候选：read-your-writes + 读到旧 active 的已提交值（状态跨 reload 可见）
+            // Inside the candidate: read-your-writes, plus the committed values of the old active
+            // generation, so state carries across reloads
             harness.writeScript(ScriptType.SERVER, "entry.js", """
                     global.ryw = 'cand'
                     Marker.hit('ryw:' + global.ryw)
                     Marker.hit('sees-committed:' + global.keep)
                     Marker.hit('sees-committed-a:' + global.a)
                     """);
-            // 候选执行后、commit 前不可见（reload 内联完成，这里以 commit 前的已提交读回观察）
+            // The candidate's writes are not visible before commit. Reload does the whole thing inline, so
+            // a test observes the committed store just before commit instead.
             harness.reload(ScriptType.SERVER);
 
             assertEquals("ryw:cand", harness.marker.first("ryw").orElseThrow(),
@@ -345,8 +357,9 @@ class Ticket10GlobalStateTest {
             assertEquals("cand", harness.stores.storeFor(ScriptType.SERVER).get("ryw"),
                     "successful commit publishes the candidate write set");
 
-            // 候选期的写不进已提交 store（在 reload 完成后无从观察 mid-flight，这里用
-            // 下一个失败候选证明：失败时 set/delete/clear 全部不发布）
+            // A candidate's writes never enter the committed store. Mid-flight state cannot be observed
+            // once reload returns, so the next failing candidate shows it: on failure none of set,
+            // delete or clear is published
             harness.writeScript(ScriptType.SERVER, "entry.js", """
                     global.a = 99
                     delete global.b
@@ -360,7 +373,7 @@ class Ticket10GlobalStateTest {
                     "a candidate rejected after state mutations must fail the reload");
             assertEquals(ReloadPhase.EXECUTION, failure.report().phase(), failure.report().describe());
 
-            // 失败丢弃：set / delete / clear 全部不污染旧 active
+            // Discard on failure: no set, delete or clear pollutes the old active state
             assertEquals(1, harness.stores.storeFor(ScriptType.SERVER).get("a"),
                     "failed candidate's set must be discarded");
             assertEquals(2, harness.stores.storeFor(ScriptType.SERVER).get("b"),
@@ -371,14 +384,14 @@ class Ticket10GlobalStateTest {
                     "writes after clear in the failed candidate must not publish");
             assertEquals("ryw:cand", harness.marker.first("ryw").orElseThrow()); // marker untouched
 
-            // 旧 active 仍可用：下一次 reload 恢复
+            // The old active state still works, so the next reload goes through
             harness.writeScript(ScriptType.SERVER, "entry.js", "global.keep = 'v3'");
             harness.reload(ScriptType.SERVER);
             assertEquals("v3", harness.stores.storeFor(ScriptType.SERVER).get("keep"));
         }
     }
 
-    // ==================== AC3：冲突检测 / 不丢写 / 跨类型私有不冲突 / shared 竞争 ====================
+    // ========= Conflict detection, no lost writes, no cross-type conflict, shared contention =========
 
     @Test
     void otherWriterDuringCandidacyConflictsWithoutLosingTheOtherWriterValue() throws Exception {
@@ -386,7 +399,8 @@ class Ticket10GlobalStateTest {
             harness.writeScript(ScriptType.SERVER, "entry.js", "global.k = 'base'");
             harness.load(ScriptType.SERVER);
 
-            // 候选首写 k（基线=当时的已提交版本），随后「其他 writer」提交同一受管 key
+            // The candidate writes k first, with the version committed at that moment as its base. An
+            // "other writer" then commits the same managed key.
             harness.writeScript(ScriptType.SERVER, "entry.js", """
                     global.k = 'cand'
                     State.write('server', 'k', 'other')
@@ -411,8 +425,9 @@ class Ticket10GlobalStateTest {
             harness.load(ScriptType.SERVER);
             harness.load(ScriptType.CLIENT);
 
-            // SERVER 候选写私有 global.k 的同时，CLIENT（active）写自己的私有 global.k：
-            // 不同 store 各自版本，互不冲突，两边都成立
+            // While the SERVER candidate writes its private global.k, CLIENT (the active generation)
+            // writes its own private global.k. The two stores keep their own versions, so the writes do
+            // not conflict and both hold
             harness.writeScript(ScriptType.SERVER, "entry.js", """
                     global.k = 'server'
                     State.write('client', 'k', 'client')
@@ -444,7 +459,7 @@ class Ticket10GlobalStateTest {
         }
     }
 
-    // ==================== AC4：一次候选同时写 global 与 shared，联合成败 ====================
+    // ==================== One candidate writes both global and shared: joint outcome ====================
 
     @Test
     void candidateWritingBothGlobalAndSharedCommitsJointlyOrNotAtAll() throws Exception {
@@ -452,7 +467,8 @@ class Ticket10GlobalStateTest {
             harness.writeScript(ScriptType.SERVER, "entry.js", "");
             harness.load(ScriptType.SERVER);
 
-            // 失败方向：联合预检里外部计划失败 → 两边全部不发布（无半提交）
+            // The failure case: an external plan fails the joint preflight, so neither side publishes and
+            // there is no half commit
             harness.writeScript(ScriptType.SERVER, "entry.js", """
                     global.joint = 'g'
                     shared.joint = 's'
@@ -468,7 +484,7 @@ class Ticket10GlobalStateTest {
             assertNull(harness.stores.sharedStore().get("joint"),
                     "shared write set must not publish (joint failure) — no half commit");
 
-            // 成功方向：两边联合发布
+            // The success case: both sides publish together
             harness.writeScript(ScriptType.SERVER, "entry.js", """
                     global.joint = 'g'
                     shared.joint = 's'
@@ -481,7 +497,7 @@ class Ticket10GlobalStateTest {
         }
     }
 
-    // ==================== AC5：联合预检边界（无领域语义） ====================
+    // ==================== Joint preflight, no domain semantics ====================
 
     @Test
     void candidateStatePlanBoundaryJoinsJointPreflightAndJointOutcome() throws Exception {
@@ -489,7 +505,8 @@ class Ticket10GlobalStateTest {
             harness.writeScript(ScriptType.SERVER, "entry.js", "");
             harness.load(ScriptType.SERVER);
 
-            // 1) 通过的计划：preflight → publish 都执行，写集联合发布
+            // 1) A passing plan runs both preflight and publish, and its write set publishes with the
+            // joint commit
             harness.writeScript(ScriptType.SERVER, "entry.js", """
                     global.p = 'p'
                     State.plan('passing-plan', 'pass')
@@ -499,7 +516,8 @@ class Ticket10GlobalStateTest {
             assertEquals(1, harness.marker.countOf("plan-published:passing-plan"),
                     "a passing plan's publish must run exactly once at the commit point");
 
-            // 2) 计划 preflight 在 STATE_PLAN 抛出 → candidate 失败、global/shared 不发布
+            // 2) The plan's preflight throws during STATE_PLAN, so the candidate fails and neither global
+            // nor shared publishes
             harness.writeScript(ScriptType.SERVER, "entry.js", """
                     global.p2 = 'p2'
                     shared.p2 = 's2'
@@ -515,8 +533,9 @@ class Ticket10GlobalStateTest {
             assertEquals(1, harness.marker.countOf("plan-published:passing-plan"),
                     "the failing candidate must not publish any plan");
 
-            // 3) 计划违反 publish 契约（preflight 通过后 publish 抛出）→ global/shared 写集
-            //    不发布（计划边界：其自身部分副作用不回滚，由计划作者负责）
+            // 3) The plan breaks the publish rule: preflight passes, then publish throws, so the global
+            // and shared write sets stay unpublished. The plan's own partial side effects are not
+            // rolled back; the plan author owns them
             harness.writeScript(ScriptType.SERVER, "entry.js", """
                     global.p3 = 'p3'
                     State.plan('publish-violator', 'publish-throw')
@@ -528,7 +547,8 @@ class Ticket10GlobalStateTest {
             assertNull(harness.stores.storeFor(ScriptType.SERVER).get("p3"),
                     "global/shared write sets must stay unpublished when a plan violates publish");
 
-            // 4) STATE_PLAN 与 commit 之间闯入的其他 writer：commit 点锁内复验兜底
+            // 4) Another writer slips in between STATE_PLAN and commit; the re-check under the lock at the
+            // commit point catches it
             harness.writeScript(ScriptType.SERVER, "entry.js", """
                     shared.backstopKey = 'cand'
                     State.plan('sneaky-writer', 'other-writer-preflight')
@@ -542,7 +562,7 @@ class Ticket10GlobalStateTest {
         }
     }
 
-    // ==================== AC7：root 生命周期（保留 / 释放 / 独立 root 从空开始） ====================
+    // ==================== Root lifetime: retained, released, a separate root starts empty ====================
 
     @Test
     void rootOwnedStateSurvivesReloadAndStopCycleAndIsReleasedByRootClose() throws Exception {
@@ -565,12 +585,12 @@ class Ticket10GlobalStateTest {
         try {
             Files.createDirectories(ScriptTypeEnv.scriptsDir(ScriptType.STARTUP));
 
-            // 独立 root 从空状态开始
+            // A separate root starts with empty state
             assertTrue(root.globalState().storeFor(ScriptType.SERVER).isEmpty(),
                     "a fresh root must start with empty global state");
             assertTrue(root.globalState().sharedStore().isEmpty());
 
-            // 先写脚本再 discover/load（loadScripts 消费 discover 的列表）
+            // Write the script before discover and load, because loadScripts consumes the list from discover
             Path serverDir = ScriptTypeEnv.scriptsDir(ScriptType.SERVER);
             Files.writeString(serverDir.resolve("entry.js"),
                     "global.retained = (global.retained || 0) + 1; shared.anchor = 'root-one'");
@@ -578,30 +598,34 @@ class Ticket10GlobalStateTest {
             root.scriptManagerOf(ScriptType.SERVER).loadScripts();
             assertEquals(1, root.globalState().storeFor(ScriptType.SERVER).get("retained"));
 
-            // 普通 reload：generation close 不误清（非 guest 值保留）。entry.js 每次执行
-            // 都会累加——reload 重跑了脚本，retained 1 → 2 本身就是「旧值可读且保留」的证据。
+            // A normal reload: closing the generation must not clear anything, so values that are not guest
+            // values survive. entry.js increments on every run, so retained going from 1 to 2 shows the old
+            // value was readable and kept
             root.reload(ScriptType.SERVER);
             assertEquals(2, root.globalState().storeFor(ScriptType.SERVER).get("retained"),
                     "generation close must not clear root-level state (reloaded script read the"
                             + " retained value and incremented it)");
             assertEquals("root-one", root.globalState().sharedStore().get("anchor"));
 
-            // server stop / 切世界模拟：只清 WORLD 包监听（平台钩子语义），root 状态保留。
-            // 注意本腿传入空 WORLD 列表——钩子路径实际不执行条目清理，真正的支撑是结构性
-            // 论证：closeAll() 全仓唯一调用点是 NekoRuntimeRoot.closeSilently，生产 server
-            // stop/世界卸载钩子（ServerEventListener → clearWorldPackListeners）不触碰状态域；
-            // 真机 smoke 见 REPORT N1（审查 F2 如实标注）。
+            // Simulates a server stop or world switch: it only clears the WORLD pack listeners, as the
+            // platform hook does, and root state is retained. This leg passes an empty WORLD list, so the
+            // hook path does not actually clean up entries. The real support is structural: the only
+            // caller of closeAll() is NekoRuntimeRoot.closeSilently, and the production server stop and
+            // world unload hook (ServerEventListener -> clearWorldPackListeners) never touches the state
+            // domain.
             root.scriptManagerOf(ScriptType.SERVER).clearWorldPackListeners(List.of());
             root.scriptManagerOf(ScriptType.SERVER).discoverScripts();
             assertEquals(2, root.globalState().storeFor(ScriptType.SERVER).get("retained"),
                     "server stop / world switch must not clear global/shared");
 
-            // 再次 reload：继续在保留值上累加（跨 reload 保留的脚本侧观察）
+            // Another reload: it keeps accumulating on the retained value, observed from the script side
+            // across reloads
             root.reload(ScriptType.SERVER);
             assertEquals(3, root.globalState().storeFor(ScriptType.SERVER).get("retained"),
                     "reloaded scripts must see and keep incrementing the retained value");
 
-            // root close 释放（close 后再获取 store 明确拒绝；已获取引用读到已释放的空状态）
+            // Closing the root releases the state. After close, acquiring a store is explicitly rejected;
+            // a reference acquired earlier reads the released, empty state
             GlobalStore serverStoreRef = root.globalState().storeFor(ScriptType.SERVER);
             GlobalStore sharedStoreRef = root.globalState().sharedStore();
             root.closeSilently();
@@ -614,7 +638,7 @@ class Ticket10GlobalStateTest {
                     () -> root.globalState().storeFor(ScriptType.SERVER),
                     "acquiring stores from a released root must be explicitly rejected");
 
-            // 独立 root / 测试 runner 从空状态开始（互不可见、不串状态）
+            // A separate root, as a test runner uses, starts empty: the two never see each other's state
             Engine engine2 = Engine.newBuilder().build();
             DefaultErrorTracker tracker2 = new DefaultErrorTracker(paths, config);
             NekoCoreContext core2 = new NekoCoreContext(engine2, config, new ClassFilter(config), tracker2);
@@ -639,7 +663,7 @@ class Ticket10GlobalStateTest {
         }
     }
 
-    // ==================== AC8：guest Value 生命周期 / 不承诺深回滚 ====================
+    // ==================== Guest Value lifetime: no promise of deep rollback ====================
 
     @Test
     void storedGuestFunctionsExpireWithTheirGenerationWhileHostValuesSurvive() throws Exception {
@@ -654,8 +678,9 @@ class Ticket10GlobalStateTest {
             assertNotNull(harness.stores.storeFor(ScriptType.SERVER).get("fn"),
                     "guest function is stored while its generation is alive");
 
-            // reload：候选执行期间旧 generation 仍存活——其已提交 guest 值对候选可读
-            // （读已提交语义）；旧 generation 在 commit 点关闭，其 guest 值随之失效。
+            // Reload: the old generation is still alive while the candidate runs, so its committed guest
+            // values are readable by the candidate (read-committed semantics). The old generation closes at
+            // commit, and its guest values expire with it
             harness.writeScript(ScriptType.SERVER, "entry.js", """
                     Marker.hit('candidate-sees-live-old-gen:' + (typeof global.fn))
                     """);
@@ -667,8 +692,9 @@ class Ticket10GlobalStateTest {
                     "guest functions from the destroyed generation must expire at commit"
                             + " (no permanent keep-alive from being stored in the map)");
 
-            // commit 后的观察点（新 active generation 内的 FILE reload 探针）：
-            // guest 函数已失效，宿主标量值保留（跨 reload 的 root 级保留）
+            // What is observed after commit, through a FILE reload probe inside the new active generation:
+            // the guest function has expired while the host scalar value survives, because root state is
+            // kept across reloads
             harness.writeScript(ScriptType.SERVER, "probe.js", """
                     Marker.hit('v2-fn:' + (typeof global.fn))
                     Marker.hit('v2-helper:' + global.helper)
@@ -684,8 +710,9 @@ class Ticket10GlobalStateTest {
     @Test
     void nestedMutationsAreNotDeepRolledBack() throws Exception {
         try (Harness harness = new Harness()) {
-            // 同一 generation 内：file1 放嵌套对象，file2 原地改内层——嵌套修改不进写集，
-            // 立即生效（明确不承诺深回滚）
+            // Within one generation: file1 stores a nested object and file2 mutates the inner field in
+            // place. Nested mutations never enter the write set and take effect immediately, so a failed
+            // candidate explicitly does not roll them back
             harness.writeScript(ScriptType.SERVER, "one.js", "global.box = { v: 1 }");
             harness.writeScript(ScriptType.SERVER, "two.js", """
                     global.box.v = 99
@@ -704,7 +731,8 @@ class Ticket10GlobalStateTest {
             assertNull(harness.stores.storeFor(ScriptType.SERVER).get("doomed"),
                     "top-level candidate write is discarded");
 
-            // 同一 active generation 内的 FILE reload 探针读回嵌套值：仍是 99（未深回滚）
+            // The FILE reload probe inside the same active generation reads the nested value back: it is
+            // still 99, so nothing was deep-rolled-back
             Files.delete(ScriptTypeEnv.scriptsDir(ScriptType.SERVER).resolve("one.js"));
             harness.writeScript(ScriptType.SERVER, "probe.js",
                     "Marker.hit('box-after-failed-candidate:' + global.box.v)");
@@ -715,7 +743,7 @@ class Ticket10GlobalStateTest {
         }
     }
 
-    // ==================== AC9：global 状态容器 vs globalThis 语言全局 ====================
+    // ==================== global, the state container, vs globalThis, the language global ====================
 
     @Test
     void globalIsTheStateContainerWhileGlobalThisStaysTheLanguageGlobal() throws Exception {
@@ -756,12 +784,12 @@ class Ticket10GlobalStateTest {
         }
     }
 
-    // ==================== AC10：迁移（同类型不变 / 旧跨类型不再隐式可见） ====================
+    // ==================== Migration: same-type usage unchanged, cross-type implicit reads gone ====================
 
     @Test
     void sameTypeUsageUnchangedAndLegacyCrossTypeFallbackIsGone() throws Exception {
         try (Harness harness = new Harness()) {
-            // 同类型用法保持不变（KubeJS 风格 global.foo 直读直写）
+            // Same-type usage is unchanged: scripts read and write global.foo directly, KubeJS style
             harness.writeScript(ScriptType.SERVER, "entry.js", """
                     global.counter = (global.counter || 0) + 1
                     shared.cross = 'explicit'
@@ -771,8 +799,9 @@ class Ticket10GlobalStateTest {
             assertEquals(2, harness.stores.storeFor(ScriptType.SERVER).get("counter"),
                     "same-type global.foo usage is unchanged across reloads");
 
-            // 旧隐式跨类型回退已删除：CLIENT 读 global.cross 得 undefined（不再共享进程 Map），
-            // 显式 shared 入口承载跨类型共享
+            // The old implicit cross-type fallback is deleted. CLIENT reading global.cross gets undefined,
+            // because no process-wide Map is shared any more, and cross-type sharing goes through the
+            // explicit shared entry
             harness.writeScript(ScriptType.CLIENT, "entry.js", """
                     Marker.hit('legacy-implicit-gone:' + (typeof global.cross))
                     Marker.hit('explicit-shared:' + shared.cross)
@@ -787,14 +816,15 @@ class Ticket10GlobalStateTest {
         }
     }
 
-    // ==================== AC11：不越界（无第二 owner / 无 static 状态） ====================
+    // ==================== Staying in scope: no second owner and no static state ====================
 
     @Test
     void stateDomainHasNoStaticStateAndNoSecondOwner() throws Exception {
-        // global 状态域完全 root 实例持有：core.state 包的关键类型不得有可变 static 字段
-        // （否则就回归了进程级 NekoGlobal 的老问题）。权限系统/网络同步协议/通用事务框架
-        // 的「不新增」由 guardLint + 代码走查承担（REPORT 记录），此处钉住最关键的
-        // 「无 static 可变状态」不变式。
+        // The global state domain is held entirely by the root instance, so key types in the
+        // core.state package must have no mutable static fields; otherwise the old process-wide
+        // NekoGlobal problem returns. Guard lint and code review cover the "add nothing" rule for the
+        // permission system, the network sync protocol and a generic transaction framework. This test
+        // pins down the key rule: no mutable static state.
         for (Class<?> clazz : List.of(GlobalStateStores.class, GlobalStore.class,
                 GenerationGlobals.class, GlobalView.class)) {
             for (Field field : clazz.getDeclaredFields()) {

@@ -1,5 +1,6 @@
-// 26.x 实现，本文件不应再出现版本守卫。1.21.1 的实现是 versions/1.21.1/src 下的同名文件，
-// 改本文件行为时须同步它。
+// Implementation for 26.x; this file must not contain version guards again. The 1.21.1
+// implementation is the file of the same name under versions/1.21.1/src; when you change the
+// behavior here, update that file too.
 package com.tkisor.nekojs.wrapper.entity;
 
 import com.tkisor.nekojs.wrapper.registry.gen.EntityTypeBuilder;
@@ -63,7 +64,8 @@ import java.util.Set;
 import java.util.function.Function;
 
 public final class GoalRegistry {
-    // 注册阶段写、gameplay 阶段读，用 ConcurrentHashMap 保证 safe-publication
+    // Written during registration and read during gameplay; ConcurrentHashMap guarantees safe
+    // publication
     private static final Map<EntityType<?>, List<GoalFactory>> GOALS = new java.util.concurrent.ConcurrentHashMap<>();
     private static final Set<Mob> APPLIED_JOIN_GOALS = java.util.Collections.newSetFromMap(
             new com.google.common.collect.MapMaker().weakKeys().<Mob, Boolean>makeMap());
@@ -128,11 +130,12 @@ public final class GoalRegistry {
     }
 
     /**
-     * 常用目标实体 id（无命名空间前缀）→ 实体类。
+     * Common goal target ids without a namespace prefix, mapped to their entity classes.
      *
-     * <p>NeoForge 自 1.21.x 起 {@code EntityType.getBaseClass()} 硬编码返回
-     * {@code Entity.class}，无法从注册表推断具体类，故内置常用映射兜底；
-     * 未覆盖的实体请用 {@code Java.type('net.minecraft...')} 传 Java 类。
+     * <p>Since 1.21.x, NeoForge's {@code EntityType.getBaseClass()} always returns
+     * {@code Entity.class}, so the concrete class cannot be read from the registry. This built-in
+     * mapping covers the common ids; for anything else, pass the Java class with
+     * {@code Java.type('net.minecraft...')}.
      */
     private static final Map<String, Class<? extends LivingEntity>> TARGET_CLASSES = new HashMap<>();
 
@@ -145,7 +148,8 @@ public final class GoalRegistry {
         TARGET_CLASSES.put("enderman", EnderMan.class);
         TARGET_CLASSES.put("witch", Witch.class);
         TARGET_CLASSES.put("blaze", Blaze.class);
-        // Slime 在 26.1 仍是 monster 包，26.2 起拆到 cubemob 子包——按版本取可用类
+        // Slime is still in the monster package in 26.1 and moved to the cubemob subpackage in 26.2,
+        // so take whichever class the version has
         addTarget("slime", "net.minecraft.world.entity.monster.cubemob.Slime", "net.minecraft.world.entity.monster.Slime");
         TARGET_CLASSES.put("phantom", Phantom.class);
         TARGET_CLASSES.put("husk", Husk.class);
@@ -175,7 +179,8 @@ public final class GoalRegistry {
         TARGET_CLASSES.put("bat", Bat.class);
     }
 
-    /** 按候选类名逐个加载（跨小版本拆包差异兜底），全部失败则跳过该映射。 */
+    /** Loads the candidate class names one by one, which covers package moves between minor
+     * versions; if none loads, the mapping is skipped. */
     private static void addTarget(String id, String... classNames) {
         for (String name : classNames) {
             try {
@@ -189,10 +194,11 @@ public final class GoalRegistry {
     }
 
     /**
-     * 目标实体 → 实体类。支持 Java 类对象（{@code Java.type(...)}）与实体 id 字符串
-     * （内置常用映射；NekoJS 注册的脚本实体统一为 {@link NekoScriptMob}）。
+     * Resolves a goal target to an entity class. Accepts a Java class object
+     * ({@code Java.type(...)}) or an entity id string (using the built-in common mappings; script
+     * entities registered by NekoJS are always {@link NekoScriptMob}).
      */
-    @SuppressWarnings("unchecked") // 已用 isAssignableFrom 校验，转换安全
+    @SuppressWarnings("unchecked") // isAssignableFrom already checked the type, so the cast is safe
     private static Class<? extends LivingEntity> resolveTarget(Object target) {
         if (target instanceof Class<?> clazz) {
             if (LivingEntity.class.isAssignableFrom(clazz)) {
@@ -275,9 +281,10 @@ public final class GoalRegistry {
             return this;
         }
 
-        // ===== 目标类 goal（加入 targetSelector）=====
+        // ===== Target goals (registered in targetSelector) =====
 
-        /** 追击最近的目标（{@code NearestAttackableTargetGoal}，默认必须看见）。 */
+        /** Chases the nearest target ({@code NearestAttackableTargetGoal}); the target must be visible
+         * by default. */
         public GoalBuilderJS target(Object target) {
             return target(4, target, true);
         }
@@ -292,7 +299,7 @@ public final class GoalRegistry {
             return this;
         }
 
-        /** 被攻击后反击（{@code HurtByTargetGoal}）。 */
+        /** Retaliates when attacked ({@code HurtByTargetGoal}). */
         public GoalBuilderJS hurtByTarget() {
             return hurtByTarget(3);
         }
@@ -302,9 +309,9 @@ public final class GoalRegistry {
             return this;
         }
 
-        // ===== 观察 / 躲避 =====
+        // ===== Looking and avoiding =====
 
-        /** 看向附近目标（{@code LookAtPlayerGoal}）。 */
+        /** Looks at a nearby target ({@code LookAtPlayerGoal}). */
         public GoalBuilderJS lookAt(Object target, float radius) {
             return lookAt(3, target, radius);
         }
@@ -315,7 +322,8 @@ public final class GoalRegistry {
             return this;
         }
 
-        /** 逃离附近目标（{@code AvoidEntityGoal}，走/跑同一速度）。 */
+        /** Flees from a nearby target ({@code AvoidEntityGoal}); walking and running use the same
+         * speed. */
         public GoalBuilderJS avoid(Object target, float radius, double speed) {
             return avoid(3, target, radius, speed);
         }

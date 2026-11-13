@@ -8,8 +8,9 @@ import graal.graalvm.polyglot.Value;
 import java.util.Objects;
 
 /**
- * {@link PerformanceFacade} 默认实现。基于 {@link System#nanoTime()} 单调时钟，
- * 亚毫秒精度；回调通过 Graal {@link Value} 执行。
+ * Default {@link PerformanceFacade} implementation. Time comes from the monotonic
+ * {@link System#nanoTime()} clock at sub-millisecond precision; callbacks run through a
+ * Graal {@link Value}.
  */
 public final class DefaultPerformanceFacade implements PerformanceFacade {
 
@@ -33,7 +34,7 @@ public final class DefaultPerformanceFacade implements PerformanceFacade {
         if (actualRuns == 0) {
             return PerfStat.of(0, 0.0, 0.0, 0.0);
         }
-        // warmup：执行一次不计入统计，避免冷启动偏置
+        // Warmup: run once without counting it, so cold-start cost does not skew the stats
         callback.executeVoid();
         double min = Double.POSITIVE_INFINITY;
         double max = 0.0;

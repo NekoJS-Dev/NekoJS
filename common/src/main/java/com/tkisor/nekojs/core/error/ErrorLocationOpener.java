@@ -1,16 +1,18 @@
 package com.tkisor.nekojs.core.error;
 
 /**
- * 可注入的错误位置分派器。实现只承诺“打开请求已交给平台/进程”，不得把它解释为编辑器确实打开。
+ * Injectable dispatcher for error locations. An implementation only promises that the open
+ * request was handed to the platform or process; callers must not read that as the editor
+ * having actually opened.
  */
 public interface ErrorLocationOpener {
 
     OpenResult open(LocalErrorSource.Target target);
 
     enum Status {
-        /** 打开请求已被真实分派机制接受。 */
+        /** The open request was accepted by a real dispatch mechanism. */
         DISPATCH_ACCEPTED,
-        /** 没有可用分派机制，或分派机制抛出/拒绝了请求。 */
+        /** No dispatch mechanism is available, or the mechanism threw or rejected the request. */
         FAILED
     }
 

@@ -12,26 +12,27 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * 创造模式标签页 builder：标题、图标与条目；条目在注册时快照到标签页
- * （注册后新增条目需重新注册/重进存档）。
+ * Builder for a creative mode tab: title, icon and entries. The entries are snapshotted into the tab
+ * when it is registered, so entries added after registration need a re-registration or a save reload.
  * <pre>
- * event.creativeModeTab('mymod:main', b =&gt; { b.title = '我的模组'; b.icon = 'minecraft:ruby'; b.add('mymod:ruby') })
+ * event.creativeModeTab('mymod:main', b =&gt; { b.title = 'My Mod'; b.icon = 'minecraft:ruby'; b.add('mymod:ruby') })
  * </pre>
  */
 public class CreativeTabBuilder extends RegistryObjectBuilder<CreativeModeTab> {
 
     private String title = "NekoJS";
-    /** 图标（物品 id 字符串或 ItemStack；null 回退屏障图标）。 */
+    /** Icon: an item id string or an ItemStack; null falls back to the barrier icon. */
     private Object icon = null;
 
-    /** 条目原始值（物品 id 字符串或 ItemStack），displayItems 回调期才解析（见 build 注释）。 */
+    /** Raw entry values (item id string or ItemStack), resolved only during the displayItems callback (see
+     * the build comment). */
     private final List<Object> items = new ArrayList<>();
 
     public CreativeTabBuilder(Identifier id) {
         super(id);
     }
 
-    /** 标题（null/空白回退默认 'NekoJS'——旧行为是 build 期深处 NPE，现在写入期规范化）。 */
+    /** Title; null or blank falls back to 'NekoJS'. The setter normalizes the value on write. */
     public String getTitle() {
         return title;
     }
@@ -40,7 +41,7 @@ public class CreativeTabBuilder extends RegistryObjectBuilder<CreativeModeTab> {
         this.title = title == null || title.isBlank() ? "NekoJS" : title;
     }
 
-    /** 图标（物品 id 字符串或 ItemStack；null 回退屏障图标）。 */
+    /** Icon: an item id string or an ItemStack; null falls back to the barrier icon. */
     public Object getIcon() {
         return icon;
     }
@@ -49,7 +50,7 @@ public class CreativeTabBuilder extends RegistryObjectBuilder<CreativeModeTab> {
         this.icon = icon;
     }
 
-    /** 添加条目（物品 id 字符串或 ItemStack）。 */
+    /** Adds an entry: an item id string or an ItemStack. */
     public void add(Object item) {
         if (item != null) {
             items.add(item);
@@ -58,12 +59,14 @@ public class CreativeTabBuilder extends RegistryObjectBuilder<CreativeModeTab> {
 
     @Override
     public CreativeModeTab build() {
-        // icon 与条目都留原始值、在懒回调期解析（渲染/打开创造页时）：fabric 的 mod init
-        // 早于 vanilla 物品组件绑定（"Components not bound yet"），eager 构造 ItemStack
-        // 在该时机必炸；懒回调期两侧组件均已绑定，且"注册后新增条目"的解析也更宽容
+        // icon and entries keep their raw values and are resolved in the lazy callback (when rendering or
+        // opening the creative page). Fabric's mod init runs before vanilla item components are bound
+        // ("Components not bound yet"), so building an ItemStack eagerly fails there. By the callback
+        // both sides have components bound, and entries added after registration still resolve.
         final Object iconValue = icon;
-        // NeoForge 给 CreativeModeTab.builder() 加了无参重载（默认 Row/列位）；vanilla 只有
-        // (Row,int) 双参，fabric 经 creative-tab api 的 FabricCreativeModeTab.builder() 等价
+        // NeoForge adds a no-arg overload of CreativeModeTab.builder() (default row and column); vanilla only
+        // has the two-arg (Row,int) form, and fabric reaches the same result through
+        // FabricCreativeModeTab.builder() from the creative-tab api
         net.minecraft.world.item.CreativeModeTab.Builder tabBuilder;
 //? if neoforge {
         tabBuilder = CreativeModeTab.builder();

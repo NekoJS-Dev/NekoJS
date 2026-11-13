@@ -9,12 +9,12 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * Ticket 21, AC3/AC4/AC6/AC7 (client side): one node's view of the batch
- * transaction. Sync-incomplete commits never activate a new generation; duplicate
- * and late messages have defined outcomes (no silent no-op); disconnect keeps the
- * ledger and watermark for rejoin; the local first-version conflict rule rejects
- * diverged server state without silent overwrite; success assertions observe the
- * node's final visible state, never the mere existence of prepare/ack messages.
+ * Client side of the batch transaction: one node's view. A commit without a complete sync
+ * never activates a new generation. Duplicate and late messages have defined outcomes and
+ * never turn into a silent no-op. A disconnect keeps the ledger and the watermark so the node
+ * can rejoin. The local first-version conflict rule rejects diverged server state instead of
+ * overwriting it silently. Success assertions check the node's final visible state, never the
+ * mere existence of prepare/ack messages.
  */
 class DynamicRegistryClientParticipantTest {
 
@@ -32,7 +32,7 @@ class DynamicRegistryClientParticipantTest {
                 RecordingTxnSupport.item(id, maxStackSize, "common"), "server_scripts/entry.js")));
     }
 
-    // ---- AC6: exactly-once activation ----
+    // ---- Exactly-once activation ----
 
     @Test
     void prepareThenCommitActivatesExactlyOnceAndDuplicateCommitIsANoOp() {
@@ -56,7 +56,7 @@ class DynamicRegistryClientParticipantTest {
         assertTrue(client.eventLog().stream().anyMatch(e -> e.startsWith("already-activated")));
     }
 
-    // ---- AC4: sync-incomplete nodes never activate ----
+    // ---- A node that never completed sync does not activate ----
 
     @Test
     void commitWithoutMatchingPrepareNeverActivates() {
@@ -92,7 +92,7 @@ class DynamicRegistryClientParticipantTest {
         assertEquals(-1L, client.stagedGeneration(), "nothing is re-staged for an activated generation");
     }
 
-    // ---- AC7: local first-version conflict rule (no silent overwrite) ----
+    // ---- Local first-version conflict rule: no silent overwrite ----
 
     @Test
     void conflictingTargetStateIsRejectedAsAWhole() {
@@ -111,7 +111,7 @@ class DynamicRegistryClientParticipantTest {
         assertEquals(1, adapter.activateCalls.size());
     }
 
-    // ---- AC4: abort / disconnect / rejoin / degraded adapter ----
+    // ---- Abort, disconnect, rejoin and degraded adapter ----
 
     @Test
     void abortDiscardsTheStagedPrepare() {
@@ -205,7 +205,7 @@ class DynamicRegistryClientParticipantTest {
         assertEquals(1, adapter.activateCalls.size(), "idempotent: the activated generation is not re-executed");
     }
 
-    // ---- AC3: final visible state, not message existence ----
+    // ---- Final visible state, not message existence ----
 
     @Test
     void activatedStateIsFullyVisibleInTheNodesLedger() {

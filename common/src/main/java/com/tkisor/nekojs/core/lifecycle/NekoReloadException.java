@@ -1,12 +1,12 @@
 package com.tkisor.nekojs.core.lifecycle;
 
 /**
- * 事务式 reload 失败：携带结构化 {@link ReloadFailureReport}（generation / phase /
- * source location / owner / domain，工单 06 AC3）。
+ * A transactional reload failed. Carries the structured {@link ReloadFailureReport} (generation,
+ * phase, source location, owner, domain).
  *
- * <p>由 {@code ScriptManager} 的事务式 reload 路径抛出，经 {@code NekoRuntimeRoot.reload}
- * 透传给命令与平台调用方。消息文本与 {@link ReloadFailureReport#describe()} 一致，
- * 不含修复指引。
+ * <p>Thrown by the transactional reload path in {@code ScriptManager} and passed through
+ * {@code NekoRuntimeRoot.reload} to commands and platform callers. The message text matches
+ * {@link ReloadFailureReport#describe()} and contains no repair guidance.
  */
 public final class NekoReloadException extends RuntimeException {
     private final ReloadFailureReport report;
@@ -16,7 +16,7 @@ public final class NekoReloadException extends RuntimeException {
         this.report = report;
     }
 
-    /** 结构化失败结果；与 {@link #getMessage()} 携带同一信息。 */
+    /** Structured failure result; it carries the same information as {@link #getMessage()}. */
     public ReloadFailureReport report() {
         return report;
     }

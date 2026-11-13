@@ -11,53 +11,35 @@ import java.util.function.Predicate;
 import java.util.function.Supplier;
 
 /**
- * 一个收集扩展点的完整自包含定义：id + 目标插件类型 + 环境谓词 + 累积器生命周期
- * + 依赖声明 + 合并策略（ADR-0001 V2 模型）。
+ * A complete self-contained definition of an extension point: id + target plugin type + environment predicate + accumulator lifecycle
+ * + dependency declaration + merge strategy (ADR-0001 V2 model).
  *
- * <p>扩展点由 {@link NekoPluginExtensionProvider} 在 bootstrap 的扩展点注册阶段经
- * {@link NekoPluginExtensionRegistry#register} 注册（{@code NekoJSPlugin} 的 14 个固有钩子
- * 也是这样注册的内置扩展点，id 为 {@code nekojs:*}），注册返回
- * {@link NekoPluginExtensionHandle}，bootstrap 完成后可凭它取回产物。
+ * <p>Extension points are registered by {@link NekoPluginExtensionProvider} during the bootstrap registration phase via
+ * {@link NekoPluginExtensionRegistry#register} (the 14 inherent hooks of {@code NekoJSPlugin}
+ * are also registered as built-in extension points in this way, with the id {@code nekojs:*}). Registration returns
+ * {@link NekoPluginExtensionHandle}, which can be used to retrieve artifacts after bootstrap completes.
  *
- * <p><b>依赖（ADR-0002 双轨制）：</b>freeze 后 bootstrap 按 Kahn 拓扑序（同层按注册序，
- * 内置先行是图的根部天然保证）逐点收集。① 时序依赖经 builder
- * {@code dependsOn(point)}/{@code dependsOnId(id)} 声明——仅需对方先完成、不读产物；
- * 环 fail-fast（报错打印完整环路径）、未注册 id 在 freeze 早爆。② 数据依赖 = 在
- * initializer / collector 里 {@link NekoPluginExtensionContext#result} 读取先序点产物，
- * 免声明；违序读取（对方已注册但尚未 finish）立即抛 {@link IllegalStateException}
- * 并附"declare dependsOn"修复指引。③ 可选时序依赖经
- * {@code dependsOnOptional(point)}/{@code dependsOnOptionalId(id)} 声明：仅当对方
- * <b>已注册</b>时加入排序边（对方缺席的 bootstrap——如不含版本树插件的 common 测试
- * 轮——不建边、不早爆），用于跨层数据依赖"读对方产物、但对方并非所有环境都存在"的
- * 场合；对方在场合的序保证与硬依赖等同，违序读取仍按 ② 立即抛。
+ * <p><b>Dependencies (ADR-0002 Dual-track System):</b> After freeze, bootstrap collects points in Kahn topological order (same-layer by registration order, built-ins guaranteed as graph roots).
+ * 1) Chronological dependency: declared via builder {@code dependsOn(point)}/{@code dependsOnId(id)}—ensures target completes first; does not read artifacts; fail-fast on cycles (prints full cycle path), early-bang on unregistered ids.
+ * 2) Data dependency: reading precedent artifacts in initializer/collector via {@link NekoPluginExtensionContext#result}, no declaration needed; out-of-order access (target registered but not finished) throws {@link IllegalStateException} with "declare dependsOn" instruction.
+ * 3) Optional chronological dependency: declared via {@code dependsOnOptional(point)}/{@code dependsOnOptionalId(id)}; adds topological edge only if target <b>is registered</b> (bootstrap without target creates no edge, no early-bang), used for cross-layer data dependencies where target's existence is environment-dependent; chronological guarantee same as hard dependency, out-of-order access still throws per 2.
  *
- * <p><b>合并策略（ADR-0001 四档标准件）：</b>builder {@code merge(...)} 必填，从
- * {@link MergePolicy} 的 {@code append / firstWin / overrideWarn / failFast} 四档
- * 显式选择；键控累积器在冲突点调用 {@link MergePolicy#resolveDuplicate}。
+ * <p><b>Merge Policy (ADR-0001 Four Standard Options):</b> Builder {@code merge(...)} is mandatory, explicitly select from
+ * {@link MergePolicy} options: {@code append / firstWin / overrideWarn / failFast};
+ * for keyed accumulators, {@link MergePolicy#resolveDuplicate} is called at conflict points.
  *
- * <p><b>reload 可重入：</b>每次 bootstrap 都会重新调用 {@code initializer} 新建累积器，
- * 扩展点自身不持有跨轮状态；产物经 {@code finisher} 从累积器快照而来，与累积器解耦。
- * finisher 运行后引擎对实现了 {@link Sealable} 的累积器调用密封（finish 后不再收集）。
+ * <p><b>Reload re-entrancy:</b> Bootstrap re-invokes {@code initializer} to create a new accumulator each round; the extension point holds no cross-round state. Artifacts are derived from accumulator snapshots via {@code finisher}, decoupling from the accumulator. The engine seals accumulators implementing {@link Sealable} after finisher execution (collection disallowed after finish).
  *
- * @param id          扩展点 id，同一次 bootstrap 内全局唯一（含与内置 {@code nekojs:*} 冲突，
- *                    重复注册抛 {@link IllegalArgumentException}）；第三方建议使用
- *                    {@code modid:name} 命名空间前缀。不允许为 null 或 blank
- * @param pluginType  目标插件类型过滤器：仅 {@code pluginType.isInstance(plugin)} 的插件会被收集，
- *                    其余插件直接跳过、collector 不被调用
- * @param enabled     环境谓词：每个扩展点收集前以当前 {@link NekoPluginExtensionContext} 测试一次，
- *                    为 {@code false} 时整个扩展点在当前环境（如专用服务器）跳过——
- *                    initializer/collector/finisher 都不执行，也不发布产物
- * @param initializer 累积器工厂：每轮 bootstrap 为本扩展点新建一个可变累积器 {@code A}；
- *                    接收当前 {@link NekoPluginExtensionContext}，故可按环境或先序点的产物
- *                    定制累积器初始状态。绝不能返回跨轮共享的可变单例
- * @param collector   收集回调：仅对同时通过环境谓词与类型过滤的插件调用一次，往累积器收集
- * @param finisher    收尾函数：累积器 → 不可变产物 {@code R}。bootstrap 在本扩展点收集完
- *                    所有插件后调用一次，产物随即发布；副作用型收尾（lock/静态注入等）
- *                    也应写在这里而不是 bootstrap 流程里
- * @param dependsOn   依赖声明：元素为 {@link NekoPluginExtensionPoint} 实例或 String id
- * @param <P>         目标插件类型（{@link NekoJSPlugin} 的子类型）
- * @param <A>         累积器类型（收集期的可变状态，每轮 bootstrap 新建）
- * @param <R>         产物类型（finisher 输出的不可变结果）
+ * @param id          Extension point id, globally unique within one bootstrap (conflicts with built-in {@code nekojs:*} throw {@link IllegalArgumentException}); third-parties should use {@code modid:name} namespace prefix. Must not be null or blank
+ * @param pluginType  Target plugin type filter: only plugins where {@code pluginType.isInstance(plugin)} is true are collected; others are skipped without collector invocation.
+ * @param enabled     Environment predicate: tested once per extension point via {@link NekoPluginExtensionContext} before collection; if {@code false}, the entire extension point is skipped in the current environment (e.g., dedicated server)—initializer/collector/finisher are not executed, and no artifacts are published.
+ * @param initializer Accumulator factory: creates a new mutable accumulator {@code A} per bootstrap round; receives current {@link NekoPluginExtensionContext}, allowing customization based on environment or precedent artifact results. Must not return a shared mutable singleton across rounds.
+ * @param collector   Collection callback: invoked once per plugin passing both environment and type filters to collect into the accumulator.
+ * @param finisher    Finishing function: maps accumulator to immutable artifact {@code R}. Invoked once after all plugins are collected for this extension point; artifacts are published immediately. Perform side-effecting completion (locking/static injection) here, not in the bootstrap flow.
+ * @param dependsOn   Dependency declarations: elements are extension point instances or String ids
+ * @param <P>         Target plugin type (subtype of {@link NekoJSPlugin})
+ * @param <A>         Accumulator type (mutable state during collection, created per bootstrap round)
+ * @param <R>         Artifact type (immutable result produced by finisher)
  */
 public final class NekoPluginExtensionPoint<P extends NekoJSPlugin, A, R> {
     private final String id;
@@ -100,55 +82,55 @@ public final class NekoPluginExtensionPoint<P extends NekoJSPlugin, A, R> {
         this.mergePolicy = mergePolicy;
     }
 
-    /** 扩展点 id（同轮 bootstrap 内全局唯一）。 */
+    /** Extension point id (globally unique within the same bootstrap round). */
     public String id() {
         return id;
     }
 
-    /** 目标插件类型过滤器。 */
+    /** Target plugin type filter. */
     public Class<P> pluginType() {
         return pluginType;
     }
 
-    /** 环境谓词。 */
+    /** Environment predicate. */
     public Predicate<NekoPluginExtensionContext> enabled() {
         return enabled;
     }
 
-    /** 累积器工厂。 */
+    /** Accumulator factory. */
     public Function<NekoPluginExtensionContext, A> initializer() {
         return initializer;
     }
 
-    /** 收集回调。 */
+    /** Collection callback. */
     public BiConsumer<P, A> collector() {
         return collector;
     }
 
-    /** 收尾函数。 */
+    /** Finishing function. */
     public Function<A, R> finisher() {
         return finisher;
     }
 
-    /** 依赖声明（元素为扩展点实例或 String id，不可变）。 */
+    /** Dependency declarations (elements are extension point instances or String ids, immutable). */
     public List<Object> dependsOn() {
         return dependsOn;
     }
 
     /**
-     * 可选时序依赖声明（元素为扩展点实例或 String id，不可变）：仅当对方已注册时
-     * 参与拓扑排序；对方缺席的 bootstrap 不建边（也不 early-bang）。
+     * Optional chronological dependency declarations (elements are extension point instances or String ids, immutable): participates in topological sort only if the target is registered;
+     * bootstrap without the target creates no edge (and no early-bang).
      */
     public List<Object> optionalDependsOn() {
         return optionalDependsOn;
     }
 
-    /** 合并策略。 */
+    /** Merge policy. */
     public MergePolicy mergePolicy() {
         return mergePolicy;
     }
 
-    /** 依赖元素的 id 归一（实例或 String）。 */
+    /** Normalize dependency element ids (instance or String). */
     static String dependencyId(Object dependency) {
         if (dependency instanceof NekoPluginExtensionPoint<?, ?, ?> point) {
             return point.id();
@@ -156,14 +138,14 @@ public final class NekoPluginExtensionPoint<P extends NekoJSPlugin, A, R> {
         return (String) dependency;
     }
 
-    // ---- V2 builder（ADR-0001：唯一推荐入口，merge 必填）----
+    // ---- V2 builder (ADR-0001: Sole recommended entry, merge required) ----
 
-    /** 创建扩展点 builder。 */
+    /** Create extension point builder. */
     public static <P extends NekoJSPlugin, A, R> Builder<P, A, R> builder(String id, Class<P> pluginType) {
         return new Builder<>(id, pluginType);
     }
 
-    /** V2 扩展点 builder：{@code merge} 必填（不给默认值），依赖可声明点实例或 id。 */
+    /** V2 extension point builder: {@code merge} is required (no default provided), dependencies can be declared via point instance or id. */
     public static final class Builder<P extends NekoJSPlugin, A, R> {
         private final String id;
         private final Class<P> pluginType;
@@ -180,57 +162,57 @@ public final class NekoPluginExtensionPoint<P extends NekoJSPlugin, A, R> {
             this.pluginType = pluginType;
         }
 
-        /** 合并策略（必填）：append / firstWin / overrideWarn / failFast 四选一。 */
+        /** Merge policy (required): select one of append, firstWin, overrideWarn, or failFast. */
         public Builder<P, A, R> merge(MergePolicy policy) {
             this.mergePolicy = Objects.requireNonNull(policy, "mergePolicy");
             return this;
         }
 
-        /** 环境谓词（默认全环境收集）。 */
+        /** Environment predicate (defaults to collection in all environments). */
         public Builder<P, A, R> enabledWhen(Predicate<NekoPluginExtensionContext> predicate) {
             this.enabled = Objects.requireNonNull(predicate, "predicate");
             return this;
         }
 
-        /** 仅客户端收集（等价 {@code enabledWhen(NekoPluginExtensionContext::client)}）。 */
+        /** Client-only collection (equivalent to {@code enabledWhen(NekoPluginExtensionContext::client)}). */
         public Builder<P, A, R> clientOnly() {
             return enabledWhen(NekoPluginExtensionContext::client);
         }
 
-        /** 累积器工厂（必填）。 */
+        /** Accumulator factory (required). */
         public Builder<P, A, R> initializer(Function<NekoPluginExtensionContext, A> initializer) {
             this.initializer = Objects.requireNonNull(initializer, "initializer");
             return this;
         }
 
-        /** 收集回调（必填）。 */
+        /** Collection callback (required). */
         public Builder<P, A, R> collector(BiConsumer<P, A> collector) {
             this.collector = Objects.requireNonNull(collector, "collector");
             return this;
         }
 
-        /** 收尾函数（必填）。 */
+        /** Finishing function (required). */
         public Builder<P, A, R> finish(Function<A, R> finisher) {
             this.finisher = Objects.requireNonNull(finisher, "finisher");
             return this;
         }
 
-        /** 时序依赖：仅需先完成的扩展点实例（ADR-0002 ①）。 */
+        /** Chronological dependencies: required extension point instances that must complete first (ADR-0002-1). */
         @SafeVarargs
         public final Builder<P, A, R> dependsOn(NekoPluginExtensionPoint<?, ?, ?>... points) {
             dependencies.addAll(List.of(points));
             return this;
         }
 
-        /** 时序依赖：仅需先完成的扩展点 id（用于无法静态引用对方实例的场合）。 */
+        /** Chronological dependencies: required extension point ids (for cases where static reference to the target instance is not possible). */
         public Builder<P, A, R> dependsOnId(String... pointIds) {
             dependencies.addAll(List.of(pointIds));
             return this;
         }
 
         /**
-         * 可选时序依赖：仅当对方已注册时加入排序边（对方缺席的 bootstrap 不建边、
-         * 不 early-bang）。用于"读对方产物、但对方并非所有环境都存在"的跨层数据依赖。
+         * Optional chronological dependencies: adds topological edge only if the target is registered (bootstrap without the target creates no edge and no early-bang).
+         * Used for cross-layer data dependencies where "reading target artifacts, but the target does not exist in all environments" is necessary.
          */
         @SafeVarargs
         public final Builder<P, A, R> dependsOnOptional(NekoPluginExtensionPoint<?, ?, ?>... points) {
@@ -238,13 +220,13 @@ public final class NekoPluginExtensionPoint<P extends NekoJSPlugin, A, R> {
             return this;
         }
 
-        /** 可选时序依赖的 id 形态（跨层引用对方点时唯一可行形态，见 {@link #dependsOnOptional}）。 */
+        /** Optional chronological dependency id form (the only feasible form when referencing targets across layers; see {@link #dependsOnOptional}). */
         public Builder<P, A, R> dependsOnOptionalId(String... pointIds) {
             optionalDependencies.addAll(List.of(pointIds));
             return this;
         }
 
-        /** 构建扩展点；merge / initializer / collector / finish 任缺即抛 {@link IllegalStateException}。 */
+        /** Build extension point; throws {@link IllegalStateException} if merge, initializer, collector, or finisher is missing. */
         public NekoPluginExtensionPoint<P, A, R> build() {
             if (mergePolicy == null) {
                 throw new IllegalStateException("Plugin extension point '" + id

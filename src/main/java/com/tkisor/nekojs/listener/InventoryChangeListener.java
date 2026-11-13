@@ -12,11 +12,11 @@ import java.util.Map;
 import java.util.WeakHashMap;
 
 /**
- * 玩家物品栏变化监听器（仿 KubeJS {@code KubeJSInventoryListener}）。
+ * Listens for player inventory changes (modeled on KubeJS {@code KubeJSInventoryListener}).
  *
- * <p>挂在玩家 {@code inventoryMenu} 上，槽位变化时按物品 id 分发到
- * {@link PlayerEvents#INVENTORY_CHANGED}。实例由 {@link #getOrCreate(Player)}
- * 按玩家缓存（WeakHashMap，玩家卸载后自动回收），无需 mixin。
+ * <p>Attached to the player's {@code inventoryMenu}, it dispatches slot changes by item id to
+ * {@link PlayerEvents#INVENTORY_CHANGED}. {@link #getOrCreate(Player)} caches one instance per player
+ * in a WeakHashMap that reclaims it once the player is unloaded, so no mixin is needed.
  */
 public final class InventoryChangeListener implements ContainerListener {
 
@@ -30,7 +30,7 @@ public final class InventoryChangeListener implements ContainerListener {
         this.player = player;
     }
 
-    /** 取（或创建并挂载到 inventoryMenu）玩家的监听器实例。 */
+    /** Returns the listener for a player, creating it and attaching it to inventoryMenu when it is missing. */
     public static InventoryChangeListener getOrCreate(Player player) {
         return CACHE.computeIfAbsent(player, p -> {
             InventoryChangeListener listener = new InventoryChangeListener(p);
@@ -44,11 +44,12 @@ public final class InventoryChangeListener implements ContainerListener {
         if (stack.isEmpty()) {
             return;
         }
-        // 无监听器时短路：槽位变化高频触发，跳过事件对象构建与分发（同 ProbeCoordinator 的做法）
+        // Short-circuit when nothing listens: slot changes fire very often, so skip building and dispatching
+        // the event object (the same approach ProbeCoordinator takes)
         if (!PlayerEvents.INVENTORY_CHANGED.hasListeners()) {
             return;
         }
-        // 仅响应玩家自身物品栏槽位（container == player.getInventory()）
+        // React only to the player's own inventory slots (container == player.getInventory())
         if (container.getSlot(index).container != player.getInventory()) {
             return;
         }
@@ -60,6 +61,6 @@ public final class InventoryChangeListener implements ContainerListener {
 
     @Override
     public void dataChanged(AbstractContainerMenu container, int id, int value) {
-        // 不关心数据条变化
+        // Ignores data slot changes
     }
 }

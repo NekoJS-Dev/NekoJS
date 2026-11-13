@@ -107,8 +107,9 @@ class ProbeTypeScriptFixtureWriterTest {
         Files.createDirectories(ACTUAL_PATH.getParent());
         Files.writeString(ACTUAL_PATH, actual, StandardCharsets.UTF_8);
 
-        // 重生成模式（-Dnekojs.golden.regenerate=true，由 gradle 任务 regenerateGoldens 设置）：
-        // 实际产物覆盖写回 golden 后跳过断言（跑完人工 review + 提交）
+        // Regeneration mode (-Dnekojs.golden.regenerate=true, set by the gradle task regenerateGoldens):
+        // the actual output is written back over the golden file and the assertion is skipped. Review the
+        // diff by hand and commit it afterwards.
         if (ProbeGoldenSupport.regenerateEnabled()) {
             Files.createDirectories(GOLDEN_PATH.getParent());
             Files.writeString(GOLDEN_PATH, actual, StandardCharsets.UTF_8);
@@ -121,8 +122,8 @@ class ProbeTypeScriptFixtureWriterTest {
                         + "\nRun the test once, review the actual output at " + ACTUAL_PATH
                         + ", then copy it to " + GOLDEN_PATH);
 
-        // 行尾归一（Windows runner checkout 出 CRLF golden，生成内容为 LF）；
-        // 与 TypeScriptNoopIrGoldenTest.normalize 同规则
+        // Normalizes line endings: the Windows runner checks out golden files with CRLF while the generated
+        // content uses LF. Same rule as TypeScriptNoopIrGoldenTest.normalize.
         String golden = normalize(Files.readString(GOLDEN_PATH, StandardCharsets.UTF_8));
         assertEquals(golden, normalize(actual),
                 "Generated declaration does not match golden. "

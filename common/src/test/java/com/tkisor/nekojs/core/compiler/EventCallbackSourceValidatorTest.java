@@ -25,29 +25,34 @@ import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * 事件回调成员 preflight 检查（反射路径 + 契约 events 注入路径）的聚焦测试。
+ * Focused tests for the event callback member preflight, which runs on the reflection path and on
+ * the contract events injection path.
  *
- * <p>覆盖：
+ * <p>Covers:
  * <ol>
- *   <li>纯反射路径：{@code EventSchemaRegistry} 注册事件组后，{@code e.getServer()} 放行、
- *       {@code e.getServeer()} 报错并带拼写建议</li>
- *   <li>契约注入路径：{@code ManagedCallbackSchemaRegistry.installContractEvents} 后，
- *       契约 payload 字段（如 {@code server}）即使反射类没有也放行（契约即权威）</li>
- *   <li>并集：契约字段与反射方法名同时放行，互不误报</li>
- *   <li>别名：{@code const x = e; x.getServer()} 与直连等价</li>
- *   <li>ValParser 无法解析的语法：不抛异常、不挂死（防死循环保护 + 日志降级）</li>
+ *   <li>Reflection only: after {@code EventSchemaRegistry} registers an event group,
+ *       {@code e.getServer()} passes and {@code e.getServeer()} is reported with a spelling
+ *       suggestion</li>
+ *   <li>Contract injection: after
+ *       {@code ManagedCallbackSchemaRegistry.installContractEvents}, contract payload fields such
+ *       as {@code server} pass even when the reflective class lacks them; the contract is
+ *       authoritative</li>
+ *   <li>Union: contract fields and reflective method names both pass, with no false report</li>
+ *   <li>Alias: {@code const x = e; x.getServer()} behaves like the direct call</li>
+ *   <li>Syntax ValParser cannot parse: no exception and no hang (loop guard plus degraded
+ *       logging)</li>
  * </ol>
  */
 class EventCallbackSourceValidatorTest {
 
-    /** 反射路径用的事件类：有 getServer()（属性 server），无 message。 */
+    /** Event class for the reflection path: it has getServer() (property server) and no message. */
     public static class TestStartedEvent {
         public Object getServer() {
             return new Object();
         }
     }
 
-    /** 链式测试用：getPlayer() 返回 PlayerJS。 */
+    /** Fixture for chained calls: getPlayer() returns a PlayerJS. */
     public static class ChainedEvent {
         public PlayerJS getPlayer() {
             return new PlayerJS();
@@ -74,7 +79,7 @@ class EventCallbackSourceValidatorTest {
         }
     }
 
-    /** 非事件回调（builder）签名推导用：绑定类收回调的普通方法。 */
+    /** Binding class for builder callback signature inference: plain methods that take a callback. */
     public static class RegistryLikeBinding {
         public Object item(String id, java.util.function.Consumer<ItemBuilderLike> config) {
             return null;
@@ -84,7 +89,8 @@ class EventCallbackSourceValidatorTest {
             return null;
         }
 
-        /** 形参是非泛型类型：签名推不出回调形参类型，整段检查必须跳过。 */
+        /** The parameter is not generic, so the signature cannot infer the callback parameter type
+         * and the whole check must be skipped. */
         public Object opaque(String id, Object config) {
             return null;
         }
@@ -106,7 +112,7 @@ class EventCallbackSourceValidatorTest {
         }
     }
 
-    /** 契约测试用的 ContractEvent 构造助手。 */
+    /** Builds ContractEvent values for the contract tests. */
     private static NormativeApiContract.ContractEvent contractEvent(String group, String name, String... fields) {
         List<NormativeApiContract.ContractEventField> payload = new ArrayList<>();
         for (String field : fields) {
@@ -143,7 +149,8 @@ class EventCallbackSourceValidatorTest {
                 group, new ScriptBindingSchema.BindingMembers(Set.of("started"))), Set.of());
     }
 
-    /** 非事件回调（builder）路径：valueClasses 带绑定类，形参类型从方法签名推导。 */
+    /** Non-event (builder) callback path: valueClasses carries the binding classes, so the
+     * parameter type comes from the method signature. */
     private void registerRegistryBinding() {
         view = new ScriptBindingSchema.View(Map.of(
                 "DynamicRegistry", new ScriptBindingSchema.BindingMembers(
@@ -203,7 +210,8 @@ class EventCallbackSourceValidatorTest {
                 contractEvent("ContractEvents", "chat", "message", "username")));
         registerBindingGroup("ContractEvents");
 
-        // message/username 在契约 payload 中但无对应事件类 → 契约即权威，放行
+        // message and username are in the contract payload but have no matching event class; the
+        // contract wins, so they pass
         validate(serverScript("contract"),
                 "ContractEvents.chat((e) => { e.message; e.username })");
 
@@ -219,7 +227,8 @@ class EventCallbackSourceValidatorTest {
         EventSchemaRegistry.registerGroup(group);
         registerBindingGroup("ContractEvents");
 
-        // server 来自契约；getServer 来自反射。并集检查两者都放行。
+        // server comes from the contract and getServer comes from reflection; the union check
+        // accepts both.
         validate(serverScript("union"),
                 "ContractEvents.started((e) => { e.server; e.getServer() })");
 
@@ -261,10 +270,13 @@ class EventCallbackSourceValidatorTest {
     }
 
     /**
-     * builder 回调误报的回归：{@code DynamicRegistry.item('id', b => b.maxStackSize(64))}
-     * 被报 {@code 'maxStackSize' not in DynamicRegistry}。根因：builder 回调不是事件注册，
-     * managed/eventClass 双空时 rootValue 退化成空集成员表，任何成员访问都判错。
-     * 现在：签名（{@code Consumer<ItemBuilder>}）推导形参类型，按 ItemBuilder 成员检查。
+     * Regression for the false report on builder callbacks:
+     * {@code DynamicRegistry.item('id', b => b.maxStackSize(64))} was reported as
+     * {@code 'maxStackSize' not in DynamicRegistry}. The cause: a builder callback is not an event
+     * registration, so when managed and eventClass are both null, rootValue falls back to an empty
+     * member table and every member access is flagged. Now the signature
+     * ({@code Consumer<ItemBuilder>}) supplies the parameter type, and members are checked against
+     * ItemBuilder.
      */
     @Test
     void builderCallbackParamTypedFromBindingSignature() {
@@ -290,7 +302,8 @@ class EventCallbackSourceValidatorTest {
         assertTrue(reported.getFirst().contains("Did you mean"), reported.getFirst());
     }
 
-    /** 签名推不出形参类型（非泛型参数）时整段跳过：宁可漏检也不误报。 */
+    /** When the signature cannot infer the parameter type (a non-generic parameter), the whole
+     * check is skipped: a missed check is better than a false report. */
     @Test
     void builderCallbackWithOpaqueSignatureSkipped() {
         registerRegistryBinding();
@@ -301,7 +314,8 @@ class EventCallbackSourceValidatorTest {
         assertTrue(reported.isEmpty(), "unresolvable callback param must not be reported: " + reported);
     }
 
-    /** 事件回调里嵌套 builder 回调：外层按事件类查，内层按绑定签名查，互不干扰。 */
+    /** A builder callback nested inside an event callback: the outer one is checked against the
+     * event class and the inner one against the binding signature, with no interference. */
     @Test
     void builderCallbackNestedInsideEventCallback() {
         registerBindingGroup("TestEvents");
@@ -317,8 +331,9 @@ class EventCallbackSourceValidatorTest {
     void unparseableInputDoesNotThrowOrHang() {
         registerBindingGroup("TestEvents");
 
-        // ValParser 无法完整解析的语法（未闭合括号/孤立分号/裸操作符）：
-        // 不得抛异常，也不得死循环（parseProgram 有未消费前进保护）。
+        // Syntax ValParser cannot fully parse (unclosed brackets, stray semicolons, bare
+        // operators): no exception and no infinite loop; parseProgram has a guard that advances on
+        // unconsumed input.
         assertTimeoutPreemptively(Duration.ofSeconds(5), () ->
                 validate(serverScript("weird"),
                         "TestEvents.started((e) => { ; ; @#$ { ( ( }"));
@@ -339,7 +354,7 @@ class EventCallbackSourceValidatorTest {
         assertTrue(schema.memberNames().contains("server"));
     }
 
-    // ==================== 动态成员访问（引号 / const key） ====================
+    // ==================== Dynamic member access (quoted keys / const keys) ====================
 
     @Test
     void quotedBracketKnownMethodPasses() {
@@ -404,7 +419,8 @@ class EventCallbackSourceValidatorTest {
     @Test
     void letVarKeyNotPropagatedAsConstant() {
         registerBindingGroup("TestEvents");
-        // let key 可变：不做常量传播，不诊断（也不误报）
+        // A let key is mutable, so there is no constant propagation, no diagnostic and no false
+        // report
         validate(serverScript("let-key"),
                 "TestEvents.started((e) => { let key = 'getServeer'; e[key]() })");
         assertTrue(reported.isEmpty(), "let key must not be treated as constant: " + reported);
@@ -418,7 +434,7 @@ class EventCallbackSourceValidatorTest {
         assertEquals(1, reported.size(), "shadowed key must be used in inner block");
     }
 
-    // ==================== 链式返回值类型传播 ====================
+    // ==================== Chained return type propagation ====================
 
     private void registerChainedGroup() {
         EventGroup group = EventGroup.of("ChainedEvents");
@@ -465,7 +481,7 @@ class EventCallbackSourceValidatorTest {
     @Test
     void overloadedCallUnionAcceptsMemberOnAnyCandidate() {
         registerChainedGroup();
-        // find(String) 与 find(int) 返回类型相同（PlayerJS），getServer 都支持
+        // find(String) and find(int) both return PlayerJS, and both support getServer
         validate(serverScript("chain-overload"),
                 "ChainedEvents.started((e) => { e.find('x').getServer(); e.find(1).getServer() })");
         assertTrue(reported.isEmpty(), reported.toString());
@@ -474,7 +490,8 @@ class EventCallbackSourceValidatorTest {
     @Test
     void varargsCallPropagatesReturnType() {
         registerChainedGroup();
-        // varargsJoin(sep, parts...) 返回 String：链式到 String 成员不深入（无对象成员），不误报
+        // varargsJoin(sep, parts...) returns String: chaining into a String member stops there
+        // (String has no object members), so nothing is reported
         validate(serverScript("chain-varargs"),
                 "ChainedEvents.started((e) => { e.varargsJoin('|').length })");
         assertTrue(reported.isEmpty(), reported.toString());

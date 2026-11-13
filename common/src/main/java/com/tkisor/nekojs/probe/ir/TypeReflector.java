@@ -38,7 +38,7 @@ public final class TypeReflector {
         TypeDecl.Kind kind = cls.isEnum() ? TypeDecl.Kind.ENUM
                 : (cls.isInterface() ? TypeDecl.Kind.INTERFACE : TypeDecl.Kind.CLASS);
         TypeDecl decl = new TypeDecl(kind, cls, cls.getName());
-        // 类级 @Doc → JSDoc（注解缺省时 docs 为空，渲染零输出）
+        // Class-level @Doc becomes JSDoc; without the annotation docs stays empty and rendering emits nothing
         decl.docs.addAll(AnnotatedDocs.typeDocs(cls));
 
         decl.typeParams.addAll(typeParametersOf(cls));
@@ -76,9 +76,10 @@ public final class TypeReflector {
             case ENUM -> reflectEnumMembers(cls, decl, scan.methods());
         }
 
-        // 确定性排序：JVM 规范不保证 getDeclaredMethods/getDeclaredFields 的返回顺序，
-        // 跨进程运行会产生成员顺序抖动 → 按名字（+参数/返回类型）稳定排序，保证 probe 产物可复现。
-        // 渲染分段（getter/静态/实例）由 renderer 按标志过滤，与列表顺序无关。
+        // Deterministic order: the JVM does not guarantee the order of getDeclaredMethods or
+        // getDeclaredFields, so member order drifts between processes. Sort by name (plus parameter
+        // and return types) to keep probe output reproducible. Renderers split getters, static and
+        // instance members by flags, so list order does not matter to them.
         decl.constructors.sort(Comparator.comparing(TypeReflector::constructorKey));
         decl.fields.sort(Comparator.comparing(f -> f.name));
         decl.methods.sort(Comparator.comparing(TypeReflector::methodKey));
@@ -115,8 +116,9 @@ public final class TypeReflector {
         StringBuilder sb = new StringBuilder();
         for (MethodDecl.MethodParam p : m.params) {
             sb.append('|').append(typeKey(p.type));
-            // varargs/optional 是排序键的一部分：varargs 参数在 IR 中被扁平化为组件类型，
-            // 若不加标志，of(int) 与 of(int...) 的排序键相同 → 稳定排序保留反射原始序 → 跨 JVM 抖动
+            // varargs and optional are part of the sort key. A varargs parameter is flattened to its
+            // component type in the IR, so without these flags of(int) and of(int...) share a key and
+            // the stable sort keeps reflection order, which differs between JVMs.
             if (p.varargs) sb.append("[]");
             if (p.optional) sb.append("?");
         }
@@ -134,11 +136,11 @@ public final class TypeReflector {
     }
 
     private void reflectIndependentMembers(Class<?> cls, TypeDecl decl) {
-        // 构造器
+        // Constructors
         for (var ctor : declarationConstructors(cls)) {
             decl.constructors.add(reflectConstructor(ctor));
         }
-        // 字段
+        // Fields
         for (var field : cls.getDeclaredFields()) {
             if (!Modifier.isPublic(field.getModifiers())) continue;
             boolean isStatic = Modifier.isStatic(field.getModifiers());
@@ -177,8 +179,8 @@ public final class TypeReflector {
                 f.docs.addAll(AnnotatedDocs.fieldDocs(field));
                 decl.fields.add(f);
             } else if (Modifier.isPublic(field.getModifiers())) {
-                // 非常量公开字段：renderer 的 renderEnum 只发射 isEnumConstant，这里仅供
-                // import 收集镜像旧 collectImports（旧实现对枚举的公开字段类型也收集 import）
+                // Non-constant public fields: renderEnum only emits isEnumConstant, so these fields exist
+                // only so import collection also covers enum public field types.
                 FieldDecl f = new FieldDecl(field.getName(), TypeSlot.of(field.getGenericType(), toRef(field.getGenericType())));
                 f.sourceField = field;
                 f.isStatic = Modifier.isStatic(field.getModifiers());
@@ -186,7 +188,8 @@ public final class TypeReflector {
                 decl.fields.add(f);
             }
         }
-        // 枚举的公开方法：renderEnum 不发射（固定骨架），仅用于 import 收集镜像旧行为
+        // Public enum methods: renderEnum does not emit them because the skeleton is fixed, so they are
+        // kept only for import collection.
         reflectMethodsLikeClassDecl(cls, decl, methods);
     }
 
@@ -203,7 +206,7 @@ public final class TypeReflector {
             // Keep their original Method for visibility/remapping; unrelated synthetic methods and bridges stay hidden.
             if (method.isBridge() || method.isSynthetic() && !implementsInterfaceMethod(cls, method)) continue;
             boolean isStatic = Modifier.isStatic(method.getModifiers());
-            // JS 侧方法名：@Remap/@RemapByPrefix 重映射；@HideFromJS → null（跳过）
+            // JS-side method name from @Remap or @RemapByPrefix; @HideFromJS makes it null and the method is skipped
             String jsName = jsName(method);
             if (jsName == null) continue;
 
@@ -250,7 +253,7 @@ public final class TypeReflector {
                 .toList();
     }
 
-    /** Native method enumeration and its explicit, owner-wide missing-signature boundary. */
+    /** Enumerates native methods; a missing signature hides the owner's whole method set and records why. */
     public record MethodScan(List<Method> methods, String omission) {}
 
     public static MethodScan scanDeclarationMethods(Class<?> cls) {
@@ -568,8 +571,10 @@ public final class TypeReflector {
     }
 
     /**
-     * getter/setter 候选的确定性排序：非 synthetic/bridge 的声明优先（协变覆盖胜出其 bridge），
-     * 同优先级按「名 + 参数类型 + 泛型返回类型」字典序。排序结果与 JVM 返回顺序无关。
+     * Deterministic order for getter/setter candidates. Declared methods that are not synthetic or
+     * bridge come first, so a covariant override wins over its bridge. Within the same group,
+     * methods are ordered by name, parameter types and generic return type. The result does not
+     * depend on the order the JVM returns methods in.
      */
     private static int compareCandidates(Method a, Method b) {
         boolean syntheticA = a.isSynthetic() || a.isBridge();
@@ -597,8 +602,9 @@ public final class TypeReflector {
     private MethodDecl reflectMethod(java.lang.reflect.Method method) {
         MethodDecl m = new MethodDecl(method.getName());
         m.sourceMethod = method;
-        // JS 侧方法名（@Remap/@RemapByPrefix）：与运行时 Graal remapper 语义一致，声明/提示
-        // 用 remap 名；Java 原名保留在 name（排序/编辑语义），renameTo 为空时渲染回退原名
+        // JS-side method name from @Remap or @RemapByPrefix, matching the runtime Graal remapper.
+        // Declarations and hints use the remapped name. The Java name stays in name for sorting and
+        // editing, and rendering falls back to it when renameTo is empty.
         String jsName = jsName(method);
         if (jsName == null) {
             m.hidden = true; // @HideFromJS
@@ -639,8 +645,9 @@ public final class TypeReflector {
     }
 
     /**
-     * JS 侧成员名：委托 {@link JavaMemberIndex#remapName}（hideMarker 传 null = 命中
-     * {@code @HideFromJS} 返回 null，调用方跳过）。未命中 remap 返回原名。
+     * JS-side member name, delegated to {@link JavaMemberIndex#remapName}. Passing a null
+     * hideMarker makes a {@code @HideFromJS} hit return null, and the caller then skips the
+     * member. Without a remap match the original name is returned.
      */
     private static String jsName(java.lang.reflect.Method method) {
         return JavaMemberIndex.remapName(method, null, method.getName());
@@ -653,9 +660,10 @@ public final class TypeReflector {
             var p = params[i];
             Type sourceType;
             if (varArgs && i == params.length - 1 && p.getType().isArray()) {
-                // varargs 必须走泛型路径：p.getType() 只给 raw Class 数组（component 的泛型实参
-                // 丢失，如 MemoryModuleType<?>... → raw MemoryModuleType）；getParameterizedType()
-                // 返回 GenericArrayType（component = MemoryModuleType<?>）保留下界
+                // A varargs parameter must take the generic path: p.getType() gives only the raw class array,
+                // which drops the component's type arguments (MemoryModuleType<?>... becomes raw
+                // MemoryModuleType). getParameterizedType() returns a GenericArrayType whose component
+                // is MemoryModuleType<?> and keeps the type arguments.
                 Type generic = p.getParameterizedType();
                 sourceType = generic instanceof GenericArrayType gat ? gat.getGenericComponentType()
                         : p.getType().getComponentType();
@@ -712,7 +720,7 @@ public final class TypeReflector {
         return "set" + property.substring(0, 1).toUpperCase(Locale.ROOT) + property.substring(1);
     }
 
-    /** getter 名判定基于 JS 名（remap 后）：neko$getId → getId 即 getter 形态。 */
+    /** Getter detection uses the JS name after remapping, so neko$getId becomes getId and counts as a getter. */
     private static boolean isGetterName(String name) {
         return (name.startsWith("get") && name.length() > 3) || (name.startsWith("is") && name.length() > 2);
     }
@@ -721,7 +729,8 @@ public final class TypeReflector {
         return name.startsWith("set") && name.length() > 3;
     }
 
-    /** 属性名：getFoo→foo、isFoo→foo。大小写归一显式用 {@link Locale#ROOT}，避免默认区域（如 tr）漂移。 */
+    /** Property name: getFoo becomes foo and isFoo becomes foo. Case mapping uses {@link Locale#ROOT}
+     *  explicitly so the default locale, such as tr, cannot change the result. */
     private static String getPropertyName(String name) {
         if (name.startsWith("get") && name.length() > 3) {
             return name.substring(3, 4).toLowerCase(Locale.ROOT) + name.substring(4);
@@ -745,7 +754,7 @@ public final class TypeReflector {
         return parameters;
     }
 
-    // ---- Java Type → ApiTypeRef（唯一类型映射：无损承载，语言糖由各渲染器决定）----
+    // ---- Java Type to ApiTypeRef: the one type mapping, lossless; each renderer applies its own syntax ----
 
     /** Converts reflection types through the same neutral model used by native handler metadata. */
     public static ApiTypeRef toRef(Type type) {

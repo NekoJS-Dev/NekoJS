@@ -9,7 +9,8 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * {@link DefaultPerformanceFacade} 测试。time/bench 用真实 Graal Context 构造 JS 函数 Value。
+ * Tests for {@link DefaultPerformanceFacade}. The time/bench cases build JS function Values in a
+ * real Graal Context.
  */
 class DefaultPerformanceFacadeTest {
 

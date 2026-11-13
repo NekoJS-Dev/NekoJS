@@ -40,26 +40,29 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * 票 16 AC2/AC9 的 contract/golden 证据：动态注册 facade 的声明面由<b>生产 probe
- * 渲染器</b>渲染并冻结为可审阅基线（普通测试只读；更新走
- * {@code :common:regenerateGoldens} + REGENERATE.md 留痕）。
+ * Golden evidence for the declaration surface of the dynamic registry facade: the production
+ * probe renderer renders it and the result is frozen as a reviewable baseline. Normal test runs
+ * only read the baseline; updating it goes through {@code :common:regenerateGoldens} and a
+ * REGENERATE.md entry.
  *
- * <p>两份 golden：
+ * <p>Two goldens:
  * <ul>
- *   <li>{@code nekojs/dynamic/dynamic-registry-events.expected.d.ts}——事件声明。它冻结
- *       <b>命名决策</b>（spec 08 工作名 {@code ServerEvents.dynamicRegistry} 未采用；
- *       实施采用独立组 {@code DynamicRegistryEvents}，成员名 {@code dynamicRegistry}，
- *       理由见 baseline REPORT「命名决策」节与 MIGRATION.md）；</li>
- *   <li>{@code nekojs/dynamic/dynamic-builders.expected.d.ts}——三个冻结类型的 typed
- *       callback Builder 声明（{@code DynamicBuilderContract} 反射 → 条目 → 渲染器；
- *       与 runtime member/fingerprint 同源）。头注是共享渲染器（ticket 15）的固定文本，
- *       本条目的派生输入是 {@code DynamicBuilderContract}（见 REGENERATE.md 登记行）。</li>
+ *   <li>{@code nekojs/dynamic/dynamic-registry-events.expected.d.ts} - the event declarations.
+ *       It freezes the naming decision: the working name {@code ServerEvents.dynamicRegistry}
+ *       was not used; the implementation uses a separate group {@code DynamicRegistryEvents}
+ *       with the member name {@code dynamicRegistry} (rationale in MIGRATION.md);</li>
+ *   <li>{@code nekojs/dynamic/dynamic-builders.expected.d.ts} - typed callback Builder
+ *       declarations for three frozen types ({@code DynamicBuilderContract} reflection to
+ *       entries to the renderer; same source as the runtime member and fingerprint). The header
+ *       is fixed text of the shared renderer, and the derived input for this entry is
+ *       {@code DynamicBuilderContract} (see the REGENERATE.md row).</li>
  * </ul>
  *
- * <p><b>冻结的是声明形状，不是能力结论</b>：本票只交付本地 inert 计划；公开激活由事务/
- * 同步 gate（票 21）裁决，capability 结论见 REPORT 能力表（未验证类型记 not verified，
- * 不改写为 unavailable）。本测试类住 probe 包以复用 {@link ProbeGoldenSupport} 与既有
- * regenerate 入口（与 {@code LegacyProbeCompatibilityTest} 同一机制）。
+ * <p><b>What is frozen is the declaration shape, not a capability conclusion</b>: this scope
+ * only delivers a local inert plan; public activation is decided by the transaction and sync
+ * gates, and types that are not verified are recorded as not verified rather than unavailable.
+ * The test class lives in the probe package to reuse {@link ProbeGoldenSupport} and the existing
+ * regenerate entry point, the same mechanism as {@code LegacyProbeCompatibilityTest}.
  */
 class DynamicRegistryEventsDeclarationGoldenTest {
 
@@ -87,7 +90,8 @@ class DynamicRegistryEventsDeclarationGoldenTest {
                 "动态注册 facade 事件声明 golden 变了。确认是刻意契约变更后，"
                         + "走 :common:regenerateGoldens + REGENERATE.md 留痕");
 
-        // 命名决策的可读性断言（golden 之外仍显式钉住，避免 golden 漂移掩盖改名）
+        // Readability assertions for the naming decision: pinned explicitly outside the golden so a rename
+        // cannot hide behind golden drift
         assertEquals(1, count("namespace DynamicRegistryEvents {", actual), "独立组名（票面命名决策）");
         assertEquals(1, count("function dynamicRegistry(", actual), "成员名 dynamicRegistry 恰好一次");
         assertFalse(actual.contains("ServerEvents.dynamicRegistry"),
@@ -114,7 +118,7 @@ class DynamicRegistryEventsDeclarationGoldenTest {
         }
     }
 
-    // ---- golden 支撑（与 ProbeEventsSurfaceGoldenTest / LegacyProbeCompatibilityTest 同一机制） ----
+    // ---- Golden support (same mechanism as ProbeEventsSurfaceGoldenTest / LegacyProbeCompatibilityTest) ----
 
     private static void maybeRegenerate(String name, String actual) throws Exception {
         if (!ProbeGoldenSupport.regenerateEnabled()) return;

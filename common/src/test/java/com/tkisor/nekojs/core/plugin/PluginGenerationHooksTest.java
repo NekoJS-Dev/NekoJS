@@ -23,13 +23,16 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * {@code generateData} / {@code generateAssets} / {@code generateLang} 三个插件钩子的冒烟测试。
+ * Smoke test for the {@code generateData}, {@code generateAssets} and {@code generateLang} plugin
+ * hooks.
  *
- * <p>这三个钩子由平台层在资源 reload 时经 {@link PluginGenerationHooks#fireGenerateData} 等
- * 入口触发、先于脚本事件、与脚本共享同一 generator 实例，但此前没有任何内置插件实现它们
- * （dogfooding 缺口）。本测试向 {@link NekoJSBasePluginManager} 登记录制插件后触发 fire 入口，
- * 证明链路确实会调用插件：同一 generator 实例送达、钩子间不串扰、插件写盘落到
- * NekoJS 的 data pack 根、且单个插件异常被隔离不中断后续插件（priority 降序决定触发顺序）。
+ * <p>The platform fires these hooks during a resource reload through entry points such as
+ * {@link PluginGenerationHooks#fireGenerateData}. They run before script events, share the same
+ * generator instance as scripts, and no built-in plugin implemented them, so this test registers
+ * recording plugins in {@link NekoJSBasePluginManager} and fires the entry points. It checks that
+ * the chain really calls the plugins: the same generator instance arrives, hooks do not interfere,
+ * a plugin's writes land in the NekoJS data pack root, and one plugin's exception is isolated so
+ * later plugins still run (priority from high to low sets the order).
  */
 class PluginGenerationHooksTest {
 
@@ -48,8 +51,8 @@ class PluginGenerationHooksTest {
 
     @BeforeEach
     void resetPluginManagerAndRecordings() throws Exception {
-        // 插件管理器全局态备份 + 清空（test seam 用法照 NekoJSBasePluginManagerTest），
-        // 保证 fire 入口遍历到的只有本测试登记的插件
+        // Back up and clear the global plugin manager state (the test hook pattern from NekoJSBasePluginManagerTest),
+        // so the fire entry points see only the plugins registered by this test
         previousEntries = ENTRIES_FIELD.get(null);
         previousSortedView = SORTED_VIEW_FIELD.get(null);
         previousOwnedView = OWNED_VIEW_FIELD.get(null);
@@ -130,7 +133,8 @@ class PluginGenerationHooksTest {
 
     @Test
     void throwingPluginIsIsolatedAndDoesNotBlockLaterPlugins() {
-        // priority 1001 > 1000：抛异常的插件必然先于录制插件触发（同优先级顺序不稳定，见注解契约）
+        // priority 1001 > 1000, so the throwing plugin always fires before the recording one
+        // (order within one priority is unstable)
         NekoJSBasePluginManager.registerClass(ThrowingGenerationPlugin.class);
         NekoJSBasePluginManager.registerClass(RecordingGenerationPlugin.class);
         DataGeneratorJS dataGen = new DataGeneratorJS(NekoJSPaths.get().data());
@@ -149,7 +153,10 @@ class PluginGenerationHooksTest {
                 "前序插件抛异常不应中断后续插件的 generateLang");
     }
 
-    /** 记录三个生成钩子调用（实例由插件管理器创建，录制走静态状态）。 */
+    /**
+     * Records calls to the three generation hooks; the plugin manager creates the instance, and the
+     * recording goes through static state.
+     */
     @RegisterNekoJSPlugin(priority = 1000)
     public static class RecordingGenerationPlugin implements NekoJSPlugin {
         static final List<DataGeneratorJS> dataCalls = new CopyOnWriteArrayList<>();
@@ -179,7 +186,7 @@ class PluginGenerationHooksTest {
         }
     }
 
-    /** 三个生成钩子全部抛异常，验证 fire 入口的异常隔离语义。 */
+    /** Throws from all three generation hooks to check how the fire entry points isolate exceptions. */
     @RegisterNekoJSPlugin(priority = 1001)
     public static class ThrowingGenerationPlugin implements NekoJSPlugin {
         @Override
@@ -198,7 +205,10 @@ class PluginGenerationHooksTest {
         }
     }
 
-    /** 在 generateData 钩子里经共享 generator 写盘，验证「与脚本共享同一 generator」的端到端语义。 */
+    /**
+     * Writes to disk through the shared generator inside generateData, checking end to end that
+     * plugins and scripts share one generator.
+     */
     @RegisterNekoJSPlugin(priority = 1000)
     public static class WritingGenerationPlugin implements NekoJSPlugin {
         @Override

@@ -10,15 +10,15 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
- * Mutable property view handed to {@code ItemEvents.modification} callbacks
- * (ticket 39 起：纯声明缓冲——candidate 收集期只记录规范化属性，live Item/默认组件
- * 由 commit 点的平台 Adapter 应用，见 {@code ModificationDomainOwner})。
+ * Mutable property view handed to {@code ItemEvents.modification} callbacks.
+ * During collection this view only buffers normalized property overrides;
+ * {@code ModificationDomainOwner} applies them to live {@code Item} default components at commit time.
  *
- * <h2>JS API（setter 与 property 写入经 {@link ModificationViewSurface} 同一 setter）</h2>
+ * <h2>JS API (property writes and explicit setters share the same setter via {@link ModificationViewSurface})</h2>
  * <pre>
  * ItemEvents.modification(event {@code ->} {
  *   event.modify('minecraft:diamond', item {@code ->} {
- *     item.maxStackSize = 16;          // 与 item.setMaxStackSize(16) 等价（同一 setter/校验/规范化）
+ *     item.maxStackSize = 16;          // equivalent to item.setMaxStackSize(16)
  *     item.rarity = 'epic';
  *     item.fireResistant = true;
  *   });
@@ -42,13 +42,13 @@ public class ItemModificationJS implements graal.graalvm.polyglot.proxy.ProxyObj
 
     private ModificationViewSurface surface;
 
-    /** Creates the script surface on first use, after normal subclass construction. */
+    /** Lazily creates the proxy member dispatcher after subclass construction completes. */
     private ModificationViewSurface surface() {
         if (surface == null) surface = ModificationViewSurface.of(this);
         return surface;
     }
 
-    // ---- ProxyObject：property 写与显式 setter 分发到同一 Java setter ----
+    // ---- ProxyObject: property writes and explicit setters share the same Java setter ----
 
     @Override
     public Object getMember(String name) {
@@ -138,8 +138,8 @@ public class ItemModificationJS implements graal.graalvm.polyglot.proxy.ProxyObj
     }
 
     /**
-     * 待写入的食物配置；{@code null} 表示未设置（保持原值）或已被 {@code item.food = null}
-     * 请求移除。
+     * Pending food override, or {@code null} if unset (keep current value) or cleared via
+     * {@code item.food = null}.
      */
     @Doc("The pending food override as { nutrition, saturation, canAlwaysEat, eatSeconds }, or null when unset (keep current food) or when removal was requested with item.food = null.")
     @Return("Pending food spec, or null.")
@@ -163,7 +163,7 @@ public class ItemModificationJS implements graal.graalvm.polyglot.proxy.ProxyObj
     }
 
     /**
-     * 待写入的工具配置；{@code null} 表示未设置或已被 {@code item.tool = null} 请求移除。
+     * Pending tool override, or {@code null} if unset or cleared via {@code item.tool = null}.
      */
     @Doc("The pending tool override as { miningSpeed, damagePerBlock, canDestroyBlocksInCreative }, or null when unset or when removal was requested.")
     @Return("Pending tool spec, or null.")
@@ -186,8 +186,9 @@ public class ItemModificationJS implements graal.graalvm.polyglot.proxy.ProxyObj
     }
 
     /**
-     * 待写入的基础攻击伤害加成；{@code null} = 保持原值。数值为修饰量（玩家基础攻击
-     * 伤害 2.0 不包含在内），语义同 KubeJS 8 的 attackDamage。
+     * Pending base attack damage bonus, or {@code null} to keep the current value. This is the
+     * modifier amount excluding the player's 2.0 base attack damage, matching KubeJS 8's
+     * {@code attackDamage}.
      */
     @Doc("Replaces the item's base attack damage modifier (minecraft:base_attack_damage, ADD_VALUE on mainhand), keeping every other attribute entry - including attack speed.")
     @Doc("The value is a bonus on top of the player's base attack damage (2.0 on 26.x), so total damage = 2.0 + value.")
@@ -204,8 +205,9 @@ public class ItemModificationJS implements graal.graalvm.polyglot.proxy.ProxyObj
     }
 
     /**
-     * 待写入的基础攻击速度加成；{@code null} = 保持原值。数值为修饰量（玩家基础攻击
-     * 速度 4.0 不包含在内），语义同 KubeJS 8 的 attackSpeed。
+     * Pending base attack speed bonus, or {@code null} to keep the current value. This is the
+     * modifier amount excluding the player's 4.0 base attack speed, matching KubeJS 8's
+     * {@code attackSpeed}.
      */
     @Doc("Replaces the item's base attack speed modifier (minecraft:base_attack_speed, ADD_VALUE on mainhand), keeping every other attribute entry - including attack damage.")
     @Doc("The value is a bonus on top of the player's base attack speed (4.0 on 26.x): a sword uses -2.4 for a total of 1.6.")
@@ -222,9 +224,10 @@ public class ItemModificationJS implements graal.graalvm.polyglot.proxy.ProxyObj
     }
 
     /**
-     * 本视图的规范化声明值（ticket 39 候选计划载体）：只含被显式设置的属性；
-     * {@code food}/{@code tool} 的值为规范化 Map，{@code null} 表示移除请求。
-     * 组件不变量（stack/damage）与目标解析由 Adapter 在联合预检（STATE_PLAN）完成。
+     * Returns the normalized map of properties explicitly set on this view. {@code food} and
+     * {@code tool} map to normalized maps, or {@code null} when removal was requested.
+     * {@code ModificationDomainOwner} checks stack/damage constraints and target existence during
+     * {@code STATE_PLAN} preflight.
      */
     Map<String, Object> normalizedProperties() {
         Map<String, Object> properties = new LinkedHashMap<>();

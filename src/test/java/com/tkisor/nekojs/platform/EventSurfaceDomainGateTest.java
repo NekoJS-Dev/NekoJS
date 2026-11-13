@@ -20,27 +20,32 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * 工单 33（W9）event/surface 覆盖 gate —— Fabric {@code common-api-processor} 延期后的
- * 非 processor 替代门禁之二：驱动<b>节点真实的事件注册入口</b>，枚举注册进
- * {@link com.tkisor.nekojs.api.event.EventGroupRegistry} 的 domain 与 bus 成员。
+ * Event/surface coverage gate: the second of the two non-processor replacement gates for the
+ * deferred Fabric {@code common-api-processor}. It drives the <b>node's real event registration entry points</b>
+ * and enumerates the domains and bus members registered into
+ * {@link com.tkisor.nekojs.api.event.EventGroupRegistry}.
  *
- * <p><b>owner</b>：Managed Surface/Probe owner（coverage ledger + contract fixture）；
- * build convention owner 负责接线。<b>输入</b>：本节点 classpath 上真实编译出的核心插件
- * （neoforge={@code NekoJSCorePlugin}，fabric={@code FabricCorePlugin}，即
- * {@code @RegisterNekoJSPlugin(priority = CORE_PRIORITY)} 的节点事件注册入口）与其
- * {@code registerEvents}/{@code registerClientEvents} 钩子，注册进本次测试新建的
- * {@link com.tkisor.nekojs.api.event.EventGroupRegistry.Impl}（不读进程级全局，也不依赖其它测试的类初始化副作用）。
- * <b>逐项输出</b>：注册到的每个 domain、holder 入口、bus 成员、client-events 是否可观测，
- * 与只读基线 {@code /nekojs/platform-gates/event-surface-domains.txt} 对比；另落
- * {@code build/nekojs-gates/event-surface-<loader>.json} 供 CI 汇总进同一报告。
- * <b>失败诊断</b>：{@code missing-binding}（承诺的 domain/bus 在本节点运行时未注册）、
- * {@code undocumented-domain}（注册了但基线未登记）、{@code unexpected-domain}、
- * {@code undeclared-evidence}、{@code client-events-not-verified}。
+ * <p><b>Owner</b>: the Managed Surface/Probe owner owns the coverage ledger and the contract
+ * fixture; the build convention owner owns the wiring. <b>Input</b>: the core plugin actually
+ * compiled onto this node's classpath (neoforge={@code NekoJSCorePlugin}, fabric={@code
+ * FabricCorePlugin}, i.e. the node event registration entry points of
+ * {@code @RegisterNekoJSPlugin(priority = CORE_PRIORITY)}) and its
+ * {@code registerEvents}/{@code registerClientEvents} hooks, registered into a
+ * {@link com.tkisor.nekojs.api.event.EventGroupRegistry.Impl} created by this test run (it reads
+ * no process-wide global and depends on no other test's class-initialization side effects).
+ * <b>Per-item output</b>: every registered domain, holder entry point, bus member and whether
+ * client events are observable, compared against the read-only baseline
+ * {@code /nekojs/platform-gates/event-surface-domains.txt}; the run also writes
+ * {@code build/nekojs-gates/event-surface-<loader>.json} for CI to fold into the same report.
+ * <b>Failure diagnosis</b>: {@code missing-binding} (a promised domain/bus was not registered at
+ * runtime on this node), {@code undocumented-domain} (registered but not in the baseline),
+ * {@code unexpected-domain}, {@code undeclared-evidence}, {@code client-events-not-verified}.
  *
- * <p><b>输入边界（明示，不夸大覆盖）</b>：本 gate 只覆盖核心插件入口注册的 domain。由其它
- * 插件注册的 domain（如 {@code DynamicRegistryPlugin}、{@code RecipeViewerEventsPlugin}）
- * 不在本 gate 输入内；基线中它们必须记为 {@code not-verified} 并保持对应域验收阻塞，不得写成
- * {@code unavailable}/{@code partial}（工单 33 AC3）。
+ * <p><b>Input limits (stated, not overstated)</b>: this gate covers only the domains registered by
+ * the core plugin entry points. Domains registered by other plugins (for example
+ * {@code DynamicRegistryPlugin}, {@code RecipeViewerEventsPlugin}) are not gated here; the
+ * baseline must record them as {@code not-verified} and keep the matching domain acceptance
+ * blocked. They must not be written as {@code unavailable} or {@code partial}.
  */
 @Tag("platform-gate")
 class EventSurfaceDomainGateTest {
@@ -70,15 +75,17 @@ class EventSurfaceDomainGateTest {
         assertTrue(!contributors.isEmpty(),
                 "节点必须能发现事件注册入口（neoforge 注解扫描 / fabric 内置清单）（node=" + loader + "）");
 
-        // 每个插件用独立 registry：与 bootstrap 的收集语义一致（同名组冲突由 merge policy 裁决），
-        // 也避免"同一静态 GROUP 实例被注册两次"这种测试自身制造的重复 bus。
+        // Each plugin gets its own registry: this matches bootstrap's collection semantics (a duplicate
+        // group name is settled by the merge policy) and avoids the duplicate bus a test would create
+        // by registering the same static GROUP instance twice.
         for (String className : contributors) {
             record(registrations, className,
                     EventRegistrationSurfaces.invokeRegistration(className, REGISTER_EVENTS),
                     "server", gaps, node);
         }
 
-        // client-events 通道：MC client 类在裸 JVM 可能无法初始化——失败必须显式记录，不能静默省略。
+        // Client-events channel: MC client classes may fail to initialize in a bare JVM, so a failure must
+        // be recorded explicitly and never silently dropped.
         Map<String, String> clientFailures = new LinkedHashMap<>();
         for (String className : contributors) {
             EventRegistrationSurfaces.Registration invocation =
@@ -180,7 +187,7 @@ class EventSurfaceDomainGateTest {
                 + " owner=Managed Surface/Probe owner :: " + detail;
     }
 
-    // ---- 注册面驱动 ----
+    // ---- Driving the registration surface ----
 
     private record Registration(String key, String group, String holder, String channel, List<String> buses) {}
 
@@ -206,9 +213,9 @@ class EventSurfaceDomainGateTest {
         }
     }
 
-    // ---- 节点事实源（发现/驱动逻辑在 EventRegistrationSurfaces，与 declaration golden 测试共享）----
+    // ---- Node facts (discovery and driving live in EventRegistrationSurfaces, shared with the golden test) ----
 
-    // ---- 逐项输出落盘 ----
+    // ---- Per-item report output ----
 
     private static void emitReport(String node, Map<String, Registration> registrations,
                                    Map<String, String> clientFailures,
@@ -245,10 +252,11 @@ class EventSurfaceDomainGateTest {
         return "\"" + value.replace("\\", "\\\\").replace("\"", "\\\"") + "\"";
     }
 
-    // ---- 只读基线 ----
+    // ---- Read-only baseline ----
 
     /**
-     * 基线格式（跨节点全景；唯一事实源是各节点核心插件注册面，基线只是经审阅的快照）：
+     * Baseline format (a cross-node view; the source of truth is each node's core plugin
+     * registration surface, the baseline is only a reviewed snapshot):
      * {@code <domain> | <node> = <present|not-verified> | buses=<a,b,c>}
      */
     private record NodeState(String status, List<String> buses) {}

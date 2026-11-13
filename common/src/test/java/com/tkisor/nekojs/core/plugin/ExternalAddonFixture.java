@@ -21,22 +21,21 @@ import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 
 /**
- * Ticket 08 test harness: drives the real external addon fixture jar through the
- * production discovery seam ({@link NekoJSBasePluginManager#registerClass}).
+ * Test harness that drives the real external addon fixture jar through
+ * {@link NekoJSBasePluginManager#registerClass}.
  *
- * <p>The fixture jar is NOT on any test classpath — the harness opens it through a
- * dedicated {@link URLClassLoader}, mimicking how a loader hands discovered mod
- * classes to the engine. Two input shapes are provided:
+ * <p>The fixture jar is not on any test classpath. The harness opens it through a dedicated
+ * {@link URLClassLoader}, the way a loader hands discovered mod classes to the engine. Two
+ * input shapes are supported:
  *
  * <ul>
- *   <li><b>jar / mods-dir shape</b> (the real target release form): scan the jar's
- *       class entries, resolve each annotated class in the addon class loader, and
- *       hand it to the production registration seam — the annotation filter,
- *       {@code clientOnly}/{@code requiredMods} rules and priority ordering all run
- *       in production code;</li>
- *   <li><b>fabric.mod.json shape</b>: read the {@code nekojs} entrypoint list from
- *       the jar's Fabric metadata and register those classes through the same seam
- *       (mirrors {@code FabricPluginLoader.loadPlugins}).</li>
+ *   <li><b>jar / mods-dir shape</b> (the real release form): scan the jar's class entries,
+ *       resolve each annotated class in the addon class loader, and hand it to the same
+ *       registration call, so the annotation filter, {@code clientOnly}/{@code requiredMods}
+ *       rules and priority ordering all run in production code;</li>
+ *   <li><b>fabric.mod.json shape</b>: read the {@code nekojs} entrypoint list from the jar's
+ *       Fabric metadata and register those classes the same way, as
+ *       {@code FabricPluginLoader.loadPlugins} does.</li>
  * </ul>
  */
 final class ExternalAddonFixture {
@@ -128,7 +127,7 @@ final class ExternalAddonFixture {
         }
     }
 
-    /** Registers every discovered fixture class through the production seam. */
+    /** Registers every discovered fixture class in the plugin manager. */
     static void registerDiscovered(List<Class<?>> classes) {
         for (Class<?> clazz : classes) {
             NekoJSBasePluginManager.registerClass(clazz);
@@ -162,7 +161,8 @@ final class ExternalAddonFixture {
         }
     }
 
-    /** Snapshot + swap of the manager's static registry (private test seam of the manager). */
+    /** Captures the manager's static registry fields so a test can swap them and restore the old
+     * state afterwards. */
     static final class ManagerEntriesSnapshot implements AutoCloseable {
         private final Object previousEntries;
         private final Object previousSorted;

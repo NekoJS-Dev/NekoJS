@@ -14,14 +14,14 @@ public interface BlockStateExtension extends BlockStateSpec {
         return (BlockState) this;
     }
 
-    /** 当前方块状态是否属于给定标签（如 {@code minecraft:mineable/pickaxe}）。 */
+    /** Whether this block state belongs to the given tag (for example {@code minecraft:mineable/pickaxe}). */
     default boolean neko$hasTag(String tagLocation) {
         Identifier loc = Identifier.tryParse(tagLocation);
         if (loc == null) return false;
 
         TagKey<Block> tagKey = TagKey.create(Registries.BLOCK, loc);
-        // 26.x 移除了 BlockState#is(TagKey) 单参重载，改用持有者判定
-//? if >=26 {
+        // 26.x removed the single-argument BlockState#is(TagKey) overload, so the holder check is used
+        //? if >=26 {
         return self().typeHolder().is(tagKey);
 //?} else {
         /*return self().is(tagKey);
@@ -29,7 +29,8 @@ public interface BlockStateExtension extends BlockStateSpec {
     }
 
     /**
-     * 判断当前方块是否匹配给定 id 或标签：以 {@code #} 前缀表示标签，否则按方块 id 精确匹配。
+     * Tests whether the current block matches the given id or tag: a {@code #} prefix means a tag,
+     * otherwise the block id is matched exactly.
      */
     default boolean neko$is(String idOrTag) {
         if (idOrTag.startsWith("#")) {
@@ -39,7 +40,8 @@ public interface BlockStateExtension extends BlockStateSpec {
     }
 
     default String neko$getId() {
-        // 26.x 经接口注入 Block 直接持有 neko$getId；1.21.1 需强转——强转写法两端等价
+        // On 26.x the Block gets neko$getId injected through the interface; 1.21.1 needs a cast, and the
+        // cast form is equivalent on both.
         return ((BlockExtension) self().getBlock()).neko$getId();
     }
 }

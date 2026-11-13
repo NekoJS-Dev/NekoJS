@@ -38,7 +38,7 @@ public interface IPlatform {
             if (parts.length >= 2) minor = Integer.parseInt(parts[1]);
             if (parts.length >= 3) patch = Integer.parseInt(parts[2]);
 
-            // 计算逻辑：
+            // How the number is computed:
             // 1.21.1 -> 1 * 1000 + 21 * 10 + 1 = 1211
             // 26.1.2 -> 26 * 100 + 1 * 10 + 2 = 2612
             // 26.1   -> 26 * 100 + 1 * 10 + 0 = 2610
@@ -84,7 +84,8 @@ public interface IPlatform {
         return NbtBinaryCodec.unsupported();
     }
 
-    /** 只读注册表查询服务；平台不支持时返回 {@code null}（脚本侧 {@code Registry} 查询返回空结果）。 */
+    /** Read-only registry query service; returns {@code null} when the platform does not support
+     * it, and script-side {@code Registry} queries then return empty results. */
     default RegistryQueryService registryQueryService() {
         return null;
     }
@@ -96,20 +97,22 @@ public interface IPlatform {
     String getLoaderVersion();
 
     /**
-     * Probe 类型生成默认扫描的 Java 包前缀（仅平台自身相关的 MC/loader 包；
-     * {@code java}/{@code com.mojang}/{@code com.tkisor.nekojs} 由 probe 配置层固定追加）。
-     * 平台按需 override 以暴露自身的包。
+     * Java package prefixes that probe type generation scans by default. Only the MC/loader
+     * packages of the platform itself: {@code java}, {@code com.mojang} and
+     * {@code com.tkisor.nekojs} are always appended by the probe config layer. A platform
+     * overrides this to expose its own packages.
      */
     default List<String> defaultScanPackages() {
         return List.of("net.minecraft");
     }
 
     /**
-     * Recipe schema 字段 kind → 值类的 Java 包（probe 的 recipes 声明 import 用）。
-     * NeoForge 1.21+ 是 {@code net.minecraft.world.item[.crafting]}；1.12.2 override 为
-     * {@code net.minecraft.item[.crafting]}。kind 无类映射时返回 {@code null}。
-     * 包路径必须与真实类一致——否则生成文件里同一别名（$ItemStack_/$Ingredient_）会从
-     * 两个模块重复 import，TS 报 Duplicate identifier，整个 recipes 声明失效。
+     * Recipe schema field kind to the Java package of its value class, used for imports in the
+     * probe recipes declaration. NeoForge 1.21+ uses {@code net.minecraft.world.item[.crafting]};
+     * 1.12.2 overrides it to {@code net.minecraft.item[.crafting]}. Returns {@code null} when the
+     * kind has no class mapping. The package must match the real class: otherwise the same alias
+     * ($ItemStack_/$Ingredient_) in the generated file is imported twice from two modules, TS
+     * reports Duplicate identifier and the whole recipes declaration fails.
      */
     default String recipeFieldKindPackage(RecipeFieldKind kind) {
         return switch (kind) {

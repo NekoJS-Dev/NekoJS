@@ -7,24 +7,27 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * 绑定到单个 Context 的 {@code global}/{@code shared} 视图（票 10）。
+ * The {@code global}/{@code shared} view bound to a single Context.
  *
- * <p>脚本侧表面与被替换的宿主 Map 绑定完全一致：{@code global.foo}（成员读）、
- * {@code global.foo = v}（成员写）、{@code delete global.foo}（成员删除）、
- * {@code global.clear()}（清空）——GraalJS 对宿主 {@link Map} 的成员访问就是
- * get/put/remove。本类实现 {@link Map} 以保留该 interop 语义（实证探针：成员键 =
- * Map 接口方法名，与旧 ConcurrentHashMap 绑定行为相同）。
+ * <p>The script-facing surface matches the host {@link Map} binding it replaces: {@code global.foo}
+ * reads a member, {@code global.foo = v} writes one, {@code delete global.foo} removes one and
+ * {@code global.clear()} empties the view. GraalJS member access on a host {@link Map} is
+ * get/put/remove. This class implements {@link Map} to keep that interop semantics: a member key
+ * resolves to the Map interface method names, the same behavior the previous
+ * ConcurrentHashMap binding had.
  *
- * <p>事务（候选）generation：顶层 set/delete/clear 进 {@link GlobalStore.MapWriteSet}
- * （read-your-writes、失败丢弃、commit 联合发布）；非事务 generation：直接提交进 store。
- * <b>不承诺深回滚</b>：嵌套对象/列表/已共享 Java 对象的内部修改不在写集事务边界内——
- * 需要事务保护的脚本应构造新值后整体替换顶层 key（spec 10）。
+ * <p>For a transactional (candidate) generation, top-level set/delete/clear go into
+ * {@link GlobalStore.MapWriteSet}, which gives read-your-writes, discards the writes on failure
+ * and publishes them jointly on commit. For a non-transactional generation they commit into the
+ * store directly. <b>No deep rollback is promised</b>: changes made inside nested objects,
+ * lists or already shared Java objects stay outside the write-set transaction. A script that
+ * needs transaction protection should build a new value and replace the top-level key with it.
  */
 public final class GlobalView implements Map<String, Object> {
 
     private final GenerationGlobals generation;
     private final GlobalStore store;
-    private final GlobalStore.MapWriteSet writes; // null = 非事务（直接提交）
+    private final GlobalStore.MapWriteSet writes; // null = non-transactional (commits directly)
 
     GlobalView(GenerationGlobals generation, GlobalStore store, GlobalStore.MapWriteSet writes) {
         this.generation = generation;
@@ -32,12 +35,12 @@ public final class GlobalView implements Map<String, Object> {
         this.writes = writes;
     }
 
-    /** 视图绑定的命名空间（{@code "global:<type>"} / {@code "shared"}；诊断用）。 */
+    /** The namespace this view is bound to ({@code "global:<type>"} or {@code "shared"}); used for diagnostics. */
     public String scope() {
         return store.scope();
     }
 
-    // ---- 顶层写（事务语义的进入点） ----
+    // ---- Top-level writes (the entry point of the transaction semantics) ----
 
     @Override
     public Object put(String key, Object value) {
@@ -71,7 +74,7 @@ public final class GlobalView implements Map<String, Object> {
         }
     }
 
-    // ---- 读（read-your-writes：候选先看写集再看已提交 store） ----
+    // ---- Reads (read-your-writes: a candidate checks the write set before the committed store) ----
 
     @Override
     public Object get(Object key) {
@@ -101,7 +104,8 @@ public final class GlobalView implements Map<String, Object> {
         return effectiveContents().isEmpty();
     }
 
-    // ---- 其余 Map 面（快照语义；interop 只用 get/put/remove/clear，这里为 Java 侧完整性） ----
+    // ---- The rest of the Map surface (snapshot semantics; interop only uses get/put/remove/clear,
+    // these exist for Java callers) ----
 
     @Override
     public Set<String> keySet() {
@@ -131,7 +135,10 @@ public final class GlobalView implements Map<String, Object> {
         return effectiveContents().containsValue(value);
     }
 
-    /** 有效内容快照（写集覆盖 + clear 语义归并；复制出锁，避免暴露内部结构）。 */
+    /**
+     * Snapshot of the effective contents: the write-set overrides merged with the clear semantics,
+     * copied out under the lock so no internal structure leaks.
+     */
     private Map<String, Object> effectiveContents() {
         if (writes != null && generation.isTransactional()) {
             return writes.effectiveSnapshot();

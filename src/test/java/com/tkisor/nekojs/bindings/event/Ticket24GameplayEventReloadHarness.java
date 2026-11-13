@@ -26,18 +26,18 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Ticket 24 script-path reload harness (version-tree test tree, NeoForge side): real root +
- * real Graal pipeline + real gameplay event groups (static singletons); scripts register
- * listeners via {@code PlayerEvents/LevelEvents/CommandEvents/...}, and SERVER load/reload
+ * Reload harness for script paths (version-tree test tree, NeoForge side): a real root, the real
+ * Graal pipeline and the real gameplay event groups (static singletons). Scripts register
+ * listeners through {@code PlayerEvents/LevelEvents/CommandEvents/...}, and SERVER load/reload
  * goes through the production lifecycle entries ({@code loadScripts} / {@code root.reload}).
  *
- * <p>Isomorphic to the ticket 26/39 harnesses (same assembly sequence, same Platform/gameDir
- * stub); this harness's families are the gameplay event groups, and its constructor installs
- * the cancellability predicate on the <b>very first line</b> (the production {@code NekoJSMod}
- * constructor order) so cancellable family buses are not frozen wrong. No vanilla registry
- * dependency: scripts only attach key-less listeners (keyed registration needs real
- * {@code Item}/{@code EntityType} values), so this harness's cases truly run — and only run —
- * on a headless JVM.
+ * <p>Uses the same assembly sequence and the same Platform/gameDir stub as the other script-path
+ * harnesses; this harness's families are the gameplay event groups, and its constructor installs the
+ * cancellability predicate on the <b>very first line</b>, following the production
+ * {@code NekoJSMod} constructor order, so cancellable family buses are not frozen wrong. It needs
+ * no vanilla registry: scripts only attach key-less listeners (keyed registration needs real
+ * {@code Item}/{@code EntityType} values), so its cases truly run, and only run, on a headless
+ * JVM.
  */
 final class Ticket24GameplayEventReloadHarness implements AutoCloseable {
 

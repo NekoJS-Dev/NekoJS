@@ -31,8 +31,8 @@ public class NekoJSPathPackResources extends PathPackResources {
                 root
         );
 
-        // SharedConstants.RESOURCE_PACK_FORMAT / DATA_PACK_FORMAT 已废弃：按 PackType 从
-        // 当前 WorldVersion 取 pack version（getPackVersion(PackType)）
+        // SharedConstants.RESOURCE_PACK_FORMAT / DATA_PACK_FORMAT are deprecated: take the pack version from
+        // the current WorldVersion by PackType (getPackVersion(PackType)).
         int format = SharedConstants.getCurrentVersion().getPackVersion(type);
 
         String json = """

@@ -7,21 +7,23 @@ import java.nio.file.AccessDeniedException;
 import java.nio.file.Path;
 
 /**
- * 脚本可触达文件系统写策略的唯一真相。
+ * Single source of truth for the filesystem write policy that scripts can reach.
  *
- * <p>此前两层各判各的：Graal {@link NekoJSFileSystem} 写路径无条件
- * {@code verifyInsideGameDirForCreate}（{@code allowFsWriteOutsideNekojs=false} 也能写
- * {@code mods/}），Node shim（{@code NekoNodeFS}）才按配置收敛；且两层都允许写
- * {@code nekojs/config/}——也就是定义沙箱自身的 {@code engine.toml}（脚本写
- * {@code allowReflection = true}，下次启动沙箱即失效）。
+ * <p>Both the Graal {@link NekoJSFileSystem} and the Node shim ({@code NekoNodeFS}) decide every
+ * write and delete here. The protected directory {@code nekojs/config/} holds the
+ * {@code engine.toml} that defines the sandbox itself: a script that set
+ * {@code allowReflection = true} there would remove the sandbox on the next start.
  *
- * <p>两层现在都经本类裁决：
+ * <p>The rules:
  * <ol>
- *   <li>{@code nekojs/config/} 整目录与旧位置 {@code <gameDir>/config/nekojs-engine.toml}
- *       永久拒写拒删——沙箱定义文件不能被沙箱内代码改写。宿主侧配置物化/probe 编辑器文件
- *       由宿主直连 {@link java.nio.file.Files}，不经过本类。</li>
- *   <li>{@code allowFsWriteOutsideNekojs=false}：写/删只允许 neko 根内；{@code true}：
- *       允许 gameDir 内（受保护配置仍然拒绝）。</li>
+ *   <li>The whole {@code nekojs/config/} directory and the old location
+ *       {@code <gameDir>/config/nekojs-engine.toml} always reject writes and deletes: code inside
+ *       the sandbox must not rewrite the files that define it. Host-side config materialization
+ *       and probe editor files go straight through {@link java.nio.file.Files} and do not pass
+ *       through this class.</li>
+ *   <li>{@code allowFsWriteOutsideNekojs=false}: writes and deletes are only allowed inside the
+ *       neko root; {@code true}: also inside gameDir (the protected config is still
+ *       rejected).</li>
  * </ol>
  */
 public final class SandboxPolicy {
@@ -39,9 +41,11 @@ public final class SandboxPolicy {
     }
 
     /**
-     * 写入目标裁决（新建或覆盖）。Graal FileSystem 层用：路径已是解析后的绝对形式。
+     * Decides a write target (create or overwrite). Used by the Graal FileSystem layer, where the
+     * path is already a resolved absolute path.
      *
-     * @throws AccessDeniedException 路径越出写作用域，或命中受保护的引擎配置
+     * @throws AccessDeniedException the path leaves the writable scope, or hits the protected
+     *                               engine config
      */
     public Path resolveWrite(Path path) throws IOException {
         Path target = allowWriteOutsideNekojs
@@ -50,7 +54,7 @@ public final class SandboxPolicy {
         return rejectProtected(target);
     }
 
-    /** 删除/改名目标裁决（存在路径变体）。 */
+    /** Decides a delete or rename target (existing-path variant). */
     public Path resolveWriteExisting(Path path) throws IOException {
         Path target = allowWriteOutsideNekojs
                 ? paths.verifyInsideGameDir(path)
@@ -58,7 +62,10 @@ public final class SandboxPolicy {
         return rejectProtected(target);
     }
 
-    /** 写入目标裁决（Node shim 层用：原始字符串 + 相对当前工作目录解析）。 */
+    /**
+     * Decides a write target for the Node shim layer: a raw string, resolved against the current
+     * working directory.
+     */
     public Path resolveWrite(String path, Path currentWorkingDirectory) throws IOException {
         Path target = allowWriteOutsideNekojs
                 ? paths.resolveGamePathForCreate(path, currentWorkingDirectory)
@@ -66,7 +73,7 @@ public final class SandboxPolicy {
         return rejectProtected(target);
     }
 
-    /** 删除/改名目标裁决（Node shim 层，存在路径变体）。 */
+    /** Decides a delete or rename target for the Node shim layer (existing-path variant). */
     public Path resolveWriteExisting(String path, Path currentWorkingDirectory) throws IOException {
         Path target = allowWriteOutsideNekojs
                 ? paths.resolveGamePath(path, currentWorkingDirectory)
@@ -74,7 +81,10 @@ public final class SandboxPolicy {
         return rejectProtected(target);
     }
 
-    /** 是否命中「定义沙箱自身的文件」：nekojs/config/ 目录或旧版引擎配置单文件。 */
+    /**
+     * Whether the path is a file that defines the sandbox itself: the nekojs/config/ directory or
+     * the single legacy engine config file.
+     */
     public boolean isProtectedConfigPath(Path path) {
         Path canonical = NekoJSPaths.canonicalForm(path);
         return canonical.startsWith(protectedConfigDir) || canonical.equals(protectedLegacyEngineConfig);

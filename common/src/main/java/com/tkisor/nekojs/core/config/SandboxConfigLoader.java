@@ -32,10 +32,10 @@ public final class SandboxConfigLoader {
     }
 
     /**
-     * 读取引擎配置。{@code writable = false} 用于旧位置
-     * {@code <gamedir>/nekojs/config/engine.toml} 的只读回退：补默认键 / 清理废弃键
-     * 只在内存中生效，不回写文件（{@code ClassFilter#loadEngineConfig} 的契约是
-     * 旧文件 honored read-only，不做任何修改）。
+     * Reads the engine config. {@code writable = false} is the read-only fallback for the legacy
+     * location {@code <gamedir>/nekojs/config/engine.toml}: added default keys and removed obsolete
+     * keys only change the in-memory config and are never written back, because
+     * {@code ClassFilter#loadEngineConfig} honours the legacy file read-only and makes no changes.
      */
     public SandboxConfig load(Path engineConfig, boolean writable) {
         var builder = CommentedFileConfig.builder(engineConfig)

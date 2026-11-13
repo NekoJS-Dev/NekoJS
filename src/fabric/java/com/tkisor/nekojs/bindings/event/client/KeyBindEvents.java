@@ -1,9 +1,11 @@
-// fabric 节点孪生：共享树同名类整文件 `//? if neoforge && >=26` 守卫（重 NeoForge 面：
-// RegisterKeyMappingsEvent 事件窗口、mod-bus 订阅、FML 运行时探测）。fabric 侧等价物更简——
-// KeyMappingHelper.registerKeyMapping 任意时机可调（无事件窗口/pending 重试），状态轮询挂
-// ClientTickEvents.END_CLIENT_TICK（edge-detect 逻辑与 NeoForge 版逐行同构）。
-// 解析/分类逻辑复用共享树 KeyBindIds（>=26 版本守卫，fabric 26 存活）。共享树版去 NeoForge
-// 化后（payload/RegisterBus 提为中立形态）合并回单副本。
+// Fabric copy of the shared tree's KeyBindEvents class, guarded file-wide by
+// `//? if neoforge && >=26` on the NeoForge side (the RegisterKeyMappingsEvent window, mod-bus
+// subscription and FML runtime probes). The Fabric equivalent is simpler:
+// KeyMappingHelper.registerKeyMapping can be called at any time, with no event window and no
+// pending retry, so state polling hangs off ClientTickEvents.END_CLIENT_TICK (the edge-detect
+// logic is line for line the same as the NeoForge version). Key resolution and categorization
+// reuse KeyBindIds from the shared tree (guarded for >=26, and Fabric 26 keeps it). The shared
+// tree version merges back into a single copy once its payload and RegisterBus are neutral.
 package com.tkisor.nekojs.bindings.event.client;
 
 import com.mojang.blaze3d.platform.InputConstants;
@@ -23,10 +25,10 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Script-friendly key bindings（fabric 形态，脚本面与 NeoForge 版一致）：
- * {@code register(id, key[, category])} 经 KeyMappingHelper 注册绑定，
- * {@code pressed} / {@code released} / {@code tick} 总线在客户端 tick 上做
- * {@code KeyMapping.isDown()} 的边沿检测。仅 client_scripts 可见。
+ * Script-friendly key bindings (Fabric form; the script surface matches the NeoForge version).
+ * {@code register(id, key[, category])} registers a binding through KeyMappingHelper, and the
+ * {@code pressed} / {@code released} / {@code tick} buses edge-detect {@code KeyMapping.isDown()}
+ * on the client tick. Visible only in client_scripts.
  */
 public final class KeyBindEvents {
 
@@ -44,7 +46,8 @@ public final class KeyBindEvents {
     public static final EventBusJS<KeyBindEventJS, String> TICK =
             GROUP.client("tick", KeyBindEventJS.class, KEY_DISPATCH);
 
-    /** {@code KeyBindEvents.register(id, key[, category])}：注册绑定，返回 KeyMapping 句柄。 */
+    /** {@code KeyBindEvents.register(id, key[, category])}: registers a binding and returns the
+     * KeyMapping handle. */
     public static final RegisterBus REGISTER =
             GROUP.add("register", ScriptType.CLIENT, new RegisterBus());
 
@@ -63,13 +66,15 @@ public final class KeyBindEvents {
 
     private KeyBindEvents() {}
 
-    /** client init 调用：挂状态轮询（END_CLIENT_TICK，与 NeoForge 版 ClientTickEvent.Post 同位）。 */
+    /** Called at client init: hooks state polling on END_CLIENT_TICK, the same place as
+     * ClientTickEvent.Post in the NeoForge version. */
     public static void register() {
         net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents.END_CLIENT_TICK
                 .register(client -> dispatchStateTransitions());
     }
 
-    /** 注册（或查回）绑定：同 id 幂等，CLIENT 脚本 reload 不重复注册。 */
+    /** Registers a binding, or returns the existing one: the same id is idempotent, so a CLIENT
+     * script reload does not register it twice. */
     static KeyMapping registerBinding(Identifier id, InputConstants.Key key, KeyMapping.Category category) {
         String fullId = id.toString();
         Binding existing = BINDINGS.get(fullId);
@@ -84,17 +89,19 @@ public final class KeyBindEvents {
     }
 
     /**
-     * 把绑定交给游戏：CLIENT 脚本加载在 CLIENT_STARTED（晚于 Options 构建），此时
-     * fabric-api 的 KeyMappingHelper 会撞 26.x GameOptions 的二次初始化守卫
-     * （"GameOptions has already been initialised"）——改为直接扩 options.keyMappings
-     * 数组（AW mutable；RegisterKeyMappingsEvent 本身做的就是这份替换）。失败时绑定仍
-     * 记录在 BINDINGS（脚本可持句柄），只是不进控制设置界面。
+     * Hands the binding to the game. CLIENT scripts load at CLIENT_STARTED, after Options is
+     * built, where fabric-api's KeyMappingHelper hits the 26.x GameOptions double-initialization
+     * guard ("GameOptions has already been initialised"). So this appends to the
+     * options.keyMappings array directly instead; the array is mutable through the access widener
+     * and this is the same replacement RegisterKeyMappingsEvent performs. On failure the binding
+     * stays in BINDINGS, so scripts can still hold the handle, but it does not appear in the
+     * controls screen.
      */
     private static void installIntoGame(KeyMapping mapping, Identifier id) {
         try {
             net.minecraft.client.Minecraft minecraft = net.minecraft.client.Minecraft.getInstance();
             if (minecraft == null || minecraft.options == null) {
-                return;   // 保持 pending，下一 tick 重试（dispatchStateTransitions 顺带 flush）
+                return;   // stay pending and retry on the next tick (dispatchStateTransitions flushes it along the way)
             }
             net.minecraft.client.KeyMapping[] current = minecraft.options.keyMappings;
             net.minecraft.client.KeyMapping[] grown = java.util.Arrays.copyOf(current, current.length + 1);
@@ -107,7 +114,8 @@ public final class KeyBindEvents {
         }
     }
 
-    /** 自定义分类：26.x 唯一注册点是 Category.register（与 NeoForge 版事件窗口外的回退同款）。 */
+    /** Custom category: on 26.x the only registration point is Category.register, the same fallback
+     * the NeoForge version uses outside the event window. */
     @SuppressWarnings("deprecation")
     private static void installCategory(KeyMapping.Category category) {
         if (!KeyBindIds.INSTALLED_CATEGORIES.add(category.id())) {
@@ -116,7 +124,7 @@ public final class KeyBindEvents {
         try {
             KeyMapping.Category.register(category.id());
         } catch (IllegalArgumentException alreadyRegistered) {
-            // 值相等的分类已注册——无事可做
+            // A category with an equal value is already registered, so there is nothing to do.
         } catch (Throwable t) {
             NekoJS.LOGGER.warn("KeyBindEvents: failed to register key category '{}'", category.id(), t);
         }
@@ -147,7 +155,8 @@ public final class KeyBindEvents {
         }
     }
 
-    /** {@code KeyBindEvents.register(...)} 入口：注册绑定而非挂监听（与 NeoForge 版同形）。 */
+    /** Entry point for {@code KeyBindEvents.register(...)}: it registers a binding instead of
+     * attaching a listener, the same shape as the NeoForge version. */
     public static final class RegisterBus extends EventBusJS<Object, Void> {
 
         RegisterBus() {
@@ -183,7 +192,7 @@ public final class KeyBindEvents {
         }
     }
 
-    /** pressed / released / tick 的事件对象（与 NeoForge 版同形）。 */
+    /** Event object for pressed / released / tick (same shape as the NeoForge version). */
     @Doc("Key binding trigger event (KeyBindEvents.pressed / released / tick).")
     @Doc("Fires on the client thread; only visible in client_scripts.")
     public static final class KeyBindEventJS {

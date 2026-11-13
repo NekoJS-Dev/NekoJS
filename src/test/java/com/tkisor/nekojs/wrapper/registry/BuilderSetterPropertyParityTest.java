@@ -19,15 +19,14 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * GraalJS runtime contract fixture（ticket 15 AC3/AC4）：固定「显式 setter 与
- * JavaBean-style property assignment 调用<b>同一个 setter</b>，并进入同一校验、
- * 规范化、definition fingerprint 与注册收集路径」。
+ * Pins the GraalJS runtime contract: an explicit setter call and a JavaBean-style property
+ * assignment invoke the <b>same setter</b> and go through the same validation, normalization,
+ * definition fingerprint and registry collection path.
  *
- * <p>事实依据（fixture 化前的 characterization 探测）：GraalJS 对<b>宿主对象</b>的
- * property 写入不会落到 setter——靠天然 Bean 行为不可靠；{@link BuilderSurface}
- * （ProxyObject putMember seam）把两种写法转发到同一 {@code Method}。本测试在
- * 真实 GraalJS Context 里钉住该契约，GraalJS 坐标升级时重跑此处即可重新验证
- * （spec 08 Implementation Decisions 的既定流程）。
+ * <p>GraalJS does not route property writes on a <b>host object</b> to a setter, so plain bean
+ * behaviour is not enough. {@link BuilderSurface} (the ProxyObject putMember hook) forwards both
+ * forms to the same {@code Method}. This test pins that contract in a real GraalJS Context;
+ * rerun it after a GraalJS upgrade to verify the contract again.
  */
 class BuilderSetterPropertyParityTest {
 
@@ -37,7 +36,7 @@ class BuilderSetterPropertyParityTest {
         return new ItemBuilder(net.minecraft.resources.Identifier.parse(id));
     }
 
-    /** 在真实 GraalJS Context 里对 surface 执行一段脚本（脚本是第一书写者）。 */
+    /** Runs a script against the surface in a real GraalJS Context; the script is the only writer. */
     private static void evalOn(Object builder, String script) {
         try (Context context = Context.newBuilder("js").allowAllAccess(true).build()) {
             context.getBindings("js").putMember("b", BuilderSurface.of(builder));
@@ -47,7 +46,8 @@ class BuilderSetterPropertyParityTest {
 
     @Test
     void propertyAssignmentAndExplicitSetterProduceSameNormalizedStateAndFingerprint() {
-        // 同一 id：fingerprint 覆盖定义身份（registry+id+类型+规范化成员），两种写法只比写入路径
+        // Both builders use the same id. The fingerprint covers the definition identity (registry + id +
+        // type + normalized members), so the two forms differ only in how they write.
         ItemBuilder viaProperty = itemBuilder("mymod:parity");
         ItemBuilder viaSetter = itemBuilder("mymod:parity");
 
@@ -110,13 +110,13 @@ class BuilderSetterPropertyParityTest {
     void unknownMemberReadYieldsUndefinedButUnknownWriteIsRejectedWithTheDirectory() {
         ItemBuilder builder = itemBuilder("mymod:unknown");
 
-        // 未知读：ProxyObject hasMember=false 的常规 JS 语义（undefined，不抛）
+        // Unknown read: plain JS semantics for hasMember=false on the ProxyObject (undefined, no throw).
         try (Context context = Context.newBuilder("js").allowAllAccess(true).build()) {
             context.getBindings("js").putMember("b", BuilderSurface.of(builder));
             assertTrue(context.eval("js", "b.nope === undefined").asBoolean(),
                     "未知成员读取按 JS 语义返回 undefined");
         }
-        // 未知写：putMember 一定被调用，错误带成员目录
+        // Unknown write: putMember is always called, and the error lists the available members.
         RuntimeException writeError = assertThrows(RuntimeException.class,
                 () -> evalOn(builder, "b.nope = 1;"));
         assertTrue(writeError.getMessage().contains("has no member 'nope'"), writeError.getMessage());
@@ -132,9 +132,9 @@ class BuilderSetterPropertyParityTest {
         BlockBuilder blockViaProperty = new BlockBuilder(net.minecraft.resources.Identifier.parse("mymod:prop_block"));
         BlockBuilder blockViaMethod = new BlockBuilder(net.minecraft.resources.Identifier.parse("mymod:method_block"));
 
-        // 属性形态：嵌套子 builder 也是 surface，写入走同一 setter
+        // Property form: nested child builders are surfaces too, so writes go through the same setter.
         evalOn(blockViaProperty, "b.hardness = 3; b.item.maxStackSize = 16;");
-        // 方法/显式 setter 形态：item(cb) 回调里拿到的也是 surface
+        // Method and explicit-setter form: the callback of item(cb) also receives a surface.
         evalOn(blockViaMethod, "b.setHardness(3); b.item(i => i.setMaxStackSize(16));");
 
         assertEquals(3.0f, blockViaProperty.getHardness());
@@ -159,10 +159,11 @@ class BuilderSetterPropertyParityTest {
 
         assertEquals(viaMethod.getItem(), viaProperty.getItem(), "b.item = null 与 noItem() 必须同一写入点（都置 null）");
 
-        // 非 null 赋值在脚本面被拒（子 builder 不能从外部替换，只能抑制或配置）：
-        // JS 对象字面量在 coerce 期就到不了 setter——"item expects ItemBuilder but the
-        // value cannot be converted"（审查 F2：旧断言的 "only accepts null" 只在 Java 直调
-        // setItem 时可达，脚本面不可达）
+        // A non-null assignment is rejected on the script side: a child builder cannot be replaced
+        // from outside, only suppressed or configured. A JS object literal never reaches the
+        // setter, because coercion fails first with "item expects ItemBuilder but the value
+        // cannot be converted". Only a direct Java call to setItem can reach the "only accepts
+        // null" check; scripts cannot.
         BlockBuilder rejected = new BlockBuilder(net.minecraft.resources.Identifier.parse("mymod:r"));
         RuntimeException error = assertThrows(RuntimeException.class,
                 () -> evalOn(rejected, "b.item = {};"));
@@ -175,10 +176,12 @@ class BuilderSetterPropertyParityTest {
     void builderImplementsSupplierSoDrainCanLazilyBuild() {
         ItemBuilder builder = itemBuilder("mymod:supplier");
         evalOn(builder, "b.maxStackSize = 8;");
-        // surface 不改变 Java 侧对象身份：包上再解包仍是同一实例（drain 期 get() 的懒构建点不变）
+        // The surface does not change object identity on the Java side: wrapping and unwrapping
+        // returns the same instance, so the lazy build point in drain-time get() stays the same.
         assertSame(builder, BuilderSurface.unwrap(BuilderSurface.of(builder)));
 
-        // Supplier 语义实质断言：get() 恰构建一次并缓存（先攒后建）
+        // The real Supplier assertion: get() builds exactly once and caches the result, so the builder
+        // is configured first and built later.
         int[] builds = {0};
         RegistryObjectBuilder<String> counting = new RegistryObjectBuilder<>(
                 net.minecraft.resources.Identifier.parse("mymod:counting")) {
@@ -195,10 +198,11 @@ class BuilderSetterPropertyParityTest {
     }
 
     // ------------------------------------------------------------------
-    // 对象值可写属性的指纹稳定性（审查 F2；合成 builder，无 vanilla 依赖，全节点真跑）
+    // Fingerprint stability for writable object-valued properties (synthetic builders, no
+    // vanilla dependency, runs on every node)
     // ------------------------------------------------------------------
 
-    /** 合成子 builder：一个 int 属性（模拟 ItemBuilder 之于 BlockBuilder.item）。 */
+    /** Synthetic child builder with one int property, standing in for ItemBuilder in BlockBuilder.item. */
     public static final class SyntheticChild extends RegistryObjectBuilder<Object> {
         private int charge = 0;
 
@@ -220,7 +224,7 @@ class BuilderSetterPropertyParityTest {
         }
     }
 
-    /** 合成父 builder：对象值可写属性 child（模拟 BlockBuilder 的 item 抑制/存在语义）。 */
+    /** Synthetic parent builder with the writable child property, standing in for BlockBuilder's item. */
     public static final class SyntheticParent extends RegistryObjectBuilder<Object> {
         private SyntheticChild child;
 
@@ -244,12 +248,14 @@ class BuilderSetterPropertyParityTest {
 
     @Test
     void objectValuedPropertyFingerprintIsStableAcrossInstancesAndDistinguishesSuppression() {
-        // 两棵独立实例树、同一配置：指纹必须一致（旧实现内嵌 identityHashCode 会漂移）
+        // Two independent instance trees with the same configuration must produce the same
+        // fingerprint; an identityHashCode inside the fingerprint would drift between them.
         SyntheticParent first = new SyntheticParent(net.minecraft.resources.Identifier.parse("mymod:host"));
         first.setChild(new SyntheticChild(net.minecraft.resources.Identifier.parse("mymod:host")));
         SyntheticParent second = new SyntheticParent(net.minecraft.resources.Identifier.parse("mymod:host"));
         second.setChild(new SyntheticChild(net.minecraft.resources.Identifier.parse("mymod:host")));
-        // 经脚本面写入子属性（覆盖 surface 的嵌套路径，与 Java 直写同指纹）
+        // Write the child property through the script surface, which covers the nested path of the
+        // surface and must produce the same fingerprint as a direct Java write.
         evalOn(first.getChild(), "b.charge = 7;");
         second.getChild().setCharge(7);
 
@@ -257,39 +263,43 @@ class BuilderSetterPropertyParityTest {
         assertEquals(runtime.definitionFingerprint(second), runtime.definitionFingerprint(first),
                 "对象值属性按子指纹规范化：同声明的不同实例树指纹一致");
 
-        // 抑制（null）与存在（子指纹）必须可区分
+        // Suppression (null) and presence (the child fingerprint) must stay distinguishable.
         SyntheticParent suppressed = new SyntheticParent(net.minecraft.resources.Identifier.parse("mymod:host"));
         assertNotEquals(runtime.definitionFingerprint(first), runtime.definitionFingerprint(suppressed),
                 "child = null（抑制）与 child 存在是不同定义");
 
-        // 子配置变化要反映进父指纹（连带声明的全规范化读数，spec 08）
+        // A child configuration change must show up in the parent fingerprint, which normalizes the
+        // whole declaration including the child.
         second.getChild().setCharge(9);
         assertNotEquals(runtime.definitionFingerprint(first), runtime.definitionFingerprint(second),
                 "子 builder 配置变化必须改变父指纹");
     }
 
     // ------------------------------------------------------------------
-    // 同名方法重载双形态可达（审查 F1；真实 PotionBuilder，3 参/5 参 effect）
+    // Both overloads of a same-named method are reachable (real PotionBuilder, 3-arg and
+    // 5-arg effect)
     // ------------------------------------------------------------------
 
     @Test
     void potionEffectOverloadsAreBothCallableFromScript() {
-        // effect 的 effect 参数传非 String/Holder 值（Integer）时 resolveEffect 返回 null、
-        // 不触碰 vanilla 注册表——裸 JUnit 可验证「两种参数个数都解析到各自重载并成功执行」；
-        // 修复前（单 Method 收集）其中一个形态会抛 "expects [...] but got N argument(s)"
+        // Passing an Integer (not a String or Holder) as the effect value makes resolveEffect return
+        // null and touches no vanilla registry, so a bare JUnit run can check that both argument
+        // counts resolve to their own overload and execute. With the earlier single-Method
+        // collection, one of the forms threw "expects [...] but got N argument(s)".
         PotionBuilder builder = new PotionBuilder(net.minecraft.resources.Identifier.parse("mymod:elixir"));
 
         evalOn(builder, "b.effect(123, 100, 1);");
         evalOn(builder, "b.effect(123, 100, 1, false, true);");
 
-        // 错误形态（错误参数个数）仍要给出带期望签名的可诊断错误
+        // A wrong argument count must still produce a diagnosable error that includes the expected
+        // signature.
         RuntimeException error = assertThrows(RuntimeException.class,
                 () -> evalOn(builder, "b.effect(123);"));
         assertTrue(error.getMessage().contains("effect"), error.getMessage());
         assertTrue(error.getMessage().contains("argument"), error.getMessage());
     }
 
-    /** 契约层：重载列表真实收集（同名多签名进 Member.overloads，顺序确定）。 */
+    /** Contract layer: collects the real overload lists; overloads land in Member.overloads in a fixed order. */
     @Test
     void contractCollectsRealOverloadLists() {
         RegistryBuilderContract contract = RegistryBuilderContract.of(PotionBuilder.class);
@@ -297,7 +307,7 @@ class BuilderSetterPropertyParityTest {
         assertNotNull(effect);
         assertEquals(RegistryBuilderContract.MemberKind.METHOD, effect.kind());
         assertEquals(2, effect.overloads().size(), "3 参/5 参两个 effect 都要进契约: " + effect.overloads());
-        // 确定性排序：参数最多者在前
+        // Deterministic order: the overload with the most parameters comes first.
         assertEquals(5, effect.overloads().get(0).getParameterCount());
         assertEquals(3, effect.overloads().get(1).getParameterCount());
     }

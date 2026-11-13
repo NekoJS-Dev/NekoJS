@@ -64,7 +64,7 @@ final class AnnotatedDocs {
         return out;
     }
 
-    /** {@code @Overload} 注解 → IR 重载节点（声明顺序）。 */
+    /** Turns {@code @Overload} annotations into IR overload nodes, in declaration order. */
     static List<MethodDecl.Overload> overloads(Executable exec) {
         List<MethodDecl.Overload> out = new ArrayList<>();
         for (Overload overload : exec.getAnnotationsByType(Overload.class)) {

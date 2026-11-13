@@ -12,21 +12,24 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 /**
- * 玩家合成事件（{@code PlayerEvents.crafted}，按产物 id dispatch）的 fabric 钩子。
+ * Fabric hook for the player crafting event ({@code PlayerEvents.crafted}, dispatched by result
+ * item id).
  *
- * <p>NeoForge 26.1.2 触发点：{@code ResultSlot#checkTakeAchievements} 内
- * {@code if (removeCount > 0)} 块、{@code carried.onCraftedBy(...)} 之后（userdev 补丁实证：
- * firePlayerCraftingEvent(player, carried, craftSlots)）。fabric 对齐同一点。
+ * <p>On NeoForge 26.1.2 the event fires inside {@code ResultSlot#checkTakeAchievements}, in the
+ * {@code if (removeCount > 0)} block after {@code carried.onCraftedBy(...)} (the userdev patch
+ * calls firePlayerCraftingEvent(player, carried, craftSlots)). This mixin uses the same place.
  *
- * <p>注入点（javap -c minecraft-merged-deobf-26.1.2 实证）：{@code checkTakeAchievements}
- * 是 protected 具体方法（非 abstract，无 TAIL 落在抽象方法的教训问题）；方法体开头即
- * removeCount 偏移 4 的 ifle 守卫。HEAD 注入发生在 onCraftedBy/reward 之前（与 NeoForge
- * 的「之后」仅一线之隔，载荷成员一致）；共享树 ResultSlotMixin（com.tkisor.nekojs.mixin）
- * 注入的是 {@code getRemainingItems}——不同类不同方法，互不冲突。
+ * <p>Injection point (checked with javap on minecraft-merged-deobf-26.1.2):
+ * {@code checkTakeAchievements} is a protected concrete method, so a TAIL injection is not lost
+ * the way it is on an abstract method. Its body starts with an ifle guard on removeCount at
+ * offset 4. HEAD therefore runs before onCraftedBy and the rewards, just before the NeoForge
+ * point, with the same payload members. The shared ResultSlotMixin
+ * (com.tkisor.nekojs.mixin) injects into {@code getRemainingItems}, a different class and method,
+ * so the two do not conflict.
  *
- * <p>守卫：与 NeoForge 相同的 {@code removeCount > 0}——onQuickCraft/onTake 都会先累计
- * removeCount 再进本方法，空取件（removeCount==0）不发事件。
- * defaultRequire=1：方法被重构时硬失败。
+ * <p>The guard is the same {@code removeCount > 0} as on NeoForge: onQuickCraft and onTake both
+ * add to removeCount before entering this method, so an empty take (removeCount == 0) fires no
+ * event. defaultRequire=1 makes a refactored method fail hard.
  */
 @Mixin(ResultSlot.class)
 public abstract class CraftingResultSlotMixin {

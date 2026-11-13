@@ -1,4 +1,4 @@
-// TODO(fabric): fabric 侧还没有对应实现，整文件守卫等移植完成后去掉
+// TODO(fabric): the fabric side has no counterpart yet; drop this whole-file guard once the port lands
 //? if neoforge {
 //? if >=26 {
 package com.tkisor.nekojs.bindings.event.client;
@@ -36,9 +36,10 @@ class KeyBindEventsTest {
     }
 
     /**
-     * KeyBindEvents 的静态初始化会注册事件组/探测可取消性，需要 FML 运行时；裸 JUnit 跳过。
-     * 探测前必须先立好 Platform 桩：ScriptType 的静态初始化要 NekoJSPaths.get()，先于
-     * Platform.init 触碰会让 ScriptType 在本 JVM 里永久损坏（NoClassDefFoundError 连坐）。
+     * KeyBindEvents' static init registers the event group and probes cancellability, which needs
+     * an FML runtime; plain JUnit skips it. The Platform stub must be installed before that probe:
+     * ScriptType's static init calls NekoJSPaths.get(), and touching ScriptType before
+     * Platform.init permanently breaks it in this JVM (a NoClassDefFoundError cascade).
      */
     @org.junit.jupiter.api.BeforeAll
     static void initPlatformStub() {
@@ -85,7 +86,8 @@ class KeyBindEventsTest {
                 }
             });
         } catch (IllegalStateException alreadyInitialized) {
-            // 同 JVM 内其它测试已初始化平台时复用现有实例
+            // Reuse the existing instance when another test in the same JVM already initialized
+            // the platform.
         }
     }
 
@@ -214,10 +216,10 @@ class KeyBindEventsTest {
     }
 
     /**
-     * Ticket 26 AC5: held state is observable through the public handle. The event object
-     * passes the registered {@link KeyMapping} through, and its public {@code isDown()} reflects
-     * the vanilla public mutator {@code setDown(boolean)}. Uses only public methods; reads no
-     * private binding table and asserts no callback identity.
+     * Held state is observable through the public handle. The event object passes the registered
+     * {@link KeyMapping} through, and its public {@code isDown()} reflects the vanilla public
+     * mutator {@code setDown(boolean)}. Uses only public methods; reads no private binding table
+     * and asserts no callback identity.
      */
     @Test
     void keyHandleHeldStateIsObservableThroughPublicMethods() {
@@ -244,13 +246,13 @@ class KeyBindEventsTest {
     }
 
     /**
-     * Ticket 26 AC5: click consumption through the public handle. A fresh headless handle has no
-     * click source so {@code consumeClick()} is false. The vanilla public static click source
+     * Click consumption through the public handle. A fresh headless handle has no click source, so
+     * {@code consumeClick()} returns false. The vanilla public static click source
      * {@code KeyMapping.click(Key)} cannot supply one here: it dereferences
      * {@code Minecraft.getInstance()} (live client only) and throws NullPointerException in a
-     * headless JVM (observed 2026-09-25, kept as red evidence in the follow-up record). So a real
-     * key press driving click counts still needs a live client (ticket 34 smoke). Uses only
-     * public methods; reads no private binding table and asserts no callback identity.
+     * headless JVM (observed 2026-09-25). Driving click counts with a real key press still needs a
+     * live client. Uses only public methods; reads no private binding table and asserts no
+     * callback identity.
      */
     @Test
     void consumeClickWithNoClickSourceConsumesNothing() {

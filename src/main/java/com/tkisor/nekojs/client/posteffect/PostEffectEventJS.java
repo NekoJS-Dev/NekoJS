@@ -1,8 +1,11 @@
-// TODO(fabric): fabric 侧还没有对应实现，整文件守卫等移植完成后去掉
+// Fabric has no equivalent implementation yet; remove the whole-file guard once the port is
+// done.
 //? if neoforge {
-// 26.x 实现，本文件不应再出现版本守卫。1.21.1 的实现是 versions/1.21.1/src 下的同名文件，
-// 改本文件行为时须同步它。
-// 脚本面的 @Doc/@Param 文案两侧本就不同，探针类型 golden 会校验，别照抄到孪生文件。
+// 26.x implementation, so this file must not contain version guards. The 1.21.1 implementation
+// is the same-named file under versions/1.21.1/src; changing this file's behavior means
+// updating that one too.
+// The @Doc/@Param text on the script side already differs between the two trees and the
+// probe-type golden checks it, so do not copy it into the twin file.
 package com.tkisor.nekojs.client.posteffect;
 
 import com.tkisor.nekojs.api.annotation.Doc;
@@ -25,14 +28,14 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
- * Payload of the {@code ClientEvents.postEffects} declaration event (ticket 28): the
- * declaration half of the {@code PostEffects} feature, separated from the runtime binding
+ * Payload of the {@code ClientEvents.postEffects} declaration event: the declaration half of
+ * the {@code PostEffects} feature, separate from the runtime binding
  * ({@code PostEffects.set/clear/toggle/current}).
  *
- * <p>The event only <b>collects</b> declarations into an inert candidate plan — it never
- * mounts a production listener, activates a post chain or touches the current client frame.
- * The platform Adapter ({@link PostEffectDomainOwner}) commits the collected generation at
- * the reload commit point; a failed or interrupted candidate keeps the previous active
+ * <p>The event only <b>collects</b> declarations into an inert candidate plan. It never mounts
+ * a production listener, activates a post chain or touches the current client frame. The
+ * platform adapter ({@link PostEffectDomainOwner}) commits the collected generation at the
+ * reload commit point; a failed or interrupted candidate keeps the previous active
  * generation.
  *
  * <pre>

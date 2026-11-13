@@ -25,21 +25,24 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Ticket 25（query tools）source contract 归类 fixture：
+ * Classifies the source contract of the query tools.
  *
- * <p>两个查询域（DataMap / EntitySelectors）按 09 号票机制归类为 <b>query binding</b>——
- * 经 BindingsPoint（{@code registerBinding}）收集、catalog 观察面（{@code global:} kind +
- * 占位签名）可见，但<b>不进入</b> portable-core managed contract（「当前入口存在 ≠
- * managed stable」）；二者均无事件 owner、无生命周期 Point、无事件包装器。
+ * <p>The two query domains (DataMap / EntitySelectors) classify as <b>query bindings</b>:
+ * BindingsPoint ({@code registerBinding}) collects them, and the catalog observation surface
+ * ({@code global:} kind plus a placeholder signature) shows them. They do <b>not</b> enter the
+ * portable-core managed contract: an existing entry point does not mean managed stable. Neither
+ * has an event owner, a lifecycle Point or an event wrapper.
  *
- * <p>本测试全部从最高调用者 Seam 观察（{@code CoreManagedApiBootstrap.buildContract}、
- * {@code LegacySurfaceAdapter}、{@code BindingRegistry}），不触碰 golden。
+ * <p>Every assertion observes from the outermost caller-facing entry points
+ * ({@code CoreManagedApiBootstrap.buildContract}, {@code LegacySurfaceAdapter},
+ * {@code BindingRegistry}) and touches no golden.
  */
 class QueryToolContractClassificationTest {
 
     private static final URI TEST_CODE_SOURCE = URI.create("file:///ticket25-query-tools.jar");
 
-    /** catalog 观察面：查询 binding 以 global kind + 占位 void 签名进入 legacySurface（09 §1.3）。 */
+    /** Catalog observation: a query binding enters legacySurface with the global kind and a
+     * placeholder void signature. */
     @Test
     void queryBindingIsObservedAsLegacyGlobalSymbolWithPlaceholderSignature() {
         BindingCatalogEntry entry =
@@ -58,7 +61,8 @@ class QueryToolContractClassificationTest {
                 "observation signature is a void placeholder, not a real contract signature");
     }
 
-    /** managed contract 不收录查询全局（DataMap/EntitySelectors），但收录 Registry 替代查询面。 */
+    /** The managed contract leaves out the query globals (DataMap/EntitySelectors) but includes
+     * the Registry alternative query surface. */
     @Test
     void queryToolGlobalsAreNotInManagedContractWhileRegistryAlternativeIs() {
         VerifiedApiContract contract = CoreManagedApiBootstrap.buildContract(TEST_CODE_SOURCE);
@@ -66,13 +70,15 @@ class QueryToolContractClassificationTest {
                 .map(symbol -> symbol.id().value())
                 .collect(Collectors.toSet());
 
-        // 「当前入口存在 ≠ managed stable」：binding 全局不因收录而升级 managed stable
+        // A runtime entry point is not the same as managed stable: listing a binding global does not
+        // promote it to managed stable.
         assertFalse(symbolIds.contains("global:DataMap"),
                 "DataMap query binding must stay on the observation plane, not the managed contract");
         assertFalse(symbolIds.contains("global:EntitySelectors"),
                 "EntitySelectors query binding must stay on the observation plane, not the managed contract");
 
-        // DataMap 的替代查询面（Registry facade dataMap 查询）是 managed contract 符号
+        // The alternative DataMap query surface, the dataMap query on the Registry facade, is a managed
+        // contract symbol.
         assertTrue(symbolIds.contains("global:Registry"),
                 "Registry facade global must be in the managed contract");
         assertTrue(symbolIds.contains("member:RegistryView.dataMapIds"),
@@ -81,7 +87,8 @@ class QueryToolContractClassificationTest {
                 "RegistryView.dataMapValue (portable data map query) must be a contract symbol");
     }
 
-    /** EntitySelectorsPlugin 无事件 owner：不实现事件 Contributor，也不覆写事件注册钩子。 */
+    /** EntitySelectorsPlugin has no event owner: it does not implement an event Contributor and does not
+     * override the event registration hooks. */
     @Test
     void entitySelectorsPluginCarriesNoEventOwnerAndNoLifecyclePoint() {
         Set<String> implemented = List.of(EntitySelectorsPlugin.class.getInterfaces()).stream()
@@ -102,7 +109,7 @@ class QueryToolContractClassificationTest {
                 "query binding must not register client events");
     }
 
-    /** 查询执行需要 ServerLevel：binding 只对 SERVER/TEST 脚本类型可见（工单 fixture 语义）。 */
+    /** A query needs a ServerLevel, so the binding is visible only to the SERVER and TEST script types. */
     @Test
     void entitySelectorsBindingIsVisibleOnlyToServerAndTestScriptTypes() {
         for (ScriptType type : ScriptType.values()) {
@@ -121,17 +128,19 @@ class QueryToolContractClassificationTest {
         }
     }
 
-    /** EntitySelectors 工厂与查询入口的 runtime member 锚点（declaration parity 的输入清单）。 */
+    /** Pins the runtime members of the EntitySelectors factory and query entry points; that list feeds the
+     * declaration parity check. */
     @Test
     void entitySelectorsFactoryAndQueryMembersExistAtRuntime() throws Exception {
-        // factory 侧
+        // Factory side.
         assertNotNull(EntitySelectorsJS.class.getMethod("create", java.util.function.Consumer.class));
         assertNotNull(EntitySelectorsJS.class.getMethod("builder"));
         for (String preset : List.of("allPlayers", "allEntities", "nearestPlayer",
                 "nearestEntity", "randomPlayer", "randomEntity")) {
             assertNotNull(EntitySelectorsJS.class.getMethod(preset), "missing factory preset: " + preset);
         }
-        // query 侧（裸 JVM 不初始化 MC 参数类：initialize=false，同 VanillaRegistryProbe 事实）
+        // Query side. A bare JVM must not initialize the MC argument classes, so the classes load with
+        // initialize=false, as in VanillaRegistryProbe.
         ClassLoader loader = getClass().getClassLoader();
         Class<?> serverLevel = Class.forName("net.minecraft.server.level.ServerLevel", false, loader);
         Class<?> entitySelector =

@@ -43,23 +43,28 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * 票 17 网络自定义通道的 owner 队列路由与 generation/stale 边界 fixture：
- * 平台 enqueue/main-thread 入口之后的中立投递核心（{@link NetworkMessageHandler}）把
- * {@link NekoScriptPayload} 路由进对应 ScriptType 的 {@link NetworkEvents} 总线，
- * 再由票 06/07 的 candidate/commit/close/cancellation 机制约束接收面。
+ * Fixture for owner-queue routing on the custom network channel and for the generation/stale
+ * rules: after the platform enqueue / main-thread entry, the neutral dispatch core
+ * ({@link NetworkMessageHandler}) routes a {@link NekoScriptPayload} into the
+ * {@link NetworkEvents} bus of the matching ScriptType, and the candidate/commit/close/
+ * cancellation handling of the script manager then constrains what may receive it.
  *
- * <p>本测试在真实 {@link ScriptManager}（含 Graal Context、pendingListeners、commit 点、
- * close 优先、activeFailed 隔离）上经脚本回调观察，不读私有字段作契约断言（除测试探针
- * currentContext 取运行时引用用于「已关闭 Context 不被触碰」的反证）。平台主线程 hop
- * （enqueueWork / server().execute()）是 loader 侧行为，由 characterization 与源码 trace
- * 钉住，见 REPORT；本测试的调用线程即 owner 线程，与 SERVER=server thread、CLIENT=render
- * thread 的生产形态同构。
+ * <p>The test observes real script callbacks on a real {@link ScriptManager} (Graal Context,
+ * pendingListeners, the commit point, close taking priority, activeFailed isolation) and does
+ * not assert on private fields. The only exception is the currentContext probe, which takes
+ * the runtime context to prove that a closed Context is never touched again. The platform
+ * main-thread hop (enqueueWork / server().execute()) is loader-side behavior pinned by
+ * characterization and source traces, so this test's calling thread is the owner thread
+ * itself, the same shape as SERVER = server thread and CLIENT = render thread in production.
  */
 class NetworkGenerationRoutingTest {
 
-    // ---- 测试绑定对象 ----
+    // ---- Test bindings ----
 
-    /** 注入脚本的计数器绑定：按 tag 分别计数，区分旧/新 generation 的回调来源。 */
+    /**
+     * Counter binding injected into scripts: it counts hits per tag, so callbacks from the old and
+     * the new generation can be told apart.
+     */
     public static final class Recorder {
         private final Map<String, AtomicInteger> hits = new ConcurrentHashMap<>();
 
@@ -87,7 +92,10 @@ class NetworkGenerationRoutingTest {
         }
     }
 
-    /** 注入脚本的 Java 侧触发器：脚本执行中途模拟「平台主线程上到达一个脚本通道包」。 */
+    /**
+     * Java-side trigger injected into scripts: it simulates a script-channel packet arriving on the
+     * platform main thread in the middle of a script run.
+     */
     public static final class PacketTrigger implements AutoCloseable {
         private volatile Runnable action = () -> {};
 
@@ -105,7 +113,10 @@ class NetworkGenerationRoutingTest {
         }
     }
 
-    /** 绑定真实 {@link NetworkEvents} 组的 bridge：脚本可注册 server/client 网络监听器。 */
+    /**
+     * Bridge that binds the real {@link NetworkEvents} group, so scripts can register server and
+     * client network listeners.
+     */
     static final class NetworkEventBridge implements ScriptEventBridge {
         final List<ScriptType> clearListenerCalls = new CopyOnWriteArrayList<>();
 
@@ -139,7 +150,7 @@ class NetworkGenerationRoutingTest {
 
         @Override
         public Map<String, com.tkisor.nekojs.api.event.EventGroup> eventGroups() {
-            // 与 bridge 持有同一组实例：schema 收割与 bindEvents 指向同一条总线
+            // Same group instance the bridge holds: schema harvesting and bindEvents point at one bus.
             return Map.of("NetworkEvents", NetworkEvents.GROUP);
         }
 
@@ -159,20 +170,21 @@ class NetworkGenerationRoutingTest {
         @Override public Object managedApiImplementation(com.tkisor.nekojs.api.surface.ApiSymbolId globalId) { return null; }
     }
 
-    // ---- 装配 ----
+    // ---- Wiring ----
 
     @BeforeAll
     static void initPlatform() {
-        // 与 common 测试树 TestPlatformInit 同形的 Platform 桩（src/test 无法引用 common 测试 fixture）；
-        // 已初始化则跳过，避免污染同 JVM 的其它测试类。
+        // Platform stub shaped like TestPlatformInit in the common test tree (src/test cannot
+        // reference common test fixtures). Skipped when already initialized so other test classes
+        // in the same JVM are not disturbed.
         try {
             Field instance = com.tkisor.nekojs.platform.Platform.class.getDeclaredField("INSTANCE");
             instance.setAccessible(true);
             if (instance.get(null) == null) {
-                // gameDir 按测试 JVM 唯一化（TestGameDirs 见统一说明）：并行 test JVM 共享
-                // 固定名 tmp 目录会在 @BeforeEach 清脚本时互清 fixture——本类曾实测
-                // 双 fabric 节点并行时偶发「候选脚本零执行」；另注意 Platform 初始化是
-                // 先到先得，本类可能寄生在同 JVM 更早初始化的（同样已唯一化的）目录上。
+                // gameDir is unique per test JVM (see TestGameDirs): a fixed-name tmp dir shared by parallel
+                // test JVMs would let them wipe each other's fixtures during the @BeforeEach script
+                // cleanup. Platform initialization is first-come-first-served, so this class may
+                // attach to a directory an earlier test class in the same JVM already initialized.
                 String dirId = "nekojs-nettest-" + Integer.toHexString(
                         Path.of("").toAbsolutePath().toRealPath().hashCode());
                 Path gameDir = com.tkisor.nekojs.TestGameDirs.unique(dirId);
@@ -304,7 +316,10 @@ class NetworkGenerationRoutingTest {
 
     // ---- fixture ----
 
-    /** 平台主线程入口后的中立投递：SERVER 包进 SERVER 总线、按 channel 定向、带 sender。 */
+    /**
+     * Neutral dispatch after the platform main-thread entry: a SERVER packet goes to the SERVER
+     * bus, reaches the listener for its channel and carries the sender.
+     */
     @Test
     void serverPacketRoutesToActiveListenerByChannel() throws Exception {
         try (ManagerHarness harness = new ManagerHarness(defaultSandboxConfig())) {
@@ -320,14 +335,18 @@ class NetworkGenerationRoutingTest {
             assertEquals(1, harness.recorder.hitsOf("v1-l:ch"), "packet must hit the matching-channel listener");
             assertEquals(0, harness.recorder.hitsOf("v1-other"), "other-channel listener must not fire");
 
-            // 非法/未知 channel 的包是既有「无监听器即丢弃」语义：不抛、不炸调用方（平台主线程）
+            // A packet on an illegal or unknown channel keeps the "no listener, drop it" behavior: nothing
+            // throws, so the caller (the platform main thread) stays up.
             assertDoesNotThrow(() -> NetworkMessageHandler.postServerEvent(
                     new NekoScriptPayload("unknown_channel", new net.minecraft.nbt.CompoundTag()), null));
             assertEquals(0, harness.recorder.hitsOf("v1-other"));
         }
     }
 
-    /** CLIENT 包只进 CLIENT 总线；SERVER 监听器不受 S2C 包影响（跨总线隔离）。 */
+    /**
+     * A CLIENT packet only enters the CLIENT bus; SERVER listeners never see S2C packets, because
+     * the buses are isolated.
+     */
     @Test
     void clientPacketRoutesOnlyToClientBus() throws Exception {
         try (ManagerHarness serverHarness = new ManagerHarness(defaultSandboxConfig())) {
@@ -352,9 +371,10 @@ class NetworkGenerationRoutingTest {
     }
 
     /**
-     * AC4 前半：reload commit 前到达的 packet 由 active generation 服务，候选监听器
-     * 挂起（pendingListeners）不提前进入生产路由；commit 后同一事件只由新 generation
-     * 处理一次，旧 generation 不再接收。
+     * Routing across the reload commit: a packet that arrives before the commit is served by
+     * the active generation, while candidate listeners stay pending (pendingListeners) and do
+     * not enter production routing early. After the commit the same event is handled exactly
+     * once by the new generation; the old generation receives nothing.
      */
     @Test
     void candidatePhasePacketIsServedByActiveAndNeverEntersCandidate() throws Exception {
@@ -366,8 +386,9 @@ class NetworkGenerationRoutingTest {
             harness.postServerPacket();
             assertEquals(1, harness.recorder.hitsOf("v1-l"));
 
-            // 候选脚本先注册自己的监听器（进入挂起收集），再模拟「包到达」：
-            // 此刻包必须仍由 active v1 服务，候选监听器不可见。
+            // The candidate script registers its listeners first (they go into the pending collection),
+            // then the packet "arrives": the packet must still be served by active v1, and the
+            // candidate listeners must stay invisible.
             harness.writeScript("entry.js", """
                     NetworkEvents.server('ch', function (event) { Recorder.hit('v2-l'); });
                     Recorder.hit('v2-entry');
@@ -381,7 +402,8 @@ class NetworkGenerationRoutingTest {
             assertEquals(0, harness.recorder.hitsOf("v2-l"),
                     "candidate listener must not receive packets before commit");
 
-            // commit 后：新事件只由新 generation 处理一次，旧 generation 冻结
+            // After the commit, a new event is handled once by the new generation only; the old generation
+            // is frozen.
             harness.postServerPacket();
             assertEquals(1, harness.recorder.hitsOf("v2-l"), "post-commit packet handled exactly once by new generation");
             assertEquals(2, harness.recorder.hitsOf("v1-l"), "old generation listener never fires again");
@@ -395,7 +417,10 @@ class NetworkGenerationRoutingTest {
         }
     }
 
-    /** 连续两次 commit 后只有最新 generation 接收（generation 单调推进，无旧代复活）。 */
+    /**
+     * After two commits in a row only the newest generation receives: the generation id only moves
+     * forward, so an old one never comes back.
+     */
     @Test
     void consecutiveReloadsKeepOnlyLatestGenerationReceiving() throws Exception {
         try (ManagerHarness harness = new ManagerHarness(defaultSandboxConfig())) {
@@ -427,8 +452,10 @@ class NetworkGenerationRoutingTest {
     }
 
     /**
-     * AC5 root close 侧：close 清空该类型的网络监听器，在途 packet 被丢弃（无监听器命中、
-     * 不抛异常），已关闭的 Context 不再被触碰（eval 抛 / 反查抛）——「不复活、不报错刷屏」。
+     * Close behavior: close clears the network listeners of that type, an in-flight packet is
+     * dropped (no listener fires and nothing throws), and the closed Context is never touched
+     * again ({@code eval} throws and the manager lookup throws). Nothing revives, and the close
+     * does not flood the log.
      */
     @Test
     void closeDropsInFlightPacketsAndNeverTouchesClosedContext() throws Exception {
@@ -443,11 +470,13 @@ class NetworkGenerationRoutingTest {
             Context closedContext = currentContext(harness.manager);
             harness.manager.close();
 
-            // 在途 packet：丢弃而非异常（平台 enqueue 的 runnable 不炸）
+            // In-flight packet: dropped instead of throwing, so the runnable the platform enqueued does not
+            // blow up.
             assertDoesNotThrow(harness::postServerPacket);
             assertEquals(1, harness.recorder.hitsOf("v1-l"), "in-flight packet after close must be dropped");
 
-            // 已关闭 Context 不被触碰的反证：eval 抛、ScriptManager 反查抛（close 后未复活）
+            // Proof that the closed Context is never touched: eval throws and the ScriptManager lookup
+            // throws, so the close did not revive it.
             assertThrows(Exception.class, () -> closedContext.eval("js", "1 + 1"));
             assertThrows(IllegalStateException.class, () -> ScriptManager.from(closedContext));
             assertFalse(harness.manager.isActiveFailed(), "clean close is not an isolated failure");
@@ -472,7 +501,8 @@ class NetworkGenerationRoutingTest {
             assertEquals(0, harness.recorder.hitsOf("v1-l"),
                     "in-flight packet must be dropped for the killed context, without dispatching into it");
 
-            // 隔离失败不自建第二个 active：generation 不动，显式 reload 才恢复接收
+            // An isolated failure does not start a second active generation: the generation id stays put, and
+            // only an explicit reload resumes receiving.
             long generationAtFailure = harness.manager.generationId();
             harness.postServerPacket();
             assertEquals(generationAtFailure, harness.manager.generationId());
@@ -489,8 +519,9 @@ class NetworkGenerationRoutingTest {
     }
 
     /**
-     * AC6 网络线程异常等价防线：监听器执行体抛错被事件总线捕获记录，不传播给调用方
-     * （平台 enqueue 的主线程任务不炸），且不中断同 channel 的其它监听器。
+     * Listener exceptions stay contained: the event bus catches and records a throwing listener
+     * body, so the error does not reach the caller (the main-thread task the platform enqueued
+     * stays up) and the other listeners on the same channel keep running.
      */
     @Test
     void listenerExceptionIsContainedAndDoesNotAbortDispatch() throws Exception {
@@ -508,7 +539,7 @@ class NetworkGenerationRoutingTest {
         }
     }
 
-    /** close 幂等 + close 后 packet 仍安全（与票 07 close 语义交叉的网络面观察）。 */
+    /** close is idempotent, and a packet that arrives after close is still safe. */
     @Test
     void repeatedCloseAndLatePacketsAreSafe() throws Exception {
         try (ManagerHarness harness = new ManagerHarness(defaultSandboxConfig())) {
@@ -521,7 +552,8 @@ class NetworkGenerationRoutingTest {
             assertDoesNotThrow(harness::postServerPacket);
             assertEquals(0, harness.recorder.hitsOf("v1-l"));
 
-            // 行为下界替代自证式字段复述：close 后再投一次仍安全、仍零投递
+            // A behavioral lower bound instead of repeating fields: one more post after close is still safe
+            // and still delivers nothing.
             assertDoesNotThrow(harness::postServerPacket, "late packets stay safe after repeated close");
             assertEquals(0, harness.recorder.hitsOf("v1-l"), "no listener may fire after close");
         }

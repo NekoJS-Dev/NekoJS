@@ -27,15 +27,15 @@ import java.util.Objects;
 import java.util.stream.Collectors;
 
 /**
- * 插件 bootstrap 引擎：扩展点注册 → 点优先收集 → 产出 {@link NekoPluginRuntime}。
+ * Plugin bootstrap engine: extension point registration → point-priority collection → produces {@link NekoPluginRuntime}.
  *
- * <p><b>点优先执行序：</b>对每个扩展点依次执行
- * {@code initializer 建累积器 → 遍历插件 collector 收集 → finisher 产结果 → 发布 → 下一个点}。
- * 扩展点按注册顺序（内置 {@code nekojs:*} 在前、自定义在后）逐点完成，后注册点在
- * initializer / collector 里可引用先注册点的产物（{@link NekoPluginExtensionContext#result}），
- * 这是扩展点间依赖的引擎语义。产物同时发布到三处：bootstrap context（供后续点引用）、
- * 注册句柄 {@link NekoPluginExtensionHandle}（供注册方取回）与结果容器
- * （{@code Map<pointId, 产物>}，最终交给 {@link NekoPluginRuntime}）。
+ * <p><b>Point-priority execution order:</b> sequentially executes for each extension point:
+ * {@code initializer builds accumulator → iterates plugin collectors → finisher produces results → publish → next point}.
+ * Extension points are completed sequentially by registration order (built-in {@code nekojs:*} first, custom later); later registered points can
+ * reference artifacts of earlier registered points in {@code initializer} / {@code collector} ({@link NekoPluginExtensionContext#result}),
+ * which is the engine semantics of dependencies between extension points. Artifacts are simultaneously published to three locations: bootstrap context (for reference by later points),
+ * registration handle {@link NekoPluginExtensionHandle} (for retrieval by registrant), and the result container
+ * ({@code Map<pointId, artifact>}, finally handed to {@link NekoPluginRuntime}).
  */
 public final class NekoPluginBootstrap {
 
@@ -68,7 +68,7 @@ public final class NekoPluginBootstrap {
         List<NekoJSPlugin> plugins = ownedPlugins.stream()
                 .map(OwnedPlugin::plugin)
                 .toList();
-        // Addon attribution for extension-registry failures (ticket 08): provider
+        // Addon attribution for extension-registry failures: provider
         // registration, duplicate ids, freeze-window violations and dependency errors
         // name the plugin that caused them. Owned bootstrap uses the owner identity,
         // the plain overload falls back to the plugin class name.
@@ -110,15 +110,15 @@ public final class NekoPluginBootstrap {
     }
 
     /**
-     * 注册并按拓扑序收集全部扩展点，返回 {@code pointId → 产物} 的结果容器。
+     * Registers and collects all extension points in topological order, returning a result container of {@code pointId → artifact}.
      *
-     * <p>每次 bootstrap 全程重建：扩展点列表（含内置点）与各累积器均为本轮新建，
-     * 扩展点实例与累积器都不携带跨轮状态——连续两轮 bootstrap（完整 reload）互不串扰。
+     * <p>Full rebuild per bootstrap: extension point list (including built-in points) and accumulators are created new this round,
+     * neither extension point instances nor accumulators carry cross-round state—consecutive bootstrap rounds (full reload) do not interfere.
      *
-     * <p>执行序（ADR-0002）：freeze 时对全部 {@code dependsOn} 边做 Kahn 拓扑排序
-     * （同层按注册序，内置先行是图的根部天然保证）；环 fail-fast 打印完整环路径，
-     * 未注册依赖 id 在 freeze 早爆。环境谓词为 false 的点跳过并登记，
-     * 供 {@link NekoPluginExtensionContext} 两档访问区分"跳过"与"未完成"。
+     * <p>Execution order (ADR-0002): performs Kahn topological sort on all {@code dependsOn} edges during freeze
+     * (registration order used for same-level tie-breaking; built-in precedence is guaranteed by the graph root); fail-fast on cycles, printing the full path,
+     * and fail early on freeze if dependency IDs are unregistered. Points with false environment predicates are skipped and registered,
+     * allowing {@link NekoPluginExtensionContext} to distinguish between "skipped" and "incomplete".
      *
      * @param ownerLabels plugin → addon label (owner id or class name) used to attribute
      *                   extension-registry failures to the causing addon; null-safe
@@ -129,8 +129,8 @@ public final class NekoPluginBootstrap {
                                         ScriptPropertyRegistry scriptProperties) {
         BootstrapContext context = new BootstrapContext(Platform.isClient());
         ExtensionRegistry registry = new ExtensionRegistry();
-        // ADR-0003：内置点定义插件显式先行（与第三方同一条 provider 路径；内置先行相位
-        // 是引擎对依赖图根部的保证，不依赖插件 priority）
+        // ADR-0003: Built-in point definition plugins precede explicitly (via the same provider path as third-party; built-in precedence phase
+        // is the engine's guarantee for the graph root, not dependent on plugin priority)
         new NekoBuiltinPointsPlugin(scriptProperties, context.client(), plugin ->
                 plugin instanceof NekoCommonBuiltinPlugin ? "nekojs" : ownerLabels.apply(plugin))
                 .registerPluginExtensionPoints(registry.scopedTo("nekojs:builtin-points"));
@@ -162,7 +162,7 @@ public final class NekoPluginBootstrap {
         return Collections.unmodifiableMap(products);
     }
 
-    /** 单个扩展点的收集：init 累积器 → 遍历插件 collect（插件按传入列表序）→ finisher 产结果 → 密封累积器。 */
+    /** Collection for a single extension point: init accumulator → iterate plugin collectors (in order) → finisher produces results → seal accumulator. */
     private static <P extends NekoJSPlugin, A> Object collectPoint(
             NekoPluginExtensionPoint<P, A, ?> extensionPoint,
             List<NekoJSPlugin> plugins,
@@ -174,7 +174,7 @@ public final class NekoPluginBootstrap {
             }
         }
         Object product = extensionPoint.finisher().apply(accumulator);
-        // ADR-0001：finish 后累积器密封（实现了 Sealable 的 bucket 此后拒绝任何收集）
+        // ADR-0001: Accumulator sealed after finish (buckets implementing Sealable henceforth reject collection)
         if (accumulator instanceof Sealable sealable) {
             sealable.seal();
         }
@@ -219,11 +219,12 @@ public final class NekoPluginBootstrap {
         return (T) value;
     }
 
-    /** 单次 bootstrap 的扩展点注册器：注册窗口在 freeze 后关闭（与收集阶段同步）。 */
+    /** Registration registry for a single bootstrap: registration window closes after freeze (synchronized with collection phase). */
     private static final class ExtensionRegistry {
         private final Map<String, NekoPluginExtensionPoint<?, ?, ?>> extensionPoints = new LinkedHashMap<>();
         private final Map<String, NekoPluginExtensionHandle<Object>> handles = new LinkedHashMap<>();
-        /** pointId → registering addon label (ticket 08: failure output must locate the addon). */
+        /** Extension point id to the label of the addon that registered it, so failure output can name
+         * the addon. */
         private final Map<String, String> registrants = new LinkedHashMap<>();
         private boolean frozen;
 
@@ -270,9 +271,9 @@ public final class NekoPluginBootstrap {
 
         List<NekoPluginExtensionPoint<?, ?, ?>> freeze() {
             frozen = true;
-            // ADR-0002 ①：未注册依赖 id 早爆（拼写错误在收集开始前暴露）。可选依赖
-            // （dependsOnOptionalId）不参与早爆：对方缺席的 bootstrap（如不含版本树
-            // 插件的 common 测试轮）不建边不报错，见 NekoPluginExtensionPoint javadoc ③
+            // ADR-0002 ①: Fail early on unregistered dependency IDs (typos exposed before collection starts). Optional dependencies
+            // (dependsOnOptionalId) do not trigger fail-early: bootstrap missing the other side (e.g., common tests without version tree
+            // plugins) do not build edges and do not error, see NekoPluginExtensionPoint javadoc ③
             for (NekoPluginExtensionPoint<?, ?, ?> point : extensionPoints.values()) {
                 for (Object dependency : point.dependsOn()) {
                     String depId = NekoPluginExtensionPoint.dependencyId(dependency);
@@ -283,8 +284,8 @@ public final class NekoPluginBootstrap {
                     }
                 }
             }
-            // ADR-0002：Kahn 拓扑排序，同层按注册序（注册序仅作稳定 tiebreaker，不承担依赖语义）；
-            // 环 fail-fast，报错打印完整环路径
+            // ADR-0002: Kahn topological sort, same-level by registration order (registration order is only a stable tiebreaker, carries no dependency semantics);
+            // fail-fast on cycles, error prints full path
             Map<String, Integer> inDegree = new LinkedHashMap<>();
             Map<String, List<String>> dependents = new LinkedHashMap<>();
             for (String id : extensionPoints.keySet()) {
@@ -296,7 +297,7 @@ public final class NekoPluginBootstrap {
                     dependents.get(NekoPluginExtensionPoint.dependencyId(dependency)).add(point.id());
                     inDegree.merge(point.id(), 1, Integer::sum);
                 }
-                // 可选时序依赖：仅对方已注册时建边（在场即与硬依赖等效，含环检测）
+                // Optional temporal dependency: build edges only if the other side is registered (equivalent to hard dependency if present, includes cycle detection)
                 for (Object dependency : point.optionalDependsOn()) {
                     String depId = NekoPluginExtensionPoint.dependencyId(dependency);
                     if (extensionPoints.containsKey(depId)) {
@@ -343,7 +344,7 @@ public final class NekoPluginBootstrap {
         }
     }
 
-    /** 单次 bootstrap 的收集上下文：环境标志 + 注册表 + 跳过登记 + 按点逐步充实的产物表。 */
+    /** Collection context for a single bootstrap: environment flags + registry + skipped registration + artifact table gradually enriched point-by-point. */
     private static final class BootstrapContext implements NekoPluginExtensionContext {
         private final boolean client;
         private final Map<String, Object> products = new LinkedHashMap<>();
@@ -355,12 +356,12 @@ public final class NekoPluginBootstrap {
             this.client = client;
         }
 
-        /** freeze 后登记本轮全部扩展点 id（供两档访问区分"未注册"与"未完成"）。 */
+        /** Registers all extension point IDs for the round after freeze (to distinguish between "unregistered" and "incomplete"). */
         void registeredIds(java.util.Collection<String> ids) {
             registeredIds.addAll(ids);
         }
 
-        /** 环境谓词为 false 的点登记为跳过。 */
+        /** Points with false environment predicates registered as skipped. */
         void markSkipped(String pointId) {
             skippedIds.add(pointId);
         }
@@ -396,7 +397,8 @@ public final class NekoPluginBootstrap {
             return checkType(pointId, require(pointId), type);
         }
 
-        /** 可选依赖档：未注册 / 跳过 → null；已注册未完成 → 违序抛错（ADR-0002 ②）。 */
+        /** Optional dependency: returns null when the point is unregistered or skipped, and throws an
+         * ordering-violation error when it is registered but has not finished. */
         private Object lookup(String pointId) {
             if (finishedIds.contains(pointId)) {
                 return products.get(pointId);
@@ -409,7 +411,7 @@ public final class NekoPluginBootstrap {
                     + pointId + "') (or dependsOnId) so the bootstrap topological order runs it first.");
         }
 
-        /** 必需依赖档：任何形式缺席 → 抛错（附缺席原因）。 */
+        /** Required dependency: any kind of absence throws an error that states the reason. */
         private Object require(String pointId) {
             if (finishedIds.contains(pointId)) {
                 return products.get(pointId);

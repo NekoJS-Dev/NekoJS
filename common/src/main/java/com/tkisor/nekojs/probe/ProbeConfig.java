@@ -13,39 +13,47 @@ import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 
 /**
- * Probe 行为配置（{@code <game>/nekojs/config/probe.toml}）。
+ * Configuration for probe behavior ({@code <game>/nekojs/config/probe.toml}).
  *
- * <p>Phase 1：控制总开关、输出基目录、类扫描白/黑名单。默认 include 经过严格选取以**逐字复现**
- * 旧 {@code ProbeOrchestrator.isRelevantClass} 的 5 个前缀行为（{@code java} /
- * {@code com.tkisor.nekojs} 由本类固定追加，MC/loader 包由 {@code IPlatform.defaultScanPackages()} 注入）。
- * 如需扫描 {@code com.mojang} 等，用 {@code extraIncludePackages} 追加。默认 exclude 镜像
- * {@code ClassFilter} 类查找黑名单中的整包前缀（{@code com.tkisor.nekojs.core}、
- * {@code java.awt}/{@code javax.swing}/{@code javax.imageio}、{@code javax.naming}/{@code java.rmi}、
- * {@code java.sql}/{@code javax.sql}、{@code org.graalvm}/{@code com.oracle.truffle}）——
- * 这些前缀下的类脚本永远无法 {@code Java.type} 加载，为它们生成声明只会指向不可用类型。
+ * <p>It holds the master switch, the output base directory and the class scan include and exclude
+ * lists. The default include list reproduces the five prefixes of
+ * {@code ProbeOrchestrator.isRelevantClass}: {@code java} and {@code com.tkisor.nekojs}, which this
+ * class always appends, plus the MC and loader packages that
+ * {@code IPlatform.defaultScanPackages()} injects. Use {@code extraIncludePackages} to add packages
+ * such as {@code com.mojang}. The default exclude list mirrors the whole-package prefixes of the
+ * {@code ClassFilter} class lookup blacklist ({@code com.tkisor.nekojs.core},
+ * {@code java.awt}/{@code javax.swing}/{@code javax.imageio}, {@code javax.naming}/{@code java.rmi},
+ * {@code java.sql}/{@code javax.sql}, {@code org.graalvm}/{@code com.oracle.truffle}). Scripts can
+ * never load classes under those prefixes with {@code Java.type}, so declarations for them would only
+ * point at unusable types.
  *
- * <p>扫描模式 {@link ScanConfig#mode()}：{@code SMART}（默认，白名单 + {@code forceScanMods} 补充）、
- * {@code FULL}（跳过 include 白名单、仅受 exclude 与 maxDepth 约束）、{@code NONE}（整体跳过扫描，probe 返回失败结果）。
+ * <p>Scan mode ({@link ScanConfig#mode()}): {@code SMART} is the default and uses the whitelist plus
+ * the {@code forceScanMods} additions; {@code FULL} skips the include whitelist and is limited only by
+ * the excludes and maxDepth; {@code NONE} skips scanning entirely and probe returns a failure result.
  *
- * <p>{@link #languages()} 承载 per-language 配置（{@code [languages.<languageId>]}）——
- * 每语言可指定优先使用的 backend 名与自定义输出子目录；两者皆可缺省（null → 沿用默认行为）。
+ * <p>{@link #languages()} holds the per-language configuration ({@code [languages.<languageId>]}).
+ * Each language can name the backend to prefer and a custom output subdirectory. Both may be absent
+ * (null falls back to the default behavior).
  */
 public record ProbeConfig(boolean enabled, boolean runAtStartup, String baseDir, ScanConfig scan, Map<String, LanguageConfig> languages) {
 
     /**
-     * 单语言 probe 配置（{@code [languages.<languageId>]} 表）：
-     * {@code backend} = 命令默认优先选用的 backend 名（null → 用该语言注册表默认）；
-     * {@code outputDir} = {@code baseDir} 下该语言的输出子目录（null → 用语言 id 本身）。
+     * Configuration for one language (the {@code [languages.<languageId>]} table):
+     * {@code backend} is the backend name the command prefers (null uses the registry default for that
+     * language); {@code outputDir} is the output subdirectory under {@code baseDir} (null uses the
+     * language id itself).
      */
     public record LanguageConfig(String backend, String outputDir) {
     }
 
-    /** 旧 4 参兼容构造（runAtStartup = false），保持既有调用点源码兼容。 */
+    /** Compatibility constructor that keeps the four-argument form, with {@code runAtStartup} set to false,
+     *  so existing call sites still compile. */
     public ProbeConfig(boolean enabled, String baseDir, ScanConfig scan, Map<String, LanguageConfig> languages) {
         this(enabled, false, baseDir, scan, languages);
     }
 
-    /** 3 参便捷构造：等价 {@code (enabled, false, baseDir, scan, Map.of())}，保持既有调用点源码兼容。 */
+    /** Three-argument convenience constructor, equivalent to {@code (enabled, false, baseDir, scan, Map.of())};
+     *  it keeps existing call sites source-compatible. */
     public ProbeConfig(boolean enabled, String baseDir, ScanConfig scan) {
         this(enabled, false, baseDir, scan, Map.of());
     }
@@ -60,17 +68,19 @@ public record ProbeConfig(boolean enabled, boolean runAtStartup, String baseDir,
             ScanMode mode          // SMART | FULL | NONE
     ) {
         /**
-         * 默认排除前缀：镜像 {@code core/fs/ClassFilter} {@code GENERAL_BLACKLIST} 中的整包条目
-         * （脚本无法 {@code Java.type} 加载这些前缀下的类，生成声明只会误导）。仅作用于默认值
-         * （{@link #defaultScan()} / {@code ProbeConfig.defaultConfig()}）；显式构造的 ScanConfig
-         * （含 golden 测试配置）不受影响，probe.toml 的 {@code scan.excludePackages} 仍为覆盖语义。
+         * Default exclude prefixes: the whole-package entries of {@code GENERAL_BLACKLIST} in
+         * {@code core/fs/ClassFilter}. Scripts cannot load classes under these prefixes with
+         * {@code Java.type}, so declaring them would only mislead. They apply to the defaults only
+         * ({@link #defaultScan()} and {@code ProbeConfig.defaultConfig()}). A ScanConfig built explicitly,
+         * including golden-test configs, is unaffected, and {@code scan.excludePackages} in probe.toml still
+         * overrides the list.
          */
         private static final List<String> DEFAULT_EXCLUDE_PACKAGES = List.of(
                 "com.tkisor.nekojs.core",
-                // 客户端桌面 API（Robot 按键/截屏/剪贴板）与 JNDI/RMI 远程加载通道、JDBC
+                // Desktop client APIs (Robot input, screenshots, clipboard), JNDI/RMI remote loading and JDBC
                 "java.awt", "javax.swing", "javax.imageio", "javax.naming", "java.rmi",
                 "java.sql", "javax.sql",
-                // Graal/Truffle 引擎内部
+                // Graal/Truffle engine internals
                 "org.graalvm", "com.oracle.truffle");
 
         public static ScanConfig defaultScan() {
@@ -85,7 +95,8 @@ public record ProbeConfig(boolean enabled, boolean runAtStartup, String baseDir,
             mode = mode == null ? ScanMode.SMART : mode;
         }
 
-        /** 字符串便捷构造：兼容 probe.toml 的字符串取值（大小写不敏感；未知取值兜底 SMART，见 {@link ScanMode#parse}）。 */
+        /** String-based convenience constructor for the string values in probe.toml. Parsing is
+         *  case-insensitive; an unknown value falls back to SMART, see {@link ScanMode#parse}. */
         public ScanConfig(List<String> includePackages, List<String> extraIncludePackages,
                           List<String> excludePackages, List<String> forceScanMods,
                           int maxDepth, String mode) {
@@ -93,13 +104,14 @@ public record ProbeConfig(boolean enabled, boolean runAtStartup, String baseDir,
                     ScanMode.parse(mode));
         }
 
-        /** 扫描模式（{@code probe.toml} 的 {@code scan.mode}）。 */
+        /** Scan mode, from {@code scan.mode} in {@code probe.toml}. */
         public enum ScanMode {
             SMART, FULL, NONE;
 
             /**
-             * 大小写不敏感解析：{@code null}/空串 → 默认 {@link #SMART}；未知取值 warn 并兜底
-             * {@link #SMART}（与旧行为等价：默认走白名单过滤）。
+             * Parses a mode name case-insensitively. A {@code null} or blank value returns {@link #SMART}. An
+             * unknown value logs a warning and falls back to {@link #SMART}, which keeps the whitelist filter that
+             * is the default.
              */
             public static ScanMode parse(String raw) {
                 if (raw == null || raw.isBlank()) return SMART;
@@ -128,29 +140,31 @@ public record ProbeConfig(boolean enabled, boolean runAtStartup, String baseDir,
         languages = languages == null || languages.isEmpty() ? Map.of() : Map.copyOf(languages);
     }
 
-    /** 取某语言 id 的 per-language 配置（未配置返回空 Optional）。 */
+    /** Returns the per-language configuration for the language id, or an empty Optional when the language
+     *  is not configured. */
     public Optional<LanguageConfig> language(String languageId) {
         return Optional.ofNullable(languages.get(languageId));
     }
 
-    /* ================= 包规则匹配（字面前缀 / re: 正则） ================= */
+    /* ================= Package rule matching (literal prefix / re: regex) ================= */
 
-    /** 正则规则条目前缀：{@code re:<regex>}，如 {@code re:com\.example\..*\.api\..*}。 */
+    /** Prefix of a regex rule entry: {@code re:<regex>}, for example {@code re:com\.example\..*\.api\..*}. */
     public static final String REGEX_RULE_PREFIX = "re:";
 
     /**
-     * 已编译正则规则的缓存（含编译失败的负缓存）。扫描会对每个候选类名遍历全部规则，
-     * 缓存避免每个类重复 {@link Pattern#compile}。
+     * Caches compiled regex rules, including a negative entry for rules that fail to compile. A scan runs
+     * every rule against every candidate class name, and the cache saves one {@link Pattern#compile} per
+     * class.
      */
     private static final Map<String, Optional<Pattern>> PATTERN_CACHE = new ConcurrentHashMap<>();
 
     /**
-     * 单条包规则是否命中全限定类名。两种条目形态：
+     * Tests one package rule against a fully qualified class name. A rule entry takes one of two forms:
      * <ul>
-     *   <li>字面包前缀（默认）：{@code fqn.startsWith(rule + ".")}——与历史语义完全一致</li>
-     *   <li>正则：以 {@code re:} 开头（例 {@code re:com\.example\.(mod[12])\..*}），
-     *       对 fqn 做<b>全匹配</b>（{@link java.util.regex.Matcher#matches()}）。编译结果缓存；
-     *       非法正则 warn 一次，该条目视为永不命中</li>
+     *   <li>literal package prefix (the default): {@code fqn.startsWith(rule + ".")}</li>
+     *   <li>regex, when the entry starts with {@code re:} (for example {@code re:com\.example\.(mod[12])\..*}):
+     *       a <b>full match</b> against the fqn ({@link java.util.regex.Matcher#matches()}). Compilation
+     *       results are cached. An invalid regex logs one warning and that entry then never matches</li>
      * </ul>
      */
     public static boolean matchesPackageRule(String rule, String fqn) {
@@ -173,11 +187,12 @@ public record ProbeConfig(boolean enabled, boolean runAtStartup, String baseDir,
     }
 
     /**
-     * 合成实际生效的包含包前缀集合：
+     * Builds the include package prefix set that is actually in effect:
      * <ul>
-     *   <li>{@code includePackages} 非空 → 完全覆盖默认（覆盖语义）</li>
-     *   <li>否则 → 固定默认 {@code {java, com.tkisor.nekojs}} ∪ 平台注入包</li>
-     *   <li>最后追加 {@code extraIncludePackages}（追加语义）</li>
+     *   <li>{@code includePackages} is non-empty -> it fully replaces the defaults</li>
+     *   <li>otherwise -> the fixed defaults {@code {java, com.tkisor.nekojs}} plus the packages the
+     *       platform injects</li>
+     *   <li>{@code extraIncludePackages} is appended last</li>
      * </ul>
      */
     public Set<String> effectiveIncludePackages(List<String> platformDefaultPackages) {
@@ -196,9 +211,10 @@ public record ProbeConfig(boolean enabled, boolean runAtStartup, String baseDir,
     }
 
     /**
-     * 判定一个全限定类名是否通过包过滤：命中某条包含规则、且不命中任何排除规则。
-     * 条目形态见 {@link #matchesPackageRule}：字面包前缀（{@code fqn.startsWith(pkg + ".")}，
-     * 与旧 {@code isRelevantClass} 一致）或 {@code re:} 正则全匹配。
+     * Decides whether a fully qualified class name passes the package filter: it matches an include rule
+     * and no exclude rule. Entry forms are described in {@link #matchesPackageRule}: a literal package
+     * prefix ({@code fqn.startsWith(pkg + ".")}, the form {@code isRelevantClass} uses) or a {@code re:}
+     * regex that must match the whole name.
      */
     public boolean isRelevantClass(String fqn, List<String> platformDefaultPackages) {
         if (fqn == null || fqn.isEmpty()) return false;
@@ -212,10 +228,10 @@ public record ProbeConfig(boolean enabled, boolean runAtStartup, String baseDir,
     }
 
     /**
-     * 仅判定排除（从 {@link #isRelevantClass} 的 exclude 段拆分复用）：
-     * 命中任一 {@code scan.excludePackages} 规则即返回 true（前缀或 {@code re:} 正则，
-     * 见 {@link #matchesPackageRule}）。供 FULL 模式（跳过 include 白名单但保留 exclude）与
-     * {@code ProbeCoordinator} 过滤工具使用。
+     * Tests only the exclude rules, split out of {@link #isRelevantClass} for reuse: it returns true when
+     * the fully qualified name matches any {@code scan.excludePackages} rule, either a prefix or a
+     * {@code re:} regex (see {@link #matchesPackageRule}). FULL mode uses it to keep excludes while
+     * skipping the include whitelist, and the {@code ProbeCoordinator} filtering helpers use it too.
      */
     public boolean isExcluded(String fqn) {
         if (fqn == null || fqn.isEmpty()) return false;
@@ -225,7 +241,8 @@ public record ProbeConfig(boolean enabled, boolean runAtStartup, String baseDir,
         return false;
     }
 
-    /** 内置 modId → 包前缀映射表（{@code scan.forceScanMods} 的保守解析，仅覆盖已知 mod id）。 */
+    /** Built-in modId to package prefix table. Resolving {@code scan.forceScanMods} uses it as a
+     *  conservative mapping that covers only known mod ids. */
     private static final Map<String, String> MOD_ID_PACKAGES = Map.of(
             "minecraft", "net.minecraft",
             "neoforge", "net.neoforged",
@@ -233,12 +250,14 @@ public record ProbeConfig(boolean enabled, boolean runAtStartup, String baseDir,
             "java", "java");
 
     /**
-     * 解析 {@code scan.forceScanMods} 为「强制包含的包规则」集合：在白名单之外被强制纳入扫描
-     * （exclude 始终优先于强制包含）。解析规则：
+     * Resolves {@code scan.forceScanMods} into the set of package rules that are scanned even though the
+     * whitelist does not cover them. Excludes always take precedence over a forced include. Each entry is
+     * resolved as follows:
      * <ul>
-     *   <li>条目以 {@code re:} 开头 → 正则规则原样保留（匹配语义见 {@link #matchesPackageRule}）</li>
-     *   <li>条目含 {@code .} → 视为字面包前缀直接使用</li>
-     *   <li>否则查 {@link #MOD_ID_PACKAGES} 内置表；查不到则 debug 日志记录并忽略</li>
+     *   <li>starts with {@code re:} -> kept as a regex rule (matching semantics in {@link #matchesPackageRule})</li>
+     *   <li>contains {@code .} -> used directly as a literal package prefix</li>
+     *   <li>otherwise -> looked up in {@link #MOD_ID_PACKAGES}; when it is missing there, a debug log
+     *       records it and the entry is ignored</li>
      * </ul>
      */
     public Set<String> forcedPackages() {

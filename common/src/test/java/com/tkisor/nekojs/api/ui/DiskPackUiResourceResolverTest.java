@@ -11,8 +11,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Resolution against a temp NekoJS disk pack root, mirroring the layout ticket
- * 29's {@code Assets} binding writes ({@code assets/<ns>/textures/...}).
+ * Resolves resources against a temp NekoJS disk pack root laid out the way the
+ * {@code Assets} binding writes it ({@code assets/<ns>/textures/...}).
  */
 class DiskPackUiResourceResolverTest {
     @TempDir

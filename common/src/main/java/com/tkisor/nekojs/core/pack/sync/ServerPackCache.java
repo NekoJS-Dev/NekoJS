@@ -15,11 +15,14 @@ import java.util.List;
 import java.util.stream.Stream;
 
 /**
- * 服务器下发包的客户端落盘缓存：{@code nekojs/server_packs/<bucket>/<syncId 编码>/}。
+ * Client-side on-disk cache for server-issued packs:
+ * {@code nekojs/server_packs/<bucket>/<syncId encoded>/}.
  *
- * <p>写入纪律：先整目录删除再重建（同 bucket 同包的旧文件不残留）；每个文件相对路径做
- * 路径穿越校验（绝对路径 / {@code ..} 逃逸一律拒绝）。写入后调用方必须
- * {@link #loadPack 从盘重扫}并重算哈希对照预期（写盘完整性自检）——本类不自行对照。
+ * <p>Write rule: delete the whole directory first, then rebuild it, so no old files of the same
+ * pack in the same bucket are left behind. Every file path is checked for traversal (absolute
+ * paths and {@code ..} escapes are rejected). After writing, the caller must
+ * {@link #loadPack rescan from disk} and recompute the hash against the expected one. This class
+ * does not compare hashes itself.
  */
 public final class ServerPackCache {
     private static volatile IOException nextCommitFailureForTests;
@@ -65,7 +68,7 @@ public final class ServerPackCache {
         }
     }
 
-    /** bucket 目录：{@code nekojs/server_packs/<bucket>}（不存在则创建）。 */
+    /** The bucket directory {@code nekojs/server_packs/<bucket>}, created when missing. */
     public static Path bucketDir(String bucket) {
         Path dir = NekoJSPaths.get().serverPacks().resolve(bucket);
         try {
@@ -76,7 +79,8 @@ public final class ServerPackCache {
         return dir;
     }
 
-    /** 落盘一个包：删旧目录 → 写 manifest 原文 → 按相对路径写内容文件（穿越校验）。 */
+    /** Writes one pack to disk: delete the old directory, write the raw manifest, then write the
+     * content files by relative path with the traversal check. */
     public static void persistPack(Path bucketDir, String syncId, String manifestJson, List<PackContentFile> files) {
         Path packDir = bucketDir.resolve(SyncedPack.encodeSyncId(syncId));
         deleteRecursively(packDir);
@@ -152,7 +156,8 @@ public final class ServerPackCache {
         }
     }
 
-    /** 从盘重扫缓存的包：返回 manifest 原文 + 内容文件 + 重算哈希；目录缺失/无 manifest 返回 null。 */
+    /** Rescans a cached pack from disk: returns the raw manifest, the content files and the
+     * recomputed hash. Returns null when the directory is missing or has no manifest. */
     public static CachedPack loadPack(Path bucketDir, String syncId) {
         Path packDir = bucketDir.resolve(SyncedPack.encodeSyncId(syncId));
         if (!Files.isDirectory(packDir)) return null;
@@ -167,7 +172,8 @@ public final class ServerPackCache {
         }
     }
 
-    /** 路径穿越校验：相对路径 normalize 后必须仍在 packDir 内；非法返回 null。 */
+    /** Path traversal check: the normalized relative path must stay inside packDir. Returns null when
+     * it does not. */
     static Path resolveInside(Path packDir, String relativePath) {
         if (relativePath == null) return null;
         Path normalized = Path.of(relativePath).normalize();
@@ -183,7 +189,7 @@ public final class ServerPackCache {
                 try {
                     Files.deleteIfExists(p);
                 } catch (IOException ignored) {
-                    // 单文件删除失败留给下一次整目录重建兜底
+                    // A failed single-file delete is covered by the next full directory rebuild
                 }
             });
         } catch (IOException e) {
@@ -216,12 +222,12 @@ public final class ServerPackCache {
         }
     }
 
-    /** Deterministic failure seam for the physical-commit rollback tests. */
+    /** Deterministic failure switch for the physical-commit rollback tests. */
     static void failNextCommitForTests(IOException failure) {
         nextCommitFailureForTests = failure;
     }
 
-    /** 从盘重扫的包快照。 */
+    /** Snapshot of a pack rescanned from disk. */
     public record CachedPack(String manifestJson, List<PackContentFile> files, String hash) {}
 
     static final class PhysicalReplacement {

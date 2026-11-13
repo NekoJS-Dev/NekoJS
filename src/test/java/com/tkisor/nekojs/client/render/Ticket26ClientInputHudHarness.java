@@ -33,22 +33,25 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 票 26 输入/HUD 域 fixture harness（版本树测试树）：真实 root + 真实 Graal 管线 + 真实
- * {@link ClientRenderRegistry}，脚本经 {@code ClientEvents.hudRender(...)} 注册常驻渲染器，
- * CLIENT 脚本的加载/reload 走 production 生命周期入口（{@code loadScripts} /
- * {@code root.reload(CLIENT)}）。
+ * Fixture harness for the client input and HUD domain (version-tree test tree): a real root, the real
+ * Graal pipeline and the real {@link ClientRenderRegistry}. Scripts register persistent renderers
+ * through {@code ClientEvents.hudRender(...)}, and CLIENT scripts load and reload through the production
+ * lifecycle entry points ({@code loadScripts} / {@code root.reload(CLIENT)}).
  *
- * <p>观测面刻意只用公开行为：{@link #dispatchHud(String)} 用 {@code List} 当渲染上下文的
- * 探针对象（{@code ctx.add(id)}），因此断言拿到的是「本帧真正被调用的渲染器 id」——
- * 而不是私有注册表的快照，也不是回调对象身份。候选期不可见 / commit 换装 / 失败保留旧
- * active 都由同一探针在 reload 前后各派发一次观察（票 26 AC4）。
+ * <p>Only public behavior is observed: {@link #dispatchHud(String)} passes a {@code List} as the probe
+ * for the render context, and script callbacks write {@code ctx.add(id)}. An assertion therefore gets
+ * the ids of the renderers actually called this frame, not a snapshot of a private registry and not
+ * callback identity. Dispatching once before and once after a reload through the same probe shows that
+ * a candidate is invisible, that a commit swaps renderers, and that a failure keeps the old active
+ * state.
  *
- * <p>形态与票 28 的 {@code PostEffectDeclarationHarness} 同构（同一装配序列、同一
- * Platform/gameDir 桩、同一 ScriptType = CLIENT），只是领域换成输入/HUD 注册面。
+ * <p>Same shape as {@code PostEffectDeclarationHarness}: same assembly sequence, same Platform/gameDir
+ * stub, same ScriptType = CLIENT, only the domain differs (input and HUD registration).
  */
 public final class Ticket26ClientInputHudHarness implements AutoCloseable {
 
-    /** 额外事件组（ClientEvents 承载 hudRender/hud，KeyBindEvents 承载 register/pressed/released/tick）。 */
+    /** Extra event groups. ClientEvents carries hudRender/hud; KeyBindEvents carries
+     * register/pressed/released/tick. */
     private final Map<String, EventGroup> groups = new LinkedHashMap<>();
     private final Bridge bridge = new Bridge(groups);
     private final StubPluginRuntime pluginRuntime = new StubPluginRuntime(groups);
@@ -68,13 +71,14 @@ public final class Ticket26ClientInputHudHarness implements AutoCloseable {
                 com.tkisor.nekojs.testfixture.NekoModuleTestFixtures.newCache(paths, compilers, config);
         NekoSandboxFactory sandboxFactory = new NekoSandboxFactory(core, paths, compilers, pluginRuntime, cache);
         root = new NekoRuntimeRoot(core, pluginRuntime, bridge, newPropertyRegistry(), sandboxFactory, cache);
-        // 生产装配（NekoJSMod.registerClient 的 client dist 分支）同款：渲染器注册域的收集器
-        // 必须注册，空批次才会走到 commit 点换装生产表。
+        // Same wiring as the client dist branch of NekoJSMod.registerClient: the collector of the
+        // renderer registration domain must be registered so even an empty batch reaches the commit
+        // point and swaps in the production tables.
         root.registerDomainCollector(new ClientRenderDomainOwner());
         root.createScriptManager(ScriptType.CLIENT).discoverScripts();
     }
 
-    /** Platform 桩与 gameDir（测试树约定：{@code TestGameDirs.unique} 按 PID 隔离）。 */
+    /** Platform stub and gameDir. Test-tree convention: {@code TestGameDirs.unique} isolates by PID. */
     public static void ensurePlatformInitialized() {
         try {
             java.lang.reflect.Field instance = com.tkisor.nekojs.platform.Platform.class.getDeclaredField("INSTANCE");
@@ -99,26 +103,27 @@ public final class Ticket26ClientInputHudHarness implements AutoCloseable {
         }
     }
 
-    /** 写一份 CLIENT 脚本（同名覆盖）。 */
+    /** Writes a CLIENT script, overwriting a file with the same name. */
     public void writeClientScript(String name, String source) throws Exception {
         Path dir = ScriptTypeEnv.scriptsDir(ScriptType.CLIENT);
         Files.createDirectories(dir);
         Files.writeString(dir.resolve(name), source);
     }
 
-    /** 非事务初始加载（生产由客户端 setup 触发：{@code NekoJSClient.onClientSetup}）。 */
+    /** Non-transactional initial load, triggered in production from client setup
+     * ({@code NekoJSClient.onClientSetup}). */
     public void loadClientScripts() throws Exception {
         var manager = root.scriptManagerOf(ScriptType.CLIENT);
         manager.discoverScripts();
         manager.loadScripts();
     }
 
-    /** 事务式 CLIENT reload（生产由 F3+T 资源 reload 触发）。 */
+    /** Transactional CLIENT reload, triggered in production by an F3+T resource reload. */
     public void reloadClientScripts() {
         root.reload(ScriptType.CLIENT);
     }
 
-    /** 清空 CLIENT 脚本目录（每例独立，避免跨例残留）。 */
+    /** Empties the CLIENT script directory so leftover files from one test cannot reach the next. */
     public static void clearClientScripts() throws Exception {
         Path dir = ScriptTypeEnv.scriptsDir(ScriptType.CLIENT);
         Files.createDirectories(dir);
@@ -130,17 +135,19 @@ public final class Ticket26ClientInputHudHarness implements AutoCloseable {
     }
 
     /**
-     * 清空生产 HUD / 世界渲染器表，并释放 generation 身份（{@code clearAll()} 会一并置空
-     * {@code activeContext}，故下一次注册按新 generation 换装）。独立用例因此互不污染；
-     * 走既有公开清理面。
+     * Clears the production HUD and world renderer tables and drops the generation identity.
+     * {@code clearAll()} also nulls {@code activeContext}, so the next registration installs against
+     * a new generation. Independent tests therefore do not affect each other, and the existing public
+     * cleanup path is used.
      */
     public static void resetRegistry() {
         ClientRenderRegistry.clearAll();
     }
 
     /**
-     * 派发指定 HUD 层一帧，返回<b>真正被调用</b>的渲染器 id（按调用顺序）。探针是
-     * {@code List}：脚本回调写 {@code ctx.add(id)}，因此这里观察到的是安装结果本身。
+     * Dispatches one frame of the given HUD layer and returns the ids of the renderers <b>actually
+     * called</b>, in call order. The probe is a {@code List}: the script callback writes
+     * {@code ctx.add(id)}, so what is observed here is the installed result itself.
      */
     public static List<String> dispatchHud(String layer) {
         List<String> calls = new ArrayList<>();
@@ -148,7 +155,7 @@ public final class Ticket26ClientInputHudHarness implements AutoCloseable {
         return calls;
     }
 
-    /** 指定 HUD 层是否安装了存活渲染器（渲染钩子每帧的快路径判据）。 */
+    /** Whether the given HUD layer has a live renderer installed (the per-frame fast path the render hook checks). */
     public static boolean hasHud(String layer) {
         return ClientRenderRegistry.hasHud(hudLayer(layer));
     }
@@ -172,7 +179,7 @@ public final class Ticket26ClientInputHudHarness implements AutoCloseable {
         }
     }
 
-    /** 脚本面事件组绑定（生产形状：{@code EventGroupJS} 包每个组）。 */
+    /** Binds the script-facing event groups the way production does, wrapping each group in {@code EventGroupJS}. */
     private static final class Bridge implements ScriptEventBridge {
         private final Map<String, EventGroup> groups;
 

@@ -41,27 +41,29 @@ import java.util.TreeMap;
 import java.util.TreeSet;
 
 /**
- * 内置 Python probe backend：把共享 IR 渲染成 PEP 484/561 的 {@code .pyi} stub 包，
- * 让 pyright/pylance/Jedi 为 NekoJS Python 脚本提供补全。
+ * Built-in Python probe backend: Renders the shared IR into PEP 484/561 compliant {@code .pyi} stub packages,
+ * enabling autocompletion in pyright, pylance, and Jedi for NekoJS Python scripts.
  *
- * <p>布局（输出目录 = {@code <baseDir>/python}）：
+ * <p>Layout (output directory = {@code <baseDir>/python}):
  * <pre>
  * nekojs/
- *   __init__.pyi     # 全局绑定（`from nekojs import *` 的目标），__all__ 框定
+ *   __init__.pyi     # Global bindings (target for `from nekojs import *`), defined by __all__
  *   py.typed         # PEP 561 marker
- *   README.md        # 用法说明
- *   _java/           # Java 类型 stub（按 Java 包组织）
+ *   README.md        # Usage instructions
+ *   _java/           # Java type stubs (organized by Java package)
  *     __init__.pyi
  *     net/minecraft/.../__init__.pyi
- *   _events/         # 事件声明（按 script side 组织）
+ *   _events/         # Event declarations (organized by script side)
  *     __init__.pyi
  *     server/__init__.pyi
  * </pre>
  *
- * <p>用法：脚本顶部写 {@code from nekojs import *}——转译器剥离之（无 JS 输出、source map 不变），
- * IDE 经 pyright 的 {@code extraPaths}（自动写入 {@code nekojs/pyrightconfig.json}）解析到本 stub 包。
+ * <p>Usage: Include {@code from nekojs import *} at the top of scripts; the transpiler strips this line
+ * (no JS output, source map remains unchanged). The IDE resolves the stub package via pyright's
+ * {@code extraPaths} (automatically written to {@code nekojs/pyrightconfig.json}).
  *
- * <p>{@link #requiresIr} 恒为 true：Python 无「旧路径」，必须由 {@code ProbeCoordinator} 构建共享 IR。
+ * <p>{@link #requiresIr} is always true: Python has no legacy path and requires the shared IR
+ * built by {@code ProbeCoordinator}.
  */
 public final class PythonProbeBackend implements ProbeBackend {
     private final Set<String> renderWarnings = new LinkedHashSet<>();
@@ -99,8 +101,7 @@ public final class PythonProbeBackend implements ProbeBackend {
     }
 
     /**
-     * 渲染全部 Python 产物到内存（相对输出目录路径 → 内容）。落盘与原子提交由接口默认
-     * {@code generate} 统一负责，本方法不触碰磁盘。
+     * Renders all Python artifacts to memory (relative path to output directory -> content). Disk writing and atomic commitment are handled by the {@code generate} interface; this method does not touch the disk.
      */
     @Override
     public Map<String, String> render(ProbeContext ctx) {
@@ -124,27 +125,27 @@ public final class PythonProbeBackend implements ProbeBackend {
         return renderFiles(ir, ctx.snapshot(), ctx.overrides().globals());
     }
 
-    // ============================== 生成主体 ==============================
+    // ============================== Generation Main Body ==============================
 
     private Map<String, String> renderFiles(List<TypeDecl> ir, NekoScriptCatalogSnapshot snapshot,
                                             List<GlobalDecl> globals) {
         Map<String, String> files = new LinkedHashMap<>();
 
-        // 1. 按 Java 包分组 + 可用 FQN 集
+        // 1. Group by Java package + set of available FQNs
         Map<String, List<TypeDecl>> byPkg = new TreeMap<>();
         Set<String> availableFqns = new HashSet<>();
         for (TypeDecl d : ir) {
             String pkg = pkgOf(d.fqn);
-            if (pkg.isEmpty()) continue; // 默认包不产出（收集到的类均在具名包内）
+            if (pkg.isEmpty()) continue; // Skip default package (all collected classes are in named packages)
             byPkg.computeIfAbsent(pkg, k -> new ArrayList<>()).add(d);
             availableFqns.add(d.fqn);
         }
-        // C5a：隐藏类从 availableFqns 剔除（在构造类型渲染器之前）——其他模块引用它时不再
-        // import（防悬空），渲染器也会把它当作未收集 SYMBOL 降级为 Any；其自身模块渲染为空串。
+        // C5a: Exclude hidden classes from availableFqns (before constructing type renderers). When other modules reference them,
+        // import is avoided (preventing dangling imports), and the renderer treats them as uncollected SYMBOLs, downgrading to Any; their own module renders as an empty string.
         for (TypeDecl d : ir) {
             if (d.hidden) availableFqns.remove(d.fqn);
         }
-        // 祖先包（含自身），保证 import 路径上每层都有 __init__.pyi
+        // Ancestor packages (including self), ensuring every level in the import path has an __init__.pyi
         Set<String> allPkgs = new TreeSet<>();
         for (String pkg : byPkg.keySet()) allPkgs.addAll(ancestorsOf(pkg));
 
@@ -157,8 +158,8 @@ public final class PythonProbeBackend implements ProbeBackend {
         ApiTypeRefPyRenderer typeR = new ApiTypeRefPyRenderer(availableFqns, exportedNames);
         PythonClassRenderer classR = new PythonClassRenderer(typeR, ir);
 
-        // 1.5 适配器输入别名：目标 FQN → <Simple>_ = <Simple> | <输入类型们>
-        // 注册表字面量查表（typeName → 条目）：RegistryValue 形状 → Literal[...]（小注册表）/ str（大注册表）
+        // 1.5 Adapter input aliases: Target FQN -> <Simple>_ = <Simple> | <input types>
+        // Registry literal lookup (typeName -> entries): RegistryValue shape -> Literal[...] (small registry) / str (large registry)
         Map<String, RegistryTypeCatalogEntry> registries = new LinkedHashMap<>();
         if (snapshot.registryTypes() != null) {
             for (RegistryTypeCatalogEntry r : snapshot.registryTypes()) {
@@ -167,10 +168,10 @@ public final class PythonProbeBackend implements ProbeBackend {
         }
         Map<String, PyAdapterAlias> adapterAliases = buildAdapterAliases(snapshot.adapters(), availableFqns,
                 registries, snapshot.modIds(), typeR);
-        // 枚举字面量别名：Color_ = Color | Literal["RED", ...]（镜像 TS 侧 $Color_ 输入别名）
+        // Enum literal aliases: Color_ = Color | Literal["RED", ...] (mirrors $Color_ input alias on TS side)
         Map<String, PyAdapterAlias> enumAliases = buildEnumAliases(ir, availableFqns);
         reserveInputAliasNames(byPkg, adapterAliases, enumAliases);
-        // dispatch key 放宽视图：适配器 + 枚举别名合并（枚举 key 经 PythonEventRenderer 放宽为 Enum_）
+        // Dispatch key widening view: Merge adapters + enum aliases (enum keys widened to Enum_ via PythonEventRenderer)
         Map<String, PyAdapterAlias> wideningAliases = new LinkedHashMap<>(adapterAliases);
         wideningAliases.putAll(enumAliases);
 
@@ -190,7 +191,7 @@ public final class PythonProbeBackend implements ProbeBackend {
         // _java/__init__.pyi（namespace marker）
         files.put("nekojs/_java/__init__.pyi", "# Auto-generated namespace marker.\n");
 
-        // 2. 每个包模块
+        // 2. Each package module
         for (String pkg : allPkgs) {
             String pkgModule = "nekojs/_java/" + pkg.replace('.', '/') + "/__init__.pyi";
             List<TypeDecl> classes = byPkg.getOrDefault(pkg, List.of());
@@ -200,13 +201,13 @@ public final class PythonProbeBackend implements ProbeBackend {
                             snapshot, registries));
         }
 
-        // 3. 事件声明：nekojs/_events/<side>/__init__.pyi
+        // 3. Event declarations: nekojs/_events/<side>/__init__.pyi
         writeEventStubs(files, snapshot, typeR, availableFqns, wideningAliases);
 
-        // 3b. typed Builder 契约声明（ticket 15，AC4/AC9）：与 TS 后端同一结构化契约输入
+        // 3b. Typed Builder contract declarations: the same structured contract input as the TS backend
         writeRegistryBuilderStubs(files, snapshot);
 
-        // 4. nekojs/__init__.pyi（全局绑定 + 事件组入口 + probe.add_global 全局声明）
+        // 4. nekojs/__init__.pyi (Global bindings + event group entry + probe.add_global global declarations)
         writeBindingsInit(files, snapshot, availableFqns, typeR, globals);
 
         // 5. py.typed (PEP 561) + README
@@ -217,11 +218,11 @@ public final class PythonProbeBackend implements ProbeBackend {
     }
 
     /**
-     * typed Builder 契约声明：{@code nekojs/_registry_builders/__init__.pyi}。
-     * 输入是 {@link com.tkisor.nekojs.api.catalog.RegistryBuilderSurfaceEntry}（与 TS 后端
-     * {@code @registry-builders/index.d.ts} 同一条目列表）——runtime member、TS/Python
-     * declaration 由同一契约反射输入派生（ticket 15）。成员名保持 JS 面 verbatim
-     * （{@code maxStackSize}/{@code setMaxStackSize}）。
+     * Typed Builder contract declarations: {@code nekojs/_registry_builders/__init__.pyi}.
+     * Input is {@link com.tkisor.nekojs.api.catalog.RegistryBuilderSurfaceEntry}, the same entry list as the TS
+     * backend {@code @registry-builders/index.d.ts}: runtime members, TS and Python declarations derived from the
+     * same contract reflection input. Member names stay verbatim to the JS side
+     * ({@code maxStackSize}/{@code setMaxStackSize}).
      */
     private void writeRegistryBuilderStubs(Map<String, String> files, NekoScriptCatalogSnapshot snapshot) {
         var entries = snapshot.registryBuilderSurfaces();
@@ -231,7 +232,7 @@ public final class PythonProbeBackend implements ProbeBackend {
         files.put("nekojs/_registry_builders/__init__.pyi", RegistryBuilderPyRenderer.render(entries));
     }
 
-    /** 渲染单个 Java 包的 __init__.pyi：跨包 import + 本包所有类 + 本包适配器/枚举输入别名。 */
+    /** Renders the __init__.pyi for a single Java package: cross-package imports + all classes in this package + adapter/enum input aliases for this package. */
     private String renderPackageModule(String javaPkg, List<TypeDecl> classes,
                                        PythonClassRenderer classR, ApiTypeRefPyRenderer typeR,
                                        Set<String> availableFqns, Map<String, PyAdapterAlias> adapterAliases,
@@ -259,18 +260,18 @@ public final class PythonProbeBackend implements ProbeBackend {
             if (allocated != null) entry.setValue(withAliasName(entry.getValue(), allocated.aliasName()));
         }
         adapterAliases = scopedAliases;
-        // 适配器输入别名：跨包的 host 输入类型需要 import；别名行在类之后输出
+        // Adapter input aliases: Cross-package host input types require imports; alias lines are output after classes.
         List<String> aliasLines = new ArrayList<>();
         for (TypeDecl d : classes) {
             PyAdapterAlias alias = adapterAliases.get(d.fqn);
             if (alias == null) continue;
             String line = alias.aliasName() + " = " + effectivePyName(d)
                     + " | " + String.join(" | ", alias.inputTypes());
-            // 大注册表（>=512 条目）的 RegistryValue 形状缩略为 str，行尾注释标注来源注册表
+            // RegistryValue shapes for large registries (>=512 entries) are abbreviated to str, with source registry annotated in trailing comments.
             if (alias.note() != null) line += "  # " + alias.note();
             aliasLines.add(line);
         }
-        // 枚举字面量别名：Color_ = Color | Literal["RED", ...]（常量序与 PythonClassRenderer.renderEnum 一致）
+        // Enum literal aliases: Color_ = Color | Literal["RED", ...] (constant order matches PythonClassRenderer.renderEnum)
         for (TypeDecl d : classes) {
             PyAdapterAlias alias = enumAliases.get(d.fqn);
             if (alias == null) continue;
@@ -278,13 +279,13 @@ public final class PythonProbeBackend implements ProbeBackend {
                     + " | " + String.join(" | ", alias.inputTypes()));
         }
 
-        // 跨包 import（仅可用的、跨包的；按简单名去重）
+        // Cross-package imports (only available, cross-package ones; de-duplicated by simple name)
 
         StringBuilder sb = new StringBuilder();
         sb.append("# Auto-generated by NekoJS probe — Python stubs for Java package ").append(javaPkg).append(".\n");
         sb.append("# Do not edit; regenerate with `/nekojs probe python`.\n\n");
-        // Literal 仅在本模块别名确实用到字面量联合时导入（枚举别名 / 小注册表 RegistryValue）；
-        // overload 仅在存在同名 def（Java 重载方法/构造器）时导入
+        // Literal imports only when alias uses literal unions in this module (enum aliases / small registry RegistryValue);
+        // overload imports only if defs with the same name (Java overloaded methods/constructors) exist.
         boolean usesLiteral = aliasLines.stream().anyMatch(l -> l.contains("Literal["));
         boolean usesOverload = classes.stream().anyMatch(classR::hasRenderedOverloads);
         boolean usesProtocol = classes.stream().anyMatch(classR::hasClassBindings)
@@ -377,14 +378,14 @@ public final class PythonProbeBackend implements ProbeBackend {
         return new PyAdapterAlias(name, alias.inputTypes(), alias.importFqns(), alias.note());
     }
 
-    /** nekojs/__init__.pyi：全局绑定 + 事件组入口 + {@code probe.add_global} 全局声明（{@code from nekojs import *} 的目标）。 */
+    /** nekojs/__init__.pyi: Global bindings + event group entry + {@code probe.add_global} global declarations (target of {@code from nekojs import *}). */
     private void writeBindingsInit(Map<String, String> files, NekoScriptCatalogSnapshot snapshot, Set<String> availableFqns,
                                    ApiTypeRefPyRenderer typeR, List<GlobalDecl> globals) {
         List<BindingCatalogEntry> bindings = snapshot.bindings().stream()
                 .filter(BindingCatalogEntry::emit)
                 .toList();
 
-        // 事件组名（按 side）；绑定名命中组名时，绑定类型指向 nekojs._events/<side> 的 <Group>Type 类
+        // Event group name (by side); when binding name hits group name, binding type points to <Group>Type class in nekojs._events/<side>
         Map<ScriptType, List<String>> groupsBySide = eventGroupsBySide(snapshot.events());
 
         Set<String> reserved = new LinkedHashSet<>(List.of("Any"));
@@ -408,13 +409,13 @@ public final class PythonProbeBackend implements ProbeBackend {
             String type = "Any";
             List<String> groupNames = groupsBySide.getOrDefault(b.scriptType(), List.of());
             if (b.scriptType() != null && groupNames.contains(b.name())) {
-                // 事件组绑定：类型 = _events/<side> 的 <Group>Type
+                // Event group binding: type = <Group>Type in _events/<side>
                 String typeName = PythonEventRenderer.groupTypeName(b.name());
                 type = typeName;
                 eventImports.add("from nekojs._events." + b.scriptType().name + " import " + typeName);
             } else if (b.typeOverride() != null && !b.typeOverride().isEmpty()) {
-                // typeOverride（如 "NekoItemHelper"）：若存在已收集 FQN 的简单名与之相等，
-                // 用该类的简单名作为绑定类型并 import（优先于 javaType）
+                // typeOverride (e.g., "NekoItemHelper"): If a collected FQN simple name equals this,
+                // use this class's simple name as binding type and import (preferred over javaType)
                 String fqn = findFqnBySimpleName(availableFqns, b.typeOverride());
                 if (fqn != null) {
                     type = importByName.type(fqn);
@@ -423,15 +424,15 @@ public final class PythonProbeBackend implements ProbeBackend {
                 String fqn = b.javaType().getName();
                 type = importByName.type(fqn);
             }
-            // 导入名与绑定名相同时（如 `from ... import Items` + `Items` 绑定），
-            // import 本身就完成了重导出；再写 `Items: Items` 会变成 pyright 的自引用报错
+            // If import name equals binding name (e.g., `from ... import Items` + `Items` binding),
+            // import itself completes re-export; writing `Items: Items` causes pyright self-reference error
             if (!(type.equals(b.name()) && importByName.localNames().contains(type))) {
                 lines.add(new String[]{b.name(), type});
             }
             allNames.add(b.name());
         }
-        // 事件组入口：binding 目录里没有对应条目的组名（DefaultScriptEventBridge 在运行时暴露事件组全局），
-        // 补发指向 _events 类，保证 `ServerEvents.recipes(...)` 有补全
+        // Event group entry: Group name without corresponding entry in binding directory (DefaultScriptEventBridge exposes event group globally at runtime),
+        // backfill pointing to _events class to ensure `ServerEvents.recipes(...)` has completions
         for (var e : groupsBySide.entrySet()) {
             ScriptType side = e.getKey();
             for (String group : e.getValue()) {
@@ -442,7 +443,7 @@ public final class PythonProbeBackend implements ProbeBackend {
                 eventImports.add("from nekojs._events." + side.name + " import " + typeName);
             }
         }
-        // probe.add_global 全局声明：类型走 py renderer；SYMBOL 类型按可用性 import
+        // probe.add_global global declaration: type follows py renderer; SYMBOL type imported by availability
         if (globals != null) {
             for (GlobalDecl g : globals) {
                 Set<String> fqns = new LinkedHashSet<>();
@@ -475,7 +476,7 @@ public final class PythonProbeBackend implements ProbeBackend {
         files.put("nekojs/__init__.pyi", sb.toString());
     }
 
-    /** 每个 side 的事件组名（按事件出现顺序去重）；无事件的 side 不出现。 */
+    /** Event group name for each side (de-duplicated by appearance order); sides without events do not appear. */
     private static Map<ScriptType, List<String>> eventGroupsBySide(List<EventCatalogEntry> events) {
         Map<ScriptType, List<String>> out = new LinkedHashMap<>();
         if (events == null) return out;
@@ -490,7 +491,7 @@ public final class PythonProbeBackend implements ProbeBackend {
         return out;
     }
 
-    /** 在可用 FQN 集合里找简单名等于 {@code simpleName} 的类（确定性：按 FQN 排序取第一个）。 */
+    /** Finds the class with simple name equal to {@code simpleName} in the set of available FQNs (determinism: sorted by FQN, takes the first). */
     private static String findFqnBySimpleName(Set<String> availableFqns, String simpleName) {
         for (String fqn : new TreeSet<>(availableFqns)) {
             if (ApiTypeRefPyRenderer.simplePyName(fqn).equals(simpleName)) return fqn;
@@ -498,9 +499,9 @@ public final class PythonProbeBackend implements ProbeBackend {
         return null;
     }
 
-    // ============================== 事件声明 ==============================
+    // ============================== Event Declarations ==============================
 
-    /** 为每个 side 写 {@code nekojs/_events/<side>/__init__.pyi}（无事件的 side 跳过）；root marker 一并产出。 */
+    /** Writes {@code nekojs/_events/<side>/__init__.pyi} for each side (skips sides without events); outputs root marker as well. */
     private void writeEventStubs(Map<String, String> files, NekoScriptCatalogSnapshot snapshot,
                                  ApiTypeRefPyRenderer typeR, Set<String> availableFqns,
                                  Map<String, PyAdapterAlias> adapterAliases) {
@@ -522,20 +523,20 @@ public final class PythonProbeBackend implements ProbeBackend {
         }
     }
 
-    // ============================== 适配器输入别名 ==============================
+    // ============================== Adapter Input Aliases ==============================
 
     /**
-     * 适配器输入别名（Python 版）：{@code <Simple>_ = <Simple> | <输入类型们>}。
-     * {@code note} 非空时别名行尾附加 {@code # note} 注释（大注册表缩略为 str 时标注注册表名）。
+     * Adapter input aliases (Python version): {@code <Simple>_ = <Simple> | <input types>}.
+     * When {@code note} is non-empty, appends {@code # note} comment to alias line (annotates registry name when large registries are abbreviated to str).
      */
     record PyAdapterAlias(String aliasName, List<String> inputTypes, Set<String> importFqns, String note) {}
 
     /**
-     * 从适配器目录构建输入别名（目标 FQN → 别名）。仅处理已被收集（IR 里有声明）的目标类，
-     * 避免别名悬空；无法映射到 Python 的形状（未收集 host/RawValue/快照缺失的注册表）跳过并 debug 日志。
+     * Builds input aliases (target FQN -> alias) from adapter directory. Only handles collected target classes (declared in IR),
+     * avoiding dangling aliases; shapes unmappable to Python (uncollected host/RawValue/missing registry in snapshot) are skipped and logged at debug level.
      *
-     * @param registries 注册表字面量查表（typeName → 条目），供 RegistryValue 形状渲染 Literal 联合
-     * @param modIds     已加载 mod id，供 NamespaceValue 形状渲染 Literal 联合（与注册表命名空间取并集）
+     * @param registries Registry literal lookup (typeName -> entries), for RegistryValue shape to render Literal unions
+     * @param modIds     Loaded mod IDs, for NamespaceValue shape to render Literal unions (takes union with registry namespace)
      */
     private Map<String, PyAdapterAlias> buildAdapterAliases(List<AdapterCatalogEntry> adapters,
                                                             Set<String> availableFqns,
@@ -564,16 +565,16 @@ public final class PythonProbeBackend implements ProbeBackend {
             String note = largeRegistries.isEmpty() ? null
                     : String.join(", ", largeRegistries) + " registry ids abbreviated as str ("
                       + REGISTRY_LITERAL_LIMIT + "+ entries)";
-            // TreeSet：确定性迭代（Set.copyOf 迭代序无规范保证，跨 JVM 会抖动 .pyi 输出）
+            // TreeSet: Deterministic iteration (Set.copyOf iteration order has no specification guarantee, causes jitter in .pyi output across JVMs)
             out.put(fqn, new PyAdapterAlias(simple + "_", List.copyOf(inputs), new java.util.TreeSet<>(inputFqns), note));
         }
         return out;
     }
 
     /**
-     * 枚举字面量输入别名：{@code Color_ = Color | Literal["RED", ...]}。
-     * 常量顺序 = {@code decl.fields} 序（TypeReflector 已按名字稳定排序，与 renderEnum 发射序一致）。
-     * 仅处理已收集且非隐藏的枚举；空枚举（无常量）跳过。
+     * Enum literal input aliases: {@code Color_ = Color | Literal["RED", ...]}.
+     * Constant order = {@code decl.fields} order (TypeReflector already sorted stably by name, consistent with renderEnum emission order).
+     * Only handles collected and non-hidden enums; empty enums (no constants) are skipped.
      */
     private Map<String, PyAdapterAlias> buildEnumAliases(List<TypeDecl> ir, Set<String> availableFqns) {
         Map<String, PyAdapterAlias> out = new LinkedHashMap<>();
@@ -591,20 +592,20 @@ public final class PythonProbeBackend implements ProbeBackend {
         return out;
     }
 
-    /** 枚举渲染名：renameTo 优先，否则 FQN 的 Python 简单名（与 PythonClassRenderer.effectiveClassName 一致）。 */
+    /** Enum render name: renameTo preferred, otherwise FQN's Python simple name (consistent with PythonClassRenderer.effectiveClassName). */
     private static String effectivePyName(TypeDecl d) {
         return d.effectiveTypeName() != null ? d.effectiveTypeName() : ApiTypeRefPyRenderer.simplePyName(d.fqn);
     }
 
-    /** RegistryValue 形状的 Literal 联合截断阈值：>= 该条目数的注册表缩略为 str（行尾注释标注）。 */
+    /** Truncation threshold for Literal unions of RegistryValue shapes: Registries >= this count abbreviated to str (annotated in trailing comment). */
     private static final int REGISTRY_LITERAL_LIMIT = 512;
 
     /**
-     * RegistryValue 形状 → Python 类型字符串：复用 TS {@code @special/types} 的同一数据源
-     * （snapshot.registryTypes 的条目列表）。小注册表（&lt;512 条目）→ 排序后的
-     * {@code Literal["id", ...]}（转义对齐 TS generateSpecialTypes：先反斜杠后引号）；
-     * 大注册表 → {@code str} 并把注册表名记入 {@code largeRegistries} 供行尾注释；
-     * 快照缺失的注册表 → null（跳过该形状，与旧行为一致）。
+     * RegistryValue shape -> Python type string: Reuses the same data source as TS {@code @special/types}
+     * (entry list from snapshot.registryTypes). Small registries (<512 entries) -> sorted
+     * {@code Literal["id", ...]} (escapes aligned with TS generateSpecialTypes: backslash then quote);
+     * Large registries -> {@code str} with registry name added to {@code largeRegistries} for trailing comments;
+     * Registries missing from snapshot -> null (skips this shape, consistent with previous behavior).
      */
     private String renderRegistryInput(String typeName, Map<String, RegistryTypeCatalogEntry> registries,
                                        List<String> largeRegistries) {
@@ -617,9 +618,9 @@ public final class PythonProbeBackend implements ProbeBackend {
     }
 
     /**
-     * RegistryTagValue 形状 → Python 类型字符串：与 {@link #renderRegistryInput} 同源同规则，
-     * 只是取 {@code tagEntries}。标签未采集（如 1.12.2 无标签系统）时回退 {@code str}，与 TS 侧
-     * {@code type XTag = string} 的回退一致。
+     * RegistryTagValue shape -> Python type string: Same source and rules as {@link #renderRegistryInput},
+     * but uses {@code tagEntries}. If tags are not collected (e.g., 1.12.2 has no tag system), it falls back to {@code str}, consistent with TS
+     * {@code type XTag = string} fallback.
      */
     private String renderRegistryTagInput(String typeName, Map<String, RegistryTypeCatalogEntry> registries,
                                           List<String> largeRegistries) {
@@ -632,9 +633,9 @@ public final class PythonProbeBackend implements ProbeBackend {
     }
 
     /**
-     * NamespaceValue 形状 → Python 类型字符串：与 TS 侧 {@code RegistryTypes.Namespace} 同源
-     * 同规则——加载器 mod 列表（{@code snapshot.modIds()}）与注册表条目 id 的 {@code ':'} 前缀
-     * 取并集。两者都空（快照来自无平台的单测）时回退 {@code str}，与 TS 侧一致。
+     * NamespaceValue shape -> Python type string: Same source and rules as TS {@code RegistryTypes.Namespace}
+     * - takes the union of loader mod list ({@code snapshot.modIds()}) and {@code ':'} prefixes of registry entry IDs.
+     * If both are empty (snapshot from platform-less unit test), falls back to {@code str}, consistent with TS.
      */
     private String renderNamespaceInput(List<String> modIds, Map<String, RegistryTypeCatalogEntry> registries,
                                         List<String> largeRegistries) {
@@ -652,12 +653,12 @@ public final class PythonProbeBackend implements ProbeBackend {
 
     private String renderLiteralUnion(String typeName, List<String> rawEntries, List<String> largeRegistries) {
         List<String> entries = new ArrayList<>(rawEntries);
-        if (entries.isEmpty()) return "str"; // TS 侧 @special 对空注册表同样回退 string
+        if (entries.isEmpty()) return "str"; // TS @special also falls back to string for empty registries
         if (entries.size() >= REGISTRY_LITERAL_LIMIT) {
             largeRegistries.add(typeName);
             return "str";
         }
-        Collections.sort(entries); // 确定性：不依赖快照条目顺序
+        Collections.sort(entries); // Determinism: Does not rely on snapshot entry order
         StringBuilder sb = new StringBuilder("Literal[");
         for (int i = 0; i < entries.size(); i++) {
             if (i > 0) sb.append(", ");
@@ -666,7 +667,7 @@ public final class PythonProbeBackend implements ProbeBackend {
         return sb.append(']').toString();
     }
 
-    /** 单个输入形状 → Python 类型字符串；无法映射（原始 TS 片段/未收集的 host）返回 null。 */
+    /** Single input shape -> Python type string; returns null if unmappable (raw TS fragment/uncollected host). */
     private String renderInputShape(AdapterInputShape shape, String selfFqn,
                                     Set<String> inputFqns, Set<String> availableFqns,
                                     Map<String, RegistryTypeCatalogEntry> registries,
@@ -709,7 +710,7 @@ public final class PythonProbeBackend implements ProbeBackend {
             case AdapterInputShape.RegistryTagValue v ->
                     renderRegistryTagInput(v.typeName(), registries, largeRegistries);
             case AdapterInputShape.NamespaceValue v -> renderNamespaceInput(modIds, registries, largeRegistries);
-            // Python 没有模板字面量类型：整个模板退化为 str（前后缀语法无法表达，字段语义已由 doc 覆盖）
+            // Python lacks template literal types: Whole template degrades to str (prefix/suffix syntax cannot be expressed, field semantics already covered by doc)
             case AdapterInputShape.TemplateValue v -> "str";
             case AdapterInputShape.NamedValue v -> renderInputShape(v.shape(), selfFqn, inputFqns, availableFqns,
                     registries, modIds, largeRegistries, typeR);
@@ -733,7 +734,7 @@ public final class PythonProbeBackend implements ProbeBackend {
         };
     }
 
-    // ============================== import 收集 ==============================
+    // ============================== Import Collection ==============================
 
     private static void collectDeclSymbolFqns(TypeDecl d, Set<String> out) {
         // Python enums use their dedicated surface rather than the Java superclass.

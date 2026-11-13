@@ -15,8 +15,9 @@ import java.util.Set;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * 覆盖 {@link ProbeConfig} 的包过滤与默认白名单合成逻辑。
- * 核心回归点：默认配置在 NeoForge 平台包下必须逐字复现旧 {@code isRelevantClass} 的 5 前缀行为。
+ * Covers how {@link ProbeConfig} combines package filters with the default whitelist.
+ * The main regression: under the NeoForge platform packages, the default config must reproduce
+ * the five prefixes that {@code isRelevantClass} matches, character for character.
  */
 class ProbeConfigTest {
 
@@ -26,25 +27,26 @@ class ProbeConfigTest {
     void defaultWhitelistReproducesLegacyFivePrefixes() {
         ProbeConfig cfg = ProbeConfig.defaultConfig();
         Set<String> included = cfg.effectiveIncludePackages(NEOFORGE_PLATFORM);
-        // 固定 + 平台
+        // fixed prefixes plus platform packages
         assertTrue(included.contains("java"));
         assertTrue(included.contains("com.tkisor.nekojs"));
         assertTrue(included.contains("net.minecraft"));
         assertTrue(included.contains("net.neoforged"));
-        // 旧逻辑里的 net.minecraftforge 不在 NeoForge 平台包里，但旧 isRelevantClass 检查它；
-        // 在 NeoForge 运行时无对应类，故行为等价（测试平台层面不包含）。这里断言默认不含。
+        // net.minecraftforge is not a NeoForge platform package, but isRelevantClass checks it. No such
+        // class exists when running NeoForge, so the behavior is equivalent. This asserts the default
+        // set does not contain it.
         assertFalse(included.contains("net.minecraftforge"));
     }
 
     @Test
     void defaultRelevanceMatchesLegacyBehavior() {
         ProbeConfig cfg = ProbeConfig.defaultConfig();
-        // 旧 5 前缀命中的样本
+        // samples that hit the five original prefixes
         assertTrue(cfg.isRelevantClass("java.lang.String", NEOFORGE_PLATFORM));
         assertTrue(cfg.isRelevantClass("net.minecraft.world.item.ItemStack", NEOFORGE_PLATFORM));
         assertTrue(cfg.isRelevantClass("net.neoforged.neoforge.event.X", NEOFORGE_PLATFORM));
         assertTrue(cfg.isRelevantClass("com.tkisor.nekojs.api.ScriptType", NEOFORGE_PLATFORM));
-        // 不在白名单
+        // not in the whitelist
         assertFalse(cfg.isRelevantClass("com.google.gson.JsonObject", NEOFORGE_PLATFORM));
         assertFalse(cfg.isRelevantClass("io.netty.buffer.X", NEOFORGE_PLATFORM));
     }
@@ -56,7 +58,7 @@ class ProbeConfigTest {
         Set<String> included = cfg.effectiveIncludePackages(NEOFORGE_PLATFORM);
         assertEquals(Set.of("com.example", "org.foo"), included,
                 "non-empty includePackages must fully override defaults+platform");
-        // java/net.minecraft 不再命中
+        // java and net.minecraft no longer match
         assertFalse(cfg.isRelevantClass("java.lang.String", NEOFORGE_PLATFORM));
         assertTrue(cfg.isRelevantClass("com.example.Bar", NEOFORGE_PLATFORM));
     }
@@ -66,9 +68,9 @@ class ProbeConfigTest {
         ProbeConfig cfg = new ProbeConfig(true, ".neko_probe", new ProbeConfig.ScanConfig(
                 List.of(), List.of("com.mojang", "com.example"), List.of(), List.of(), 5, "SMART"));
         Set<String> included = cfg.effectiveIncludePackages(NEOFORGE_PLATFORM);
-        assertTrue(included.contains("java"));            // 默认保留
-        assertTrue(included.contains("net.minecraft"));   // 平台保留
-        assertTrue(included.contains("com.mojang"));      // 追加
+        assertTrue(included.contains("java"));            // kept from the defaults
+        assertTrue(included.contains("net.minecraft"));   // kept by the platform
+        assertTrue(included.contains("com.mojang"));      // appended from the scan config
         assertTrue(cfg.isRelevantClass("com.mojang.brigadier.X", NEOFORGE_PLATFORM));
     }
 
@@ -98,7 +100,7 @@ class ProbeConfigTest {
     void relevancePrefixUsesDotBoundary() {
         ProbeConfig cfg = new ProbeConfig(true, ".neko_probe", new ProbeConfig.ScanConfig(
                 List.of("net.minecraft"), List.of(), List.of(), List.of(), 5, "SMART"));
-        // 不应被 "net.m" 前缀误命中：net.minecraftforgecraft 不该匹配 net.minecraft
+        // must not match on a "net.m" prefix: net.minecraftforgecraft does not belong to net.minecraft
         assertFalse(cfg.isRelevantClass("net.minecraftforgecraft.X", NEOFORGE_PLATFORM));
         assertTrue(cfg.isRelevantClass("net.minecraft.X", NEOFORGE_PLATFORM));
     }
@@ -132,9 +134,9 @@ class ProbeConfigTest {
 
     @Test
     void loadCreatesMissingProbeTomlWithDefaults(@TempDir Path tmp) throws Exception {
-        // 与 engine.toml 一样，probe.toml 缺失时 load 应自动落盘默认值（autosave），
-        // 保证首次启动/清理目录后 nekojs/config/probe.toml 自动出现。
-        // 前置条件与真实游戏一致：initFolders 已建好 nekojs/config/ 目录，但 probe.toml 缺失。
+        // Like engine.toml, load writes the default probe.toml to disk when the file is missing
+        // (autosave), so nekojs/config/probe.toml appears on first start and after the directory is
+        // cleaned. The setup matches the real game: initFolders created nekojs/config/, probe.toml is absent.
         Path cfgFile = NekoJSPaths.fromGameDir(tmp).probeConfig();
         Files.createDirectories(cfgFile.getParent());
         assertFalse(Files.exists(cfgFile), "前置：文件不存在");
@@ -163,7 +165,7 @@ class ProbeConfigTest {
         assertFalse(new ProbeConfigLoader().load(cfgFile).enabled(), "重载后 enabled 应为 false");
     }
 
-    /* ================= per-language 配置（languages.<lang>.backend / .outputDir） ================= */
+    /* ================= Per-language config (languages.<lang>.backend / .outputDir) ================= */
 
     @Test
     void loaderParsesPerLanguageConfig(@TempDir Path tmp) throws Exception {
@@ -197,7 +199,8 @@ class ProbeConfigTest {
         Files.writeString(cfgFile, "enabled = true\n", StandardCharsets.UTF_8);
 
         ProbeConfig cfg = new ProbeConfigLoader().load(cfgFile);
-        // 缺 languages 表 → setup 写入固定默认集（typescript/python 的 outputDir = 语言 id），与 defaultConfig 一致
+        // No languages table: setup writes the fixed default set that defaultConfig has, with
+        // outputDir = the language id (typescript, python).
         assertEquals(ProbeConfig.defaultConfig().languages(), cfg.languages(),
                 "缺 languages 表时应落入固定默认集（与 defaultConfig 一致）");
         assertNull(cfg.language("typescript").get().backend());
@@ -230,7 +233,7 @@ class ProbeConfigTest {
                 "无语言级覆盖时输出目录 = baseDir/<languageId>（旧行为）");
     }
 
-    /* ================= re: 正则包规则 ================= */
+    /* ================= re: regex package rules ================= */
 
     @Test
     void regexIncludeRuleMatchesByFullMatch() {
@@ -238,15 +241,15 @@ class ProbeConfigTest {
                 List.of("re:com\\.acme\\..*"), List.of(), List.of(), List.of(), 5, "SMART"));
         assertTrue(cfg.isRelevantClass("com.acme.api.Foo", NEOFORGE_PLATFORM));
         assertTrue(cfg.isRelevantClass("com.acme.Foo", NEOFORGE_PLATFORM));
-        // 正则全匹配的精确性：前缀意外延续（com.acmeextra）不应命中
+        // full-match regex: an accidental prefix extension (com.acmeextra) must not match
         assertFalse(cfg.isRelevantClass("com.acmeextra.Foo", NEOFORGE_PLATFORM));
-        // 覆盖语义：正则白名单非空时默认白名单（java 等）不再生效
+        // override: once the regex whitelist is non-empty, the default whitelist (java and others) stops applying
         assertFalse(cfg.isRelevantClass("java.lang.String", NEOFORGE_PLATFORM));
     }
 
     @Test
     void regexExcludeWinsOverInclude() {
-        // 默认白名单含 java；正则排除掉 java.lang.reflect 后，该子包整体失活
+        // the default whitelist contains java; excluding java.lang.reflect with a regex disables that whole subpackage
         ProbeConfig cfg = withScan(new ProbeConfig.ScanConfig(
                 List.of(), List.of(), List.of("re:java\\.lang\\.reflect\\..*"), List.of(), 5, "SMART"));
         assertTrue(cfg.isExcluded("java.lang.reflect.Field"));
@@ -260,10 +263,10 @@ class ProbeConfigTest {
     void invalidRegexRuleWarnsOnceAndNeverMatches() {
         ProbeConfig cfg = withScan(new ProbeConfig.ScanConfig(
                 List.of(), List.of(), List.of("re:***"), List.of(), 5, "SMART"));
-        // 非法正则不抛异常、视为永不命中
+        // an invalid regex does not throw and never matches
         assertFalse(cfg.isExcluded("java.lang.String"));
         assertTrue(cfg.isRelevantClass("java.lang.String", NEOFORGE_PLATFORM));
-        // 重复调用命中缓存路径，同样安全
+        // repeated calls go through the cache path and are just as safe
         assertFalse(cfg.isExcluded("net.minecraft.X"));
     }
 
@@ -281,7 +284,7 @@ class ProbeConfigTest {
 
     @Test
     void literalPrefixSemanticsUnchanged() {
-        // 回归：无 re: 前缀的条目仍为 startsWith(pkg + ".")，package 自身（无子包）不命中
+        // regression: entries without the re: prefix still use startsWith(pkg + "."), so the package itself does not match
         assertTrue(ProbeConfig.matchesPackageRule("java.util", "java.util.List"));
         assertFalse(ProbeConfig.matchesPackageRule("java.util", "java.utilx.X"));
         assertFalse(ProbeConfig.matchesPackageRule("java.util", "java.util"));

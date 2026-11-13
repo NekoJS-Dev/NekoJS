@@ -5,30 +5,32 @@ import com.tkisor.nekojs.api.ScriptType;
 import java.util.function.Consumer;
 
 /**
- * 插件生命周期钩子注册器。
+ * Registrar for plugin lifecycle hooks.
  *
- * <p>由 {@link com.tkisor.nekojs.api.NekoJSPlugin} 的 {@code registerLifecycleHooks} 接收，
- * 插件通常无需直接调用本接口 —— 直接 override {@code NekoJSPlugin} 上的便捷方法
- *（{@code init} / {@code initStartup} / {@code afterInit} /
- * {@code beforeScriptsLoaded} / {@code afterScriptsLoaded}）即可，
- * 默认实现会把对应方法引用注册进来。
+ * <p>A {@link com.tkisor.nekojs.api.NekoJSPlugin} receives it in {@code registerLifecycleHooks},
+ * and plugins usually never call this interface directly: overriding the convenience methods
+ * on {@code NekoJSPlugin} ({@code init} / {@code initStartup} / {@code afterInit} /
+ * {@code beforeScriptsLoaded} / {@code afterScriptsLoaded}) is enough, because the default
+ * implementation registers the method references for them.
  *
- * <p>仅在需要注册多个回调、或精细控制注册时机时才直接使用本注册器。
+ * <p>Use the registrar directly only to register several callbacks, or to control when the
+ * registration happens.
  */
 public interface PluginLifecycleRegister {
 
-    /** 最早触发：runtime bootstrap 完成后、startup 脚本加载前。 */
+    /** Fires earliest: after runtime bootstrap completes and before startup scripts load. */
     void onInit(Runnable hook);
 
-    /** startup 脚本加载完成后触发。 */
+    /** Fires after the startup scripts have loaded. */
     void onInitStartup(Runnable hook);
 
-    /** 所有 mod 初始化完成（FMLLoadCompleteEvent）后触发。 */
+    /** Fires after all mods finish initialization (FMLLoadCompleteEvent). */
     void onAfterInit(Runnable hook);
 
-    /** 每次某个类型的脚本加载前触发（含首次加载与完整 reload，不含单文件热重载）。 */
+    /** Fires before each load of one script type; this covers the first load and full reloads, not
+     * single-file hot reload. */
     void onBeforeScriptsLoaded(Consumer<ScriptType> hook);
 
-    /** 每次某个类型的脚本加载后触发（含首次加载与完整 reload，不含单文件热重载）。 */
+    /** Runs after the scripts of one script type load, on first load and full reload, but not on single-file hot reload. */
     void onAfterScriptsLoaded(Consumer<ScriptType> hook);
 }

@@ -13,15 +13,16 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * typed Builder 声明两侧 parity fixture（ticket 15 AC4/AC9）：
- * TS（{@link RegistryBuilderTsRenderer}，probe 后端 {@code @registry-builders/index.d.ts}
- * 的渲染器）与 Python（{@link RegistryBuilderPyRenderer}，{@code _registry_builders/__init__.pyi}
- * 的渲染器）从<b>同一条目列表</b>渲染——成员名序列、种类标注（可写/只读/方法）与
- * 类型映射两侧一致；输出确定（重复渲染逐字节稳定）。
+ * Parity fixture for typed builder declarations: the TS renderer ({@link RegistryBuilderTsRenderer},
+ * behind the probe backend's {@code @registry-builders/index.d.ts}) and the Python renderer
+ * ({@link RegistryBuilderPyRenderer}, behind {@code _registry_builders/__init__.pyi}) render the same
+ * entry list. Member name order, the member kind (writable, read-only, method) and the type mapping
+ * match on both sides. Output is deterministic: rendering twice is byte-for-byte identical.
  *
- * <p>条目本身由版本树对 builder 类的契约反射派生（根测试树 golden
- * {@code RegistryBuilderSurfaceGoldenTest} 冻结真实面）；本 fixture 用与真实派生同构的
- * 手工条目钉住<b>渲染层</b>的双侧一致性——common 树零 MC 类型（ADR-0007 L1/L2）。
+ * <p>The real entries are derived in the version tree by reflecting the builder class; a golden test
+ * in the root test tree, {@code RegistryBuilderSurfaceGoldenTest}, freezes that surface. This fixture
+ * uses hand-written entries shaped like the real derivation to pin the two renderers to each other.
+ * The common tree has no MC types.
  */
 class RegistryBuilderDeclarationParityTest {
 
@@ -55,7 +56,7 @@ class RegistryBuilderDeclarationParityTest {
         String ts = RegistryBuilderTsRenderer.render(entries);
         String py = RegistryBuilderPyRenderer.render(entries);
 
-        // 同一契约输入 → 两侧 builder 面同序、成员名序列逐一相同（成员语义一致）
+        // Same contract input: both sides list builders in the same order and the member names match one for one
         assertEquals(builderNames(ts, "interface "), builderNames(py, "class "),
                 "TS 与 Python 的 builder 列表必须同源同序");
         assertEquals(memberNames(ts), memberNames(py),
@@ -67,17 +68,18 @@ class RegistryBuilderDeclarationParityTest {
         String ts = RegistryBuilderTsRenderer.render(fixtureEntries());
         String py = RegistryBuilderPyRenderer.render(fixtureEntries());
 
-        // 可写属性：两侧都是裸属性标注（无 readonly / 无 read-only 注释）
+        // Writable property: a plain property on both sides, with no readonly and no read-only marker
         assertTrue(ts.contains("    maxStackSize: number;"), ts);
         assertTrue(py.contains("    maxStackSize: int\n"), py);
         assertFalse(ts.contains("readonly maxStackSize"), "可写成员不得标 readonly");
         assertFalse(py.contains("maxStackSize: int  # read-only"), "可写成员不得标 read-only");
 
-        // 只读属性：TS readonly，Python read-only 注释（final id 例外清单在两侧一致呈现）
+        // Read-only property: TS marks it {@code readonly} and Python adds a read-only comment; the
+        // final id exception is shown the same way on both sides
         assertTrue(ts.contains("    readonly id: string;"), ts);
         assertTrue(py.contains("    id: str  # read-only\n"), py);
 
-        // 显式 setter 形态作为方法成员保留（不引入第二写入语义）
+        // An explicit setter stays a method member, so no second write path is introduced
         assertTrue(ts.contains("    setMaxStackSize(arg0: number): void;"), ts);
         assertTrue(py.contains("    def setMaxStackSize(self, arg0: int) -> None: ..."), py);
     }
@@ -99,7 +101,8 @@ class RegistryBuilderDeclarationParityTest {
         assertEquals("", RegistryBuilderPyRenderer.render(null));
     }
 
-    /** 从渲染文本按声明头提取 builder 名序列（TS {@code interface X} / Py {@code class X}）。 */
+    /** Collects builder names from rendered text by declaration header:
+     * TS {@code interface X}, Python {@code class X}. */
     private static List<String> builderNames(String rendered, String header) {
         List<String> names = new ArrayList<>();
         for (String line : rendered.split("\n")) {
@@ -111,7 +114,8 @@ class RegistryBuilderDeclarationParityTest {
         return names;
     }
 
-    /** 成员名序列：4 空格缩进的成员行归一为成员名（{@code readonly id:}→id、{@code def foo(}→foo、{@code bar(}→bar）。 */
+    /** Member names: each 4-space-indented member line is reduced to a name, so {@code readonly id:}
+     * becomes id, {@code def foo(} becomes foo and {@code bar(} becomes bar. */
     private static List<String> memberNames(String rendered) {
         List<String> names = new ArrayList<>();
         for (String line : rendered.split("\n", -1)) {

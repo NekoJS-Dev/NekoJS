@@ -19,15 +19,19 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * 票 39 AC1 fixture：{@code ItemEvents.modification} / {@code BlockEvents.modification}
- * 的公开事件面（组名、事件名、payload 类、side、cancel/dispatch 能力）仍在既有
- * catalog 派生路径上——本票不新增第二事件 bus、不复制 wrapper，事件名与 payload 不变。
- * 无 vanilla 注册表依赖（只读总线元数据）→ 本机实测五节点真跑（block 半边 >=26）。
+ * Fixture for the public event surface of {@code ItemEvents.modification} and
+ * {@code BlockEvents.modification}: group name, event name, payload class, side, and the
+ * cancel and dispatch capabilities still come from the existing catalog derivation path. No
+ * second event bus and no copied wrapper are added; event names and payloads are unchanged.
+ * No vanilla registry dependency (only bus metadata is read), so it runs on all five nodes
+ * (the block half on >=26).
  *
- * <p>dispatch 时机（唯一 post 来源 = domain owner 的两个合法收集点）与 priority/顺序语义
- * 由 {@code ModificationDomainOwner} + {@code CandidateDomainCollector} 承载：本测试钉住
- * 静态声明面，运行面由 {@code Ticket39ModificationScriptE2ETest} 与
- * {@code Ticket39BlockModificationScriptE2ETest} 覆盖；source trace（谁 post）见票 39 REPORT。
+ * <p>Dispatch timing (the event is posted only from the domain owner's two legal collection
+ * points) and priority/order semantics live in {@code ModificationDomainOwner} and
+ * {@code CandidateDomainCollector}. This test pins the static declaration surface; the runtime
+ * surface is covered by {@code Ticket39ModificationScriptE2ETest} and
+ * {@code Ticket39BlockModificationScriptE2ETest}. The source trace (who posts) is in the batch
+ * report.
  */
 class Ticket39ModificationEventSurfaceTest {
 
@@ -71,7 +75,7 @@ class Ticket39ModificationEventSurfaceTest {
 
     @Test
     void payloadSurfaceKeepsTheScriptVisibleDeclarationEntryPoint() throws Exception {
-        // 脚本面公开成员保持不变：modify(id, callback) 与 getModifiedCount()
+        // The members exposed to scripts stay the same: modify(id, callback) and getModifiedCount()
         assertEquals(void.class, ItemModificationEventJS.class
                 .getMethod("modify", String.class, java.util.function.Consumer.class).getReturnType());
         assertTrue(ItemModificationEventJS.class.getMethod("getModifiedCount").getReturnType() == int.class);

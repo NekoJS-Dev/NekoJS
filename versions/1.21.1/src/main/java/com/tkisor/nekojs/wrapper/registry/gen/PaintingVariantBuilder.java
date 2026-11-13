@@ -1,14 +1,16 @@
-// 1.21.1 实现，与版本树 src/ 下的同名 26.x 文件成对。内容等于那份文件在本节点求值后的形态。
-// 26.x 侧行为变更时须同步本文件。
+// 1.21.1 implementation, paired with the same-named 26.x file under src/ in the version tree.
+// Its content equals that file evaluated at this node. Keep this file in sync when the 26.x
+// side changes behavior.
 package com.tkisor.nekojs.wrapper.registry.gen;
 
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.decoration.PaintingVariant;
 
 /**
- * 画变种 builder（1.21.1 面）：宽高（16 的倍数，单位像素）与纹理资源 id（指向
- * {@code assets/<ns>/textures/painting/<path>.png}）。26.x 的 title/author 成员在
- * 本节点不存在（成员面差异按版本各冻一份 golden，见 ticket 15 REPORT 五节点差异表）。
+ * Builds a painting variant on the 1.21.1 API: width and height in pixels (multiples of 16) and a
+ * texture resource id pointing at {@code assets/<ns>/textures/painting/<path>.png}. The title and
+ * author members of 26.x do not exist on this node; each node freezes its own member list in a
+ * golden file.
  * <pre>
  * event.paintingVariant('mymod:sea', b =&gt; { b.width = 32; b.height = 16 })
  * </pre>
@@ -17,14 +19,14 @@ public class PaintingVariantBuilder extends RegistryObjectBuilder<PaintingVarian
 
     private int width = 16;
     private int height = 16;
-    /** 纹理资源 id（默认与注册 id 相同）。 */
+    /** Texture resource id; defaults to the registration id. */
     private String assetId = null;
 
     public PaintingVariantBuilder(ResourceLocation id) {
         super(id);
     }
 
-    // ---- 数据属性：显式 setter 与 JavaBean property 同一写入点（ticket 15） ----
+    // ---- Data properties: explicit setters and JavaBean properties share one write path ----
 
     public int getWidth() {
         return width;
@@ -44,7 +46,8 @@ public class PaintingVariantBuilder extends RegistryObjectBuilder<PaintingVarian
         this.height = height;
     }
 
-    /** 纹理资源 id（已归一化：空白视为未声明——build 期本来就走同一分支）。 */
+    /** Texture resource id, normalized on write: blank means undeclared, the same branch the build path
+     * takes. */
     public String getAssetId() {
         return assetId;
     }

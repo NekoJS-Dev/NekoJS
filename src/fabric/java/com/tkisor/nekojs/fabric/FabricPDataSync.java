@@ -18,27 +18,30 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.entity.Entity;
 
 /**
- * pdata 的 fabric 面：
+ * The Fabric side of pdata:
  * <ul>
- *   <li>持久化容器：{@code NekoEntityPDataMixin} 给 {@code Entity} 加的 {@code neko$pdataTag}
- *       （duck 接口 {@link NekoEntityPData}）→ 装进 {@link EntityPDataStore}，两平台同形读写；</li>
- *   <li>同步：S2C {@code PDataSyncPacket} 注册 + 客户端 receiver（对齐 NeoForge
- *       {@code NekoJSNetwork#handlePDataSyncOnClient}），每 server tick flush、
- *       实体换世界时按「离开追踪范围」语义清 revision（{@code onEntityRemoved}，
- *       entity id 复用防线）。</li>
+ *   <li>Storage: {@code NekoEntityPDataMixin} adds {@code neko$pdataTag} to {@code Entity} (through
+ *       the duck interface {@link NekoEntityPData}), and the tag is stored in
+ *       {@link EntityPDataStore}; both platforms read and write the same shape;</li>
+ *   <li>Sync: registers the S2C {@code PDataSyncPacket} and its client receiver (matching NeoForge
+ *       {@code NekoJSNetwork#handlePDataSyncOnClient}), flushes every server tick, and clears the
+ *       revision when an entity changes world using the "left the tracking range" rule
+ *       ({@code onEntityRemoved}, which stops a reused entity id from reading stale data).</li>
  * </ul>
  */
 public final class FabricPDataSync {
 
-    /** findEntity 需要 server 实例（与 FabricPlayNetwork 同生命周期）。 */
+    /** findEntity needs a server instance (same lifetime as FabricPlayNetwork). */
     private static volatile MinecraftServer currentServer;
 
-    /** 「离开旧世界才清」守卫（首次进服 null→世界 不清，见 {@link ClientLevelWatch}）。 */
+    /** Clears only when the client leaves an old world; the null-to-level change on first join does not
+     * clear. See {@link ClientLevelWatch}. */
     private static final ClientLevelWatch LEVEL_WATCH = new ClientLevelWatch();
 
     private FabricPDataSync() {}
 
-    /** 服务器半：payload 注册 + store 装配 + flush / 实体换世界钩子（common init 调用）。 */
+    /** Server side: payload registration, store setup, and the flush and entity-world-change hooks
+     * (called from common init). */
     public static void registerServer() {
         PayloadTypeRegistry.clientboundPlay().register(
                 PDataSyncPacket.TYPE, PDataSyncPacket.STREAM_CODEC);
@@ -59,8 +62,9 @@ public final class FabricPDataSync {
             PDataSyncService.resetServerState();
         });
         ServerTickEvents.END_SERVER_TICK.register(FabricPDataSync::flush);
-        // 对齐 NeoForge 的 EntityLeaveLevelEvent 语义（chunk 卸载/死亡/消失/换维度都算离开）：
-        // 只用换维度事件会漏掉消失的实体——revision/mirror 残留，entity id 复用会读到旧数据
+        // Matches NeoForge's EntityLeaveLevelEvent semantics (chunk unload, death, despawn and dimension
+        // change all count as leaving). Using only the dimension change event would miss despawned
+        // entities, leaving revision and mirror data behind so that a reused entity id reads stale data
         ServerEntityEvents.ENTITY_LOAD.register((entity, level) -> {
             if (entity instanceof net.minecraft.server.level.ServerPlayer) {
                 PDataSyncService.markDirty(entity);
@@ -92,8 +96,9 @@ public final class FabricPDataSync {
                 }
             }
 
-            // 实体引用面直接解引用 mixin 容器：EntityJoinLevelEvent 窗口内实体尚未进入
-            // level 实体索引，findEntity(id) 反查必空 → 写静默丢弃（票 03 §3-3，票 18 修复）
+            // The entity reference side dereferences the mixin container directly: inside the
+            // EntityJoinLevelEvent window the entity is not yet in the level entity index, so a
+            // findEntity(id) lookup is always empty and the write is silently dropped
             @Override
             public CompoundTag get(Entity entity, String key) {
                 CompoundTag container = ((NekoEntityPData) entity).neko$getPDataRoot();
@@ -112,7 +117,8 @@ public final class FabricPDataSync {
         };
     }
 
-    /** 实体 id → 实体：仅服务器线程调用（flush / 脚本读写都在服务器 tick 内）。 */
+    /** Entity id to entity. Called on the server thread only (flush and script reads and writes all run
+     * inside the server tick). */
     private static Entity findEntity(int entityId) {
         var server = currentServer;
         if (server == null) return null;
@@ -127,15 +133,15 @@ public final class FabricPDataSync {
         PDataSyncService.flush(server);
     }
 
-    /** 客户端半：receiver + 断线清 mirror（client init 调用）。 */
+    /** Client side: receiver plus mirror clearing on disconnect (called from client init). */
     public static void registerClient() {
         ClientPlayNetworking.registerGlobalReceiver(PDataSyncPacket.TYPE, (payload, context) ->
                 context.client().execute(() -> acceptClientSync(payload, context.client().level)));
         ClientPlayConnectionEvents.DISCONNECT.register(
                 (handler, client) -> PDataSyncService.clearClientMirrors());
-        // 切维度也要清（NeoForge 挂 client level unload）：只在"离开一个已有世界"时清，
-        // 进服那次 null→世界 的变化不清（否则会抹掉刚随进服推下来的数据）——
-        // 语义钉在 ClientLevelWatch（节点本地 JVM fixture）
+        // A dimension change also clears (NeoForge hooks client level unload). Clear only when leaving an
+        // existing world; the null-to-level change on first join does not clear, or it would wipe the
+        // data just pushed down on join. The rule lives in ClientLevelWatch
         net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents.END_CLIENT_TICK.register(client ->
                 observeClientLevel(client.level));
     }

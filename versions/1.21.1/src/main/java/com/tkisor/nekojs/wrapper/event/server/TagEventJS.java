@@ -1,5 +1,6 @@
-// 1.21.1 实现，与版本树 src/ 下的同名 26.x 文件成对。内容等于那份文件在本节点求值后的形态。
-// 26.x 侧行为变更时须同步本文件。
+// 1.21.1 implementation, paired with the 26.x file of the same name under the version tree's src/.
+// The content is that file as evaluated on this node. Keep this file in sync when the 26.x side
+// changes behavior.
 package com.tkisor.nekojs.wrapper.event.server;
 
 import net.minecraft.resources.ResourceLocation;
@@ -18,15 +19,17 @@ public final class TagEventJS {
     private final Map<ResourceLocation, List<TagLoader.EntryWithSource>> sourceMap;
     private final Map<ResourceLocation, List<TagLoader.EntryWithSource>> additions = new HashMap<>();
     private final Map<ResourceLocation, List<TagLoader.EntryWithSource>> removals = new HashMap<>();
-    /** replaceAll/removeAll 的延迟替换：apply 时先清空 tag 源列表再写入新条目。 */
+    /** Delayed replacement for replaceAll/removeAll: apply() empties the tag source list first and
+     *  then writes the new entries. */
     private final Map<ResourceLocation, List<TagLoader.EntryWithSource>> replacements = new HashMap<>();
 
     public TagEventJS(ResourceLocation registryId, Map<ResourceLocation, List<TagLoader.EntryWithSource>> sourceMap) {
         this.registryId = registryId;
         this.sourceMap = sourceMap;
-        // 注册 builder 的待写 tag（.tag(...)，见 BuilderTags）先于脚本监听器注入本事件：
-        // 脚本随后的 add/remove 仍可覆盖，apply() 统一写回。待写条目不在此消费——
-        // 每次 tag（重）加载都会重新注入（稳定事实，跨 /reload 存活）。
+        // Tags a registration builder queues (.tag(...), see BuilderTags) are injected into this event
+        // before the script listeners run, so a later add/remove from the script still wins and
+        // apply() writes everything back in one pass. These pending entries are not consumed here:
+        // every tag (re)load injects them again, which is why they survive a /reload.
     }
 
     public ResourceLocation getRegistry() {
@@ -51,7 +54,7 @@ public final class TagEventJS {
                 .add(new TagLoader.EntryWithSource(TagEntry.element(entry), SOURCE, true));
     }
 
-    /** 清空 tag 的全部条目（延迟应用，与 add/remove 组合时语义正确）。 */
+    /** Removes every entry of the tag. Applied later, so it composes correctly with add/remove. */
     public void removeAll(String tag) {
         removeAll(ResourceLocation.parse(tag));
     }
@@ -60,7 +63,7 @@ public final class TagEventJS {
         replacements.put(tag, new ArrayList<>());
     }
 
-    /** 用新条目整体替换 tag 的全部内容。 */
+    /** Replaces the whole content of the tag with the given entries. */
     public void replaceAll(String tag, String... entries) {
         replaceAll(ResourceLocation.parse(tag), entries);
     }
@@ -82,7 +85,8 @@ public final class TagEventJS {
     }
 
     public void apply() {
-        // 替换（replaceAll/removeAll）优先：清空 tag 源列表，再写入新条目
+        // Replacements (replaceAll/removeAll) come first: empty the tag's source list, then write the
+        // new entries.
         for (var entry : replacements.entrySet()) {
             if (entry.getValue().isEmpty()) {
                 sourceMap.remove(entry.getKey());
@@ -97,10 +101,9 @@ public final class TagEventJS {
         for (var entry : removals.entrySet()) {
             var list = sourceMap.get(entry.getKey());
             if (list == null) continue;
-            // TagEntry 无值相等（identity），按 (id, isTag) 匹配移除——否则 remove() 新建的
-            // TagEntry 永远匹配不上源表里的同 id 条目（含 builder 待写条目）。
-            // ticket 23：26.x 侧的 RemovalKey 匹配此前未同步到本孪生（旧实现按 TagEntry
-            // 对象恒等匹配，source 表里的既有条目永远删不掉），本票对齐两侧行为。
+            // TagEntry has no value equality (identity only), so removal matches on (id, isTag).
+            // Otherwise a TagEntry created by remove() would never match an entry with the same id in
+            // the source table, including the entries a builder still has pending.
             var toRemove = entry.getValue().stream()
                     .map(TagLoader.EntryWithSource::entry)
                     .map(e -> new RemovalKey(e.getId(), e.isTag()))
@@ -112,7 +115,8 @@ public final class TagEventJS {
         }
     }
 
-    /** remove 匹配键：元素 id + 是否 tag 引用（忽略 required 差异）。 */
+    /** Matching key for remove: the entry id plus whether it is a tag reference; the required flag is
+     *  ignored. */
     private record RemovalKey(ResourceLocation id, boolean tag) {
     }
 }

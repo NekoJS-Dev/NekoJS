@@ -7,8 +7,9 @@ import java.util.Optional;
 //?}
 
 /**
- * 声音事件 builder（通用注册表体系的首个内置类型，垂直切片验证
- * {@code registry_types → 糖方法 → 先攒后建 → pass 抽干} 全链路）。
+ * Builder for sound events. It is the first built-in type of the general registry system and
+ * exercises the whole chain: {@code registry_types -> sugar methods -> collect first, build
+ * later -> pass draining}.
  *
  * <pre>
  * event.soundEvent('mymod:boom', b =&gt; { b.fixedRange = 16 })
@@ -16,14 +17,14 @@ import java.util.Optional;
  */
 public final class SoundEventBuilder extends RegistryObjectBuilder<SoundEvent> {
 
-    /** 固定可听距离（格）；null 时由声音定义文件决定。 */
+    /** Fixed audible range in blocks. When null, the sound definition file decides. */
     private Float fixedRange;
 
     public SoundEventBuilder(Identifier id) {
         super(id);
     }
 
-    /** 固定可听距离（null=由声音定义文件决定）。 */
+    /** Fixed audible range; null means the sound definition file decides it. */
     public Float getFixedRange() {
         return fixedRange;
     }

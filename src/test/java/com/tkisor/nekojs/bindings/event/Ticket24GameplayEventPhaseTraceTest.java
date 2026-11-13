@@ -13,30 +13,30 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Ticket 24 platform adapter source trace (pure file reads, runs on every node).
+ * Traces the platform adapter sources (pure file reads, runs on every node).
  *
- * <p>Pins the platform wiring facts a bare JVM cannot exercise against real Minecraft
- * callbacks, mirroring ticket 23's {@code Ticket23RecipeDataPhaseTraceTest} shape:
+ * <p>Pins the platform wiring that a bare JVM cannot exercise against real Minecraft callbacks,
+ * in the same shape as {@code Ticket23RecipeDataPhaseTraceTest}:
  * <ol>
- *   <li><b>AC3 (representative caller path)</b> — every platform-dispatched bus of the eight
- *       gameplay families is bound to the NeoForge game bus exactly once through the single
+ *   <li><b>Representative caller path</b>: every platform-dispatched bus of the eight gameplay
+ *       families is bound to the NeoForge game bus exactly once through the single
  *       {@code EventBusForgeBridge} per family; posted-object buses
  *       ({@code ItemEvents.modification}/{@code BlockEvents.modification}) and the
  *       listener-posted {@code PlayerEvents.inventoryChanged} are deliberately NOT bridge-bound
  *       and have exactly one production poster each.</li>
- *   <li><b>AC5 (side)</b> — the both-logical-side events bound to SERVER buses carry the
- *       {@code !level().isClientSide()} filter, so client instances never enter SERVER script
- *       contexts (Render-thread Graal rejection).</li>
- *   <li><b>AC9 (per-node source trace)</b> — the fabric twins/adapters that carry the fabric
- *       subset of each family exist and post the neutral payloads, including the entity
- *       behavior mixins (death drops / finalize spawn / tick / damage); the 1.21.1
- *       {@code BlockEvents} twin keeps the same bind surface.</li>
- *   <li><b>AC10 (no second registration path)</b> — {@code EventGroup.of("<Family>")} for each
- *       of the eight families is declared only in its legal platform/node source sites;
- *       mutually exclusive source twins do not create an additional runtime surface.</li>
+ *   <li><b>Side</b>: the events that fire on both logical sides but are bound to SERVER buses
+ *       carry the {@code !level().isClientSide()} filter, so client instances never enter SERVER
+ *       script contexts (Graal rejects the render thread).</li>
+ *   <li><b>Per-node source trace</b>: the fabric twins/adapters that carry the fabric subset of
+ *       each family exist and post the neutral payloads, including the entity behavior mixins
+ *       (death drops / finalize spawn / tick / damage); the 1.21.1 {@code BlockEvents} twin keeps
+ *       the same bind surface.</li>
+ *   <li><b>No second registration path</b>: {@code EventGroup.of("<Family>")} for each of the
+ *       eight families is declared only in its legal platform/node source sites; mutually
+ *       exclusive source twins do not create an additional runtime surface.</li>
  * </ol>
- * File reads see the raw shared tree (stonecutter guards included), so the same assertions
- * hold on every node; guards only affect evaluation, not the wiring recorded here.
+ * File reads see the raw shared tree (stonecutter guards included), so the same assertions hold
+ * on every node; guards only affect evaluation, not the wiring recorded here.
  */
 class Ticket24GameplayEventPhaseTraceTest {
 
@@ -139,8 +139,8 @@ class Ticket24GameplayEventPhaseTraceTest {
                 assertEquals(1, count(code(path), "PlayerEvents.INVENTORY_CHANGED.post("),
                         "inventoryChanged has exactly one poster (the inventory listener)"));
 
-        // modification families: only the ticket-39 domain owner posts (event-side wiring only;
-        // transaction/snapshot acceptance belongs to ticket 39's evidence)
+        // The modification families: only the domain owner posts them. This checks the event-side
+        // wiring only; the transaction/snapshot acceptance is covered elsewhere.
         String owner = code(MAIN + "/wrapper/event/server/ModificationDomainOwner.java");
         assertEquals(1, count(owner, "ItemEvents.MODIFICATION.postForCollection("),
                 "ItemEvents.modification is posted only by the modification domain owner");

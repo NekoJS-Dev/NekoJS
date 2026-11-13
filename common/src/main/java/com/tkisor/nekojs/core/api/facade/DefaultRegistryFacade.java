@@ -13,15 +13,18 @@ import java.util.Objects;
 
 public final class DefaultRegistryFacade implements RegistryFacade {
     /**
-     * 视图缓存封顶。registryId 由脚本任意提供（含用户自定义注册表），空间不可预知；
-     * {@link DefaultRegistryView} 无状态，简单按访问顺序做 LRU 封顶即可同时兼顾
-     * 热路径（脚本按 tick 调 {@code Registry.get(...)} 不再重复分配视图）与内存上限。
+     * Caps the view cache. Scripts supply registryId themselves, including for their own
+     * registries, so the key space is unknown. {@link DefaultRegistryView} is stateless, so a
+     * simple access-ordered LRU cap keeps the hot path free of new views (a script calling
+     * {@code Registry.get(...)} every tick reuses the cached view) and bounds memory at the
+     * same time.
      */
     private static final int MAX_CACHED_VIEWS = 256;
 
     private final RegistryQueryService service;
-    // DefaultRegistryView 只有 service + registryId 两个 final 字段、所有方法委托 service，
-    // 同一 (service, registryId) 的视图行为完全一致，可安全复用。缓存按实例持有（service 绑死）。
+    // A DefaultRegistryView holds only two final fields, service and registryId, and delegates
+    // every method to service, so views with the same (service, registryId) behave identically
+    // and can be reused. The cache belongs to one instance, so service stays fixed.
     private final Map<String, RegistryView> viewCache =
             Collections.synchronizedMap(new LinkedHashMap<>(64, 0.75f, true) {
                 @Override

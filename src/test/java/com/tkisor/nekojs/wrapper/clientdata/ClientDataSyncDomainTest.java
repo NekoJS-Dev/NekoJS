@@ -17,11 +17,12 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * 票 18 AC4 的 ClientData 发送面域语义 fixture：{@code ClientData.sync} 经
- * {@link PlayPacketDispatchers} 装配推送——合法 JSON 类型走 key+JSON 文本 wire
- * （wire hex 本体由票 17 PayloadWireFormatGoldenTest 钉住，本测试钉域语义）；
- * 非旧契约 JSON 类型显式失败；超限值（序列化超 32768 字符）显式失败且不发送；
- * 同 key 覆盖、key 校验与坏 key 拒绝。
+ * Fixture for the domain semantics of the ClientData send side: {@code ClientData.sync} assembles a
+ * push through {@link PlayPacketDispatchers}. A valid JSON type goes over the wire as key plus JSON
+ * text; the wire hex itself is pinned by PayloadWireFormatGoldenTest and this test pins the domain
+ * semantics. A type that is not legacy-contract JSON fails explicitly. A value over the limit
+ * (serialized text longer than 32768 characters) fails explicitly and is not sent. The same key
+ * overwrites, and key validation rejects a bad key.
  */
 class ClientDataSyncDomainTest {
 
@@ -84,7 +85,7 @@ class ClientDataSyncDomainTest {
 
     @Test
     void oversizedValuesFailExplicitlyWithoutSending() {
-        // 序列化文本恰在上限内：32766 字符字符串 + 两个引号 = 32768
+        // Serialized text lands exactly on the limit: a 32766-character string plus two quotes is 32768
         ClientDataSyncJS.sync("big-ok", "x".repeat(32_766));
         assertEquals(1, dispatcher.broadcast.size(), "values at exactly the 32768-char budget must pass");
 
@@ -106,7 +107,8 @@ class ClientDataSyncDomainTest {
 
     @Test
     void sameKeyOverwritesOnTheClientStore() {
-        // 接收侧等价面：平台 handler 解析 JSON 文本后写入 SHARED（v1 语义：同 key 后到者胜）
+        // Receive-side equivalent: the platform handler parses the JSON text and writes it to SHARED;
+        // for the same key the later write wins (v1 semantics)
         com.google.gson.JsonParser parser = new com.google.gson.JsonParser();
         ClientDataStore.SHARED.accept("hud:mana", parser.parse("{\"v\":1}"));
         ClientDataStore.SHARED.accept("hud:mana", parser.parse("{\"v\":2}"));

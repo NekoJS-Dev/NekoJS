@@ -10,10 +10,10 @@ import java.util.LinkedHashMap;
 import java.util.function.Predicate;
 
 /**
- * Root-owned, bounded reuse of pure built-in transformations and source analysis.
+ * Root-owned, bounded cache for pure built-in transformations and source analysis.
  * Source analysis is independent of frontend transformation and retains no guest or schema state.
- * One owner has one pipeline with immutable code-generation configuration; entries cannot
- * cross that policy boundary. The character budget includes authored code and generated maps.
+ * One owner maintains one pipeline with immutable code-generation configuration; entries cannot
+ * cross this policy boundary. The character budget includes both authored code and generated maps.
  */
 final class BuiltinModuleTransformCache {
     private final LinkedHashMap<Path, Entry> entries = new LinkedHashMap<>(16, 0.75f, true);

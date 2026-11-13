@@ -15,27 +15,29 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
- * 动态注册收集事件的载荷（ticket 16，AC2/AC3）：成员目录<b>冻结</b>为三个类型直达入口
- * {@code item} / {@code soundEvent} / {@code mobEffect}，每个入口接收
- * {@code (id, callbackBuilder => {...})}（callback 可省略＝全默认值）。
+ * Payload of the dynamic registration collection event: the member directory is frozen to three
+ * typed entry points, {@code item} / {@code soundEvent} / {@code mobEffect}, and each accepts
+ * {@code (id, callbackBuilder => {...})}. The callback may be omitted, which means all defaults.
  *
- * <p><b>没有通用 type catalog</b>：不存在 {@code event.register(typeName, ...)} 之类的
- * 通用成员，未知 type 字符串在成员解析期即被拒绝（错误列出三个冻结入口），不会被转换
- * 成注册能力；候选范围因此结构上封闭在 Item、SoundEvent、MobEffect 内。
- * 回调收到的 builder 是 {@link DynamicBuilderSurface} 包装的 typed callback Builder
- * （property 写入与显式 setter 同一路径）。
+ * <p>There is no generic type catalog: no member such as {@code event.register(typeName, ...)}
+ * exists, and an unknown type string is rejected while the member is resolved (the error lists the
+ * three fixed entry points) instead of turning into a registration. The candidate set is therefore
+ * structurally closed to Item, SoundEvent and MobEffect. The builder a callback receives is a
+ * typed callback builder wrapped by {@link DynamicBuilderSurface}: property writes and explicit
+ * setters take the same path.
  *
- * <p>成员执行的任何失败（id 非法、builder 校验拒绝、callback 抛错、同批同 key 定义
- * 变化）都会记为该批计划的 collection error（<b>毒化整批</b>：preflight 必失败、批次
- * 不发布）后向调用方传播——总线 post 会吞掉监听器异常，所以毒化标记是「失败不另起
- * 写入」的承载机制。
+ * <p>Any failure in a member (invalid id, builder validation refusal, callback throwing, a changed
+ * definition for the same key in the same batch) is recorded as a collection error on that batch's
+ * plan, which poisons the whole batch: preflight must fail and the batch is not published. The
+ * error is then propagated to the caller. The bus post swallows listener exceptions, so the poison
+ * flag is what makes a failure start no separate write.
  */
 public final class DynamicRegistryEventJS implements ProxyObject {
 
     private final DynamicCandidateRegistryPlan plan;
     private final Map<String, ProxyExecutable> members;
 
-    /** @param plan 本批收集目标（每批一个 payload 实例）。 */
+    /** @param plan the collection target for this batch; there is one payload instance per batch */
     public DynamicRegistryEventJS(DynamicCandidateRegistryPlan plan) {
         this.plan = plan;
         Map<String, ProxyExecutable> built = new LinkedHashMap<>();
@@ -45,7 +47,7 @@ public final class DynamicRegistryEventJS implements ProxyObject {
         this.members = built;
     }
 
-    // ---- ProxyObject：成员目录 ----
+    // ---- ProxyObject: member directory ----
 
     @Override
     public Object getMember(String name) {
@@ -65,7 +67,7 @@ public final class DynamicRegistryEventJS implements ProxyObject {
         return members.containsKey(name);
     }
 
-    /** 成员目录（probe / 补全用）：三个冻结的类型直达入口。 */
+    /** Member directory, used for probing and completion: the three fixed typed entry points. */
     @Override
     public Object getMemberKeys() {
         return members.keySet().toArray();
@@ -81,7 +83,7 @@ public final class DynamicRegistryEventJS implements ProxyObject {
         return false;
     }
 
-    // ---- 类型直达入口 ----
+    // ---- Typed entry points ----
 
     private final class TypedEntryMember implements ProxyExecutable {
 
@@ -101,7 +103,8 @@ public final class DynamicRegistryEventJS implements ProxyObject {
                 newBuilder().configure(args);
                 return true;
             } catch (RuntimeException e) {
-                // 毒化整批：收集失败 → preflight 必失败 → 批次不发布（AC1「失败不另起写入」）
+                // Poison the whole batch: a collection failure makes preflight fail, so the batch is never
+                // published and a failure starts no separate write.
                 plan.noteCollectionError(currentScriptId(), e);
                 throw e;
             }
@@ -115,7 +118,8 @@ public final class DynamicRegistryEventJS implements ProxyObject {
             };
         }
 
-        /** 单条入口的执行体：id 解析 → callback（可省略）→ 定义收集进计划。 */
+        /** Execution body of one entry: parse the id, run the optional callback, then collect the
+         *  definition into the plan. */
         private final class EntryBuilder {
             private final com.tkisor.nekojs.core.dynamic.plan.DynamicDefinitionBuilder builder;
 

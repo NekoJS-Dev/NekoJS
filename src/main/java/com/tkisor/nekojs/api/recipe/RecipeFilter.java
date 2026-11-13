@@ -1,5 +1,6 @@
-// 版本差异下沉到 RecipeEventJS 的版本中立静态助手（getRecipeOutputId 的双参重载 /
-// recipeHolderId / recipeGroup / ingredientMatches），本文件因此零版本守卫。
+// Version differences live in version-neutral static helpers of RecipeEventJS (the two-argument
+// overload of getRecipeOutputId, recipeHolderId, recipeGroup, ingredientMatches), so this file has
+// no version guards.
 package com.tkisor.nekojs.api.recipe;
 
 import com.tkisor.nekojs.wrapper.event.server.RecipeEventJS;

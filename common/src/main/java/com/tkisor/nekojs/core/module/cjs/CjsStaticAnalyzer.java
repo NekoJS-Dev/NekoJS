@@ -9,28 +9,31 @@ import java.util.List;
 import java.util.Set;
 
 /**
- * CJS 静态分析器（第二阶段：Java-backed CJS 基础设施的一部分）。
+ * Static analyzer for CommonJS modules.
  *
- * <p>复用 {@link NekoEsmLexer} 做字符串/注释/正则/模板感知的 token 化，然后扫描 token 流
- * 识别 CJS 关键语义：
+ * <p>It reuses {@link NekoEsmLexer} to tokenize with string, comment, regex and template awareness,
+ * then scans the token stream for the key CommonJS semantics:
  * <ul>
- *   <li>{@code require('literal')} 调用 → 静态依赖（跳过成员访问 {@code x.require(...)} 与
- *       非字面量参数）；</li>
- *   <li>{@code module.exports = ...} 整体重赋值、{@code exports.xxx = ...} /
- *       {@code module.exports.xxx = ...} 成员赋值；</li>
- *   <li>{@code __esModule} 互操作标记（Babel/TS 编译产物）；</li>
- *   <li>require 被局部声明遮蔽（函数参数、{@code let/const/var require}、{@code require = ...}）
- *       → 静态依赖标记为不可靠。</li>
+ *   <li>{@code require('literal')} calls become static dependencies (member access such as
+ *       {@code x.require(...)} and non-literal arguments are skipped);</li>
+ *   <li>whole reassignment through {@code module.exports = ...}, and member assignment through
+ *       {@code exports.xxx = ...} / {@code module.exports.xxx = ...};</li>
+ *   <li>the {@code __esModule} interop marker (Babel/TS compiler output);</li>
+ *   <li>require shadowed by a local declaration (function parameter,
+ *       {@code let/const/var require}, {@code require = ...}), which marks the static dependencies
+ *       as unreliable.</li>
  * </ul>
  *
- * <p>限制（保守近似，不追求完整 AST 语义）：条件分支内赋值不区分可达性；动态 require
- * （非字面量）不提取；箭头函数参数影子 require 不检测。需要精确语义时以执行期为准。
+ * <p>Limits, as a conservative approximation rather than full AST semantics: assignments inside
+ * conditional branches are not checked for reachability, dynamic require (non-literal) is not
+ * extracted, and arrow function parameters that shadow require are not detected. When precise
+ * semantics matter, the runtime behavior is authoritative.
  */
 public final class CjsStaticAnalyzer {
 
     private CjsStaticAnalyzer() {}
 
-    /** 分析 CJS 源码；{@code null} 源码按空模块处理。 */
+    /** Analyzes CommonJS source; a {@code null} source is treated as an empty module. */
     public static CjsModuleRecord analyze(String source) {
         if (source == null || source.isEmpty()) {
             return CjsModuleRecord.EMPTY;
@@ -103,18 +106,19 @@ public final class CjsStaticAnalyzer {
                 shadowedRequire);
     }
 
-    /** 前一个 token 是 {@code .} 或 {@code ?.} → 成员访问，不是模块 require 引用。 */
+    /** The previous token is {@code .} or {@code ?.}, so this is member access, not a module require reference. */
     private static boolean isMemberAccess(List<NekoEsmToken> tokens, int index) {
         NekoEsmToken prev = peek(tokens, index - 1);
         return prev != null && (prev.text(".") || prev.text("?."));
     }
 
     /**
-     * require 被局部声明遮蔽的常见模式：
+     * The common patterns that shadow require with a local declaration:
      * <ul>
-     *   <li>{@code let/const/var require}（声明）；</li>
-     *   <li>{@code require = ...} / 复合赋值（赋值目标，与前置 token 无关）；</li>
-     *   <li>{@code function name(require, ...)} 或 {@code function (require)}（函数参数）。
+     *   <li>{@code let/const/var require} (declaration);</li>
+     *   <li>{@code require = ...} or a compound assignment (assignment target, whatever the previous
+     *       token is);</li>
+     *   <li>{@code function name(require, ...)} or {@code function (require)} (function parameter).
      * </ul>
      */
     private static boolean isShadowingDeclaration(List<NekoEsmToken> tokens, int index) {
@@ -123,32 +127,39 @@ public final class CjsStaticAnalyzer {
             if (prev.identifier("let") || prev.identifier("const") || prev.identifier("var")) {
                 return true;
             }
-            // 函数参数：function 后跟 (require 或 function name(require
+            // Function parameter: `function (` or `function name(` directly before require
             if (prev.text("(") || prev.text(",")) {
                 return isInsideFunctionParamList(tokens, index);
             }
         }
-        // 赋值目标 require = ...：require 可能是文件首个 token（prev 为 null），独立判断
+        // Assignment target `require = ...`: require may be the first token of the file, so prev is
+        // null here and this check stands on its own
         return isAssignmentOperator(peek(tokens, index + 1));
     }
 
-    /** {@code = true}（或 {@code = !0}）形式的互操作标记赋值；其它右侧值不算。 */
+    /**
+     * An interop marker assignment of the form {@code = true} or {@code = !0}; any other
+     * right-hand value does not count.
+     */
     private static boolean isTrueAssignment(List<NekoEsmToken> tokens, int eqIndex) {
         NekoEsmToken eq = peek(tokens, eqIndex);
         NekoEsmToken value = peek(tokens, eqIndex + 1);
         if (eq == null || !eq.text("=")) return false;
         if (value != null && value.identifier("true")) return true;
-        // Babel 压缩产物常见 !0
+        // `!0` is common in minified Babel output
         NekoEsmToken not = peek(tokens, eqIndex + 1);
         NekoEsmToken zero = peek(tokens, eqIndex + 2);
         return not != null && not.text("!") && zero != null && zero.text("0");
     }
 
-    /** 从 require 位置向前找最近的 function 关键字，且中间无右括号闭合（即处于参数列表内）。 */
+    /**
+     * Looks backwards from the require position for the nearest function keyword with no closing
+     * parenthesis in between, meaning require is inside the parameter list.
+     */
     private static boolean isInsideFunctionParamList(List<NekoEsmToken> tokens, int index) {
         for (int j = index - 1; j >= 0; j--) {
             NekoEsmToken t = tokens.get(j);
-            if (t.text(")")) return false;   // 已闭合的括号，不是参数列表
+            if (t.text(")")) return false;   // Brackets already closed, so this is not a parameter list
             if (t.identifier("function")) return true;
         }
         return false;

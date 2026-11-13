@@ -14,24 +14,29 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 
 /**
- * 实体事件面的 fabric 桥：joinLevel（按实体类型 dispatch，经自建 mixin 钩子——
- * fabric-api 无「实体加入世界（含 summon/生成）」等价事件，ENTITY_LOAD 仅覆盖存储装载）
- * + death（dispatch，经 ServerLivingEntityEvents.ALLOW_DEATH：死亡判定前触发，
- * 语义对齐 NeoForge LivingDeathEvent）
- * + damagePre/damagePost（dispatch，经 ALLOW_DAMAGE/AFTER_DAMAGE）。
+ * Fabric bridge for entity events:
+ * joinLevel (dispatched by entity type through our own mixin hook, because fabric-api has no
+ * event for an entity joining the world, including summon and spawn; ENTITY_LOAD only covers
+ * loading from storage)
+ * + death (dispatched through ServerLivingEntityEvents.ALLOW_DEATH, which fires before the death
+ * decision, matching NeoForge LivingDeathEvent)
+ * + damagePre/damagePost (dispatched through ALLOW_DAMAGE/AFTER_DAMAGE).
  *
- * <p>总线名与 dispatch 语义和 NeoForge 侧一致（脚本
- * {@code EntityEvents.joinLevel('minecraft:zombie', ...)} 跨加载器同写法）；
- * payload 为中立类，成员名对齐原生事件 getter（entity/level/source）。
+ * <p>Bus names and dispatch behavior match NeoForge (a script writes
+ * {@code EntityEvents.joinLevel('minecraft:zombie', ...)} the same way on both loaders). The
+ * payload is a neutral class and its members are named after the vanilla event getters
+ * (entity/level/source).
  *
- * <p>damagePre 用 {@code EventBusJS.of(type, true, dispatch)} 显式建可取消总线（fabric 没有
- * NeoForge 的 {@code ICancellableEvent} 判定链，{@code EventGroup.server} 的默认可取消性
- * 谓词在 fabric 上恒为不可取消）；监听器返回 {@code true} → ALLOW_DAMAGE 返回 false 免除伤害。
- * 已知能力差异：fabric 的 ALLOW_DAMAGE 不支持改写伤害量（NeoForge Pre 可以），只支持取消。
+ * <p>damagePre builds a cancellable bus explicitly with
+ * {@code EventBusJS.of(type, true, dispatch)}: fabric has no {@code ICancellableEvent} check
+ * chain like NeoForge, and the default cancellability predicate of {@code EventGroup.server} is
+ * always non-cancellable on fabric. A listener returning {@code true} makes ALLOW_DAMAGE return
+ * false, which removes the damage. Known capability gap: fabric's ALLOW_DAMAGE cannot change the
+ * damage amount (NeoForge Pre can); it only supports cancellation.
  */
 public final class FabricEntityEventBindings {
 
-    /** 与 NeoForge 侧 bindings/event/EntityEvents 同名（fabric 子集）。 */
+    /** Same names as bindings/event/EntityEvents on NeoForge (a fabric subset). */
     public static final EventGroup ENTITY_EVENTS = EventGroup.of("EntityEvents");
 
     public static final EventBusJS<EntityJoinLevelEventJS, EntityType<?>> JOIN_LEVEL =
@@ -57,7 +62,7 @@ public final class FabricEntityEventBindings {
 
     public static void register() {
         LOGGER.info("FabricEntityEventBindings registering");
-        // joinLevel 由 ServerLevelMixin 在 addEntity 成功后经 postJoinLevel 触发
+        // joinLevel is triggered by ServerLevelMixin through postJoinLevel after addEntity succeeds.
         ServerLivingEntityEvents.ALLOW_DEATH.register((entity, source, damageAmount) -> {
             DEATH.post(new LivingDeathEventJS(entity, source), entity.getType());
             return true;
@@ -68,10 +73,12 @@ public final class FabricEntityEventBindings {
                 DAMAGE_POST.post(new LivingDamageEventJS(entity, source, amount), entity.getType()));
     }
 
-    /** ServerLevelMixin 钩子入口：ServerLevel 接受实体加入时调用（服务端专属，天然满足 SERVER 总线约定）。 */
+    /** Hook entry for {@code ServerLevelMixin}: called when a {@code ServerLevel} accepts an entity
+     *  join. This runs on the server only, so it meets the SERVER bus rule by construction. */
     public static void postJoinLevel(Entity entity, ServerLevel level) {
         JOIN_LEVEL.post(new EntityJoinLevelEventJS(entity, level), entity.getType());
-        // 与 NeoForge 侧 NekoJSMod 的 EntityJoinLevelEvent 监听同职责：应用脚本注册的 goal
+        // Does the same job as the EntityJoinLevelEvent listener in NekoJSMod on NeoForge: apply the
+        // goals that scripts registered.
         GoalRegistry.onEntityJoinLevel(entity, level);
     }
 }

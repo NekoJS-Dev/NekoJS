@@ -9,38 +9,38 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 /**
- * {@code LevelEvents.explosionStart / explosionDetonate}（及 beforeExplosion /
- * afterExplosion 别名）的 fabric 挂点：{@code ServerExplosion#explode()} 的
- * HEAD / TAIL。
+ * Fabric hook for {@code LevelEvents.explosionStart} and {@code LevelEvents.explosionDetonate}
+ * (with the beforeExplosion and afterExplosion aliases): the HEAD and TAIL of
+ * {@code ServerExplosion#explode()}.
  *
- * <p>26.x 爆炸形态（javap 实证）：
+ * <p>26.x explosion shape (checked with javap):
  * <ul>
- *   <li>{@code Explosion} 是**接口**，实现 {@code ServerExplosion}——构造只发生在
- *       {@code ServerLevel.explode(...)}（全 jar 常量池扫描仅此一处
- *       {@code new ServerExplosion}），因此 {@code explode()} 的 HEAD/TAIL 等价于
- *       NeoForge 的 ExplosionEvent.Start/Detonate 时点（Start=结算前，
- *       Detonate=结算后，同 {@code ServerLevel.explode} 的爆炸包发出前）。</li>
- *   <li>{@code public int explode()}：{@code gameEvent(EXPLODE)} →
- *       {@code calculateExplodedPositions()} → {@code hurtEntities()} →
- *       {@code interactWithBlocks()}（若 interactsWithBlocks）→
- *       {@code createFire()}，返回受影响方块数；之后 {@code ServerLevel.explode}
- *       才向玩家发 {@code ClientboundExplodePacket}。26.x 无独立
- *       {@code finalizeExplosion()} 阶段——两个事件点安全分开。</li>
- *   <li>仅服务端：客户端爆炸走 {@code ClientLevel#explode} 的独立实现
- *       （javap 实证，ClientLevel 类在 client/multiplayer 包）与爆炸包渲染，
- *       不触达 {@code ServerExplosion}。</li>
- *   <li>载荷数据读 {@link Explosion} 接口公共成员（level/center/radius/
- *       getDirectSourceEntity/getIndirectSourceEntity），无需 AW。</li>
+ *   <li>{@code Explosion} is an <b>interface</b> and {@code ServerExplosion} implements it.
+ *       Construction happens only in {@code ServerLevel.explode(...)} (a constant-pool scan finds
+ *       this as the only {@code new ServerExplosion} in the jar), so HEAD and TAIL of
+ *       {@code explode()} match the timing of NeoForge ExplosionEvent.Start and
+ *       ExplosionEvent.Detonate: Start before resolution, Detonate after it, both before
+ *       {@code ServerLevel.explode} sends the explosion packet.</li>
+ *   <li>{@code public int explode()} runs {@code gameEvent(EXPLODE)},
+ *       {@code calculateExplodedPositions()}, {@code hurtEntities()},
+ *       {@code interactWithBlocks()} (when it interacts with blocks) and {@code createFire()},
+ *       and returns the number of affected blocks; only afterwards does {@code ServerLevel.explode}
+ *       send {@code ClientboundExplodePacket} to players. 26.x has no separate
+ *       {@code finalizeExplosion()} stage, so the two event points stay separate.</li>
+ *   <li>Server only: a client explosion uses its own {@code ClientLevel#explode} implementation
+ *       (javap; the ClientLevel class is in the client/multiplayer package) and packet rendering,
+ *       and never reaches {@code ServerExplosion}.</li>
+ *   <li>The payload reads public members of the {@link Explosion} interface (level/center/radius/
+ *       getDirectSourceEntity/getIndirectSourceEntity) and needs no AW.</li>
  * </ul>
  *
- * <p><b>取消语义说明（known caveat）</b>：HEAD 取消采用
- * {@code cir.setReturnValue(0)}（必填，int 返回）——爆炸本身（伤害/方块/火焰）
- * 被跳过，但 {@code ServerLevel.explode} 后续仍会对半径 64 内的玩家发出一个
- * {@code blockCount=0}、无受伤者的 {@code ClientboundExplodePacket}（视觉/音效
- * 仍播，无后果）。NeoForge 的 Start 取消是整方法打断（含不发包）。如需完全对齐，
- * 可换挂点：注入 {@code ServerLevel.explode} 的 HEAD 整体 {@code ci.cancel()}
- * （见接线清单给出的备选代码，代价是载荷拿不到 {@code Explosion} 对象，只能从
- * 方法参数组）。
+ * <p><b>Cancelling (known caveat)</b>: HEAD cancelling calls {@code cir.setReturnValue(0)}, which
+ * the int return type requires. The explosion itself (damage, blocks, fire) is skipped, but
+ * {@code ServerLevel.explode} still sends players within 64 blocks a {@code ClientboundExplodePacket}
+ * with {@code blockCount=0} and no hurt entities, so the visuals and sound still play with no
+ * effect. NeoForge Start cancelling interrupts the whole method and sends no packet. To match that
+ * exactly, hook the HEAD of {@code ServerLevel.explode} and call {@code ci.cancel()} there, at the
+ * cost of building the payload from the method parameters instead of an {@code Explosion} object.
  */
 @Mixin(ServerExplosion.class)
 public abstract class MixinServerExplosion {

@@ -63,8 +63,10 @@ public abstract class RecipeManagerMixin implements IRecipeManagerExtension {
     @Unique
     private final Map<Identifier, JsonElement> nekojs$rawJsons = new HashMap<>();
 
-    // 永久缓存 prepare() 读到的原始配方 JSON，让 nekojs$applyScripts() 可被 /nekojs reload server 反复调用（热重载）。
-    // rawJsons 是每次 applyScripts 的工作集（会被条件过滤 mutate、末尾 clear），baseJsons 只在 prepare 时整体重建。
+    // Permanently caches the raw recipe JSON that prepare() read, so nekojs$applyScripts() can be called
+    // again and again by /nekojs reload server (hot reload). rawJsons is the working set of one
+    // applyScripts call: condition filtering mutates it and the end of the call clears it. baseJsons
+    // is only rebuilt as a whole during prepare.
     @Unique
     private final Map<Identifier, JsonElement> nekojs$baseJsons = new HashMap<>();
     @Unique
@@ -119,11 +121,13 @@ public abstract class RecipeManagerMixin implements IRecipeManagerExtension {
                 nekojs$rawJsons.put(id, JsonParser.parseReader(reader));
             } catch (Exception e) {
                 this.nekojs$sourceJsonsValid = false;
-                // 坏配方 JSON 不再静默丢弃：告警并附 id，方便整合包作者定位
+                // Bad recipe JSON is not dropped silently: log a warning with the id so modpack authors can find
+                // the broken entry.
                 NekoJS.LOGGER.warn("Failed to parse recipe JSON '{}'; it will be skipped", id, e);
             }
         }
-        // 同步永久缓存：热重载时 nekojs$applyScripts() 从 baseJsons 重建工作集
+        // Sync the permanent cache; on a hot reload nekojs$applyScripts() rebuilds its working set from
+        // baseJsons.
         nekojs$baseJsons.clear();
         nekojs$baseJsons.putAll(nekojs$rawJsons);
     }
@@ -140,14 +144,15 @@ public abstract class RecipeManagerMixin implements IRecipeManagerExtension {
         boolean[] successful = {this.nekojs$sourceJsonsValid};
         boolean replaySucceeded = false;
         try {
-            // 从永久缓存重建工作集，使本方法可被 /nekojs reload server 反复调用。
-            // rawJsons 在下方会被条件过滤 mutate、末尾 clear，故每次入口都从 baseJsons 重新拷贝。
+            // Rebuild the working set from the permanent cache so the method can run again on every
+            // /nekojs reload server. Condition filtering mutates rawJsons and the end of the call clears it,
+            // so the copy from baseJsons is remade on each entry.
             this.nekojs$rawJsons.clear();
             this.nekojs$rawJsons.putAll(this.nekojs$baseJsons);
             int beforeCount = this.nekojs$rawJsons.size();
 //? if neoforge {
-            // 相当于: ! ICondition.conditionsMatched(JsonOps.INSTANCE, entry.getValue())
-            // 这么写只是为了避免重复创建 ConditionalOps
+// Same as: ! ICondition.conditionsMatched(JsonOps.INSTANCE, entry.getValue())
+// Written this way only to avoid creating the ConditionalOps repeatedly.
             var conditionalCodec = ConditionalOps.createConditionalCodec(Unit.CODEC);
             this.nekojs$rawJsons.entrySet().removeIf(entry -> ICondition.getWithConditionalCodec(conditionalCodec, JsonOps.INSTANCE, entry.getValue()).isEmpty());
 
@@ -157,16 +162,18 @@ public abstract class RecipeManagerMixin implements IRecipeManagerExtension {
 
             RecipeEventJS eventJS = new RecipeEventJS(this.nekojs$rawJsons, this.registries, RecipeTypeDefinitionStorage.current());
             try {
-                // 原料动作（damage/keep/replaceIngredient）是纯脚本状态：脚本重跑前整表清空，
-                // 由本次脚本执行期间 RecipeJsonBuilder 的动作调用重建——删掉的脚本动作随之消失
+                // Ingredient actions (damage/keep/replaceIngredient) are pure script state: the whole table is
+                // cleared before the scripts rerun and rebuilt by the RecipeJsonBuilder calls made while the
+                // scripts run, so actions of deleted scripts disappear with them.
                 com.tkisor.nekojs.api.recipe.IngredientActionRegistry.clear();
                 NekoRuntimeAccess.get().beforeRecipeLoading(eventJS);
                 if (!ServerEvents.RECIPES.postChecked(eventJS)) successful[0] = false;
                 eventJS.prepareRecipesForDecode();
             } catch (PolyglotException e) {
                 successful[0] = false;
-                // 错误上报经 ScriptErrorReporter 门面（root-owned ErrorTracker 的静态报告面，
-                // 由共享装配函数安装）——mixin 静态上下文无法注入 root，不再直读 static root
+                // Errors are reported through the ScriptErrorReporter facade, the static reporting face of the
+                // root-owned ErrorTracker that the shared assembly function installs; static mixin context cannot
+                // inject the root.
                 ScriptErrorReporter.recordEventError(ScriptType.SERVER, e);
             } catch (Exception e) {
                 successful[0] = false;
@@ -193,9 +200,10 @@ public abstract class RecipeManagerMixin implements IRecipeManagerExtension {
                 }
             }
 
-            // ticket 23（AC3）：整批解析完成后一次性替换 RecipeMap（单引用提交，无半更新）；
-            // afterRecipes（脚本事件与插件 hook）只在提交之后触发——此前它先于 codec 解析，
-            // 消费者会观察到未提交的旧配方表。afterRecipes 阶段的修改不再进入本次提交。
+            // After the whole batch has parsed, the RecipeMap is replaced in one go: a single reference commit,
+            // never a half update. afterRecipes (script event and plugin hooks) fires only after that commit,
+            // so consumers see the committed recipe table, and changes made during afterRecipes do not enter
+            // this commit.
             this.recipes = RecipeMap.create(newHolders);
             try {
                 if (!ServerEvents.AFTER_RECIPES.postChecked(eventJS)) successful[0] = false;

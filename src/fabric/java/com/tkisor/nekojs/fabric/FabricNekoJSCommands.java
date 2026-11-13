@@ -42,21 +42,26 @@ import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 /**
- * fabric 侧的 {@code /nekojs} 指令树（挂载等价 NeoForge 的 {@code RegisterCommandsEvent}）。
+ * The {@code /nekojs} command tree on the Fabric side, mounted where NeoForge uses
+ * {@code RegisterCommandsEvent}.
  *
- * <p>共享树的 {@code NekoJSCommands} 还是整文件 neoforge 守卫（它的依赖面——错误面板网络包、
- * 工作区编辑器、Modification 重放、ClientReloadExecutor——大多未移植 fabric，见
- * {@code docs/fabric-port-status} 的缺口清单），在那些面落地前由本文件提供 fabric 当前能力
- * 子集。子命令与 NeoForge 版同名同语义；差异：
+ * <p>The shared {@code NekoJSCommands} is still guarded neoforge for the whole file: most of what it
+ * needs (the error panel network packets, the workspace editor, Modification replay and
+ * ClientReloadExecutor) is not ported to Fabric. The gaps are listed in
+ * {@code docs/fabric-port-status}. Until those pieces land, this file provides the command subset
+ * Fabric supports. Subcommands have the same names and meaning as the NeoForge version, with these
+ * differences:
  * <ul>
- *   <li>{@code error} / {@code view_all_errors} 降级为文本输出（错误 UI 与网络面板未移植）</li>
- *   <li>{@code editor} 不注册（工作区编辑器 GUI 面未移植）</li>
- *   <li>SERVER reload 做配方热重载（RecipeManagerMixin 孪生）+ Modification 重放
- *       （ItemModificationEventJS/BlockModificationEventJS 已去守卫复用）；
- *       村民交易重放仍未移植（对应机制无 fabric 落点）</li>
+ *   <li>{@code error} and {@code view_all_errors} degrade to text output (the error UI and network
+ *       panel are not ported)</li>
+ *   <li>{@code editor} is not registered (the workspace editor GUI is not ported)</li>
+ *   <li>A SERVER reload hot-reloads recipes (through the RecipeManagerMixin twin) and replays
+ *       modifications (ItemModificationEventJS/BlockModificationEventJS are reused without their
+ *       guards); villager trade replay is still not ported because that mechanism has no Fabric
+ *       hook</li>
  *   <li>CLIENT reload is queued on the client thread, with results returned to the server source</li>
  * </ul>
- * 依赖面齐后应与共享树版合并回单副本。
+ * This file should merge back into the shared copy once its dependencies land.
  */
 public final class FabricNekoJSCommands {
 
@@ -233,9 +238,10 @@ public final class FabricNekoJSCommands {
     }
 
     /**
-     * SERVER 脚本 reload 后重新应用配方脚本（与 NeoForge 版 {@code NekoJSCommands#applyRecipeScripts}
-     * 同语义）：RecipeManagerMixin 孪生的 {@code nekojs$applyScripts()} 从永久缓存重建工作集并
-     * 重跑配方脚本；其内部会向全体 gamemaster 广播 ✔/⚠。
+     * Re-applies the recipe scripts after a SERVER script reload, with the same meaning as
+     * {@code NekoJSCommands#applyRecipeScripts} on NeoForge: the RecipeManagerMixin twin's
+     * {@code nekojs$applyScripts()} rebuilds the working set from the permanent cache and reruns the
+     * recipe scripts. It broadcasts ✔/⚠ to every gamemaster.
      */
     private static void applyRecipeScripts(CommandSourceStack source) {
         net.minecraft.server.MinecraftServer server = source.getServer();
@@ -290,7 +296,7 @@ public final class FabricNekoJSCommands {
     }
 
     // ------------------------------------------------------------------
-    //  error / view_all_errors（文本降级：错误 UI 与网络面板未移植）
+    //  error / view_all_errors (text fallback: the error UI and network panel are not ported)
     // ------------------------------------------------------------------
 
     private static LiteralArgumentBuilder<CommandSourceStack> errorCommand(Supplier<NekoRuntimeRoot> rootProvider) {
@@ -560,7 +566,8 @@ public final class FabricNekoJSCommands {
     //  Registry health and read-only fluid inspection
     // ------------------------------------------------------------------
 
-    /** /nekojs registry：动态注册健康快照。fabric 上动态注册面未移植，快照恒为空。 */
+    /** /nekojs registry: health snapshot of dynamic registration. The dynamic registration side is not
+     * ported to Fabric, so the snapshot is always empty. */
     private static LiteralArgumentBuilder<CommandSourceStack> registryCommand() {
         return Commands.literal("registry")
                 .executes(context -> {

@@ -8,23 +8,29 @@ import net.neoforged.neoforge.network.handling.IPayloadContext;
 import java.util.List;
 
 /**
- * 包分发 payload 的客户端接收处理器（NeoForge 26.x / 1.21.1 共用，payload 类各平台
- * 同 FQCN 复制、线格式一致）。
+ * Client-side receive handler for pack distribution payloads (shared by NeoForge 26.x and 1.21.1;
+ * the payload classes are copied under the same FQCN on each platform and share the wire format).
  *
- * <p>配置阶段时序（全盘参考 Katton）：NeoForge 在网络线程收包 → {@code prepareMainThreadWork}
- * 登记 latch → {@code enqueueWork} 切主线程执行落盘/验签/信任/脚本执行 → 网络线程
- * {@code awaitMainThreadWork} 阻塞直到主线程完成。网络线程阻塞期间连接的后续包
- * （注册表同步、finish configuration）不会推进——保证原版注册表校验时远端脚本产物已就位。
+ * <p>Configuration-phase timing: NeoForge receives the packet on the network thread, then
+ * {@code prepareMainThreadWork} registers a latch, then {@code enqueueWork} switches to the main
+ * thread to write files, verify signatures, check trust and run scripts, while the network thread
+ * blocks in {@code awaitMainThreadWork} until the main thread finishes. While the network thread is
+ * blocked, the connection's later packets (registry sync, finish configuration) do not advance, which
+ * guarantees the remote script artifacts are in place when vanilla validates its registry.
  *
- * <p>地址解析：配置阶段 {@code Minecraft#getCurrentServer()} 依赖 play 阶段的
- * ClientPacketListener（此时尚未建立），因此从连接的远端套接字地址取 hostname——
- * 未信任断连消息中打印的即 bucket 所用地址，用户照抄 {@code /nekojs trust} 即可。
+ * <p>Address resolution: in the configuration phase {@code Minecraft#getCurrentServer()} relies on
+ * the play-phase ClientPacketListener, which does not exist yet, so the hostname comes from the
+ * connection's remote socket address. That is the address used for the bucket and printed in the
+ * untrusted-disconnect message, so the user can copy it into {@code /nekojs trust}.
  */
 public final class PackSyncMessageHandler {
 
     private PackSyncMessageHandler() {}
 
-    /** S2C 配置阶段哈希清单。本地/单人内存连接跳过（同步语义只针对真实远端连接）。 */
+    /**
+     * S2C configuration-phase hash list. Local/singleplayer memory connections are skipped, because the
+     * sync semantics only apply to real remote connections.
+     */
     public static void handleHashListOnClient(PackHashListPayload payload, IPayloadContext context) {
         if (context.connection().isMemoryConnection()) return;
         String address = PackSyncClient.normalizeRemoteAddress(context.connection().getRemoteAddress());
@@ -44,7 +50,10 @@ public final class PackSyncMessageHandler {
         PackSyncClient.awaitMainThreadWork();
     }
 
-    /** S2C 配置阶段 bundle：管线拒绝（验签失败/完整性失败/未信任）时断连并展示原因。 */
+    /**
+     * S2C configuration-phase bundle. When the pipeline rejects it (signature failure, integrity failure
+     * or untrusted server), it disconnects and shows the reason.
+     */
     public static void handleBundleOnClient(PackBundlePayload payload, IPayloadContext context) {
         if (context.connection().isMemoryConnection()) return;
         List<com.tkisor.nekojs.core.pack.sync.SyncedPack> packs = payload.toSyncedPacks();

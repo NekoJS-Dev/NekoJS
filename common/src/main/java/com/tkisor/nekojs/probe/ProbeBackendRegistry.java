@@ -10,18 +10,21 @@ import java.util.Optional;
 import java.util.Set;
 
 /**
- * 多 backend 注册表：按 {@code (languageId, name)} 二维登记。
+ * Registry of probe backends, keyed by {@code (languageId, name)}.
  *
- * <p>同一语言可有多个 backend（不同 name）；同名同语言在 {@link #lock()} 时 fail-fast 崩溃，
- * 沿用旧 {@code ProbeRegistry} 的冲突报告风格。{@link #backendsFor(String)} 按 {@link ProbeBackend#priority()}
- * 降序返回，最高者优先作为该语言的默认 backend。
+ * <p>One language can have several backends with different names. {@link #lock()} fails fast when
+ * two backends share the same language and name, with the conflict report style of
+ * {@code ProbeRegistry}. {@link #backendsFor(String)} returns them by
+ * {@link ProbeBackend#priority()}, highest first, and the highest one is the default backend for that
+ * language.
  */
 public final class ProbeBackendRegistry {
 
-    /** Bootstrap 期创建并 lock 后通过 {@link #setInstance(ProbeBackendRegistry)} 注入；运行期命令/协调器经 {@link #get()} 取用。 */
+    /** The locked registry built during bootstrap, injected through {@link #setInstance(ProbeBackendRegistry)}.
+     *  Commands and the coordinator read it at runtime through {@link #get()}. */
     private static volatile ProbeBackendRegistry INSTANCE;
 
-    /** 返回 bootstrap 注入的注册表单例（未注入时抛异常）。 */
+    /** Returns the registry singleton injected during bootstrap. Throws when nothing was injected. */
     public static ProbeBackendRegistry get() {
         ProbeBackendRegistry inst = INSTANCE;
         if (inst == null) {
@@ -31,8 +34,8 @@ public final class ProbeBackendRegistry {
     }
 
     /**
-     * Bootstrap 专用：注入锁定后的注册表单例。完整 reload 触发的二次 bootstrap
-     * 用新一轮的注册表整体替换旧单例（reload 可重入），而不是抛异常。
+     * Bootstrap only: injects the locked registry singleton. A second bootstrap from a full reload
+     * replaces the old singleton with the new registry instead of throwing, because reload can re-enter.
      */
     public static synchronized void setInstance(ProbeBackendRegistry registry) {
         INSTANCE = java.util.Objects.requireNonNull(registry, "registry");
@@ -44,10 +47,10 @@ public final class ProbeBackendRegistry {
     private volatile boolean locked = false;
 
     /**
-     * 注册一个 backend。
+     * Registers a backend.
      *
-     * @param backend 非 null
-     * @param source  注册来源（mod id / 类名），用于冲突诊断
+     * @param backend must not be null
+     * @param source  where the registration came from (mod id or class name), used to diagnose conflicts
      */
     public synchronized void register(ProbeBackend backend, String source) {
         if (locked) {
@@ -73,7 +76,7 @@ public final class ProbeBackendRegistry {
         }
     }
 
-    /** 锁定注册表；若存在 (语言, 名字) 冲突则抛异常崩溃。 */
+    /** Locks the registry. Throws when any (language, name) pair was registered twice. */
     public synchronized void lock() {
         locked = true;
         if (conflicts.isEmpty()) {
@@ -96,7 +99,7 @@ public final class ProbeBackendRegistry {
         return locked;
     }
 
-    /** 该语言下所有 backend，按 priority 降序。 */
+    /** Returns every backend for the language, highest priority first. */
     public synchronized List<ProbeBackend> backendsFor(String languageId) {
         Map<String, ProbeBackend> names = byLanguage.getOrDefault(languageId, Map.of());
         return names.values().stream()
@@ -104,22 +107,24 @@ public final class ProbeBackendRegistry {
                 .toList();
     }
 
-    /** 该语言下 priority 最高的 backend（用作 {@code /nekojs probe <lang>} 的默认）。 */
+    /** Returns the highest-priority backend for the language, which {@code /nekojs probe <lang>} uses by
+     *  default. */
     public synchronized Optional<ProbeBackend> defaultBackend(String languageId) {
         return backendsFor(languageId).stream().findFirst();
     }
 
-    /** 精确指定 (语言, 名字) 的 backend。 */
+    /** Returns the backend registered under exactly this language and name. */
     public synchronized Optional<ProbeBackend> backend(String languageId, String name) {
         return Optional.ofNullable(byLanguage.getOrDefault(languageId, Map.of()).get(name));
     }
 
-    /** 已注册 backend 的语言集合（用于命令补全）。 */
+    /** Returns the language ids that have backends, sorted, for command completion. */
     public synchronized Set<String> languages() {
         return java.util.Collections.unmodifiableSet(new java.util.TreeSet<>(byLanguage.keySet()));
     }
 
-    /** 全部 backend（按语言注册序），供 {@code resetEditorConfig} 等跨语言遍历。 */
+    /** Returns every backend in language registration order, for cross-language walks such as
+     *  {@code resetEditorConfig}. */
     public synchronized List<ProbeBackend> allBackends() {
         List<ProbeBackend> out = new ArrayList<>();
         for (Map<String, ProbeBackend> names : byLanguage.values()) {
@@ -128,7 +133,7 @@ public final class ProbeBackendRegistry {
         return out;
     }
 
-    /** 所有已登记条目（含冲突项），用于 {@code /nekojs probe list}。 */
+    /** Returns every recorded registration, including conflicting ones, for {@code /nekojs probe list}. */
     public synchronized List<String> registrars() {
         return List.copyOf(registrars);
     }

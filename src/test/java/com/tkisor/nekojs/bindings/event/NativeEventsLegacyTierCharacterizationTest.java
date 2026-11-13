@@ -1,4 +1,4 @@
-// TODO(fabric): fabric 侧还没有对应实现，整文件守卫等移植完成后去掉
+// TODO(fabric): the fabric side has no counterpart yet; drop this whole-file guard once the port lands
 //? if neoforge {
 package com.tkisor.nekojs.bindings.event;
 
@@ -33,19 +33,22 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * 票 14 AC4：{@code NativeEvents} 的 tier 定位 characterization——保留为
- * legacy/raw Adapter 观察面（raw NeoForge event bridge），声明来源是
- * {@code TypeDocCatalogEntry}（probe 补全/文档），<strong>不</strong>被 catalog
- * 收录动作静默升级为 managed stable：
+ * Characterizes the tier of {@code NativeEvents}: it stays a legacy/raw adapter observation
+ * surface (the raw NeoForge event bridge). Its declaration source is a
+ * {@code TypeDocCatalogEntry} (for completion and docs), and the catalog collection step does
+ * <strong>not</strong> silently upgrade it to managed stable:
  *
  * <ul>
- *   <li>注册面：只在 STARTUP 绑定集注册（STARTUP reload 时 {@code close()} 注销上一轮
- *       原生监听器），SERVER/CLIENT 绑定集没有它；</li>
- *   <li>catalog 面：以 binding 进入 {@code legacySurface} 观察面（{@code global:}
- *       kind + 占位签名，ticket 09 的 legacy shadow 语义），不出现在 events 目录
- *       （它不是事件组），也不进 managedApis（managed stable 面没有这个符号）；</li>
- *   <li>声明来源：{@code NekoJSCorePlugin.registerTypeDocs} 的
- *       {@code TypeDocCatalogEntry.binding(STARTUP, "NativeEvents", ...)} 条目。</li>
+ *   <li>registration: it is registered only in the STARTUP binding set (a STARTUP reload calls
+ *       {@code close()}, which unregisters the previous round's native listeners); the
+ *       SERVER/CLIENT binding sets do not have it;</li>
+ *   <li>catalog: the binding enters the {@code legacySurface} observation surface (the
+ *       {@code global:} kind plus a placeholder signature, the legacy shadow semantics), it does
+ *       not appear in the events catalog (it is not an event group), and it does not enter
+ *       managedApis (the managed stable surface has no such symbol);</li>
+ *   <li>declaration source: the
+ *       {@code TypeDocCatalogEntry.binding(STARTUP, "NativeEvents", ...)} entry from
+ *       {@code NekoJSCorePlugin.registerTypeDocs}.</li>
  * </ul>
  */
 class NativeEventsLegacyTierCharacterizationTest {
@@ -70,9 +73,10 @@ class NativeEventsLegacyTierCharacterizationTest {
 
     @Test
     void catalogExposureStaysLegacyObservationAndNeverEntersManagedStable() {
-        // catalog 收录动作：以 STARTUP binding 进入 legacy 观察面（LegacySurfaceAdapter
-        // 是 NekoScriptCatalog.snapshot 的 legacy 投影步骤；snapshot() 本体依赖运行中的
-        // FML loader，单测无法进入，故直接驱动同一 adapter）
+        // Catalog collection: the STARTUP binding enters the legacy observation surface.
+        // LegacySurfaceAdapter is the legacy projection step of NekoScriptCatalog.snapshot.
+        // snapshot() itself needs a running FML loader and cannot run in a unit test, so the test
+        // drives the same adapter directly.
         NekoScriptCatalogSnapshot minimal = new NekoScriptCatalogSnapshot(
                 List.of(ScriptType.STARTUP),
                 NekoScriptCatalog.bindings(new RuntimeWithNativeEvents(), ScriptType.STARTUP),
@@ -87,10 +91,10 @@ class NativeEventsLegacyTierCharacterizationTest {
                 "NativeEvents is observable in the legacy surface (global: observation kind)");
         assertEquals(0, minimal.events().size(),
                 "NativeEvents is not an event group: the events catalog has no NativeEvents entries");
-        // managed stable 面的唯一构成来源是 apiRuntime 贡献（ticket 09 派生链：
-        // CoreManagedApiBootstrap → ApiContributionRegistry → JsApiSurfaceResolver）。
-        // NativeEventsJS 是 raw binding，不注册任何 ApiContribution——「不被 catalog
-        // 收录动作静默升级 managed stable」的结构性证据见本票 REPORT 旁路清单。
+        // The managed stable surface is built only from apiRuntime contributions (the chain
+        // CoreManagedApiBootstrap -> ApiContributionRegistry -> JsApiSurfaceResolver).
+        // NativeEventsJS is a raw binding and registers no ApiContribution, so the catalog
+        // collection step cannot silently upgrade it to managed stable.
     }
 
     @Test
@@ -120,7 +124,8 @@ class NativeEventsLegacyTierCharacterizationTest {
                 "the doc carries the usage example (probe/completion source)");
     }
 
-    /** 只带 NativeEvents STARTUP binding 的最小 runtime（观察 legacySurface 的投影输入）。 */
+    /** A minimal runtime carrying only the NativeEvents STARTUP binding; it is the projection
+     * input for observing legacySurface. */
     private static final class RuntimeWithNativeEvents implements IPluginRuntime {
         @Override
         public Map<String, Binding> bindings(ScriptType type) {

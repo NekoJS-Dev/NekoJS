@@ -1,4 +1,4 @@
-// TODO(fabric): fabric 侧还没有对应实现，整文件守卫等移植完成后去掉
+// TODO(fabric): there is no Fabric implementation yet; remove this whole-file guard once the port is done
 //? if neoforge {
 package com.tkisor.nekojs.core;
 
@@ -7,8 +7,9 @@ import com.tkisor.nekojs.api.annotation.RegisterNekoJSPlugin;
 import com.tkisor.nekojs.utils.ReflectionUtils;
 
 /**
- * 平台插件加载器：仅负责「发现」被 {@link RegisterNekoJSPlugin} 标记的类，
- * 过滤/实例化/priority 排序交给 common 的 {@link NekoJSBasePluginManager#registerClass}。
+ * Platform plugin loader. It only discovers classes marked with {@link RegisterNekoJSPlugin};
+ * filtering, instantiation and priority ordering are left to
+ * {@link NekoJSBasePluginManager#registerClass} in common.
  */
 public final class NeoForgePluginLoader {
     private NeoForgePluginLoader() {}

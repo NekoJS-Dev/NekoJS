@@ -21,18 +21,19 @@ import java.util.concurrent.TimeoutException;
 import java.util.function.Consumer;
 
 /**
- * 脚本执行器：负责设置/恢复 current script id、进入/退出 Java class-load telemetry scope、
- * 调用 module loader host 加载 entry、等待 native ESM evaluation / TLA 完成、把执行异常交给 {@link ErrorTracker}。
+ * Runs scripts: sets and restores the current script id, enters and leaves the Java class-load
+ * telemetry scope, asks the module loader host to load the entry, waits for the native ESM
+ * evaluation / TLA to finish, and hands execution errors to {@link ErrorTracker}.
  *
- * <p>从 {@link ScriptManager} 的 {@code runScript} / {@code waitForEntryModule} /
- * {@code waitForEvaluation} 下沉而来。{@code ScriptManager} 保留 discover/load/reload/close
- * 顶层生命周期协调，不直接承担执行细节。
+ * <p>{@link ScriptManager} keeps the top-level discover/load/reload/close lifecycle and does not
+ * handle execution details itself.
  */
 public final class ScriptExecutor {
     private final ErrorTracker errorTracker;
     private final NekoJSPaths paths;
     private final SandboxConfig sandboxConfig;
-    /** kill 上报携带发生求值的 Context：ticket 06 起区分 active / candidate generation。 */
+    /** The kill report carries the Context where evaluation happened, which distinguishes active
+     * from candidate generations. */
     private final Consumer<Context> onContextKilled;
 
     public ScriptExecutor(ErrorTracker errorTracker, NekoJSPaths paths, SandboxConfig sandboxConfig, Consumer<Context> onContextKilled) {
@@ -46,10 +47,9 @@ public final class ScriptExecutor {
                              NekoModulePipelineCache moduleSession) {
         try {
             synchronized (ctx) {
-                // Pack scripts may carry platform-relative paths (WORLD packs before the
-                // registry normalized them; see ScriptPackRegistry#activateWorldPacks) while
-                // the nekojs root is always absolute — relativize over mixed inputs throws
-                // IAE (ticket 03 §3-1 / ticket 07 G4), so normalize first.
+                // Pack scripts may carry platform-relative paths (WORLD packs before the registry normalized
+                // them; see ScriptPackRegistry#activateWorldPacks) while the nekojs root is always
+                // absolute — relativize over mixed inputs throws IAE, so normalize first.
                 Path relativePath = paths.root().relativize(script.path.toAbsolutePath().normalize());
                 String requirePath = "./" + relativePath.toString().replace("\\", "/");
 
@@ -80,8 +80,8 @@ public final class ScriptExecutor {
             script.lastError = t;
 
             ScriptError scriptError = errorTracker.record(ctx, script, t);
-            // Log history consumes the same frozen record (ticket 30): the attribution line is
-            // appended after the existing detail text, keeping the legacy body unchanged.
+            // The log line reuses the same frozen record: the attribution line is appended after the existing
+            // detail text, so the body format stays unchanged.
             com.tkisor.nekojs.script.ScriptTypeEnv.logger(script.type).error("[NEKO-1003] 脚本执行失败: {}\n{}\n{} — script execution failed",
                     script.id.toString(), scriptError.getLogDetailText(sandboxConfig.conciseScriptErrorLogs()),
                     scriptError.diagnostic().describe());
@@ -99,10 +99,13 @@ public final class ScriptExecutor {
     }
 
     /**
-     * 加载时校验入口脚本对全局绑定（Utils/Platform/Items 等）的成员访问。
+     * Validates the entry script's member access on global bindings (Utils/Platform/Items and so on) at
+     * load time.
      *
-     * <p>每次执行/重载都跑（而非只在编译时），保证游戏内错误面板在完整重载（源码未改、模块缓存命中）
-     * 时仍准确反映当前脚本状态 —— 编译时校验（{@code NekoModulePipeline}）受静态缓存限制，这里补足入口脚本。
+     * <p>It runs on every execution and reload rather than only at compile time, so the in-game error
+     * panel still reflects the current script state after a full reload whose sources did not change and
+     * whose module cache was hit. Compile-time validation ({@code NekoModulePipeline}) is limited by its
+     * static cache; this call covers the entry script.
      */
     private void validateGlobalBindings(Context context, ScriptContainer script,
                                         NekoModulePipelineCache moduleSession) {
@@ -110,15 +113,16 @@ public final class ScriptExecutor {
         try {
             source = Files.readString(script.path);
         } catch (IOException e) {
-            // 读取失败已由 preload 失败路径上报错误面板（ScriptManager.reportPreloadFailure），不重复
+            // A read failure is already reported to the error panel by the preload failure path
+            // (ScriptManager.reportPreloadFailure), so do not report it again.
             return;
         }
         try {
             moduleSession.validateEntryBindings(script.path, source);
         } catch (Throwable t) {
-            // 校验只报告错误，绝不阻塞脚本执行；但校验器自身崩了不能无声吞掉——
-            // 进错误面板（recordCallbackError 含里程碑节流），否则该类型的成员校验
-            // 静默消失且无人察觉
+            // Validation only reports errors and never blocks script execution, but a crash in the validator
+            // itself must not be swallowed: report it to the error panel (recordCallbackError applies
+            // milestone throttling), otherwise member validation for this type disappears silently.
             errorTracker.recordCallbackError(context, script.type, "preflight-validator", t);
         }
     }

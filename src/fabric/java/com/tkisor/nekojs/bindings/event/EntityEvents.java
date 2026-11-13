@@ -1,10 +1,12 @@
-// fabric 节点孪生：共享树同名接口整文件 `//? if neoforge` 守卫（总线直传 NeoForge 原生
-// 事件类）。fabric 侧 joinLevel/death/damagePre/damagePost 由 FabricEntityEventBindings 提供
-// （组实例各自注册、同名合并）；本孪生提供 drops/finalizeSpawn/tickPre/tickPost/leaveLevel
-// （中立 payload，由 FabricEntityEventBindingsV2 + fabric/mixin/* 投递）。
-// Note：本组总线只有在 FabricCorePlugin.registerEvents 注册后方对脚本可见——目前
-// FabricCorePlugin 只注册了 FabricEntityEventBindings.ENTITY_EVENTS，需补
-// registry.register(com.tkisor.nekojs.bindings.event.EntityEvents.GROUP);
+// Fabric copy of the shared tree's EntityEvents interface, which is guarded file-wide by
+// `//? if neoforge` and passes bus calls straight to the native NeoForge event classes. On
+// Fabric, joinLevel/death/damagePre/damagePost come from FabricEntityEventBindings (each group
+// instance registers on its own, and groups with the same name merge). This copy provides
+// drops/finalizeSpawn/tickPre/tickPost/leaveLevel with neutral payloads, delivered by
+// FabricEntityEventBindingsV2 + fabric/mixin/*.
+// These buses are only visible to scripts after FabricCorePlugin.registerEvents registers them.
+// It registers only FabricEntityEventBindings.ENTITY_EVENTS so far, so
+// registry.register(com.tkisor.nekojs.bindings.event.EntityEvents.GROUP); is still missing.
 package com.tkisor.nekojs.bindings.event;
 
 import com.tkisor.nekojs.api.ScriptType;
@@ -18,32 +20,38 @@ import com.tkisor.nekojs.wrapper.event.entity.MobFinalizeSpawnEventJS;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 
-/** 实体/生物事件组（server 脚本）：掉落、生成初始化、tick 与离开维度（fabric 子集），按实体类型定向。 */
+/** Entity and mob event group for server scripts: drops, spawn initialization, tick and leaving the
+ * level (the Fabric subset). Dispatched by entity type. */
 public interface EntityEvents {
     EventGroup GROUP = EventGroup.of("EntityEvents");
 
-    /** 死亡掉落（server 脚本）：按实体类型 dispatch；return true = 跳过原版掉落（脚本可选 event.drops）。 */
+    /** Death drops (server scripts): dispatched by entity type; returning true skips vanilla drops
+     * (scripts can read event.drops). */
     EventBusJS<LivingDropsEventJS, EntityType<?>> DROPS =
             GROUP.add("drops", ScriptType.SERVER, EventBusJS.of(
                     LivingDropsEventJS.class, true,
                     DispatchKey.of(EntityType.class, event -> event.getEntity().getType())));
 
-    /** 生成初始化完成（server 脚本）：按实体类型 dispatch；通知型（fabric 不可取消/不可改）。 */
+    /** Spawn initialization finished (server scripts): dispatched by entity type. Notification only;
+     * Fabric cannot cancel it or change the mob. */
     EventBusJS<MobFinalizeSpawnEventJS, EntityType<?>> FINALIZE_SPAWN =
             GROUP.server("finalizeSpawn", MobFinalizeSpawnEventJS.class,
                     DispatchKey.of(EntityType.class, event -> event.getMob().getType()));
 
-    /** 每实体 tick 前（server 脚本）：按实体类型 dispatch；高频，监听器保持轻量。 */
+    /** Before each entity tick (server scripts): dispatched by entity type. High frequency, so keep
+     * listeners light. */
     EventBusJS<EntityTickEventJS, EntityType<?>> TICK_PRE =
             GROUP.server("tickPre", EntityTickEventJS.class,
                     DispatchKey.of(EntityType.class, event -> event.getEntity().getType()));
 
-    /** 每实体 tick 后（server 脚本）：按实体类型 dispatch；高频，监听器保持轻量。 */
+    /** After each entity tick (server scripts): dispatched by entity type. High frequency, so keep
+     * listeners light. */
     EventBusJS<EntityTickEventJS, EntityType<?>> TICK_POST =
             GROUP.server("tickPost", EntityTickEventJS.class,
                     DispatchKey.of(EntityType.class, event -> event.getEntity().getType()));
 
-    /** 实体离开维度/世界（server 脚本）：按实体类型 dispatch（fabric-api ENTITY_UNLOAD）。 */
+    /** Entity leaves the dimension/world (server scripts): dispatched by entity type (fabric-api
+     * ENTITY_UNLOAD). */
     EventBusJS<EntityLeaveLevelEventJS, EntityType<?>> LEAVE_LEVEL =
             GROUP.server("leaveLevel", EntityLeaveLevelEventJS.class,
                     DispatchKey.of(EntityType.class, event -> event.getEntity().getType()));

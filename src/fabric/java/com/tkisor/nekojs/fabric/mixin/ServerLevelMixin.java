@@ -9,11 +9,13 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 /**
- * 「实体加入世界」钩子（fabric-api 无等价事件：ENTITY_LOAD 仅覆盖从存储装载，
- * summon/生成的实体不经过它）。对齐 NeoForge EntityJoinLevelEvent 语义：ServerLevel
- * 接受实体加入时（addEntity 返回 true）post 中立 payload 到 joinLevel 总线。
+ * Entity-joins-world hook. fabric-api has no equivalent event: ENTITY_LOAD only covers entities
+ * loaded from storage, and summoned/spawned entities never pass through it. The semantics match
+ * NeoForge's EntityJoinLevelEvent: when ServerLevel accepts an entity (addEntity returns
+ * {@code true}), a neutral payload is posted to the joinLevel bus.
  *
- * <p>本类经 nekojs-fabric.mixins.json 应用（fabric.mod.json {@code mixins} 键声明）。
+ * <p>This class is applied via nekojs-fabric.mixins.json (declared by the {@code mixins} key in
+ * fabric.mod.json).
  */
 @Mixin(ServerLevel.class)
 abstract class ServerLevelMixin {

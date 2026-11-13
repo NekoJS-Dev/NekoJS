@@ -83,16 +83,20 @@ public interface PlayerExtension extends PlayerSpec {
         }
     }
 
-    // —— 不进 spec 的方法（碰撞或平台独有）——
+    // ---- Methods left out of the spec (name collision with vanilla, or platform specific) ----
 
-    // isCreative() 与原生零参碰撞，行为一致，JS 直接用原生 — 删除注入版本
+    // isCreative() collides with the vanilla no-arg method and behaves the same, so scripts call the
+    // vanilla one instead of an injected version.
 
-    /** 给玩家发送消息。message 接受 String 或平台原生 Component。 */
+    /** Sends a message to the player. message accepts a String or a platform-native Component. */
     default void neko$sendMessage(Object message) {
         neko$self().sendSystemMessage(toComponent(message));
     }
 
-    /** 返回挂载到该 player 的内存数据容器；首次访问时 lazy 创建并触发 {@code attachPlayerData}。 */
+    /**
+     * Returns the in-memory data container of this player. The first access creates it lazily and
+     * fires {@code attachPlayerData}.
+     */
     AttachedData<Player> neko$data();
 
     private static Component toComponent(Object o) {

@@ -18,20 +18,23 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * 票 39 snapshot ownership / 旧路径收口的结构性 guard（AC5/AC13/AC14 的旁路证据；
- * 无 vanilla 注册表依赖 → 本机实测 26.1.2 / 26.1.2-fabric / 1.21.1 / 26.2.0 / 26.2.0-fabric 真跑）。
+ * Structural guard for snapshot ownership and for the old path being closed. It needs no
+ * vanilla registry, so it runs on 26.1.2 / 26.1.2-fabric / 1.21.1 / 26.2.0 / 26.2.0-fabric.
  *
- * <p>断言的是「旧路径已经不在了」这类可机检事实，而不是行为：进程级 static
- * {@code SNAPSHOTS}、{@code fire()} restore-all-then-replay 入口、以及视图上的
- * public live-mutation 接缝都必须消失——snapshot/restore 状态只能由 root 授权
- * domain owner 的实例字段持有，应用只发生在 Adapter。
+ * <p>These assertions check machine-checkable facts of the form "the old path is no longer
+ * there", not behavior: the process-wide static {@code SNAPSHOTS}, the {@code fire()}
+ * restore-all-then-replay entry point, and the public live-mutation hooks on the views must
+ * all be gone. Snapshot and restore state may only live in the instance fields of the domain
+ * owner authorized by the root, and applying happens only in the Adapter.
  *
- * <p>删除门禁（AC14）：本测试只是替代路径 parity 与无消费者证据的一部分；旧公开路径的
- * 正式删除仍需维护者 sign-off，见票 39 REPORT 的 AC14 章节。
+ * <p>Removal gate: this test is only part of the parity and no-consumer evidence for the
+ * replacement path. Formally deleting the old public path still needs maintainer sign-off, see
+ * the removal-gate section of the batch report.
  */
 class Ticket39ModificationOwnershipTest {
 
-    /** 视图/载荷不得公开接受这些 live 平台类型（否则脚本可绕过候选计划直接改 live 对象）。 */
+    /** Views and payloads must not publicly accept these live platform types (otherwise a script
+     * could bypass the candidate plan and change live objects directly). */
     private static final Set<String> LIVE_PLATFORM_TYPES = Set.of(
             "net.minecraft.world.item.Item",
             "net.minecraft.world.level.block.Block",
@@ -74,8 +77,9 @@ class Ticket39ModificationOwnershipTest {
                                 + "(ticket 39 AC3/AC14)");
             }
         }
-        // 调用者 Interface → Adapter 的可追溯归属（AC13）：domain owner 同时是收集挂载点、
-        // 应用接缝与 root close 清理对象，不是新的公开 Modification Runtime。
+        // Traceable ownership from the caller-facing interface to the Adapter: the domain owner is
+        // where collection is mounted, where changes are applied, and what the root cleans up on
+        // close. It is not a new public Modification Runtime.
         assertTrue(CandidateDomainCollector.class.isAssignableFrom(ModificationDomainOwner.class),
                 "the domain owner is the root-owned collection mount point");
         assertTrue(ModificationApplier.class.isAssignableFrom(ModificationDomainOwner.class),
@@ -118,9 +122,11 @@ class Ticket39ModificationOwnershipTest {
     }
 
     /**
-     * AC10 的可机检边界：modification 类不得出现网络/包符号。本票不声明任何客户端自动同步
-     * 能力（自动同步 = unsupported；relog / chunk resync 需平台侧动作），写入面只碰服务端
-     * 对象图——一旦有人给这条路径加 packet/sendTo，本 guard 立即失败，能力记录必须先更新。
+     * A machine-checkable limit for the modification classes: they must not reference network or
+     * packet symbols. This code declares no client auto-sync capability (auto-sync is unsupported;
+     * relog and chunk resync need a platform-side action), and the write side only touches
+     * server-side object graphs. If anyone adds a packet or sendTo to this path, this guard fails
+     * at once and the capability record must be updated first.
      */
     @Test
     void modificationPathReferencesNoNetworkSymbols() {

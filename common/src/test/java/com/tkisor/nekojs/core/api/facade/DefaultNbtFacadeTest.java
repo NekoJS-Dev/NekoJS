@@ -40,7 +40,7 @@ class DefaultNbtFacadeTest {
 
     @Test
     void parseRoundTripsThroughSnbtSerializer() {
-        // serialize -> parse -> serialize 应稳定（解析器读回序列化器产物）
+        // serialize -> parse -> serialize is stable: the parser reads back what the serializer writes
         LinkedHashMap<String, NbtValue> values = new LinkedHashMap<>();
         values.put("count", nbt.byteValue(2));
         values.put("short", nbt.shortValue(100));
@@ -53,7 +53,7 @@ class DefaultNbtFacadeTest {
         String snbt = nbt.toSnbt(original);
         NbtValue parsed = nbt.parse(snbt);
         assertInstanceOf(NbtValue.CompoundValue.class, parsed);
-        // 解析后再序列化应与原序列化串一致
+        // serializing the parsed value again yields the original SNBT string
         assertEquals(snbt, nbt.toSnbt(parsed));
     }
 

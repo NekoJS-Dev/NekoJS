@@ -22,15 +22,20 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * 票 16 AC1/AC7 的 reload 管线 fixture（真实 {@link ScriptManager} 事务式 reload +
- * 真实 GraalJS + 生产同款事件组绑定 + 候选域收集器挂入 {@code ScriptManager}）：
+ * Reload pipeline fixture with a real {@link ScriptManager} transactional reload, real GraalJS, the
+ * production event group binding, and the candidate domain collector wired into
+ * {@code ScriptManager}:
  * <ul>
- *   <li>初次候选（collectInitial，生产＝server registry ready 触发）发布计划；</li>
- *   <li>reload 在<b>候选阶段</b>重新收集（收集器消费候选挂起监听器，不上生产总线），
- *       preflight 通过、commit 点联合发布——成功 commit 才发布计划；</li>
- *   <li>同 key 定义变化 → 整批冲突失败（ReloadPhase.STATE_PLAN / domain=
- *       dynamic-registry-conflict），旧 active 继续服务、store 零写入；</li>
- *   <li>收集错误 → 同一失败路径；CLIENT 类型 reload 不触碰 SERVER 域账本。</li>
+ *   <li>the initial candidate (collectInitial, triggered by server registry ready in production)
+ *       publishes the plan;</li>
+ *   <li>a reload collects again in the <b>candidate phase</b> (the collector consumes the candidate
+ *       pending listeners and never touches the production bus); preflight runs and the plan is
+ *       published together at commit, so only a successful commit publishes it;</li>
+ *   <li>a changed definition for the same key fails the whole batch (ReloadPhase.STATE_PLAN with
+ *       domain=dynamic-registry-conflict); the old active definitions keep serving and the store is
+ *       not written;</li>
+ *   <li>a collection error takes the same failure path; a CLIENT reload leaves the SERVER domain
+ *       ledger untouched.</li>
  * </ul>
  */
 class DynamicRegistryReloadPipelineTest {
@@ -67,14 +72,15 @@ class DynamicRegistryReloadPipelineTest {
                     """);
             harness.manager.discoverScripts();
             harness.manager.loadScripts();
-            // 初次候选：server registry ready 触发（生产＝ServerEventListener.onServerAboutToStart）
+            // Initial candidate, triggered by server registry ready (ServerEventListener.onServerAboutToStart in production).
             var initial = harness.facade.collectInitial("server-registry-ready");
             assertTrue(initial.published(), "初次候选发布: " + initial.failureDetail());
             assertEquals(2, harness.facade.store().lastCommittedBatch().size());
             String rubyFingerprint =
                     harness.facade.store().exposedEntry("minecraft:item|mymod:ruby").definition().fingerprint();
 
-            // reload：候选阶段重新收集（收集器消费候选监听器）→ commit 点联合发布
+            // Reload: collect again in the candidate phase (the collector consumes the candidate listeners),
+            // then publish everything together at commit.
             harness.writeScript("main.js", """
                     DynamicRegistryEvents.dynamicRegistry(event => {
                         event.item('mymod:ruby', b => { b.maxStackSize = 16; b.rarity = 'epic' });
@@ -111,7 +117,7 @@ class DynamicRegistryReloadPipelineTest {
                     harness.facade.store().exposedEntry("minecraft:item|mymod:ruby").definition().fingerprint();
             long committedBefore = harness.facade.store().committedGeneration();
 
-            // 变更定义：reload 必须以 STATE_PLAN / dynamic-registry-conflict 失败
+            // Changed definition: the reload must fail with STATE_PLAN / dynamic-registry-conflict.
             harness.writeScript("main.js", """
                     DynamicRegistryEvents.dynamicRegistry(event => {
                         event.item('mymod:ruby', b => { b.maxStackSize = 32 });
@@ -121,7 +127,7 @@ class DynamicRegistryReloadPipelineTest {
             assertEquals(ReloadPhase.STATE_PLAN, failure.report().phase(), "冲突在候选 STATE_PLAN 阶段失败");
             assertEquals("dynamic-registry-conflict", failure.report().domain(), "domain 精确归因");
 
-            // 旧 active 继续服务：generation 不变、store 零写入、claim 不被动
+            // The old active definitions keep serving: the generation stays, the store is not written, claims are untouched.
             assertEquals(generationBefore, harness.manager.generationId(), "失败 reload 不切换 active generation");
             assertEquals(committedBefore, harness.facade.store().committedGeneration(), "失败批次不发布");
             assertEquals(oldFingerprint,
@@ -130,14 +136,15 @@ class DynamicRegistryReloadPipelineTest {
             assertFalse(harness.facade.store().claimOf(DynamicDefinitionType.ITEM, "mymod:ruby").stale(),
                     "失败不把旧 active 标 stale");
 
-            // 修正脚本后可以再次成功 reload（旧 active 仍可用，候选失败不留持久损伤）
+            // After fixing the script the reload succeeds again: the old active definitions were still usable, so a
+            // failed candidate left no lasting damage.
             harness.writeScript("main.js", """
                     DynamicRegistryEvents.dynamicRegistry(event => {
                         event.item('mymod:ruby', b => { b.maxStackSize = 16 });
                     });
                     """);
             harness.manager.reloadScripts();
-            // 失败轮 beginBatch 消耗了批次号 2（未提交）；修正轮提交批次 3
+            // The failed round consumed batch number 2 with beginBatch but never committed; the fixed round commits batch 3.
             assertEquals(committedBefore + 2, harness.facade.store().committedGeneration(),
                     "修正后 reload 成功并发布（失败轮只耗号不提交）");
             assertEquals(generationBefore + 1, harness.manager.generationId(),
@@ -158,7 +165,8 @@ class DynamicRegistryReloadPipelineTest {
             harness.facade.collectInitial("server-registry-ready");
             long committedBefore = harness.facade.store().committedGeneration();
 
-            // 候选脚本带非法定义（category 越界）：候选收集毒化 → STATE_PLAN 失败 → 零写入
+            // The candidate script holds an invalid definition (category out of range): collecting poisons the
+            // candidate, STATE_PLAN fails and nothing is written.
             harness.writeScript("main.js", """
                     DynamicRegistryEvents.dynamicRegistry(event => {
                         event.item('mymod:ok', b => { b.maxStackSize = 16 });
@@ -190,7 +198,7 @@ class DynamicRegistryReloadPipelineTest {
             server.facade.collectInitial("server-registry-ready");
             long committed = server.facade.store().committedGeneration();
 
-            // CLIENT 类型的 reload：收集器必须跳过（SERVER-only 域），账本不被触碰
+            // A CLIENT reload: the collector must skip it, because the domain is SERVER-only, and the ledger is untouched.
             client.writeScript("client.js", "console.log('client reload')");
             client.manager.discoverScripts();
             client.manager.loadScripts();
@@ -207,7 +215,8 @@ class DynamicRegistryReloadPipelineTest {
 
     @Test
     void unusedFacadeReloadsAttachNoPlan() throws Exception {
-        // facade 从未被使用（无监听器、账本为空）：reload 不挂空计划，也不失败
+        // The facade was never used: no listeners and an empty ledger, so a reload attaches no empty plan and does
+        // not fail either.
         try (FacadeTestHarness harness = new FacadeTestHarness(ScriptType.SERVER)) {
             harness.writeScript("main.js", "console.log('no facade usage')");
             harness.manager.discoverScripts();
@@ -221,9 +230,10 @@ class DynamicRegistryReloadPipelineTest {
 
     @Test
     void facadeCollectorParticipatesThroughTheConstructorSuppliedSeam() throws Exception {
-        // 收集器是 root 拥有的 reload 接缝（票 39/16 统一后的唯一形态）：只有经
-        // ScriptManager 构造器（生产 = root 装配注册）传入的收集器参与候选收集——
-        // 进程级静态注册表随统一移除，域不会因「某处注册过」在无关 manager 上参与。
+        // The collector is the reload hook the root owns, the only form since the two were unified: only a
+        // collector passed through the ScriptManager constructor (registered by the root at assembly in
+        // production) takes part in collecting candidates. The process-level static registry is gone, so a
+        // domain never joins an unrelated manager just because something registered it somewhere.
         try (FacadeTestHarness harness = new FacadeTestHarness(ScriptType.SERVER)) {
             harness.writeScript("main.js", """
                     DynamicRegistryEvents.dynamicRegistry(event => {

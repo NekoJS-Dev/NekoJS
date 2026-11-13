@@ -21,17 +21,18 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
- * 实体事件面的 fabric 桥 v2：drops / finalizeSpawn / tickPre / tickPost / leaveLevel——
- * 总线定义在节点孪生 {@link EntityEvents}（组 "EntityEvents" 与 v1 的
- * joinLevel/death/damagePre/damagePost 同名合并），本类只提供投递入口。
+ * Fabric bridge for the second group of entity events: drops, finalizeSpawn, tickPre, tickPost
+ * and leaveLevel. The buses live in the node twin {@link EntityEvents}, whose "EntityEvents"
+ * group merges by name with joinLevel/death/damagePre/damagePost from v1; this class only
+ * supplies the dispatch entry points.
  *
- * <p>drops/finalizeSpawn/tick ×2 由 fabric/mixin/* 提供（fabric-api 5.0.2 的
- * entity-events-v1 仅 Elytra/Sleep/Combat/Living 伤害死亡转换，无掉落/生成/tick
- * 回调，javap 实证）；leaveLevel 用 fabric-api
- * {@code ServerEntityEvents.ENTITY_UNLOAD}（注意 FQN 已迁到
- * {@code net.fabricmc.fabric.api.event.lifecycle.v1}）。由于不得修改
- * {@code NekoJSFabricMod}，ENTITY_UNLOAD 的注册由 {@code MixinEntityTick}
- * 首个 tick 时经 {@link #ensureRegistered()} 惰性完成（幂等）。
+ * <p>drops, finalizeSpawn and both tick events come from {@code fabric/mixin/*}: fabric-api
+ * 5.0.2 entity-events-v1 only converts Elytra/Sleep/Combat/Living damage and death and has no
+ * drop, spawn or tick callbacks (checked with javap). leaveLevel uses fabric-api
+ * {@code ServerEntityEvents.ENTITY_UNLOAD}, whose FQN now lives in
+ * {@code net.fabricmc.fabric.api.event.lifecycle.v1}. {@code NekoJSFabricMod} must not be
+ * changed, so {@code MixinEntityTick} registers ENTITY_UNLOAD lazily on the first tick through
+ * {@link #ensureRegistered()}, which is idempotent.
  */
 public final class FabricEntityEventBindingsV2 {
 
@@ -40,9 +41,10 @@ public final class FabricEntityEventBindingsV2 {
     private FabricEntityEventBindingsV2() {}
 
     /**
-     * 惰性注册 leaveLevel 的 fabric-api 回调（幂等）。在 {@code MixinEntityTick}
-     * 第一个实体 tick 时调用——服务端第一个 tick 必然早于任何实体卸载/离开。
-     * 后续批次接入 {@code NekoJSFabricMod.onInitialize} 时建议把此调用上移。
+     * Registers the fabric-api callback for leaveLevel lazily; calling it again has no effect.
+     * {@code MixinEntityTick} calls it on the first entity tick, which on the server always comes
+     * before any entity unloads or leaves a level. When this code is wired into
+     * {@code NekoJSFabricMod.onInitialize}, move this call there instead.
      */
     public static void ensureRegistered() {
         if (!UNLOAD_REGISTERED.compareAndSet(false, true)) {
@@ -53,11 +55,12 @@ public final class FabricEntityEventBindingsV2 {
     }
 
     /**
-     * 死亡掉落：{@code MixinLivingEntityDeathDrops} 在
-     * {@code LivingEntity#dropAllDeathLoot(ServerLevel, DamageSource)} 入口调用。
+     * Death drops: called by {@code MixinLivingEntityDeathDrops} at the entry of
+     * {@code LivingEntity#dropAllDeathLoot(ServerLevel, DamageSource)}.
      *
-     * @return true 表示监听器取消了原版掉落（mixin 应 {@code ci.cancel()}；脚本 push
-     *         进 {@code event.drops} 的物品此刻经 {@code Entity#spawnAtLocation} 放出）
+     * @return {@code true} if a listener cancelled the vanilla drops (the mixin then calls
+     *         {@code ci.cancel()}; items that scripts pushed into {@code event.drops} are spawned
+     *         with {@code Entity#spawnAtLocation} at that point)
      */
     public static boolean postDrops(LivingEntity entity, ServerLevel level, DamageSource source) {
         if (!EntityEvents.DROPS.hasListeners()) {
@@ -75,7 +78,7 @@ public final class FabricEntityEventBindingsV2 {
         return cancelled;
     }
 
-    /** 生成初始化完成：{@code MixinMobFinalizeSpawn} 在 {@code Mob#finalizeSpawn} 的 TAIL 调用。 */
+    /** Spawn setup finished: {@code MixinMobFinalizeSpawn} calls this at the TAIL of {@code Mob#finalizeSpawn}. */
     public static void postFinalizeSpawn(Mob mob, ServerLevelAccessor level, DifficultyInstance difficulty,
                                          EntitySpawnReason spawnType, SpawnGroupData spawnData) {
         if (!EntityEvents.FINALIZE_SPAWN.hasListeners()) {
@@ -86,7 +89,8 @@ public final class FabricEntityEventBindingsV2 {
                 mob.getType());
     }
 
-    /** 实体 tick 前：{@code MixinEntityTick} 在 {@code Entity#tick} 的 HEAD 调用（已过滤客户端）。 */
+    /** Before an entity ticks: {@code MixinEntityTick} calls this at the HEAD of {@code Entity#tick}
+     *  (client entities are already filtered out). */
     public static void postTickPre(Entity entity) {
         if (!EntityEvents.TICK_PRE.hasListeners()) {
             return;
@@ -94,7 +98,8 @@ public final class FabricEntityEventBindingsV2 {
         EntityEvents.TICK_PRE.post(new EntityTickEventJS(entity, entity.level()), entity.getType());
     }
 
-    /** 实体 tick 后：{@code MixinEntityTick} 在 {@code Entity#tick} 的 TAIL 调用（已过滤客户端）。 */
+    /** After an entity ticks: {@code MixinEntityTick} calls this at the TAIL of {@code Entity#tick}
+     *  (client entities are already filtered out). */
     public static void postTickPost(Entity entity) {
         if (!EntityEvents.TICK_POST.hasListeners()) {
             return;

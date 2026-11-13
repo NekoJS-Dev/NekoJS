@@ -13,18 +13,21 @@ import java.util.List;
 import java.util.function.Consumer;
 
 /**
- * typed Builder 的脚本面（ticket 15，AC3）：把 {@link RegistryObjectBuilder} 包成
- * {@link ProxyObject}，属性写入与显式 setter <b>分发到同一个 Java setter</b>。
+ * Script surface of a typed builder: wraps a {@link RegistryObjectBuilder} in a
+ * {@link ProxyObject} so that property writes and explicit setters <b>dispatch to the same Java
+ * setter</b>.
  *
- * <p>不依赖 Graal 对宿主对象的天然 Bean 映射——实测（runtime contract fixture
- * {@code BuilderSetterPropertyParityTest} 固定）宿主对象的属性写入不会落到 setter，
- * ProxyObject 的 putMember seam 才是可靠转发点（spec 08 预授权的回退路径）。
- * 两种写入都经 {@link RegistryBuilderContract.Member#setter()} 这一个
- * {@link Method}，进入同一校验、规范化、definition fingerprint 与注册收集路径；
- * {@code final id}、只读成员与未开放 experimental 成员是例外（读面直接暴露）。
+ * <p>It does not rely on Graal's built-in Bean mapping for host objects. Measurements (fixed by
+ * the runtime contract fixture {@code BuilderSetterPropertyParityTest}) show that a property
+ * write on a host object never reaches the setter, so the putMember hook of ProxyObject is the
+ * reliable forwarding point. Both kinds of write go through the single {@link Method} returned by
+ * {@link RegistryBuilderContract.Member#setter()} and enter the same validation, normalization,
+ * definition fingerprint and registry collection path. {@code final id}, read-only members and
+ * unreleased experimental members are exceptions (they are exposed directly on the read side).
  *
- * <p>复合配置回调（{@code food(cb)} 等 Consumer 参数）收到的子 builder 同样包本面，
- * 不让裸宿主 builder 泄漏回脚本（消除 public-field 旁路）。
+ * <p>Composite configuration callbacks (Consumer parameters such as {@code food(cb)}) also
+ * receive their sub builder wrapped in this surface, so a raw host builder never leaks back to
+ * the script and there is no public-field bypass.
  */
 public final class BuilderSurface implements ProxyObject {
 
@@ -36,12 +39,15 @@ public final class BuilderSurface implements ProxyObject {
         this.contract = RegistryBuilderContract.of(builderClass(builder));
     }
 
-    /** 包一个 builder（builder 类型须为 {@link RegistryObjectBuilder} 子类）。 */
+    /** Wraps a builder (the builder type must be a {@link RegistryObjectBuilder} subclass). */
     public static BuilderSurface of(Object builder) {
         return new BuilderSurface(builder);
     }
 
-    /** 若 value 是被本面包裹的 builder，解出裸对象；否则原样返回（参数解包用）。 */
+    /**
+     * Returns the raw object when value is a builder wrapped by this surface, and value unchanged
+     * otherwise. Used to unwrap arguments.
+     */
     public static Object unwrap(Object value) {
         if (value instanceof CallableBuilderProperty property) return property.nested.builder;
         return value instanceof BuilderSurface surface ? surface.builder : value;
@@ -52,12 +58,15 @@ public final class BuilderSurface implements ProxyObject {
         return (Class<? extends RegistryObjectBuilder<?>>) builder.getClass();
     }
 
-    /** 被包裹的裸 builder（Java 侧收集/注册用；脚本面不直接接触）。 */
+    /**
+     * The wrapped raw builder, used by the Java side for collection and registration; the script
+     * surface never touches it.
+     */
     public Object target() {
         return builder;
     }
 
-    // ---- ProxyObject：成员目录 ----
+    // ---- ProxyObject: member catalog ----
 
     @Override
     public Object getMember(String name) {
@@ -82,7 +91,7 @@ public final class BuilderSurface implements ProxyObject {
         return contract.memberNames().toArray();
     }
 
-    /** 属性写入：转发到与显式 setter 相同的 setter 方法。 */
+    /** Writes a property: forwards to the same setter method the explicit setter uses. */
     @Override
     public void putMember(String name, Value value) {
         RegistryBuilderContract.Member member = contract.member(name);
@@ -105,10 +114,10 @@ public final class BuilderSurface implements ProxyObject {
         return false;
     }
 
-    // ---- 属性读写 ----
+    // ---- Property access ----
 
     private Object readProperty(RegistryBuilderContract.Member member) {
-        // getter 或 final identity 字段（契约的 readMember 统一承载，异常带成员名）
+        // Getter or final identity field; contract.readMember handles both and puts the member name in the exception.
         Object result = wrapResult(contract.readMember(builder, member));
         return result instanceof BuilderSurface nested && !member.overloads().isEmpty()
                 ? new CallableBuilderProperty(nested, new MethodMember(member)) : result;
@@ -149,7 +158,7 @@ public final class BuilderSurface implements ProxyObject {
         return builder.getClass().getSimpleName();
     }
 
-    // ---- 方法成员（含显式 setter 形态） ----
+    // ---- Method members, including explicit setters ----
 
     private final class MethodMember implements ProxyExecutable {
 
@@ -231,14 +240,13 @@ public final class BuilderSurface implements ProxyObject {
         }
     }
 
-    // ---- 值装配 ----
+    // ---- Value conversion ----
 
     /**
-     * JS 值 → setter/方法参数。错误信息带成员名与期望类型（AC7：错误结果由契约派生）。
-     * Numeric members normalize through {@link ScriptNumberCoercion} (D6 policy):
-     * script numbers are doubles and {@code asInt/asLong/asFloat} lossy checks reject
-     * valid values like {@code hardness = 0.9} with a raw engine exception
-     * (2026-09-29 float-coercion hotfix).
+     * Converts a JS value to a setter or method argument. Errors name the member and the expected type.
+     * Numeric members normalize through {@link ScriptNumberCoercion}: script numbers are doubles, and
+     * the lossy checks in {@code asInt/asLong/asFloat} would reject valid values like
+     * {@code hardness = 0.9} with a raw engine exception.
      */
     private static Object coerce(Value value, Class<?> target, String what) {
         if (Consumer.class.isAssignableFrom(target) && value.canExecute()) {
@@ -304,7 +312,8 @@ public final class BuilderSurface implements ProxyObject {
         }
     }
 
-    /** JS 函数 → Java {@link Consumer}：回调参数若为被包裹 builder 则解包后重包本面。 */
+    /** Wraps a JS function as a Java {@link Consumer}. A callback argument that is a wrapped builder is
+     * unwrapped and then wrapped in this surface again. */
     private static Consumer<Object> consumerOf(Value function) {
         return argument -> {
             Object wrapped = argument instanceof RegistryObjectBuilder<?> ? BuilderSurface.of(argument) : argument;
@@ -312,7 +321,8 @@ public final class BuilderSurface implements ProxyObject {
         };
     }
 
-    /** 返回值若为 builder（如 {@code b.item} 子 builder、链式方法返回 this）则包本面。 */
+    /** Wraps the result in this surface when it is a builder, such as a {@code b.item} child builder or a
+     * chained method that returns this. */
     private static Object wrapResult(Object result) {
         if (result instanceof RegistryObjectBuilder<?>) {
             return BuilderSurface.of(result);

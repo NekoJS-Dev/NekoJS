@@ -6,30 +6,32 @@ import com.tkisor.nekojs.api.data.JSTypeAdapterRegistry;
 import java.util.List;
 
 /**
- * 内置扩展点 {@code nekojs:adapters}（ADR-0001 自包含 Point 文件）。
- * merge 策略 {@link MergePolicy#append}（适配器列表收集）；累积器即
- * {@link JSTypeAdapterRegistry.Impl}（registry 形态）。
+ * The built-in {@code nekojs:adapters} extension point; a self-contained Point file (ADR-0001).
+ * The merge policy is {@link MergePolicy#append}, which collects a list of adapters. The
+ * accumulator is {@link JSTypeAdapterRegistry.Impl} (registry form).
  */
 public final class AdaptersPoint {
 
-    /** 扩展点 id（observable 契约）。 */
+    /** The extension point id; part of the observable contract. */
     public static final String ID = "nekojs:adapters";
 
     private AdaptersPoint() {
     }
 
-    /** 显式声明形态（与直接覆写 NekoJSPlugin 对应钩子等价收集）：插件被 {@code nekojs:adapters} 扩展点收集。 */
+    /** Explicit declaration form, collected the same way as overriding the matching NekoJSPlugin
+     * hook: the plugin is collected by the {@code nekojs:adapters} extension point. */
     public interface Contributor extends NekoJSPlugin {
 
         /**
-         * 注册 JS↔Java 类型适配器（{@code string → ItemStack} 等参数自动转换）。
-         * 适配器同时驱动 probe 的输入别名（{@code $ItemStack_}）生成。
+         * Registers JS↔Java type adapters, so parameters such as {@code string → ItemStack} convert
+         * automatically. The adapters also drive generation of the probe input aliases
+         * ({@code $ItemStack_}).
          */
         default void registerAdapters(JSTypeAdapterRegistry registry) {
         }
     }
 
-    /** 扩展点定义（由 {@link NekoBuiltinPointsPlugin} 清单注册）。 */
+    /** The extension point definition, registered by the {@link NekoBuiltinPointsPlugin} manifest. */
     public static final NekoPluginExtensionPoint<NekoJSPlugin, JSTypeAdapterRegistry, List<Object>> POINT =
             NekoPluginExtensionPoint.<NekoJSPlugin, JSTypeAdapterRegistry, List<Object>>builder(ID, NekoJSPlugin.class)
                     .merge(MergePolicy.append())

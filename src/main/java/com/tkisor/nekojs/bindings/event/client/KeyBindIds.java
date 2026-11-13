@@ -11,9 +11,10 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * {@link KeyBindEvents} 的纯解析逻辑（无 EventGroup/桥接触）：单独成类是为了裸 JUnit 可测
- * ——KeyBindEvents 的静态初始化会注册事件组并探测可取消性，那需要 FML 运行时；本类只触碰
- * 裸环境可初始化的 vanilla 常量（{@code KeyMapping.Category} 等）。
+ * Pure parsing logic for {@link KeyBindEvents}, with no EventGroup or bridge. It is a separate
+ * class so plain JUnit can test it: the static initializer of KeyBindEvents registers the event
+ * group and probes cancellability, which needs the FML runtime. This class only touches vanilla
+ * constants that initialize in a bare environment ({@code KeyMapping.Category} and so on).
  */
 final class KeyBindIds {
 
@@ -63,7 +64,8 @@ final class KeyBindIds {
         try {
             return Identifier.fromNamespaceAndPath(NekoJS.MODID, trimmed);
         } catch (RuntimeException e) {
-            // 裸路径分支的非法字符（空格/!等）原版抛 IdentifierException，统一成可操作报错
+            // For the bare-path branch, invalid characters (spaces, '!' and so on) make vanilla throw
+            // IdentifierException; turn that into an actionable error.
             throw new IllegalArgumentException(
                     "invalid id '" + trimmed + "': expected 'namespace:path' or 'path'", e);
         }

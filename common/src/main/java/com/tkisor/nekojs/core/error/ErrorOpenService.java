@@ -10,10 +10,10 @@ import java.util.concurrent.Executor;
 import com.tkisor.nekojs.network.ErrorSummaryDTO;
 
 /**
- * 把“点击时重新校验位置”和“异步分派”绑在一起，避免 UI 用选中时缓存的旧路径绕过检查。
- * Both entry points share one resolution-and-dispatch path: the error DTO (wire projection)
- * and ticket 30's frozen diagnostic record via its {@link DiagnosticOpenAction} seam
- * (consumed by ticket 27).
+ * Binds "re-check the location at click time" to asynchronous dispatch, so the UI cannot open a
+ * stale path cached when the error was selected. Both entry points share one resolve-and-dispatch
+ * path: the error DTO (wire projection) and the frozen diagnostic record, handed in as a
+ * {@link DiagnosticOpenAction}.
  */
 public final class ErrorOpenService {
     private final LocalErrorSource source;
@@ -25,8 +25,9 @@ public final class ErrorOpenService {
     }
 
     /**
-     * 在调用方给的 Executor 上重新解析并分派；渲染线程应传入后台 executor。
-     * 返回 future 正常完成，实现内部的异常会转成 FAILED/UNAVAILABLE 结果。
+     * Re-resolves and dispatches on the caller's Executor; a rendering thread must pass a
+     * background executor. The returned future completes normally: internal failures turn into
+     * FAILED/UNAVAILABLE results.
      */
     public CompletableFuture<Result> openAsync(
             ErrorSummaryDTO error,
@@ -45,10 +46,10 @@ public final class ErrorOpenService {
     }
 
     /**
-     * Ticket 30 open-action seam consumption (ticket 27): resolve and dispatch from the frozen
-     * diagnostic record's {@link DiagnosticOpenAction} instead of re-deriving the location from
-     * any other source. A {@code null} action (no locatable authored source) reports
-     * {@code LOCATION_UNAVAILABLE}/{@code NO_ERROR} without touching the opener.
+     * Resolves and dispatches from the frozen diagnostic record's {@link DiagnosticOpenAction}
+     * instead of re-deriving the location from another source. A {@code null} action (no locatable
+     * authored source) reports {@code LOCATION_UNAVAILABLE}/{@code NO_ERROR} without touching the
+     * opener.
      */
     public CompletableFuture<Result> openAsync(
             DiagnosticOpenAction action,

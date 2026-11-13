@@ -1,6 +1,8 @@
-// 1.21.1 实现，与版本树 src/ 下的同名 26.x 文件成对。内容等于那份文件在本节点求值后的形态。
-// 26.x 侧行为变更时须同步本文件。
-// guard-exempt(20): 通用注册表重写对象，配方读写形状在两个时代差异密集（ADR-0004 / ADR-0006）
+// 1.21.1 implementation, paired with the 26.x file of the same name under the version tree's src/.
+// The content is that file as evaluated on this node. Keep this file in sync when the 26.x side
+// changes behavior.
+// Exempt from the version guard: this is a general registry rewrite target, and recipe read/write
+// shapes differ heavily between the two eras.
 package com.tkisor.nekojs.wrapper.event.server;
 
 import com.google.gson.*;
@@ -193,11 +195,12 @@ public class RecipeEventJS implements RecipeLifecycleContext {
 
     public JsonElement serializeIngredient(Ingredient ingredient) {
         if (ingredient == null || ingredient.isEmpty()) return new JsonArray();
-        // #tag 原料不能走 Ingredient.CODEC encode：创建侧（BuiltInRegistries 的 owner）与
-        // 序列化侧（本次数据包加载的 RegistryOps）包装层不同实例，HolderSetCodec 的 owner
-        // 校验恒拒绝（"is not valid in current registry set"）。改写为 vanilla 合法的
-        // {"tag": ...} 引用形态——Ingredient.CODEC 的 either(TagKey, list) 分支直接接受，
-        // RecipeManagerMixin 重新 parse 时由当前 ops 解析出正确的 Named 集。
+        // A #tag ingredient cannot go through Ingredient.CODEC encode: the creating side (the
+        // BuiltInRegistries owner) and the serializing side (the RegistryOps of the current data pack
+        // load) wrap different instances, so HolderSetCodec's owner check always rejects it ("is not
+        // valid in current registry set"). Write the vanilla {"tag": ...} reference form instead:
+        // Ingredient.CODEC's either(TagKey, list) branch accepts it directly, and when
+        // RecipeManagerMixin parses it again the current ops resolve the correct named set.
         return Ingredient.CODEC.encodeStart(registries.createSerializationContext(JsonOps.INSTANCE), ingredient).getOrThrow(JsonParseException::new);
     }
 
@@ -277,7 +280,8 @@ public class RecipeEventJS implements RecipeLifecycleContext {
     }
 
     /** Parse single element through Ingredient.CODEC — works for individual items in arrays. */
-    // items() 无等价非废弃 API（getValues().stream() 不含 custom ingredient 展开），保守保留
+    // items() has no equivalent non-deprecated API: getValues().stream() does not expand
+    // custom ingredients. Kept on purpose.
     private boolean testSingleIngredient(JsonElement node, Ingredient match) {
         try {
             Ingredient nodeIng = Ingredient.CODEC.parse(registries.createSerializationContext(JsonOps.INSTANCE), node).getOrThrow();
@@ -288,14 +292,15 @@ public class RecipeEventJS implements RecipeLifecycleContext {
         }
     }
 
-    // items() 无等价非废弃 API（getValues().stream() 不含 custom ingredient 展开），保守保留
+    // items() has no equivalent non-deprecated API: getValues().stream() does not expand
+    // custom ingredients. Kept on purpose.
     private boolean testIngredientNode(JsonElement node, Ingredient match) {
         try {
             Ingredient nodeIng = Ingredient.CODEC.parse(registries.createSerializationContext(JsonOps.INSTANCE), node).getOrThrow();
             List<String> nodeItems = Arrays.stream(nodeIng.getItems()).map(s -> BuiltInRegistries.ITEM.getKey(s.getItem()).toString()).toList();
             List<String> matchItems = Arrays.stream(match.getItems()).map(s -> BuiltInRegistries.ITEM.getKey(s.getItem()).toString()).toList();
-            // Partial match (B-档): non-empty intersection suffices — the size-equality guard
-            // was the common "tag ingredient fails because it has more items than match" trap.
+            // Partial match: a non-empty intersection is enough. Requiring equal sizes was the usual
+            // trap where a tag ingredient failed because it holds more items than the match.
             return !nodeItems.isEmpty() && !matchItems.isEmpty() && nodeItems.stream().anyMatch(matchItems::contains);
         } catch (Exception e) {
             return false;
@@ -350,9 +355,9 @@ public class RecipeEventJS implements RecipeLifecycleContext {
     }
 
     /**
-     * 阶段 4：替换输出时保留原 count（result.count 感知）。
-     * 原节点为 {@code {item, count: N}} 且替换 JSON 是单物品对象（无 count）时，
-     * 把 N 迁移到替换结果上，避免替换后数量丢失。
+     * Replaces the output while keeping the original count. When the original node is
+     * {@code {item, count: N}} and the replacement JSON is a single item object without a count,
+     * N is carried over to the replacement so the amount is not lost.
      */
     private JsonElement replacementWithCount(JsonElement original, JsonElement replacement) {
         if (!original.isJsonObject() || !replacement.isJsonObject()) {
@@ -381,7 +386,8 @@ public class RecipeEventJS implements RecipeLifecycleContext {
         }
     }
 
-    // items() 无等价非废弃 API（getValues().stream() 不含 custom ingredient 展开），保守保留
+    // items() has no equivalent non-deprecated API: getValues().stream() does not expand
+    // custom ingredients. Kept on purpose.
     private boolean testOutputId(ResourceLocation id, Ingredient match) {
         return Arrays.stream(match.getItems()).anyMatch(stack -> BuiltInRegistries.ITEM.getKey(stack.getItem()).equals(id));
     }
@@ -661,19 +667,22 @@ public class RecipeEventJS implements RecipeLifecycleContext {
         return java.util.Arrays.asList(ingredient.getItems());
     }
 
-    // ---- 版本中立静态助手（对应共享树 26.x 版同名方法；供 RecipeFilter 零守卫调用） ----
+    // ---- Version-neutral static helpers. They match the methods of the same name in the shared
+    // 26.x tree, so RecipeFilter can call them without version guards. ----
 
-    /** 配方 id 的中立访问器：1.21.1 的 holder.id() 即 ResourceLocation 本体。 */
+    /** Version-neutral accessor for a recipe id: on 1.21.1, holder.id() already returns the
+     *  ResourceLocation itself. */
     public static ResourceLocation recipeHolderId(RecipeHolder<?> holder) {
         return holder.id();
     }
 
-    /** 配方分组的中立访问器：1.21.1 为 getGroup()。 */
+    /** Version-neutral accessor for the group of a recipe: on 1.21.1 this is getGroup(). */
     public static String recipeGroup(Recipe<?> recipe) {
         return recipe.getGroup();
     }
 
-    /** 单个配料是否命中 tag/id 过滤：1.21.1 配料走 ItemStack 集合匹配（registries 参数仅为签名中立）。 */
+    /** Returns whether one ingredient matches the tag/id filter. On 1.21.1 an ingredient is matched
+     *  as a set of ItemStacks; the registries parameter only keeps the signature neutral. */
     public static boolean ingredientMatches(Ingredient ingredient, @Nullable TagKey<Item> tagKey,
                                             @Nullable ResourceLocation itemID, HolderLookup.Provider registries) {
         if (ingredient.isEmpty()) return false;

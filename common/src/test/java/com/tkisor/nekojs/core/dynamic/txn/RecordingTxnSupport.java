@@ -14,9 +14,9 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Shared fixtures of the ticket 21 transaction tests: a recording Adapter (the only
- * "surgery" the JVM tests may observe), a scripted Transport that records every
- * outbound message, and definition builders for the frozen three candidate types.
+ * Shared fixtures for the transaction tests: a recording Adapter (the only effect the JVM tests
+ * may observe), a scripted Transport that records every outbound message, and definition
+ * builders for the frozen three candidate types.
  */
 final class RecordingTxnSupport {
 

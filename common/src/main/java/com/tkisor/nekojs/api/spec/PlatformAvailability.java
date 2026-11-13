@@ -6,33 +6,34 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * 声明 spec 接口或方法的平台可用性。
+ * Declares which platforms a spec interface or method is available on.
  *
- * <p>标注在 spec 接口上表示该 spec 涵盖的平台范围。SpecCoverageProcessor 读取此注解
- * 决定校验哪些平台实现。
+ * <p>On a spec interface it gives the platform range the spec covers. SpecCoverageProcessor reads
+ * the annotation to decide which platform implementations to check.
  *
- * <p>标注在单个方法上表示该方法的可用性（用于脱离 spec 单独使用时的文档化）。
+ * <p>On a single method it gives that method's availability, documented for use outside the spec.
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target({ElementType.TYPE, ElementType.METHOD})
 public @interface PlatformAvailability {
-    /** 该 spec / 方法的目标平台范围。 */
+    /** Platform range this spec or method targets. */
     Scope value() default Scope.ALL;
 
     /**
-     * 平台范围枚举。
+     * Platform range.
      *
-     * <p>{@link #ALL} 意味着所有目标平台（NF26 / NF121 / CR / 未来 Fabric）都必须实现该 spec。
-     * 只有"所有平台原生类都不提供、需 mixin 注入"的方法才应进入 {@code ALL} spec。
+     * <p>{@link #ALL} means every target platform (NF26 / NF121 / CR / Future Fabric) must implement
+     * the spec. Only methods that no platform's native classes provide and that need a mixin belong
+     * in an {@code ALL} spec.
      */
     enum Scope {
-        /** 所有目标平台必须实现（NF26 / NF121 / CR / Future Fabric） */
+        /** Every target platform must implement it (NF26 / NF121 / CR / Future Fabric) */
         ALL,
-        /** 仅 NeoForge 系列（26.x + 1.21.1） */
+        /** NeoForge releases only (26.x + 1.21.1) */
         NF_ONLY,
-        /** 仅 NeoForge 26.x（26-shared 源集，26.1/26.2） */
+        /** NeoForge 26.x only (the 26-shared source set, 26.1/26.2) */
         NF26_ONLY,
-        /** 仅 Cleanroom 1.12.2 */
+        /** Cleanroom 1.12.2 only */
         CR_ONLY
     }
 }

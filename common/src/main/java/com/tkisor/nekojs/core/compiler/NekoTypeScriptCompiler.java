@@ -19,14 +19,14 @@ public final class NekoTypeScriptCompiler {
     }
 
     /**
-     * 擦除 TypeScript 类型注解，返回可直接 eval 的 JS 源码（enum/namespace/参数属性同步降级）。
+     * Erases TypeScript type annotations and returns JS source code ready for evaluation (synchronizing enum/namespace/parameter property downgrades).
      *
-     * <p>供 node 模块加载器等"脚本式 .ts → JS"场景使用：.ts 模块用脚本兼容写法
-     * （IIFE + {@code __nekoNodeDefine}），类型注解由本方法擦除后即可在脚本上下文求值。
+     * <p>Used for "script-style .ts to JS" scenarios, such as the node module loader: .ts modules use a script-compatible syntax
+     * (IIFE + {@code __nekoNodeDefine}), and type annotations erased by this method allow for evaluation within the script context.
      *
-     * @param file   用于错误定位的文件路径（可为虚拟路径）
-     * @param source TypeScript 源码
-     * @return 擦除类型后的 JS 源码
+     * @param file   File path used for error location (can be a virtual path).
+     * @param source TypeScript source code.
+     * @return JS source code with types erased.
      */
     public static String eraseTypescript(Path file, String source) {
         String original = source == null ? "" : source;
@@ -46,9 +46,9 @@ public final class NekoTypeScriptCompiler {
         private final List<ClassBodyRange> classBodies = new ArrayList<>();
         private final List<BraceRange> braceRanges = new ArrayList<>();
         private final java.util.Map<Integer, Integer> parenOpens = new java.util.HashMap<>();
-        /** 预扫描：该偏移的 ':' 是 switch case/default 或 label 冒号（typeAnnotationAt 必须拒判）。*/
+        /** Pre-scan: The ':' at this offset is a switch case/default or label colon (must be rejected by typeAnnotationAt). */
         private final boolean[] caseOrLabelColon;
-        /** 预扫描：该偏移处于 import/export 的值别名子句（named {...} 或 * as X）——其中的 as 是 JS 原生别名。*/
+        /** Pre-scan: The offset is within an import/export value alias clause (named {...} or * as X), where 'as' is a native JS alias. */
         private final boolean[] aliasClause;
 
         private Eraser(Path file, String source) {
@@ -91,20 +91,20 @@ public final class NekoTypeScriptCompiler {
                     }
                     if ("abstract".equals(word)) {
                         if (startsWithKeyword(nextNonWhitespace(end), "class")) {
-                            // abstract class：只擦修饰词，类本身照常
+                            // abstract class: Erase only the modifier; keep the class declaration as is.
                             eraseRange(i, end);
                             i = end;
                         } else {
-                            // 类体里的抽象成员（abstract m(): void; / abstract field: T;）：
-                            // TS 语义是"无实现占位"，JS class 里残留无体方法/无初始化字段即
-                            // SyntaxError——整条成员擦除（与 TS 官方 elide 行为一致）
+                            // Abstract members in a class body (abstract m(): void; / abstract field: T;):
+                            // TS semantics act as a placeholder without implementation. Residual methods without bodies or uninitialized fields in a JS class are SyntaxErrors,
+                            // so erase the entire member (consistent with TS official elide behavior).
                             int memberEnd = statementOrBlockDeclarationEnd(i);
                             eraseRange(i, memberEnd);
                             i = memberEnd;
                         }
                         continue;
                     }
-                    // enum/namespace/module：不再抛异常，作为普通标识符跳过，留给转换阶段（transformEnums/Namespaces）处理
+                    // enum/namespace/module: Do not throw an exception; skip as a normal identifier and leave for the transformation stage (transformEnums/Namespaces) to handle.
                     if ("declare".equals(word)) {
                         i = eraseDeclare(i);
                         continue;
@@ -122,8 +122,8 @@ public final class NekoTypeScriptCompiler {
                         continue;
                     }
                     if ("export".equals(word) && startsWithKeyword(nextNonWhitespace(end), "declare")) {
-                        // export declare const/function/... 整条是环境声明：连同 export 一起整句擦除
-                        // （只擦 declare 会留下裸 export + 无初始化声明 → SyntaxError）
+                        // export declare const/function/...: The entire statement is an environment declaration; erase the whole sentence including 'export'.
+                        // (Erasing only 'declare' would leave a naked 'export' + uninitialized declaration -> SyntaxError).
                         int end2 = statementOrBlockDeclarationEnd(i);
                         eraseRange(i, end2);
                         i = end2;
@@ -159,8 +159,8 @@ public final class NekoTypeScriptCompiler {
                     continue;
                 }
                 if (c == '@' && decoratorAt(i)) {
-                    // 装饰器（@Component / @Log(...)）：NekoJS 是脚本引擎非 TS 框架，不支持装饰器。
-                    // 明确报错而非透传成坏 JS（裸 @ 在 JS 里非法，GraalJS 会报错但信息不清晰）。
+                    // Decorators (@Component / @Log(...)): NekoJS is a script engine, not a TS framework, and does not support decorators.
+                    // Explicitly report an error instead of passing it through as invalid JS (a naked '@' is illegal in JS; GraalJS would report an error but with an unclear message).
                     throw unsupported("decorator (@)", i);
                 }
                 if (c == '<' && genericTypeArgumentsAt(i)) {
@@ -171,7 +171,7 @@ public final class NekoTypeScriptCompiler {
                 }
                 if (c == ':' && typeAnnotationAt(i)) {
                     int end = typeAnnotationEnd(i + 1);
-                    // 可选参数 name?: T → 连带擦 ?
+                    // Optional parameter 'name?: T' -> also erase '?'
                     int q = previousNonWhitespace(i - 1);
                     int start = (q >= 0 && source.charAt(q) == '?') ? q : i;
                     int thisParameter = thisParameterStart(i);
@@ -187,8 +187,8 @@ public final class NekoTypeScriptCompiler {
                 if (c == '!') {
                     if (definiteAssignmentAt(i)) {
                         eraseRange(i, i + 1);
-                        // 定值断言 `x!: T` 的 `!` 擦除后，source 里 `!` 仍在，typeAnnotationAt 会因
-                        // `:` 前是 `!` 而误判为非类型注解 → 这里连带擦除 `: T`
+                        // After erasing the '!' in a definite assignment assertion 'x!: T', the '!' remains in the source.
+                        // 'typeAnnotationAt' would misinterpret it as a non-type annotation because ':' is preceded by '!'. -> Therefore, erase ': T' along with it.
                         int colon = nextNonWhitespace(i + 1);
                         if (colon < length && source.charAt(colon) == ':') {
                             int tend = typeAnnotationEnd(colon + 1);
@@ -206,7 +206,7 @@ public final class NekoTypeScriptCompiler {
                     }
                 }
                 if (c == '?' && bareOptionalParameterAt(i)) {
-                    // 裸可选参数 `b?`（无 `: T` 标注时 `?` 无人擦除，残留即语法错误）
+                    // Naked optional parameter 'b?' (when there is no ': T' annotation, '?' is not erased by anyone; if it remains, it is a syntax error).
                     eraseRange(i, i + 1);
                     i++;
                     continue;
@@ -217,19 +217,19 @@ public final class NekoTypeScriptCompiler {
             return out.toString();
         }
 
-        // ===== 阶段0：语句级结构预扫描 =====
+        // ===== Stage 0: Statement-level structure pre-scan =====
 
         /**
-         * 一遍线性扫描记录语句级上下文，供擦除谓词查表（擦除器本身仍按字符推进）：
+         * Performs a linear scan to record the statement-level context for the erasure predicate lookup table (the eraser itself still advances character by character):
          * <ul>
-         *   <li>case/default/label 的 ':' —— {@code typeAnnotationAt} 曾把 {@code case 1:} 的冒号
-         *       （数字也是 identifier 字符）与 label 冒号当成类型注解，掏空整个 case 体/label 语句；</li>
-         *   <li>import/export 的值别名子句 —— {@code import { A as B }} 的 as 是 JS 原生别名，
-         *       {@code assertionContext} 曾把它当类型断言擦掉导致运行时 ReferenceError。</li>
+         *   <li>':' for case/default/label -- {@code typeAnnotationAt} used to mistake the colon in {@code case 1:}
+         *       (numbers are also identifier characters) and label colons for type annotations, emptying the entire case body/label statement;</li>
+         *   <li>Value alias clause for import/export -- 'as' in {@code import { A as B }} is a native JS alias,
+         *       and {@code assertionContext} used to erase it as a type assertion, causing a ReferenceError at runtime.</li>
          * </ul>
-         * 识别规则保守：label 要求「标识符在语句头 + ':' 后跟 for/while/do/switch/if/try 完整词」，
-         * 类字段 {@code x: { a: T }}（冒号后是对象类型）与对象字面量属性不可误伤——误标一个本就
-         * 不该擦除的冒号（对象属性）无行为影响，漏标才会破坏擦除。
+         * The identification rule is conservative: labels require 'an identifier at the statement header + ":" followed by the full word "for"/"while"/"do"/"switch"/"if"/"try"',
+         * avoiding misidentification of class fields {@code x: { a: T }} (colon followed by object type) and object literal properties--mislabeling one that
+         * shouldn't have been erased (object property) has no behavioral impact, but missing it would break the erasure.
          */
         private void scanStructure() {
             boolean statementHead = true;
@@ -272,8 +272,8 @@ public final class NekoTypeScriptCompiler {
                     i = end;
                     continue;
                 }
-                // 语句边界重置语句头；空白（空格/Tab/\r）保持当前状态——"{\n  case" 里
-                // 换行后的缩进空格不能把语句头标志吃掉
+                // Reset the statement header at statement boundaries; blanks (space/Tab/\r) maintain the current state--in "{\n  case",
+                // the indentation spaces after a newline cannot consume the statement header flag.
                 if (c == ';' || c == '{' || c == '}' || c == '\n') {
                     statementHead = true;
                 } else if (!Character.isWhitespace(c)) {
@@ -283,7 +283,7 @@ public final class NekoTypeScriptCompiler {
             }
         }
 
-        /** label 冒号后必须是 loop/switch/if/try 语句头（完整词匹配；break/continue 目标才需要 label）。*/
+        /** The label colon must be followed by a loop/switch/if/try statement header (full word match; only break/continue targets require labels). */
         private boolean labelStatementAfter(int from) {
             int i = nextNonWhitespace(from);
             if (i >= length || !isIdentifierStart(source.charAt(i))) return false;
@@ -294,8 +294,8 @@ public final class NekoTypeScriptCompiler {
         }
 
         /**
-         * 从 case 关键字之后扫描配对 ':'（跳过字符串/模板/括号内内容；深度 0 的三元 ?: 配对计数，
-         * 排除 ?. 与 ??）。遇到 {@code ;}/{@code {} 说明输入形态异常，返回 -1 不当 case 处理。
+         * Scans for a matching ':' after the 'case' keyword (skipping strings/templates/content within parentheses; ternary '?:' depth 0 pairing count,
+         * excluding '?.' and '??'). If {@code ;}/{@code {} is encountered, the input form is abnormal; return -1 and do not treat it as a case.
          */
         private int findCaseColon(int from) {
             int parenDepth = 0, ternary = 0, i = from;
@@ -326,9 +326,10 @@ public final class NekoTypeScriptCompiler {
         }
 
         /**
-         * 标记 import/export 语句里的值别名子句（named {...} 与 {@code * as X}）为 aliasClause。
-         * 扫描在遇到声明体边界（{@code =}/{@code (}/const/function/class/default 等关键字）即止——
-         * {@code export const x = y as any} 的 as 仍是类型断言，必须照常擦除。
+         * Marks value alias clauses in import/export statements (named {...} and {@code * as X}) as
+         * aliasClause. Scanning stops at a declaration body (keywords like {@code =}/{@code (}/
+         * const/function/class/default): {@code export const x = y as any}'s 'as' is still a type
+         * assertion and must be erased as usual.
          */
         private int markAliasClauses(int from) {
             int i = from;
@@ -365,7 +366,7 @@ public final class NekoTypeScriptCompiler {
                     int end = readIdentifierEnd(i + 1);
                     String word = source.substring(i, end);
                     if (word.equals("from") || word.equals("type")) { i = end; continue; }
-                    // default/声明关键字之后是值区（可能含 as 断言），别名子句已结束
+                    // After default/declaration keywords is the value area (which may contain 'as' assertions); the alias clause has ended.
                     if (word.equals("default") || word.equals("const") || word.equals("let")
                             || word.equals("var") || word.equals("function") || word.equals("class")
                             || word.equals("async") || word.equals("abstract") || word.equals("enum")
@@ -382,7 +383,7 @@ public final class NekoTypeScriptCompiler {
             return i;
         }
 
-        // ===== 阶段2：转换（enum/namespace/参数属性）—— 在 out 上 replace，改变长度，source map 行号可能偏移 =====
+        // ===== Stage 2: Transformation (enum/namespace/parameter properties)——Replace on 'out', changing length; source map line numbers may shift =====
 
        private void transform() {
            transformEnums();
@@ -391,7 +392,7 @@ public final class NekoTypeScriptCompiler {
             transformClassMemberModifiers();
        }
 
-        // ---- class 体内字段/方法前的可见性修饰符擦除（保留 static；JS class 字段不支持 public/private/protected/readonly/abstract/override）----
+        // ---- Erase visibility modifiers before class fields/methods (keep 'static'; JS class fields do not support public/private/protected/readonly/abstract/override) ----
         private void transformClassMemberModifiers() {
             int i = 0;
             while (i < out.length()) {
@@ -408,7 +409,7 @@ public final class NekoTypeScriptCompiler {
             }
         }
 
-        /** 定位 class 体并擦除体内成员修饰符；返回 class 体结束后的位置。 */
+        /** Locates the class body and erases the member modifiers within it; returns the position after the class body ends. */
         private int eraseClassModifiers(int afterClass) {
             int i = nextOutNonWhitespace(afterClass);
             int braceOpen = -1;
@@ -419,7 +420,7 @@ public final class NekoTypeScriptCompiler {
                 if (c == '/' && i + 1 < out.length() && out.charAt(i + 1) == '/') { i = skipOutLine(i + 2); continue; }
                 if (c == '/' && i + 1 < out.length() && out.charAt(i + 1) == '*') { i = skipOutBlock(i + 2); continue; }
                 if (c == '{') { braceOpen = i; break; }
-                if (c == ';' || c == '\n') return i + 1; // declare class 无体
+                if (c == ';' || c == '\n') return i + 1; // 'declare class' without body
                 i++;
             }
             if (braceOpen < 0) return out.length();
@@ -429,7 +430,7 @@ public final class NekoTypeScriptCompiler {
             return braceClose + 1;
         }
 
-        /** 在 class 体内（depth=0 处）擦除 public/private/protected/readonly/abstract/override；保留 static。 */
+        /** Erases public/private/protected/readonly/abstract/override within a class body (at depth=0); keeps 'static'. */
         private void eraseClassMemberModifiers(int bodyStart, int bodyEnd) {
             int i = bodyStart;
             int depth = 0;
@@ -465,7 +466,7 @@ public final class NekoTypeScriptCompiler {
             }
         }
 
-        // ---- enum（含 const enum）→ IIFE 对象（数字双向映射 / 字符串单向）----
+        // ---- enum (including const enum) -> IIFE object (bidirectional numeric mapping / unidirectional string) ----
         private void transformEnums() {
             int i = 0;
             while (i < out.length()) {
@@ -477,7 +478,7 @@ public final class NekoTypeScriptCompiler {
                 if (isIdentifierStart(c)) {
                     if (outKeywordAt(i, "const")) {
                         int after = nextOutNonWhitespace(i + 5);
-                        if (outKeywordAt(after, "enum")) { i = transformOneEnum(i); continue; } // 从 const 起替换
+                        if (outKeywordAt(after, "enum")) { i = transformOneEnum(i); continue; } // Replace starting from 'const'
                     }
                     if (outKeywordAt(i, "enum")) { i = transformOneEnum(i); continue; }
                 }
@@ -487,7 +488,7 @@ public final class NekoTypeScriptCompiler {
 
         private int transformOneEnum(int start) {
             int i = start;
-            if (outKeywordAt(i, "const")) i = nextOutNonWhitespace(i + 5); // 跳过 const enum 的 const
+            if (outKeywordAt(i, "const")) i = nextOutNonWhitespace(i + 5); // Skip 'const' in 'const enum'
             int enumStart = i;
             i = nextOutNonWhitespace(i + 4);
             int nameStart = i;
@@ -570,8 +571,8 @@ public final class NekoTypeScriptCompiler {
             StringBuilder sb = new StringBuilder();
             sb.append("var ").append(name).append("; (function (").append(name).append(") { ");
             double next = 0;
-            // 上一个数字成员的名字（用于上一个成员是「计算值」时，下一个无值成员的运行时自增 E["prev"] + 1）。
-            // lastNumericKnown=true 表示 next 是编译期已知值（字面量数字）；false 表示上一个数字成员是计算值。
+            // Name of the previous numeric member (used when the previous member is a "computed value", for runtime self-increment E["prev"] + 1 of the next member without a value).
+            // lastNumericKnown=true means next is a compile-time known value (literal number); false means the previous numeric member is a computed value.
             String lastNumericName = null;
             boolean lastNumericKnown = true;
             for (EnumMember m : members) {
@@ -579,13 +580,13 @@ public final class NekoTypeScriptCompiler {
                 if (nm.isEmpty()) continue;
                 if (!m.hasValue()) {
                     if (lastNumericName != null && !lastNumericKnown) {
-                        // 上一个是计算值数字成员：运行时自增 E["prev"] + 1（编译期不知 prev 的值）
+                        // Previous was a computed numeric member: runtime self-increment E["prev"] + 1 (compile-time does not know the value of 'prev')
                         String expr = name + "[\"" + lastNumericName + "\"] + 1";
                         sb.append(name).append("[").append(name).append("[\"").append(nm).append("\"] = " + expr + "] = \"").append(nm).append("\"; ");
                         lastNumericName = nm;
-                        // 这个成员本身也是「计算」性质（值依赖运行时 prev），后续继续 +1
+                        // This member itself is also of "computed" nature (value depends on runtime 'prev'), subsequent ones continue to +1
                     } else {
-                        // 已知数字基准（或首个成员从 0 起）：用编译期字面量
+                        // Known numeric base (or the first member starts from 0): use compile-time literal
                         sb.append(name).append("[").append(name).append("[\"").append(nm).append("\"] = ").append(formatEnumNumber(next)).append("] = \"").append(nm).append("\"; ");
                         lastNumericName = nm;
                         lastNumericKnown = true;
@@ -593,7 +594,7 @@ public final class NekoTypeScriptCompiler {
                     }
                 } else if (isStringLit(m.valueExpr())) {
                     sb.append(name).append("[\"").append(nm).append("\"] = ").append(m.valueExpr()).append("; ");
-                    // 字符串成员不提供数字基准
+                    // String members do not provide a numeric base
                     lastNumericName = null;
                 } else if (isNumberLit(m.valueExpr())) {
                     double num;
@@ -607,11 +608,11 @@ public final class NekoTypeScriptCompiler {
                     lastNumericName = nm;
                     lastNumericKnown = true;
                 } else if (looksLikeNumberLiteral(m.valueExpr())) {
-                    // 形似数值字面量但未通过 isNumberLit（如 1e、1e+）：报编译期错误，不能透传成坏 JS。
+                    // Looks like a numeric literal but failed 'isNumberLit' (e.g., 1e, 1e+): report a compile-time error; cannot pass it through as invalid JS.
                     throw badEnumNumberLiteral(m.valueExpr(), m.valueStart());
                 } else {
-                    // 计算成员：值运行时才知。作为数字基准（TS 视计算 enum 成员为 number），
-                    // 下一个无值成员用 E["thisMember"] + 1 运行时自增。
+                    // Computed member: value is only known at runtime. As a numeric base (TS treats computed enum members as 'number'),
+                    // the next member without a value uses E["thisMember"] + 1 for runtime self-increment.
                     sb.append(name).append("[").append(name).append("[\"").append(nm).append("\"] = ").append(m.valueExpr()).append("] = \"").append(nm).append("\"; ");
                     lastNumericName = nm;
                     lastNumericKnown = false;
@@ -677,7 +678,7 @@ public final class NekoTypeScriptCompiler {
             return neg ? -value : value;
         }
 
-        /** 枚举数字值的输出形式：整数值不打小数点（0 而不是 0.0），非整数保留 double 字面量。*/
+        /** Output form of enumeration numeric values: integer values do not include a decimal point (0, not 0.0), non-integers retain double literals. */
         private static String formatEnumNumber(double v) {
             if (v == Math.rint(v) && Math.abs(v) <= 9.007199254740992E15) {
                 return String.valueOf((long) v);
@@ -686,11 +687,11 @@ public final class NekoTypeScriptCompiler {
         }
 
         /**
-         * 形似数值字面量但未通过 {@link #isNumberLit} 的枚举成员值（如 {@code 1e}、{@code 1e+}、
-         * {@code 0b2}、{@code 0o8}、{@code 0xG}）。必须整串匹配数值记号形态（可带正负号、
-         * 0x/0o/0b 前缀加字母数字、十进制小数/指数、n 后缀），因此 {@code 1 + 2}、
-         * {@code (1+2)}、{@code 0xff + 1}、{@code 1 << 2} 都不匹配。前缀分支使用宽松字符类，
-         * 因为本方法仅在 {@link #isNumberLit} 返回 false 之后调用，合法字面量不受影响。
+         * Enumeration member values that look like numeric literals but failed {@link #isNumberLit} (e.g., {@code 1e}, {@code 1e+},
+         * {@code 0b2}, {@code 0o8}, {@code 0xG}). The entire string must match the numeric token form (optional sign,
+         * 0x/0o/0b prefix plus alphanumeric, decimal/exponent, n suffix), so {@code 1 + 2},
+         * {@code (1+2)}, {@code 0xff + 1}, {@code 1 << 2} do not match. The prefix branch uses a loose character class,
+         * as this method is only called after {@link #isNumberLit} returns false, and legal literals are unaffected.
          */
         private boolean looksLikeNumberLiteral(String v) {
             if (v.isEmpty()) return false;
@@ -706,7 +707,7 @@ public final class NekoTypeScriptCompiler {
             return diagnostic("Invalid TypeScript enum numeric literal '" + literal + "' in " + file, valueStart);
         }
 
-        // ---- namespace（单层）/ module → IIFE，export 成员在末尾批量转 Name.member=member ----
+        // ---- namespace (single level) / module -> IIFE, 'export' members are converted to Name.member=member in batches at the end ----
         private void transformNamespaces() {
             int i = 0;
             while (i < out.length()) {
@@ -747,7 +748,7 @@ public final class NekoTypeScriptCompiler {
             return transformNamespacesInRange(start, start + wrapped.length());
         }
 
-        /** Transforms nested namespaces and adjusts the scan boundary as each replacement changes the output length. */
+        /** Transforms nested namespaces and adjusts the scan limit as each replacement changes the output length. */
         private int transformNamespacesInRange(int start, int endExclusive) {
             int limit = Math.min(endExclusive, out.length());
             int i = Math.max(0, start);
@@ -795,13 +796,13 @@ public final class NekoTypeScriptCompiler {
                         String member = body.substring(ms, me);
                         if (!member.isEmpty()) members.add(member);
                         int namespaceEnd = (kwLen == 9 || kwLen == 6) ? namespaceBodyEnd(body, me) : -1;
-                        cleaned.append(body, lastCopy, i).append("      "); // 6 空格擦 export
+                        cleaned.append(body, lastCopy, i).append("      "); // 6 spaces to erase 'export'
                         lastCopy = i + 6;
                         i = namespaceEnd > me ? namespaceEnd : i + 6;
                         continue;
                     } else if (kwLen == -1) {
-                        // interface/type：运行时无值，剥除 export 但不作为成员导出。
-                        // 其声明体已由 phase1 擦成空格，只剩裸 export + 名字残留，这里一并擦掉 export。
+                        // interface/type: No runtime value; remove 'export' but do not export as a member.
+                        // Its declaration body was already erased to spaces by phase1, leaving only naked 'export' + name; erase 'export' here too.
                         cleaned.append(body, lastCopy, i).append("      ");
                         lastCopy = i + 6;
                         i += 6;
@@ -812,8 +813,8 @@ public final class NekoTypeScriptCompiler {
             }
             cleaned.append(body, lastCopy, n);
             StringBuilder sb = new StringBuilder();
-            // 前置 var 声明：namespace 常出现在函数/IIFE 体内，原 (name || (name={})) 依赖外层已声明 name，
-            // 严格模式下嵌套作用域会 ReferenceError。var 可重复声明，兼容多次 namespace 合并。
+            // Preceding 'var' declaration: namespaces often appear in functions/IIFE bodies, and the original (name || (name={})) relied on an 'name' declared in the outer scope.
+            // Strict mode would cause a ReferenceError in nested scopes. 'var' can be redeclared, which is compatible with multiple namespace merges.
             sb.append("var ").append(name).append(";\n");
             sb.append("(function (").append(name).append(") {\n").append(cleaned).append('\n');
             for (String m : members) sb.append(name).append('.').append(m).append(" = ").append(m).append(";\n");
@@ -907,15 +908,15 @@ public final class NekoTypeScriptCompiler {
             if (bodyKeywordAt(body, i, "module")) return 6;
             if (bodyKeywordAt(body, i, "let")) return 3;
             if (bodyKeywordAt(body, i, "var")) return 3;
-            // interface/type：运行时不产生值成员，但 phase1 已把它们的声明体擦成空格，
-            // 这里返回长度以便剥除其 export 关键字，避免 IIFE 体内残留裸 export。
-            // 注意：不把这类成员加入 members 列表（它们没有运行时绑定可导出）。
-            if (bodyKeywordAt(body, i, "interface")) return -1; // 哨兵：剥 export 但不作为值成员
+            // interface/type: No value member produced at runtime, but phase1 has already erased their declaration bodies to spaces.
+            // Return the length to remove their 'export' keyword and avoid naked 'export' in the IIFE body.
+            // Note: Do not add these members to the 'members' list (they have no runtime binding to export).
+            if (bodyKeywordAt(body, i, "interface")) return -1; // Sentinel: remove 'export' but do not treat as a value member
             if (bodyKeywordAt(body, i, "type")) return -1;
             return 0;
         }
 
-        // ---- 参数属性 constructor(public name) → 擦修饰符 + 构造器体插入 this.name=name ----
+        // ---- Parameter properties constructor(public name) -> erase modifiers + insert this.name=name into constructor body ----
         private void transformParameterProperties() {
             int i = 0;
             while (i < out.length()) {
@@ -935,14 +936,14 @@ public final class NekoTypeScriptCompiler {
         private int transformOneConstructor(int start) {
             ClassContext classContext = enclosingClassForTopLevelConstructor(start);
             if (classContext == null) return start + 11;
-            int i = nextOutNonWhitespace(start + 11); // 跳过 constructor
+            int i = nextOutNonWhitespace(start + 11); // Skip 'constructor'
             if (i >= out.length() || out.charAt(i) != '(') return start + 11;
             int parenClose = matchOutParen(i);
             if (parenClose < 0) return start + 11;
             String params = out.substring(i + 1, parenClose);
             List<String> assigned = new ArrayList<>();
             String cleanedParams = cleanParamProperties(params, assigned);
-            if (assigned.isEmpty()) return parenClose + 1; // 无参数属性，跳过
+            if (assigned.isEmpty()) return parenClose + 1; // No parameter properties, skip
             int j = parenClose + 1;
             int braceOpen = -1;
             while (j < out.length()) {
@@ -952,7 +953,7 @@ public final class NekoTypeScriptCompiler {
                 if (c == '/' && j + 1 < out.length() && out.charAt(j + 1) == '/') { j = skipOutLine(j + 2); continue; }
                 if (c == '/' && j + 1 < out.length() && out.charAt(j + 1) == '*') { j = skipOutBlock(j + 2); continue; }
                 if (c == '{') { braceOpen = j; break; }
-                if (c == ';') return j + 1; // 声明无体
+                if (c == ';') return j + 1; // Declaration without body
                 j++;
             }
             if (braceOpen < 0) return parenClose + 1;
@@ -967,9 +968,9 @@ public final class NekoTypeScriptCompiler {
                 insertionPoint = superCallEnd;
             }
 
-            out.replace(i + 1, parenClose, cleanedParams); // 擦除参数修饰符
+            out.replace(i + 1, parenClose, cleanedParams); // Erase parameter modifiers
             int delta = cleanedParams.length() - (parenClose - i - 1);
-            insertionPoint += delta; // 参数替换发生在构造器体与插入点之前
+            insertionPoint += delta; // Parameter replacement occurs before the constructor body and insertion point
             StringBuilder assigns = new StringBuilder();
             if (classContext.derived()) assigns.append(';');
             for (String name : assigned) assigns.append(" this.").append(name).append(" = ").append(name).append(";");
@@ -979,7 +980,7 @@ public final class NekoTypeScriptCompiler {
 
         private record ClassContext(boolean derived, int bodyOpen) {}
 
-        /** 仅认 class 体第一层的 constructor，顺便判定 class 头是否含顶层 extends。 */
+        /** Recognize only the 'constructor' at the first level of the class body, and determine if the class header contains a top-level 'extends'. */
         private ClassContext enclosingClassForTopLevelConstructor(int constructorStart) {
             ClassContext innermost = null;
             int i = 0;
@@ -1054,7 +1055,7 @@ public final class NekoTypeScriptCompiler {
             return depth;
         }
 
-        /** 返回合法顶层独立 {@code super(...);} 语句的分号后一位。 */
+        /** Return the position after the semicolon of a legal, independent top-level {@code super(...);} statement. */
         private int findTopLevelSuperCallEnd(int bodyOpen) {
             int bodyClose = matchOutBrace(bodyOpen);
             if (bodyClose < 0) return -1;
@@ -1193,7 +1194,7 @@ public final class NekoTypeScriptCompiler {
             return -1;
         }
 
-        // ---- out（StringBuilder）扫描辅助 ----
+        // ---- 'out' (StringBuilder) scanning aids ----
         private int skipOutString(int start, char quote) {
             int i = start + 1;
             while (i < out.length()) { char c = out.charAt(i); if (c == '\\') { i += 2; continue; } if (c == quote) return i + 1; i++; }
@@ -1317,7 +1318,7 @@ public final class NekoTypeScriptCompiler {
             return n;
         }
 
-        /** type/interface 后是否跟标识符（声明名），区分 type 别名 vs 属性名/变量名 type。*/
+        /** Whether 'type'/'interface' is followed by an identifier (declaration name), to distinguish between type alias and property/variable name 'type'. */
         private boolean typeDeclAfter(int afterKw) {
             int p = nextNonWhitespace(afterKw);
             return p < length && isIdentifierStart(source.charAt(p));
@@ -1335,7 +1336,7 @@ public final class NekoTypeScriptCompiler {
                     || startsWithKeyword(after, "const") || startsWithKeyword(after, "let") || startsWithKeyword(after, "var")
                     || startsWithKeyword(after, "class") || startsWithKeyword(after, "abstract") || startsWithKeyword(after, "function")
                     || startsWithKeyword(after, "enum")) {
-                // 环境声明整句擦除：declare const x: T 只擦 declare 会留下无初始化 const → SyntaxError
+                // Erase the entire environment declaration: 'declare const x: T' - erasing only 'declare' would leave an uninitialized 'const' -> SyntaxError
                 int end = statementOrBlockDeclarationEnd(start);
                 eraseRange(start, end);
                 return end;
@@ -1351,10 +1352,12 @@ public final class NekoTypeScriptCompiler {
         }
 
         /**
-         * 擦除 {@code export type ...} / {@code export interface ...} 声明，仅擦类型声明本身，
-         * 不像 {@link #eraseStatement} 那样扫到换行/分号——因为 {@code export interface I { ... }} 后面
-         * 可能紧跟其它语句（尤其 namespace 体内），用 statementEnd 会越界吞掉后续语句。
-         * 用 statementOrBlockDeclarationEnd：interface 的 {...} 体匹配后即停。
+         * Erases only the {@code export type ...} / {@code export interface ...} declaration itself,
+         * unlike {@link #eraseStatement}, which scans until a newline or semicolon. Another statement
+         * may follow {@code export interface I { ... }} closely, especially inside a namespace, and
+         * 'statementEnd' would run past it and swallow the following statements.
+         * 'statementOrBlockDeclarationEnd' is used instead: it stops after matching the interface's
+         * {...} body.
          */
         private int eraseExportTypeDeclaration(int start) {
             int typeStart = nextNonWhitespace(start + "export".length());
@@ -1401,7 +1404,7 @@ public final class NekoTypeScriptCompiler {
 
         private boolean assertionContext(int start) {
             if (aliasClause[start]) {
-                // import/export 值别名子句里的 as（import { A as B }）：JS 原生别名，原样保留
+                // 'as' in import/export value alias clause (import { A as B }): native JS alias, keep as is.
                 return false;
             }
             int previous = previousNonWhitespace(start - 1);
@@ -1418,7 +1421,7 @@ public final class NekoTypeScriptCompiler {
             return startsWithKeyword(i, "type") || startsWithKeyword(i, "interface");
         }
 
-        /** import/export 语句的命名导入/导出块里是否含内联 type 修饰符（TS 4.5+：{ real, type T }）。*/
+        /** Whether the named import/export block of an import/export statement contains an inline 'type' modifier (TS 4.5+: { real, type T }). */
         private boolean hasInlineTypeSpecifier(int afterKeyword) {
             int brace = findNamedClauseBrace(afterKeyword);
             if (brace < 0) return false;
@@ -1428,9 +1431,9 @@ public final class NekoTypeScriptCompiler {
         }
 
         /**
-         * 定位 import/export 语句头之后的命名子句 '{'（越过 default 绑定、逗号与 type 关键字：
-         * {@code import def, { type A, B } from '...'}）。遇到声明体边界（=、(、const/function/
-         * class 等关键字）、分号或换行即无命名子句；模块字符串（import '...'）同理。
+         * Locate the named clause '{' after the import/export statement header (skipping default binding, commas, and the 'type' keyword:
+         * {@code import def, { type A, B } from '...'} ). If a declaration body boundary (keywords like =、(、const/function/
+         * class) or a semicolon/newline is encountered, there is no named clause; same applies to module strings (import '...').
          */
         private int findNamedClauseBrace(int from) {
             int i = from;
@@ -1458,7 +1461,7 @@ public final class NekoTypeScriptCompiler {
             return -1;
         }
 
-        /** 在 {...} 块内查找顶层（逗号深度 0）的 `type X` 说明符，返回 type 关键字起点；找不到返回 -1。*/
+        /** Finds the 'type X' specifier at the top level (comma depth 0) within a {...} block; returns the start of the 'type' keyword, or -1 if not found. */
         private int findInlineTypeInBlock(int from, int to) {
             int depth = 0, i = from;
             while (i < to) {
@@ -1471,7 +1474,7 @@ public final class NekoTypeScriptCompiler {
                     int end = readIdentifierEnd(i + 1);
                     String word = source.substring(i, end);
                     if (word.equals("type")) {
-                        // 确认是说明符：后面跟标识符（type X），而非属性名 type
+                        // Confirm it is a specifier: followed by an identifier (type X), not a property named 'type'.
                         int after = nextNonWhitespace(end);
                         if (after < to && isIdentifierStart(source.charAt(after))) return i;
                     }
@@ -1481,40 +1484,40 @@ public final class NekoTypeScriptCompiler {
             return -1;
         }
 
-        /** 擦除 import/export 命名块里的所有内联 `type X` 说明符（含尾随逗号），保留值绑定与整条语句。*/
+        /** Erases all inline 'type X' specifiers (including trailing commas) in an import/export named block, keeping value bindings and the entire statement. */
         private int eraseInlineTypeSpecifiers(int start, int afterKeyword) {
             int brace = findNamedClauseBrace(afterKeyword);
             if (brace < 0) return afterKeyword;
             int close = matchingCloseBracket(brace, '{', '}');
             if (close < 0) return afterKeyword;
-            // 反复擦块内的内联 type 说明符
+            // Repeatedly erase inline 'type' specifiers within the block.
             int scanFrom = brace + 1;
             while (true) {
                 int typeStart = findInlineTypeInBlock(scanFrom, close);
                 if (typeStart < 0) break;
-                // type 说明符范围：从 typeStart 到下一个值绑定前（含尾随逗号与空白）
-                int specEnd = readIdentifierEnd(typeStart + 1); // type 关键字尾
+                // 'type' specifier range: from typeStart to before the next value binding (including trailing comma and whitespace)
+                int specEnd = readIdentifierEnd(typeStart + 1); // end of the 'type' keyword
                 int nameStart = nextNonWhitespace(specEnd);
-                int nameEnd = readIdentifierEnd(nameStart + 1); // X 尾
+                int nameEnd = readIdentifierEnd(nameStart + 1); // end of X
                 int eraseTo = nameEnd;
-                // 吃掉后面的逗号（如果有）
+                // Consume following comma (if any)
                 int afterComma = nextNonWhitespace(nameEnd);
                 if (afterComma < close && source.charAt(afterComma) == ',') {
                     eraseTo = afterComma + 1;
                 } else {
-                    // 没有尾随逗号：吃掉前面的逗号（type X 是最后一个）
+                    // No trailing comma: consume preceding comma ('type X' is the last one)
                     int before = previousNonWhitespace(typeStart - 1);
                     if (before >= brace + 1 && source.charAt(before) == ',') {
                         typeStart = before;
                     }
                 }
                 eraseRange(typeStart, eraseTo);
-                scanFrom = eraseTo; // eraseRange 保长度，close 不变
+                scanFrom = eraseTo; // eraseRange preserves length, close remains unchanged
             }
             return close + 1;
         }
 
-        /** 从 open 开始匹配配对的闭括号（跳过字符串/模板），找不到返回 -1。*/
+        /** Matches the pair of closing brackets starting from 'open' (skipping strings/templates), returns -1 if not found. */
         private int matchingCloseBracket(int open, char openCh, char closeCh) {
             int depth = 0, i = open;
             while (i < length) {
@@ -1532,17 +1535,17 @@ public final class NekoTypeScriptCompiler {
             int previous = previousNonWhitespace(start - 1);
             if (previous < 0) return false;
             char previousChar = source.charAt(previous);
-            // 泛型实参/泛型箭头的合法前导：标识符/`)`/`]`（foo<T>、(a)<T>），
-            // 或赋值/参数/返回等上下文后的泛型箭头 <T>(x) => …：
-            // `=`（const id = <T>…）、`,`/`(`（作为函数实参）、`return`/`=>`/`{`/`;` 等语句起始。
-            // 这些上下文里 `<…>(` 或 `<…> =>` 不可能是比较运算（比较不会紧跟 `(` 调用），故可放心擦除。
+            // Valid lead-in for generic arguments or a generic arrow: an identifier/`)`/`]` (foo<T>, (a)<T>), or the
+            // contexts a generic arrow can follow: assignment (`=` in const id = <T>...), argument (`,`/`(`),
+            // statement start (`return`/`=>`/`{`/`;`). In none of them can `<...>(` or `<...> =>` be a comparison
+            // (a comparison never continues with a `(` call), so erasing the angle group is safe.
             boolean arrowContext = previousChar == '=' || previousChar == ','
                 || previousChar == '(' || previousChar == '{' || previousChar == ';'
                 || previousChar == '\n' || previousChar == '\r' || previousChar == ':';
             if (!isIdentifierPart(previousChar) && previousChar != ')' && previousChar != ']' && previousChar != '.' && !arrowContext) {
                 return false;
             }
-            // 语句起始关键字（return/throw/yield/await 等）后的 <T>( 也是泛型箭头
+            // After a statement-start keyword (return/throw/yield/await and the like) a <T>( is also a generic arrow
             if (isIdentifierPart(previousChar)) {
                 int ws = previous;
                 while (ws > 0 && isIdentifierPart(source.charAt(ws - 1))) ws--;
@@ -1562,16 +1565,16 @@ public final class NekoTypeScriptCompiler {
                     if (range.headerStart() < start && start < range.open()) return true;
                 }
             }
-            // <T>(  或  <T> =>  —— 泛型箭头/泛型调用
+            // <T>(  or  <T> =>  -- generic arrow or generic call
             if (nextChar == '(' || nextChar == '{') return true;
             if (nextChar == '=' && next + 1 < length && source.charAt(next + 1) == '>') return true;
-            // 非箭头上下文（标识符/) / ] 前导）下，<T>( 仍是泛型调用（如 foo<T>(x)）
+            // Outside an arrow context (identifier/) / ] lead-in) <T>( is still a generic call (e.g. foo<T>(x))
             if ((isIdentifierPart(previousChar) || previousChar == ')' || previousChar == ']' || previousChar == '.') && nextChar == '(') {
                 return true;
             }
-            // 泛型实参出现在表达式里但非紧接调用：foo<T>, / foo<T>) / foo<T>] / foo<T>;
-            // （典型场景：TSX 泛型组件 <Foo<number>/> lowering 后的 Foo<number> 表达式）
-            // 仅当前导是标识符/`)`/`]` 时认定；前导是 `,`/`=` 等属于箭头上下文（上面 arrowContext 已覆盖）
+            // Generic arguments in an expression that do not continue into a call: foo<T>, / foo<T>) / foo<T>] / foo<T>;
+            // (typical case: the Foo<number> expression left after lowering a TSX generic component <Foo<number>/>).
+            // Only accepted when the lead-in is an identifier/`)`/`]`; a `,`/`=` lead-in is arrow context, covered above.
             if ((isIdentifierPart(previousChar) || previousChar == ')' || previousChar == ']' || previousChar == '.')
                 && (nextChar == ',' || nextChar == ')' || nextChar == ']' || nextChar == ';'
                     || nextChar == '\n' || nextChar == '\r')) {
@@ -1581,22 +1584,22 @@ public final class NekoTypeScriptCompiler {
         }
 
         private boolean typeAnnotationAt(int colon) {
-            // case/default/label 冒号不是类型注解（case 1: 的前导数字也是 identifier 字符；
-            // outer: for 的 label 冒号曾把整条循环语句当类型擦掉）
+            // A case/default/label colon is not a type annotation (the digit before `case 1:` also counts as an
+            // identifier character; the label colon in `outer: for` would otherwise erase the whole loop as a type).
             if (caseOrLabelColon[colon]) return false;
-            // 三元 cond ? a : b 的 : 不是类型注解——先判，覆盖 : 前为 )/]/}/数字/字符串等所有前导
-            // （isTernaryColon 已排除 ?: 可选参数与 ?. 可选链）
+            // The `:` of a ternary cond ? a : b is not a type annotation. Checked first, so every lead-in is covered,
+            // including )/]/}/digit/string; isTernaryColon already excludes ?: optional parameters and ?. optional chaining.
             if (isTernaryColon(colon)) return false;
             int previous = previousNonWhitespace(colon - 1);
             if (previous < 0) return false;
             char previousChar = source.charAt(previous);
-            // 可选参数 name?: T → : 前 ?，? 前 ident
+            // Optional parameter name?: T -> `?` before `:`, an identifier before `?`
             if (previousChar == '?') {
                 int beforeQ = previousNonWhitespace(previous - 1);
                 return beforeQ >= 0 && isIdentifierPart(source.charAt(beforeQ)) && !objectLiteralPropertyColon(colon);
             }
             if (!isIdentifierPart(previousChar) && previousChar != ')' && previousChar != ']' && previousChar != '}') return false;
-            // ) 后 : 需区分函数声明参数列表（返回类型）vs 方法调用/三元
+            // A `:` after `)` must be told apart: a function declaration parameter list (return type) vs. a method call/ternary
             if (previousChar == ')' && !parenIsReturnType(previous)) return false;
             int next = nextNonWhitespace(colon + 1);
             if (next >= length) return false;
@@ -1615,23 +1618,23 @@ public final class NekoTypeScriptCompiler {
             return before >= 0 && source.charAt(before) == '(' ? start : -1;
         }
 
-        /** ) 是否函数声明参数列表的闭合（返回类型合法位置）；方法调用/三元返回 false。*/
+        /** Whether `)` closes a function declaration parameter list (a valid return-type position); returns false for a method call or ternary. */
         private boolean parenIsReturnType(int closeParen) {
             int openParen = backwardMatchParen(closeParen);
             if (openParen < 0) return false;
             int before = previousNonWhitespace(openParen - 1);
             if (before < 0) return true;
             char bc = source.charAt(before);
-            if (bc == '.') return false; // obj.method() 调用
-            if (bc == '>' || bc == ')') return true; // <T>(params) 或 )) 嵌套
-            if (!isIdentifierPart(bc)) return true; // = ( , ; { [ + - 等 → arrow/方法
+            if (bc == '.') return false; // obj.method() call
+            if (bc == '>' || bc == ')') return true; // <T>(params) or nested ))
+            if (!isIdentifierPart(bc)) return true; // = ( , ; { [ + - etc. -> arrow/method
             int start = before;
             while (start > 0 && isIdentifierPart(source.charAt(start - 1))) start--;
             if (source.substring(start, before + 1).equals("function")) return true;
             int beforeName = previousNonWhitespace(start - 1);
             if (beforeName >= 0) {
                 char bic = source.charAt(beforeName);
-                if (bic == '.') return false; // a.b() 调用
+                if (bic == '.') return false; // a.b() call
                 // Named calls in initializers and conditional branches cannot declare a return type.
                 if (bic == '=' || bic == '?') return false;
                 if (isIdentifierPart(bic)) {
@@ -1641,7 +1644,7 @@ public final class NekoTypeScriptCompiler {
                     if (prev.equals("function")) return true;
                     if (prev.equals("if") || prev.equals("while") || prev.equals("for") || prev.equals("switch") || prev.equals("catch") || prev.equals("with") || prev.equals("return")) return false;
                 }
-                return true; // { ; , 等 → 方法简写
+                return true; // { ; , etc. -> method shorthand
             }
             return false;
         }
@@ -1651,7 +1654,7 @@ public final class NekoTypeScriptCompiler {
             return parenOpens.getOrDefault(closeParen, -1);
         }
 
-        /** : 是否处于三元表达式（前面同层有配对的 ? 三元，排除 ?: 可选参数与 ?. 可选链）。*/
+        /** Whether the `:` sits in a ternary expression (a matching `?` at the same level in front, excluding `?:` optional parameters and `?.` optional chaining). */
         private boolean isTernaryColon(int colon) {
             int depth = 0;
             int i = colon - 1;
@@ -1688,14 +1691,16 @@ public final class NekoTypeScriptCompiler {
             if (c != '{' && c != ',') return false;
             int objectStart = enclosingOpenBrace(previousToken);
             if (objectStart < 0 || !objectLiteralContext(objectStart)) return false;
-            // 方法简写参数表：属性名前的 `,` 位于对象字面量 `{` 之后未闭合的 `(` 内
-            // （如 { m(a: T, b: U) {} } 里 b 前的逗号）——那是参数分隔符而非属性分隔符，
-            // 其后的 `:` 是参数类型注解，须走正常擦除（此前被误判为属性冒号而残留）。
+            // Method shorthand parameter list: the `,` before a property name sits inside a `(` that follows
+            // the object literal's `{` and is still open (e.g. the comma before b in
+            // { m(a: T, b: U) {} }). That comma separates parameters, not properties, and the `:`
+            // after it is a parameter type annotation that must go through normal erasure.
             if (c == ',' && parenDepthBetween(objectStart + 1, previousToken) > 0) return false;
             return true;
         }
 
-        /** [from, to) 区间内未闭合的 `(` 层数；跳过字符串/模板/注释，避免字面量里的括号干扰。 */
+        /** Depth of unclosed `(` in the range [from, to); strings, templates and comments are skipped so
+         *  parentheses inside literals do not interfere. */
         private int parenDepthBetween(int from, int to) {
             int depth = 0;
             int i = Math.max(0, from);
@@ -1741,18 +1746,18 @@ public final class NekoTypeScriptCompiler {
             int previous = previousNonWhitespace(openBrace - 1);
             if (previous < 0) return true;
             char c = source.charAt(previous);
-            // { 前是 ident 时，return/throw 后 { } 是对象字面量；else/do/try/finally/function名等是 block
+            // When an identifier precedes the `{`: `{ }` after return/throw is an object literal; after else/do/try/finally or a function name it is a block
             if (isIdentifierPart(c)) {
                 int end = previous + 1;
                 int start = previous;
                 while (start > 0 && isIdentifierPart(source.charAt(start - 1))) start--;
                 String kw = source.substring(start, end);
                 if (kw.equals("return") || kw.equals("throw")) return true;
-                // key: { } —— 属性名后跟对象字面量（key 前 : ），如 constants: { ... }
+                // key: { } -- an object literal after a property name (a `:` before the key), e.g. constants: { ... }
                 int beforeKw = previousNonWhitespace(start - 1);
                 return beforeKw >= 0 && source.charAt(beforeKw) == ':';
             }
-            // => 后的 { 是箭头函数体 block（非对象字面量），如 (() => { function f(a: T) {} })
+            // A `{` after => opens an arrow function body block, not an object literal, e.g. (() => { function f(a: T) {} })
             if (c == '>' && previous - 1 >= 0 && source.charAt(previous - 1) == '=') return false;
             if (c == '>' && classBodyHeader(openBrace)) return false;
             return "=(:,[!&|?;{}<>+-*/%".indexOf(c) >= 0;
@@ -1862,8 +1867,10 @@ public final class NekoTypeScriptCompiler {
                         i++;
                         continue;
                     }
-                    // 顶层（非对象/函数/泛型内）的 : 必是三元分隔（如 expr as T : fallback）→ 类型到此结束；
-                    // 对象类型 { a: T } 的 : 在 brace>0，函数/箭头类型 (a: T)=>R 的 : 在 paren>0，均不在此分支
+                    // A `:` at the top level (not inside an object, function or generics) must separate a ternary
+                    // (e.g. expr as T : fallback), so the type ends here. Object type { a: T } colons have
+                    // brace>0 and function/arrow type (a: T)=>R colons have paren>0; neither reaches this
+                    // branch.
                     if (c == '=' || c == ',' || c == ';' || c == ')' || c == '}' || c == ':' || c == '\n' || c == '\r') {
                         return i;
                     }
@@ -1892,25 +1899,29 @@ public final class NekoTypeScriptCompiler {
         private boolean definiteAssignmentAt(int bang) {
             int previous = previousNonWhitespace(bang - 1);
             int next = nextNonWhitespace(bang + 1);
-            // 只认 `:`（x!: T）或 `;`（x!;）；不认 `=`，以免把 `a != b` 的 `!` 误判为定值断言而擦除
+            // Only `:` (x!: T) or `;` (x!;) is accepted, never `=`, so the `!` in `a != b` is not mistaken for a
+            // definite assignment assertion and erased.
             return previous >= 0 && next < length && isIdentifierPart(source.charAt(previous)) && (source.charAt(next) == ':' || source.charAt(next) == ';');
         }
 
-        /** 非空断言 `a!.x` / `a!`：前一非空白字符为 ident 部分/`)`/`]`，且 `!` 后非 `=`（排除 `!=`/`!==`）。 */
+        /** Non-null assertion `a!.x` / `a!`: the previous non-whitespace char is an identifier part, `)` or
+         *  `]`, and the char after `!` is not `=` (excludes `!=` and `!==`). */
         private boolean nonNullAssertionAt(int bang) {
             int previous = previousNonWhitespace(bang - 1);
             if (previous < 0) return false;
             char pc = source.charAt(previous);
             if (!isIdentifierPart(pc) && pc != ')' && pc != ']') return false;
             if (bang + 1 >= length || source.charAt(bang + 1) != '=') {
-                // `return !!x` / `typeof !!x` 等关键字后的 `!` 是逻辑非而非断言（断言只能跟在表达式后）；
-                // 不排除的话 return !!x 会被擦成 return !x，逻辑反转
+                // A `!` after a keyword such as `return !!x` or `typeof !!x` is logical negation, not an
+                // assertion (an assertion can only follow an expression). Without this exclusion
+                // return !!x would be erased to return !x, inverting the logic
                 return !keywordImmediatelyBefore(previous);
             }
             return false;
         }
 
-        /** previous（含）往前构成的标识符是否为语句/运算符关键字——断言不可能紧跟其后。 */
+        /** Whether the identifier ending at previous (inclusive) is a statement or operator keyword; an
+         *  assertion can never directly follow one. */
         private boolean keywordImmediatelyBefore(int end) {
             int start = end;
             while (start > 0 && isIdentifierPart(source.charAt(start - 1))) start--;
@@ -1923,9 +1934,10 @@ public final class NekoTypeScriptCompiler {
         }
 
         /**
-         * 裸可选参数 {@code b?}（无 {@code : T} 类型标注）：{@code ?} 前是标识符、
-         * 后（跳过空白）是 `,` 或 `)`。三元 {@code x ? a : b} 的 {@code ?} 后是表达式、
-         * 可选链 {@code a?.}、空值合并 {@code a??} 均不满足该判据，不受影响。
+         * A bare optional parameter {@code b?} with no {@code : T} type annotation: the {@code ?} is
+         * preceded by an identifier and followed (ignoring whitespace) by `,` or `)`. The {@code ?} of a
+         * ternary {@code x ? a : b} is followed by an expression, and optional chaining {@code a?.} and
+         * nullish coalescing {@code a??} do not match either, so none of them are affected.
          */
         private boolean bareOptionalParameterAt(int question) {
             int previous = previousNonWhitespace(question - 1);
@@ -1935,17 +1947,18 @@ public final class NekoTypeScriptCompiler {
         }
 
         /**
-         * 是否装饰器（{@code @Component} / {@code @Log(...)}）。
-         * 判据：{@code @} 后紧跟标识符起始字符，且前一非空白字符是声明起始位置
-         *（{@code \n} / {@code }} / {@code ;} / {@code {} 或文件首）。
-         * 装饰器总是出现在声明前（类/方法/属性/参数），不会跟在值表达式后面。
+         * Whether this is a decorator ({@code @Component} / {@code @Log(...)}).
+         * The criterion: {@code @} is directly followed by an identifier start character, and the
+         * previous non-whitespace character starts a declaration ({@code \n} / {@code }} / {@code ;} /
+         * {@code {} or the start of the file). A decorator always comes before a declaration (class,
+         * method, property, parameter) and never follows a value expression.
          */
         private boolean decoratorAt(int at) {
             if (at + 1 >= length) return false;
             char next = source.charAt(at + 1);
             if (!isIdentifierStart(next)) return false;
             int previous = previousNonWhitespace(at - 1);
-            if (previous < 0) return true; // 文件首
+            if (previous < 0) return true; // Start of the file
             char pc = source.charAt(previous);
             return pc == '\n' || pc == '\r' || pc == '}' || pc == ';' || pc == '{' || pc == ')';
         }
@@ -2101,9 +2114,9 @@ public final class NekoTypeScriptCompiler {
         private int functionOverloadEnd(int wordEnd) {
             int i = nextNonWhitespace(wordEnd);
             if (i < length && source.charAt(i) == '*') i = nextNonWhitespace(i + 1); // generator
-            if (i < length && isIdentifierStart(source.charAt(i))) i = readIdentifierEnd(i + 1); // 名字
+            if (i < length && isIdentifierStart(source.charAt(i))) i = readIdentifierEnd(i + 1); // the name
             i = nextNonWhitespace(i);
-            if (i < length && source.charAt(i) == '<') { // 泛型参数 <T>
+            if (i < length && source.charAt(i) == '<') { // generic parameters <T>
                 int closeAngle = matchingAngle(i);
                 if (closeAngle < 0) return -1;
                 i = nextNonWhitespace(closeAngle + 1);
@@ -2112,7 +2125,7 @@ public final class NekoTypeScriptCompiler {
             int close = matchingParen(i);
             if (close < 0) return -1;
             int after = nextNonWhitespace(close + 1);
-            if (after < length && source.charAt(after) == ':') { // 返回类型注解
+            if (after < length && source.charAt(after) == ':') { // return type annotation
                 after = typeExpressionEnd(after + 1);
             } else after = close + 1;
             return bodylessSignatureEnd(after);

@@ -14,12 +14,11 @@ import java.util.List;
 import java.util.Locale;
 
 /**
- * JSON codec of the Dynamic Registry transaction wire (ticket 21 platform wiring):
- * encodes/decodes the server→client {@link DynamicSyncMessage} and the client→server
- * {@link DynamicSyncReply} into the single JSON string body of the existing play-phase
- * payload channel (ticket 17 register-once discipline — no second channel, no second
- * model). Lives in common so the JVM-verified protocol and the platform payload share
- * one serialization; no Minecraft/loader type is referenced.
+ * JSON codec of the Dynamic Registry transaction wire: encodes and decodes the server→client
+ * {@link DynamicSyncMessage} and the client→server {@link DynamicSyncReply} into the single JSON
+ * string body of the existing play-phase payload channel (no second channel, no second model).
+ * Lives in common so the JVM-verified protocol and the platform payload share one serialization;
+ * no Minecraft/loader type is referenced.
  *
  * <p>Wire shape (schema {@code v:1}, field order fixed by this writer):
  * <pre>
@@ -32,11 +31,10 @@ import java.util.Locale;
  * </pre>
  *
  * <p>Decoding is strict (malformed input throws {@link IllegalArgumentException} with an
- * actionable message): unknown schema version, unknown message kind, unknown candidate
- * type or register mode, and missing scalar fields are all rejected instead of silently
- * coerced. The receive side treats a decode failure as a dropped/recorded event per the
- * ticket 17 defense-line discipline — it never propagates into the platform network
- * thread.
+ * actionable message): unknown schema version, unknown message kind, unknown candidate type or
+ * register mode, and missing scalar fields are all rejected instead of silently coerced. The
+ * receive side treats a decode failure as a dropped/recorded event and never lets it propagate
+ * into the platform network thread.
  */
 public final class DynamicSyncWireCodec {
 

@@ -32,15 +32,19 @@ public record ScriptPackManifest(
 
     public static final String FILE_NAME = "manifest.json";
 
-    /** 目录名兜底用的 id 规则：小写字母/数字/下划线/连字符，其余字符替换为 {@code _}。 */
+    /**
+     * Id rule for the directory-name fallback: lowercase letters, digits, underscore and hyphen; any
+     * other character becomes {@code _}.
+     */
     public static String sanitizeId(String dirName) {
         String cleaned = dirName == null ? "" : dirName.trim().toLowerCase(java.util.Locale.ROOT).replaceAll("[^a-z0-9_-]", "_");
         return cleaned.isBlank() ? "pack" : cleaned;
     }
 
     /**
-     * 解析包目录下的 manifest.json。文件不存在返回 {@code null}（不是包）；
-     * 存在但损坏时同样返回 {@code null} 并 WARN——由调用方决定跳过该包。
+     * Parses manifest.json in a pack directory. Returns {@code null} when the file is missing (not a
+     * pack), and also returns {@code null} with a WARN when it exists but is corrupt; the caller
+     * decides to skip that pack.
      */
     public static ScriptPackManifest load(Path packDir, String fallbackId) {
         Path file = packDir.resolve(FILE_NAME);
