@@ -403,6 +403,22 @@
       "translationDigest": "2e11153c768f27bcbf4f29512cfd3bf3734342aef1d95f4e76cce7cef52437a2",
       "translationStatus": "draft",
       "humanReview": "pending"
+    },
+    {
+      "id": "jsx-client-ui-advanced",
+      "section": "modpacks",
+      "cn": "JSX 进阶控件与工作区",
+      "us": "JSX advanced controls and workspace",
+      "translationStatus": "draft",
+      "humanReview": "pending"
+    },
+    {
+      "id": "ai-support-protocol",
+      "section": "contributors",
+      "cn": "AI 查询协议与底层接口",
+      "us": "AI query protocol and low-level API",
+      "translationStatus": "draft",
+      "humanReview": "pending"
     }
   ]
 }

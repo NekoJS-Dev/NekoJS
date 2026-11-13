@@ -230,4 +230,4 @@ A release creates a GitHub Release and publishes to CurseForge, once the build a
 
 ---
 
-[Previous: Probe type generation](probe-type-generation_us) · [Contents](Home)
+[Previous: Probe type generation](probe-type-generation_us) · [Contents](Home) · [Next: JSX advanced controls and workspace](jsx-client-ui-advanced_us)

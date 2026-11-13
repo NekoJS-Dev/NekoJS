@@ -230,4 +230,4 @@ deps.platform=neoforge
 
 ---
 
-[上一篇: Probe 类型生成](probe-type-generation_cn) · [目录](Home)
+[上一篇: Probe 类型生成](probe-type-generation_cn) · [目录](Home) · [下一篇: JSX 进阶控件与工作区](jsx-client-ui-advanced_cn)

@@ -2,102 +2,81 @@
 
 > **中文** · [English](script-basics_us)
 
-<a id="wiki-section-1"></a>
 # 脚本基础
 
-本页讲清楚三件事：脚本应该放在哪个目录、改完怎么让它生效、出错了怎么查。
+写 NekoJS 脚本前，先搞清三件事：**脚本该放进哪个文件夹、改完怎么让它生效、写错了去哪看报错**。
 
-<a id="wiki-section-2"></a>
-## 四种脚本
+## 1. 四种脚本目录与分工
 
-NekoJS 按目录区分脚本。不同目录的脚本在不同时机运行，能用的 API 也不同。
+NekoJS 根据文件所在的目录决定脚本在什么时机运行、能调用哪些 API：
 
-| 目录 | 什么时候运行 | 用来做什么 | 改完怎么生效 |
-|---|---|---|---|
-| `startup_scripts/` | 游戏启动时，只运行一次 | 注册新物品、方块、实体 | **重启游戏** |
-| `server_scripts/` | 进入世界时 | 改配方、监听玩家和世界事件、自定义命令 | `/nekojs reload` |
-| `client_scripts/` | 游戏启动时（仅客户端） | HUD、按键、界面、物品提示 | `/nekojs reload client` |
-| `test_scripts/` | 只在你手动执行时 | 写测试，检查脚本行为是否正确 | `/nekojs test` |
+| 目录 | 运行时机 | 主要用途 | 能用的 API 范围 | 改完怎么生效 |
+|---|---|---|---|---|
+| `startup_scripts/` | 游戏启动时（仅运行一次） | 注册新物品、方块、实体、能力、生物 AI | 服务端 + 客户端（专用服无客户端 API） | **必须重启游戏** |
+| `server_scripts/` | 进入存档或服务端启动时 | 改配方、改标签/掉落表、监听玩家与世界事件、注册命令 | 仅服务端 API | `/nekojs reload` |
+| `client_scripts/` | 客户端启动时（专用服不跑） | 画 HUD、写 JSX 界面、自定义按键、改物品悬浮提示 | 仅客户端 API | `/nekojs reload client` |
+| `test_scripts/` | 手动执行测试命令时 | 编写自动化断言，验证配方或脚本逻辑是否符合预期 | 仅服务端 API | `/nekojs test` |
 
-简单判断：
+**不确定放哪？按这个直觉选：**
+- 要**无中生有加新东西**（新物品、新方块） 👉 放 `startup_scripts/`
+- 要**改玩法规则或服务端数据**（配方、掉落、右键事件） 👉 放 `server_scripts/`
+- 要**改画面显示或键鼠操作**（HUD、弹窗、快捷键） 👉 放 `client_scripts/`
 
-- 要**添加新东西**（物品、方块） → `startup_scripts`
-- 要**改游戏规则或数据**（配方、事件） → `server_scripts`
-- 要**改画面或操作** → `client_scripts`
+> 跨端调错 API 会直接报错——比如在 `client_scripts/` 里写 `ServerEvents.recipes(...)` 是跑不通的。每个事件和工具属于哪一端，见 [事件参考](event-reference_cn) 和 [全局绑定](global-bindings_cn)。
 
-<a id="wiki-section-3"></a>
-## 每种脚本能用哪些 API
+## 2. 支持的脚本文件后缀
 
-服务端脚本只能用服务端的 API，客户端脚本只能用客户端的 API。用错会直接报错，例如在 `client_scripts` 里写 `ServerEvents.recipes(...)`。
-
-| 脚本 | 能用的 API |
-|---|---|
-| 启动脚本 | 服务端和客户端都能用 |
-| 服务端脚本 | 只有服务端 |
-| 客户端脚本 | 只有客户端 |
-| 测试脚本 | 只有服务端 |
-
-每个事件和绑定能在哪种脚本里用，[事件参考](event-reference_cn) 和 [全局绑定](global-bindings_cn) 里都有标注。
-
-<a id="wiki-section-4"></a>
-## 文件类型
+日常写脚本直接用 `.js` 即可；如果你习惯类型提示、JSX 界面或 Python，也可以混用其他后缀：
 
 | 扩展名 | 说明 |
 |---|---|
-| `.js` | 普通 JavaScript，推荐新手使用 |
-| `.mjs` / `.cjs` | 明确指定为 ES 模块 / CommonJS 模块 |
-| `.ts` | TypeScript，只去掉类型标注后运行，不做类型检查 |
-| `.jsx` / `.tsx` | 带 JSX 语法的 JavaScript / TypeScript |
-| `.py` | NekoJS 支持的 Python 子集，不需要安装 Python |
+| `.js` | 标准 JavaScript（新手首选） |
+| `.mjs` / `.cjs` | 显式声明为 ES Module / CommonJS 模块（详见 [模块系统](module-system_cn)） |
+| `.ts` | TypeScript（加载时自动擦除类型标注直接运行，不在游戏内做类型检查） |
+| `.jsx` / `.tsx` | 带 JSX 语法的脚本，常用于写客户端界面（详见 [TypeScript 与 JSX](typescript-and-jsx_cn)） |
+| `.py` | NekoJS 内置支持的 Python 子集，电脑无需安装 Python（详见 [Python 脚本](python-scripts_cn)） |
 
-详见 [TypeScript 与 JSX](typescript-and-jsx_cn)、[Python 脚本](python-scripts_cn)。
+## 3. 让修改生效（热重载规则）
 
-<a id="wiki-section-5"></a>
-## 让改动生效
+在编辑器里保存文件后，游戏**不会**自动刷新，需要手动触发对应重载：
 
-保存文件**不会**自动生效。改完后按脚本类型执行对应操作：
+- **服务端脚本**：执行 `/nekojs reload`（等价于 `/nekojs reload server`）。
+- **客户端脚本**：执行 `/nekojs reload client`（在 NeoForge 上按原版重载资源的 `F3 + T` 也会顺带重载客户端脚本）。
+- **测试脚本**：执行 `/nekojs test`。
+- **启动脚本**：**只能重启游戏**（执行 `/nekojs reload startup` 会被直接拒绝）。
 
-| 改了什么 | 怎么做 |
-|---|---|
-| 服务端脚本 | `/nekojs reload`（等同 `/nekojs reload server`） |
-| 客户端脚本 | `/nekojs reload client`（NeoForge 上按 F3+T 也会重载） |
-| 测试脚本 | `/nekojs test` |
-| 启动脚本 | 重启游戏。`/nekojs reload startup` 会被拒绝 |
+> **单文件重载提示**：调试时虽然可以写 `/nekojs reload server recipes.js`（按 Tab 可补全相对路径）只重跑单个文件，但**日常强烈建议直接整类重载**，避免多文件之间的状态不一致。
 
-只想重跑某一个文件时，可以写 `/nekojs reload server recipes.js`（路径相对于 `server_scripts`，按 TAB 可补全）。日常开发建议直接重载整个类型，结果更可靠。
+### 重载报错时会发生什么？
 
-<a id="wiki-section-6"></a>
-### reload 失败时会怎样
+当你整类重载（如 `/nekojs reload`）时，如果新改的脚本里有任意一个文件语法错误或顶层抛错，**本次重载会整体作废，游戏继续保留上一次正常工作的脚本**，不会变成“一半新、一半旧”的残废状态。修好报错再重新 reload 即可。
 
-重载整个类型（例如 `/nekojs reload`）时，如果新脚本里有任何一个报错，**这次重载会整体放弃，游戏继续使用上一次成功加载的脚本**。所以写错了不会让游戏陷入“一半新、一半旧”的状态，修好后再 reload 即可。
+> 注意：如果脚本在抛错**之前**已经执行了外部副作用（例如调用 `JsonIO` 写了磁盘文件、或已经往玩家背包塞了物品），这些已经发生的操作不会自动撤销。
 
-但要注意：脚本已经做过的事情不会被撤销。比如脚本在报错之前已经写了文件、给玩家发了物品，这些改动会保留。
+### 为什么改了配方，JEI / REI 里没变？
 
-<a id="wiki-section-7"></a>
-### 配方查看器没刷新
+执行 `/nekojs reload` 后，新配方在服务端**立刻就能合成生效**。但 JEI、REI 等客户端配方查看器有时不会立刻重刷缓存，退出重进一次存档就能看到最新列表了。
 
-`/nekojs reload` 之后配方会立刻在服务端生效，可以直接合成验证。JEI、REI 等配方查看器有时还显示旧配方，重新进入世界即可。
+## 4. 控制加载顺序与跨文件传值
 
-<a id="wiki-section-8"></a>
-## 加载顺序
+### 调整文件加载顺序
 
-同一类型的脚本默认按文件路径顺序加载。需要控制顺序时，在文件**最开头**加注释：
+同一目录下的脚本默认按文件路径字母顺序加载。如果你想让某个工具库或前置脚本先跑，在文件的**最顶部第一行**加上属性注释：
 
 ```javascript
 // priority: 100
 ```
 
-数字越大越先加载，默认是 0。如果需要“某个文件在另一个文件之后加载”，用 `// after: lib/init.js`。
+- `priority` 数字越大越先加载（默认为 `0`，支持负数）。
+- 如果只需要排在某个特定文件后面，写 `// after: lib/init.js`。
+- ⚠️ 这类注释**必须写在文件最开头的代码之前**；写在代码中间不会生效，也不会报错提醒。完整属性列表见 [脚本属性](script-properties_cn)。
 
-这些注释必须写在文件开头，写在代码后面不会生效，也不会报错。所有可用的注释见 [脚本属性](script-properties_cn)。
+### 在不同文件之间共享变量（`global` 与 `shared`）
 
-<a id="wiki-section-9"></a>
-## 在脚本之间共享数据
+每个脚本文件都有独立的作用域，顶层 `const` / `let` 定义的变量不会污染其他文件。需要跨文件读写内存数据时：
 
-每个脚本文件有自己独立的作用域，在一个文件里定义的变量，另一个文件看不到。需要共享时：
-
-- **`global`**：同一类型的脚本之间共享。例如所有服务端脚本共用一个 `global`。
-- **`shared`**：所有类型的脚本之间共享。例如服务端脚本写入，客户端脚本读取（仅单人游戏，同一个游戏进程内有效）。
+- **`global`**：在**同一种脚本类型**内部共享（例如所有 `server_scripts/` 共用一个 `global`，所有 `client_scripts/` 共用另一个 `global`，两边互不可见）。
+- **`shared`**：在**同一个游戏进程内的所有脚本类型**之间共享（仅单人游戏能让服务端脚本写、客户端脚本读；多人联机时服务端与玩家客户端不在同一台机器进程上，绝不能用 `shared` 传数据）。
 
 ```javascript
 // server_scripts/a.js
@@ -109,53 +88,36 @@ ServerEvents.tickPost(event => {
 })
 ```
 
-`global` 和 `shared` 的内容在 reload 后保留，但**关闭游戏后就没了**。也不能用它们在服务器和多人游戏的客户端之间传数据。
+> `global` 和 `shared` 里的基础值在 reload 后依然保留，但**关掉游戏就没了**。需要存进存档、写本地文件或联机同步，请看 [数据、状态与持久化](data-and-state_cn)。
 
-需要保存到硬盘、同步给客户端，或者存到玩家和物品身上，请看 [数据与状态](data-and-state_cn)。
+## 5. 脚本出错了怎么查？
 
-<a id="wiki-section-10"></a>
-## 出错了怎么查
+脚本写错不会直接崩掉整个游戏。遇到“没反应”或报错提示时，按这三步定位：
 
-脚本报错不会让游戏崩溃。按这个顺序排查：
+1. 游戏内执行 `/nekojs error`，快速查看当前有没有报错摘要。
+2. 执行 `/nekojs view_all_errors` 查看完整错误堆栈（NeoForge 上会直接弹出可视化错误面板）。
+3. 打开游戏目录下的专用日志 `logs/nekojs/<类型>.log`（分为 `startup.log`、`server.log`、`client.log`、`test.log`）。
 
-1. 执行 `/nekojs error`，看有没有报错。
-2. 执行 `/nekojs view_all_errors`，查看完整的错误列表（NeoForge 会打开错误面板）。
-3. 打开 `logs/nekojs/<类型>.log`，例如 `logs/nekojs/server.log`。
-
-错误信息会写明出错的文件、行号和列号，并附上出错的那行代码：
+日志会精确标出出错的文件、行号、列号以及对应的代码行：
 
 ```text
 > 12 |   event.shapd('minecraft:stone', ...)
      |         ^
 ```
 
-出错之后会怎样，取决于脚本类型：
+**不同位置的报错影响范围不同：**
+- **服务端 / 客户端 / 测试脚本顶层报错**：整次 reload 放弃，回退到上一次成功的版本。
+- **启动脚本（`startup_scripts`）报错**：出错的那个文件被跳过，其余启动脚本继续执行。
+- **事件回调内部报错**（例如玩家右键方块时触发的回调里抛错）：只记录当次错误日志，不影响脚本其余部分和后续事件触发。
 
-- **服务端、客户端、测试脚本**：重载时只要有一个文件报错，这次重载的所有改动都不生效，继续使用上一次成功加载的版本（见上文“reload 失败时会怎样”）。修好错误再 reload 即可。
-- **启动脚本**：出错的文件被跳过，其他文件照常运行。
-- **事件回调里的报错**（比如 `ServerEvents.recipes(event => { ... })` 里面的代码出错）：只记录这一次错误，脚本和其他事件照常工作。
+### 加载前的拼写提示与死循环防范
 
-<a id="wiki-section-11"></a>
-### 加载前的拼写检查
+- **成员拼写预检**：NekoJS 在加载脚本前会扫描常见的 API 调用拼写（比如把 `recipes` 写成 `event.rec` 时会提示“你是不是想写 `recipes`”）。如果遇到误报或觉得提示太吵，可在 `nekojs/config/engine.toml` 中设 `scriptMemberValidation = false` 关闭。
+- **严防死循环与阻塞**：NekoJS 不会强行杀死一直不退出的同步死循环。如果你写了 `while (true)` 死循环，或者 `await` 了一个永远不会 resolve 的 Promise，主线程会被直接卡死；在 `tick` 等每秒运行 20 次的高频事件里也请保持逻辑轻量。
 
-NekoJS 在加载脚本前会做一次拼写检查。例如你写了 `event.rec`，它会提示“你是不是想写 `recipes`”。这些只是提示，不会阻止脚本运行。
+## 6. 下一步看什么
 
-如果提示太多或有误报，可以在 `nekojs/config/engine.toml` 里设置 `scriptMemberValidation = false` 关闭。
-
-<a id="wiki-section-12"></a>
-### 小心死循环
-
-NekoJS 不会强行中断一直运行不结束的脚本。如果脚本里有死循环，或者 `await` 了一个永远不会完成的 Promise，游戏会卡住。在 `tick` 之类频繁触发的事件里，也要避免做太重的工作。
-
-<a id="wiki-section-13"></a>
-## 接下来
-
-- [脚本属性](script-properties_cn)：`priority`、`modloaded`、`disable`、`after` 的完整用法。
-- [命令](commands_cn)：所有 `/nekojs` 命令。
-- [全局绑定](global-bindings_cn)：可以直接使用的全部工具。
-
-<!-- wiki-nav -->
-
----
-
-[上一篇: 常见问题](faq_cn) · [目录](Home) · [下一篇: 脚本 API 约定](script-api-style_cn)
+- [脚本属性](script-properties_cn)：`priority`、`modloaded`、`disable`、`after` 的全部用法。
+- [脚本 API 约定](script-api-style_cn)：事件、绑定、Builder 与读写属性的设计规律。
+- [全局绑定](global-bindings_cn)：`Item`、`Text`、`JsonIO` 等开箱即用的全局工具。
+- [命令](commands_cn)：所有 `/nekojs` 调试与管理命令。

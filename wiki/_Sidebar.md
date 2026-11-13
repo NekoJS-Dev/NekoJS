@@ -35,6 +35,7 @@
 - JSX 客户端 UI / JSX client UI · [中文](jsx-client-ui_cn) · [EN](jsx-client-ui_us)
 - MixinJS（实验性） / MixinJS (experimental) · [中文](mixinjs_cn) · [EN](mixinjs_us)
 - Node.js 兼容 / Node.js compatibility · [中文](nodejs-compatibility_cn) · [EN](nodejs-compatibility_us)
+- JSX 进阶控件与工作区 / JSX advanced controls and workspace · [中文](jsx-client-ui-advanced_cn) · [EN](jsx-client-ui-advanced_us)
 
 ## 插件开发者 / Plugin developers
 
@@ -48,3 +49,4 @@
 - 项目架构 / Project architecture · [中文](project-architecture_cn) · [EN](project-architecture_us)
 - Probe 类型生成 / Probe type generation · [中文](probe-type-generation_cn) · [EN](probe-type-generation_us)
 - 构建系统 / Build system · [中文](build-system_cn) · [EN](build-system_us)
+- AI 查询协议与底层接口 / AI query protocol and low-level API · [中文](ai-support-protocol_cn) · [EN](ai-support-protocol_us)

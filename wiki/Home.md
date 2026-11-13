@@ -35,6 +35,7 @@
 - [JSX 客户端 UI](jsx-client-ui_cn)
 - [MixinJS（实验性）](mixinjs_cn)
 - [Node.js 兼容](nodejs-compatibility_cn)
+- [JSX 进阶控件与工作区](jsx-client-ui-advanced_cn)
 
 ## 插件开发者
 
@@ -48,6 +49,7 @@
 - [项目架构](project-architecture_cn)
 - [Probe 类型生成](probe-type-generation_cn)
 - [构建系统](build-system_cn)
+- [AI 查询协议与底层接口](ai-support-protocol_cn)
 
 ---
 
@@ -84,6 +86,7 @@
 - [JSX client UI](jsx-client-ui_us)
 - [MixinJS (experimental)](mixinjs_us)
 - [Node.js compatibility](nodejs-compatibility_us)
+- [JSX advanced controls and workspace](jsx-client-ui-advanced_us)
 
 ## Plugin developers
 
@@ -97,3 +100,4 @@
 - [Project architecture](project-architecture_us)
 - [Probe type generation](probe-type-generation_us)
 - [Build system](build-system_us)
+- [AI query protocol and low-level API](ai-support-protocol_us)
