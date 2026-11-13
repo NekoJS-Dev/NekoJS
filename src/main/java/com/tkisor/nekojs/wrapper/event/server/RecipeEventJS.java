@@ -367,7 +367,7 @@ public class RecipeEventJS implements RecipeLifecycleContext {
     }
 
     /**
-     * Stage 4: keeps the original count when the output is replaced (result.count aware).
+     * Keeps the original count when the output is replaced (result.count aware).
      * When the original node is {@code {item, count: N}} and the replacement JSON is a single-item object
      * (no count), N migrates onto the replacement result so the count is not lost.
      */

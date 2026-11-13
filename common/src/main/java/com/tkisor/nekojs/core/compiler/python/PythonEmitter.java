@@ -656,8 +656,8 @@ public final class PythonEmitter {
                     line("throw " + errStack.peek() + ";");   // re-raise the current exception
                 } else if (r.exc() instanceof PythonNode.Name rn && isThrowableClassName(rn.id())) {
                     // raise Cls == raise Cls() (Python semantics): a bare class name (built-in exception, user class, or
-                    // exception class alias) must be instantiated before throwing; a user class used to be thrown as the
-                    // class object itself, so `except Cls` never matched through instanceof and the crash went uncaught.
+                    // exception class alias) must be instantiated before throwing; throwing the class object itself makes
+                    // `except Cls` fail its instanceof test, and the exception escapes uncaught.
                     line("throw new " + jsName(rn.id()) + "();");
                 } else {
                     // raise ValueError('x') -> throw new ValueError("x") (the built-in exception classes come from the prelude)
