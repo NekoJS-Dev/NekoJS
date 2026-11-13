@@ -29,10 +29,19 @@ tasks.jar {
 
 repositories {
     mavenCentral()
-    // The core exposes its relocated Graal runtime through this repository.
     exclusiveContent {
         forRepository { maven("https://www.cursemaven.com") }
         filter { includeGroup("curse.maven") }
+    }
+    // The core exposes its relocated Graal runtime through this repository.
+    exclusiveContent {
+        forRepository {
+            maven {
+                name = "Modrinth"
+                url = uri("https://api.modrinth.com/maven")
+            }
+        }
+        filter { includeGroup("maven.modrinth") }
     }
     // Resolve Gson compile-time annotations from Central rather than a loader mirror.
     exclusiveContent {

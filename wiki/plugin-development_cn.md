@@ -10,12 +10,30 @@
 <a id="wiki-section-2"></a>
 ## 🚀 开发环境与入口
 
-插件本质上是 Minecraft 模组。在 `build.gradle` 中依赖 NekoJS 的 API jar 即可：
+插件本质上是 Minecraft 模组。在 `build.gradle` 中依赖对应版本与加载器的 NekoJS 发布 jar。两个加载器均要求 GraalMC 25.5.0 或更高；NeoForge 使用 Modrinth Maven，Fabric 可使用 CurseMaven：
 
 ```groovy
-repositories { maven { url = "https://cursemaven.com" } }
+repositories {
+    exclusiveContent {
+        forRepository {
+            maven {
+                name = "Modrinth"
+                url = "https://api.modrinth.com/maven"
+            }
+        }
+        filter { includeGroup("maven.modrinth") }
+    }
+    // Used only by the Fabric alternative below.
+    maven {
+        url = "https://cursemaven.com"
+        content { includeGroup("curse.maven") }
+    }
+}
 dependencies {
-    compileOnly "curse.maven:graal-1504336:8762962" // Graal
+    // NeoForge: GraalMC 25.5.0.
+    compileOnly "maven.modrinth:bjcrgPcA:O8qtoV6d"
+    // Fabric: replace the NeoForge dependency with this CurseForge file.
+    // compileOnly "curse.maven:graal-1504336:9555615"
     compileOnly files("libs/nekojs-<version>.jar")
 }
 ```

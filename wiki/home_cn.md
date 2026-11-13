@@ -26,7 +26,7 @@ NekoJS 是一个 Minecraft 脚本模组：用 JavaScript（也可以用 TypeScri
 <a id="wiki-section-3"></a>
 ## 一分钟体验
 
-1. 把 NekoJS 和前置模组 [Graal](https://www.curseforge.com/minecraft/mc-mods/graal)（25.1.3.7 或更高）放进 `mods/`，启动游戏。
+1. 把 NekoJS 和前置模组 [Graal](https://www.curseforge.com/minecraft/mc-mods/graal)（[按加载器选择所需版本](quick-start_cn#wiki-section-2)）放进 `mods/`，启动游戏。
 2. 游戏目录下会出现 `nekojs/` 文件夹。新建 `nekojs/server_scripts/hello.js`：
 
 ```javascript

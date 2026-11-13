@@ -41,15 +41,15 @@ NODES = [
         "java": "C:/Program Files/Java/jdk-21.0.10/bin/java.exe",
         "args": ["@libraries/net/neoforged/neoforge/21.1.227/win_args.txt", "nogui"],
         "platform": ["libraries"],
-        "external_mods": ["graal-1504336-8762962.jar"],
-        "jar_glob": "nekojs-neoforge-1.21.1-*-server.jar",
+        "external_mods": ["graalmc-neoforge-25.5.0.jar"],
+        "jar_glob": "nekojs-neoforge-1.21.1-*.jar",
     },
     {
         "node": "26.1.2", "loader": "neoforge",
         "java": "C:/Program Files/Java/jdk-25.0.2/bin/java.exe",
         "args": ["@libraries/net/neoforged/neoforge/26.1.2.71/win_args.txt", "nogui"],
         "platform": ["libraries"],
-        "external_mods": ["graal-1504336-8762962.jar"],
+        "external_mods": ["graalmc-neoforge-25.5.0.jar"],
         "jar_glob": "nekojs-neoforge-26.1.2-*.jar",
     },
     {
@@ -57,7 +57,7 @@ NODES = [
         "java": "C:/Program Files/Java/jdk-25.0.2/bin/java.exe",
         "args": ["@libraries/net/neoforged/neoforge/26.2.0.75/win_args.txt", "nogui"],
         "platform": ["libraries"],
-        "external_mods": ["graal-1504336-8762962.jar"],
+        "external_mods": ["graalmc-neoforge-25.5.0.jar"],
         "jar_glob": "nekojs-neoforge-26.2.0-*.jar",
     },
     {
@@ -65,7 +65,7 @@ NODES = [
         "java": "C:/Program Files/Java/jdk-25.0.2/bin/java.exe",
         "args": ["-jar", "fabric-server-launch.jar", "nogui"],
         "platform": ["fabric-server-launch.jar", "libraries"],
-        "external_mods": ["graal-1504336-8762963.jar", "fabric-api-0.155.2+26.1.2.jar"],
+        "external_mods": ["graal-1504336-9555615.jar", "fabric-api-0.155.2+26.1.2.jar"],
         "jar_glob": "nekojs-fabric-26.1.2-*.jar",
     },
     {
@@ -73,7 +73,7 @@ NODES = [
         "java": "C:/Program Files/Java/jdk-25.0.2/bin/java.exe",
         "args": ["-jar", "fabric-server-launch.jar", "nogui"],
         "platform": ["fabric-server-launch.jar", "libraries"],
-        "external_mods": ["graal-1504336-8762963.jar", "fabric-api-0.159.0+26.2.jar"],
+        "external_mods": ["graal-1504336-9555615.jar", "fabric-api-0.159.0+26.2.jar"],
         "jar_glob": "nekojs-fabric-26.2-*.jar",
     },
 ]
@@ -98,7 +98,8 @@ def write_json(path, data):
 
 def pick_nekojsjar(node_cfg):
     pattern = os.path.join(REPO_ROOT, "versions", node_cfg["node"], "build", "libs", node_cfg["jar_glob"])
-    matches = [p for p in glob.glob(pattern)]
+    excluded = ("-sources.jar", "-javadoc.jar", "-dev.jar", "-plain.jar", "-server.jar")
+    matches = [p for p in glob.glob(pattern) if not p.endswith(excluded)]
     if not matches:
         raise SystemExit(f"no nekojs jar matches {pattern}; build the node first")
     return max(matches, key=os.path.getmtime)

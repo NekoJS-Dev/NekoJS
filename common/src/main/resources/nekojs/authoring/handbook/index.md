@@ -2,6 +2,8 @@
 
 Use this installed bundle with the matching instance's declarations. The wiki is supplementary; authoring does not require an internet connection.
 
+NekoJS produces one mod jar per Minecraft/loader node for both client and server, with no separate server jar or bundled ICU4J. Both loaders require GraalMC 25.5.0 or later. The pinned NeoForge build (`maven.modrinth:bjcrgPcA:O8qtoV6d`) and Fabric build (CurseForge file 9555615) supply their own relocated ICU for GraalJS; no separate ICU library is needed for that runtime.
+
 1. Read `[output].directory` in `nekojs/config/ai.toml` to discover the configured AI root (default `.github/neko_ai` if the file or setting is absent), then read `environment.json` and `current.json` under that selected root from the game directory, or use the authoring context operation. Resolve the active bundle and index locations from those discovery files.
 2. For MCP tool access while the game runs, enable [in-mod MCP](connections.md) and configure the client with its URL and bearer token; no helper JAR or game-directory argument is needed. For offline snapshots or a separate client-owned process, use the [standalone stdio helper](stdio.md).
 3. Choose the script type and read [script types](script-types.md).

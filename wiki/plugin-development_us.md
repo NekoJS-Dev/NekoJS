@@ -383,16 +383,31 @@ Each built-in hook corresponds to an `XxxPoint` in the `com.tkisor.nekojs.core.p
 <a id="wiki-section-19"></a>
 ## Gradle dependencies
 
-NekoJS does not publish Maven artifacts yet, so plugins depend on the NekoJS release jar directly. Graal comes from CurseMaven:
+NekoJS does not publish Maven artifacts yet, so plugins depend on the matching NekoJS release jar directly. Both loaders require GraalMC 25.5.0 or later. Use Modrinth Maven for NeoForge; Fabric can use CurseMaven:
 
 ```groovy
 repositories {
-    maven { url = "https://cursemaven.com" }
+    exclusiveContent {
+        forRepository {
+            maven {
+                name = "Modrinth"
+                url = "https://api.modrinth.com/maven"
+            }
+        }
+        filter { includeGroup("maven.modrinth") }
+    }
+    // Used only by the Fabric alternative below.
+    maven {
+        url = "https://cursemaven.com"
+        content { includeGroup("curse.maven") }
+    }
 }
 
 dependencies {
-    // Graal 25.1.3.7. File 8762962 is the NeoForge build; use 8762963 for Fabric.
-    compileOnly "curse.maven:graal-1504336:8762962"
+    // NeoForge: GraalMC 25.5.0.
+    compileOnly "maven.modrinth:bjcrgPcA:O8qtoV6d"
+    // Fabric: replace the NeoForge dependency with this CurseForge file.
+    // compileOnly "curse.maven:graal-1504336:9555615"
     // The NekoJS release jar for your Minecraft version and loader.
     compileOnly files("libs/nekojs-<version>.jar")
 }

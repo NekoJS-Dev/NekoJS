@@ -9,7 +9,7 @@
 [![License: LGPL-3.0](https://img.shields.io/badge/license-LGPL--3.0-blue.svg)](LICENSE)
 [![CI](https://github.com/NekoJS-Dev/NekoJS/actions/workflows/ci-build.yml/badge.svg)](https://github.com/NekoJS-Dev/NekoJS/actions/workflows/ci-build.yml)
 [![Release](https://img.shields.io/github/v/release/NekoJS-Dev/NekoJS?include_prereleases&label=release)](https://github.com/NekoJS-Dev/NekoJS/releases)
-[![Graal](https://img.shields.io/badge/Graal-%E2%89%A525.1.3.7-orange.svg)](https://www.curseforge.com/minecraft/mc-mods/graal)
+[![Graal](https://img.shields.io/badge/Graal-required-orange.svg)](https://www.curseforge.com/minecraft/mc-mods/graal)
 [![QQ Group](https://img.shields.io/badge/QQ%20Group-1158525822-brightgreen.svg)](https://qm.qq.com/q/rbryak0K6k)
 
 [Docs](wiki/home_us.md) · [Quick Start](wiki/quick-start_us.md) · [Download](https://github.com/NekoJS-Dev/NekoJS/releases) · [Issues](https://github.com/NekoJS-Dev/NekoJS/issues) · [中文文档](wiki/home_cn.md)
@@ -50,13 +50,13 @@ If you've used KubeJS or CraftTweaker, here's what you might be looking for:
 | NeoForge | 26.1.2, 26.2.0 | 25 | Supported, most complete |
 | Fabric | 26.1.2, 26.2 | 25 | Supported, some features not yet ported |
 
-Every version requires the [Graal](https://www.curseforge.com/minecraft/mc-mods/graal) library mod, **version 25.1.3.7 or later**. For per-platform differences, see [Platform Compatibility](wiki/platform-compatibility_us.md).
+Every version requires the [Graal](https://www.curseforge.com/minecraft/mc-mods/graal) library mod: **GraalMC 25.5.0 or later for both Fabric and NeoForge**; use the [loader-specific downloads](wiki/quick-start_us.md#wiki-section-2). For per-platform differences, see [Platform Compatibility](wiki/platform-compatibility_us.md).
 
 ## Quick start
 
 **1. Install.** Download the NekoJS build for your Minecraft version and loader from [Releases](https://github.com/NekoJS-Dev/NekoJS/releases), put it in `mods/` together with Graal, and launch the game.
 
-> On NeoForge 1.21.1, dedicated servers use the jar with `-server` in its file name, and clients use the regular jar. Don't install both at once.
+> One NekoJS jar per Minecraft version and loader is used on both client and server; there is no separate `-server` artifact. NekoJS does not bundle ICU4J; the GraalMC 25.5.0 builds for both loaders supply their own relocated ICU.
 
 **2. Find the script folder.** After the first launch, a `nekojs/` folder appears in your game directory:
 

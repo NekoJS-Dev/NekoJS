@@ -13,11 +13,13 @@
 你需要两个模组：
 
 - **NekoJS**：从 [CurseForge](https://www.curseforge.com/minecraft/search?search=NekoJS) 或 [GitHub Releases](https://github.com/NekoJS-Dev/NekoJS/releases) 下载。
-- **[Graal](https://www.curseforge.com/minecraft/mc-mods/graal)**：NekoJS 的前置，负责真正执行 JavaScript。版本必须是 **25.1.3.7 或更高**。
+- **[Graal](https://www.curseforge.com/minecraft/mc-mods/graal)**：NekoJS 的前置，负责真正执行 JavaScript。两个加载器均要求 **GraalMC 25.5.0 或更高**。当前固定下载为 [Modrinth 上的 NeoForge 版本](https://modrinth.com/mod/bjcrgPcA/version/O8qtoV6d) 和 [CurseForge 上的 Fabric 版本（文件 9555615）](https://www.curseforge.com/minecraft/mc-mods/graal/files/9555615)。
 
 两者都要选和你的 Minecraft 版本、加载器（NeoForge 或 Fabric）对应的文件。把它们放进 `mods/` 文件夹，启动游戏。
 
-> **NeoForge 1.21.1 的专用服务器**要用文件名带 `-server` 的那个 jar，客户端用普通 jar。两个不要同时放。其他版本只有一个 jar。
+> 每个 Minecraft 版本与加载器组合只提供一个 NekoJS 模组 jar，客户端和专用服务器使用同一个文件，不再提供单独的 `-server` jar。
+
+> NekoJS 不内嵌 ICU4J。两个加载器当前固定的 GraalMC 25.5.0 均包含供 GraalJS 使用的重定位 ICU，因此该运行时不需要单独安装 ICU 库。
 
 > Graal 版本太低时，脚本里一用正则表达式就会报 `No language for id regex found`。看到这条报错就去升级 Graal。
 

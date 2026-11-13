@@ -119,14 +119,15 @@ SUBSET_SPEC = {
         "expect": ["26.1.2-fabric", "26.2.0-fabric"],
         "expectPlatform": "fabric",
         "skip": ["1.21.1", "26.1.2", "26.2.0"],
-        "commands": [],
-        "steps": ["Verify packaged Fabric artifact", "Run Fabric development runtime smoke"],
-        "workflow": ["versions/26.1.2-fabric/build/libs/nekojs-fabric-",
-                     "versions/26.2.0-fabric/build/libs/nekojs-fabric-"],
+        "commands": [":${{ matrix.node }}:remapJar"],
+        "steps": ["Build Fabric smoke artifact", "Verify packaged Fabric artifact",
+                  "Run Fabric development runtime smoke"],
+        "workflow": ["- 26.1.2-fabric", "- 26.2.0-fabric",
+                     'find "versions/$node/build/libs"'],
         "intentionalSkip": [
-            "此 job 校验的是 download-artifact 取回的已上传 jar，不是本机构建产物，因此不复用"
-            " Gradle :<node>:verifyFabricRuntimeArtifact；两处断言各自保留：本地 Gradle 门禁保证"
-            "构建不产出坏 jar，CI bash 保证上传/下载链路没有偷换对象",
+            "Each Fabric matrix job builds its own remapped jar without publishing an intermediate "
+            "artifact. Gradle checks the local assembly; the smoke job checks its node-local final "
+            "jar and development runtime. Uploaded-byte identity is no longer claimed.",
             "NeoForge 节点不在此子集：artifact 面由 release-publish 子集覆盖",
         ],
     },
@@ -463,7 +464,7 @@ def gate_nodes(repo=REPO):
             gate.row(node_id, "check", "%d suites / %d tests / 0 failed" % (len(results), tests))
 
         jars = sorted((build / "libs").glob("*.jar")) if (build / "libs").is_dir() else []
-        jars = [j for j in jars if not re.search(r"-(sources|javadoc|dev|plain)\.jar$", j.name)]
+        jars = [j for j in jars if not re.search(r"-(sources|javadoc|dev|plain|server)\.jar$", j.name)]
         prefix = artifact_prefix.get(node["platform"], "?")
         matched = [j for j in jars if j.name.startswith(prefix)]
         if not matched:

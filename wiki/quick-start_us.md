@@ -13,11 +13,13 @@ This page walks you through installing NekoJS, writing your first script, changi
 You need two mods:
 
 - **NekoJS**: download it from [CurseForge](https://www.curseforge.com/minecraft/search?search=NekoJS) or [GitHub Releases](https://github.com/NekoJS-Dev/NekoJS/releases).
-- **[Graal](https://www.curseforge.com/minecraft/mc-mods/graal)**: the dependency that actually runs JavaScript. It must be **25.1.3.7 or newer**.
+- **[Graal](https://www.curseforge.com/minecraft/mc-mods/graal)**: the dependency that actually runs JavaScript. Use **GraalMC 25.5.0 or newer on both loaders**. The pinned downloads are [NeoForge on Modrinth](https://modrinth.com/mod/bjcrgPcA/version/O8qtoV6d) and [Fabric on CurseForge (file 9555615)](https://www.curseforge.com/minecraft/mc-mods/graal/files/9555615).
 
 Pick the files that match your Minecraft version and loader (NeoForge or Fabric). Put both in the `mods/` folder and start the game.
 
-> **For a NeoForge 1.21.1 dedicated server**, use the jar whose name ends in `-server`; clients use the normal jar. Never install both. Other versions ship a single jar.
+> Each Minecraft version and loader combination ships one NekoJS mod jar for both clients and dedicated servers. There is no separate `-server` jar.
+
+> NekoJS does not bundle ICU4J. Both pinned GraalMC 25.5.0 builds include relocated ICU for GraalJS, so no separate ICU library is needed for that runtime.
 
 > If Graal is too old, any script that uses a regular expression fails with `No language for id regex found`. Update Graal when you see this.
 

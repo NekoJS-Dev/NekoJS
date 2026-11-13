@@ -4,6 +4,8 @@ Start with the actual failure, script path, line, Script Type, environment and s
 
 Distinguish parse/transpile failures, declaration errors, runtime exceptions, conversion failures and world-specific validation. An empty authoring query with incomplete coverage does not prove that a member is missing.
 
+A startup failure naming a missing ICU class is a host-runtime dependency problem, not a script or declaration error. Verify the installed GraalMC build against the [runtime requirements](index.md). Both pinned 25.5.0 builds include relocated ICU for GraalJS; they do not expose unshaded `com.ibm.icu` classes to unrelated libraries. Identify the failing library before suggesting another dependency; NekoJS does not bundle ICU or produce a separate server jar.
+
 Normal script execution has no module-evaluation deadline, statement budget or runaway watchdog. The engine settings `scriptEvaluationTimeoutSeconds`, `scriptStatementLimit` and `scriptRunawayTimeoutSeconds` were removed, not replaced by a default timeout. An unresolved top-level await can remain pending; infinite guest/host loops may block the owner thread or process. Investigate the actual promise, code path and host call rather than recommending retired budget settings.
 
 `NEKO-2001`, `NEKO-2002`, `NEKO-2003` and `NEKO-2005` are historical diagnostics whose automatic budget call sites were removed. `NEKO-2004` still limits log output, not execution. The structured phase `WATCHDOG` and owner `Runaway Watchdog` are retained compatibility labels for cancelled, interrupted or resource-exhausted Polyglot contexts; they do not prove an automatic watchdog exists.

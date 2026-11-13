@@ -11,12 +11,12 @@
 <a id="wiki-section-3"></a>
 ### 启动时崩溃，提示找不到 GraalJS 或 polyglot
 
-没有装 **Graal** 前置模组，或者装错了版本。到 [Graal 的 CurseForge 页面](https://www.curseforge.com/minecraft/mc-mods/graal) 下载和你的 Minecraft 版本、加载器对应的文件，版本至少是 25.1.3.7。
+没有装 **Graal** 前置模组，或者装错了版本。使用[对应加载器的下载](quick-start_cn#wiki-section-2)安装匹配的 GraalMC 25.5.0 或更高版本。两个固定版本均包含其使用的重定位 ICU。
 
 <a id="wiki-section-4"></a>
 ### 脚本一用正则就报 `No language for id regex found`
 
-Graal 版本太低。升级到 25.1.3.7 或更高。
+Graal 版本太低或缺少正则语言 provider。安装满足[对应加载器要求](quick-start_cn#wiki-section-2)的版本。
 
 <a id="wiki-section-5"></a>
 ### 游戏目录里没有 nekojs 文件夹

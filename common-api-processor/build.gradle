@@ -25,9 +25,8 @@ repositories {
 }
 
 dependencies {
-    // 只用到 api.spec 的注解（@PlatformAvailability 等）。声明为非传递：契约类型现在住 :common，
-    // 而 :common 用 `api` 导出 Graal（cursemaven），传递进来会让本模块也要配 cursemaven 仓库并
-    // 下载一个它根本不碰的引擎依赖。processorpath 只需要 :common 自己的 class。
+    // Only api.spec annotations are needed. Keep this non-transitive so the processor
+    // does not resolve the Graal runtime exported by common or need its Modrinth repository.
     compileOnly(project(':common')) { transitive = false }
 
     // 处理器单测：SpecCoverageProcessorTest 通过系统编译器内嵌编译源码，

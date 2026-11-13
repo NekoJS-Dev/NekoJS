@@ -109,10 +109,12 @@ deps.platform=neoforge
 | 入口 | 约定插件 | 负责 |
 |---|---|---|
 | `build.gradle.kts` | `nekojs.neoforge-node` | ModDev（MDG）配置和运行配置、AT 与 `neoforge.mods.toml`、按时代分层的资源、fat jar、`verifyDevModSourceSets`、`verifyNeoForgeRuntimeArtifact` |
-| `fabric.gradle.kts` | `nekojs.fabric-node` | Loom、ICU4J 处理、night-config 打包、Fabric fat jar、`verifyFabricRuntimeArtifact` |
+| `fabric.gradle.kts` | `nekojs.fabric-node` | Loom、按加载器选择 Graal 依赖、night-config 打包、Fabric fat jar、`verifyFabricRuntimeArtifact` |
 | 两个约定插件都会应用 | `nekojs.node-sources` | 节点专属文件优先于共享树、`src/fabric` 和 Stonecutter 生成的源码 |
 
-各节点的产物是 fat jar，内嵌 `common` 的运行时类（不含 Graal，Graal 由玩家另装的 Graal 前置模组提供）。NeoForge 1.21.1 还会额外生成一个 `-server` 后缀的专用服务器 jar，带上服务器需要的 ICU 依赖。
+每个 NeoForge 或 Fabric 节点只生成一个供客户端和专用服务器共用的模组 fat jar，内嵌 `common` 的运行时类；不再生成单独的 `-server` jar。Graal 不内嵌，由玩家另装的 Graal 前置模组提供。
+
+NekoJS 模组 jar 不内嵌 ICU4J。两个加载器均要求 GraalMC 25.5.0 或更高：NeoForge 使用 `maven.modrinth:bjcrgPcA:O8qtoV6d`，Fabric 使用 CurseForge 文件 9555615。两个固定版本均提供重定位 ICU，支持开发与安装环境中的 GraalJS；该运行时无需单独提取 ICU 或外部原包名 ICU 依赖。
 
 修改约定插件时要注意：
 
@@ -199,7 +201,7 @@ deps.platform=neoforge
 4. `npm run test:probe-types`（对生成的声明文件做 TypeScript 类型检查）
 5. 五个节点的 `build`
 6. 原生配方 probe、JSX 声明、各节点源码覆盖选择、构建门禁报告（`tools/nekojs-ci-gates.py`）等额外检查
-7. 每个 Fabric 节点：校验下载的 jar，再跑开发服务端冒烟测试
+7. 每个 Fabric 节点：构建并校验本 job 的 remap jar，再跑开发服务端冒烟测试；常规 Fabric Dev-Jars 仍作为 CI 产物，不上传单独的冒烟 jar 产物。
 
 另有一个 job 用 JDK 21 再跑一次 `:common:check`，防止依赖 Gradle 守护进程的 JDK 版本。
 

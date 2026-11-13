@@ -11,12 +11,12 @@
 <a id="wiki-section-3"></a>
 ### The game crashes at startup saying GraalJS or polyglot is missing
 
-The **Graal** dependency is missing or the wrong version. Download the file that matches your Minecraft version and loader from [Graal on CurseForge](https://www.curseforge.com/minecraft/mc-mods/graal). It must be at least 25.1.3.7.
+The **Graal** dependency is missing or the wrong version. Install the matching GraalMC 25.5.0 or newer build using the [loader-specific downloads](quick-start_us#wiki-section-2). Both pinned builds supply their own relocated ICU.
 
 <a id="wiki-section-4"></a>
 ### Any regular expression fails with `No language for id regex found`
 
-Graal is too old. Update to 25.1.3.7 or newer.
+Graal is too old or lacks the regex language provider. Install a build that meets the [requirements for your loader](quick-start_us#wiki-section-2).
 
 <a id="wiki-section-5"></a>
 ### There is no nekojs folder in the game folder

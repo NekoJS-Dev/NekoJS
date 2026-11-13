@@ -41,6 +41,6 @@ side = "BOTH"
 [[dependencies."${mod_id}"]]
 modId = "graalmc"
 type = "required"
-versionRange = "[25.0.1,)"
+versionRange = "[${graal_version},)"
 ordering = "NONE"
 side = "BOTH"

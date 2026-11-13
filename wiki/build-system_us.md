@@ -109,10 +109,12 @@ Both entry scripts are a single line. All build logic lives in convention plugin
 | Entry | Convention plugin | Responsible for |
 |---|---|---|
 | `build.gradle.kts` | `nekojs.neoforge-node` | ModDev (MDG) setup and run configs, AT and `neoforge.mods.toml`, era-split resources, fat jar, `verifyDevModSourceSets`, `verifyNeoForgeRuntimeArtifact` |
-| `fabric.gradle.kts` | `nekojs.fabric-node` | Loom, ICU4J handling, bundled night-config, Fabric fat jar, `verifyFabricRuntimeArtifact` |
+| `fabric.gradle.kts` | `nekojs.fabric-node` | Loom, loader-specific Graal dependency selection, bundled night-config, Fabric fat jar, `verifyFabricRuntimeArtifact` |
 | Applied by both conventions | `nekojs.node-sources` | Node-only files take precedence over the shared tree, `src/fabric` and Stonecutter-generated sources |
 
-Each node produces a fat jar that embeds the `common` runtime classes. Graal is excluded; players install the separate Graal mod. NeoForge 1.21.1 also builds a dedicated-server jar with a `-server` classifier that carries the ICU dependency servers need.
+Each NeoForge or Fabric node produces one mod fat jar for both clients and dedicated servers, embedding the `common` runtime classes. There is no separate `-server` jar. Graal is excluded; players install the separate Graal mod.
+
+NekoJS mod jars do not bundle ICU4J. Both loaders require GraalMC 25.5.0 or later: NeoForge resolves `maven.modrinth:bjcrgPcA:O8qtoV6d`, and Fabric resolves CurseForge file 9555615. Both pinned builds provide relocated ICU for GraalJS in development and installed environments; no separate ICU extraction or external unshaded ICU dependency is needed for that runtime.
 
 When you change a convention plugin, keep in mind:
 
@@ -199,7 +201,7 @@ The main flow in `.github/workflows/ci-build.yml`:
 4. `npm run test:probe-types` (TypeScript type checks on generated declarations)
 5. `build` on all five nodes
 6. Extra checks: native recipe probe, JSX declarations, per-node source override selection, and the build gate report (`tools/nekojs-ci-gates.py`)
-7. For each Fabric node: verify the downloaded jar, then run a development server smoke test
+7. For each Fabric node: build and verify a node-local remapped jar, then run a development server smoke test. Normal Fabric Dev-Jars remain CI artifacts; no separate smoke jar artifact is uploaded.
 
 A separate job runs `:common:check` again on JDK 21 to catch hidden dependencies on the Gradle daemon's JDK version.
 

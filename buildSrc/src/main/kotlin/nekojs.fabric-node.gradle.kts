@@ -24,6 +24,7 @@ val mcVersion = property("deps.minecraft") as String
 val loaderVersion = property("deps.loader_version") as String
 val fabricApiVersion = property("deps.fabric_api") as String
 val javaRelease = (property("deps.java") as String).toInt()
+val graalMinimumVersion = libs.versions.graalRuntime.get()
 
 val modId = property("mod_id") as String
 val modVersion = property("mod_version") as String
@@ -55,12 +56,12 @@ repositories {
 val bundled = configurations.create("bundled")
 configurations.named("implementation").get().extendsFrom(bundled)
 
-// GraalMC 的 curse 文件按加载器分构建：版本目录里的默认值是 NeoForge 构建（不含
-// fabric.mod.json），fabric 节点定向解析到 8762963。版本下限见 libs.versions.toml 的 graal 注释。
+// GraalMC publishes separate loader builds. Override the shared NeoForge dependency with
+// the Fabric file, which includes the relocated ICU runtime used by GraalJS.
 configurations.all {
     resolutionStrategy.eachDependency {
-        if (requested.group == "curse.maven" && requested.name == "graal-1504336") {
-            useVersion("8762963")
+        if (requested.group == "maven.modrinth" && requested.name == "bjcrgPcA") {
+            useTarget("curse.maven:graal-1504336:${libs.versions.graalFabric.get()}")
         }
     }
 }
@@ -127,6 +128,7 @@ val generateModMetadata = tasks.register<ProcessResources>("generateModMetadata"
         "minecraft_version" to mcVersion,
         "loader_version" to loaderVersion,
         "fabric_api_version" to fabricApiVersion,
+        "graal_version" to graalMinimumVersion,
         "java_version" to javaRelease.toString(),
     )
     inputs.properties(replaceProperties)
@@ -135,25 +137,6 @@ val generateModMetadata = tasks.register<ProcessResources>("generateModMetadata"
     into(layout.buildDirectory.dir("generated/sources/modMetadata"))
 }
 sourceSets.main { resources.srcDir(generateModMetadata) }
-
-// ICU4J：GraalJS（truffle）的静态初始化需要它，而 fabric loader 和 MC 开发环境都不提供。
-// 不能走依赖通道：loom 会把用户声明的 icu4j 从 dev run 类路径剥离（它按 MC manifest 库
-// 去重）。改为把类直接提取进主 sourceSet 的输出目录——dev run 类路径必含源集输出，分发
-// jar 也随之携带，一举覆盖开发与生产两侧。
-val icuClassesDir = layout.buildDirectory.dir("generated/icuClasses")
-val extractIcuClasses = tasks.register<Sync>("extractIcuClasses") {
-    val icuJar = configurations.detachedConfiguration(
-        dependencies.create("com.ibm.icu:icu4j:" + libs.icu4j.get().version)
-    ).resolve().single()
-    from(zipTree(icuJar)) {
-        exclude("META-INF/**")
-        exclude("module-info.class")
-    }
-    into(icuClassesDir)
-}
-sourceSets.main {
-    output.dir(mapOf("builtBy" to extractIcuClasses), icuClassesDir)
-}
 
 // 共享树的 resources（src/main/resources、resources-modern/-legacy、templates）由 stonecutter
 // 挂进本节点。其中 AT / mods.toml / interface_injection 是 NeoForge 机制，fabric jar 不应携带；
@@ -235,7 +218,8 @@ val embeddedCommonRuntime = files(
     Callable {
         project(":common").configurations.runtimeClasspath.get().resolvedConfiguration.resolvedArtifacts
             .filter { artifact ->
-                !(artifact.moduleVersion.id.group == "curse.maven" && artifact.name == "graal-1504336")
+                artifact.moduleVersion.id.group != "com.ibm.icu" &&
+                    !(artifact.moduleVersion.id.group == "maven.modrinth" && artifact.name == "bjcrgPcA")
             }
             .map { artifact -> artifact.file }
     }
@@ -293,6 +277,10 @@ val verifyFabricRuntimeArtifact = tasks.register("verifyFabricRuntimeArtifact") 
             val entries = generateSequence {
                 if (zipEntries.hasMoreElements()) zipEntries.nextElement().name else null
             }.toSet()
+            val bundledIcu = entries.filter { entry ->
+                entry.startsWith("com/ibm/icu/") || entry.contains("/com/ibm/icu/") ||
+                    (entry.endsWith(".jar") && entry.substringAfterLast('/').startsWith("icu4j-"))
+            }
             val missing = requiredEntries - entries
             val forbidden = entries.filter { entry ->
                 entry in fabricForbiddenResourceEntries || forbiddenPrefixes.any(entry::startsWith)
@@ -307,18 +295,24 @@ val verifyFabricRuntimeArtifact = tasks.register("verifyFabricRuntimeArtifact") 
                 jar.getInputStream(jar.getEntry("fabric.mod.json")).bufferedReader().use { it.readText() }
             }
             val invalidFabricApiDependency = expectedFabricApiDependency !in metadata
+            val invalidGraalDependency = "\"graalmc\": \">=$graalMinimumVersion\"" !in metadata
 
-            if (missing.isNotEmpty() || forbidden.isNotEmpty() || forbiddenClasses.isNotEmpty() || invalidFabricApiDependency) {
+            if (missing.isNotEmpty() || forbidden.isNotEmpty() || forbiddenClasses.isNotEmpty() ||
+                bundledIcu.isNotEmpty() || invalidFabricApiDependency || invalidGraalDependency) {
                 throw GradleException(
                     "Fabric runtime artifact ${archive.name} is invalid: " +
                         listOfNotNull(
                             missing.takeIf { it.isNotEmpty() }?.let { "missing ${it.sorted()}" },
+                            bundledIcu.takeIf { it.isNotEmpty() }?.let { "contains bundled ICU ${it.sorted()}" },
                             forbidden.takeIf { it.isNotEmpty() }?.let { "contains NeoForge artifacts ${it.sorted()}" },
                             forbiddenClasses.takeIf { it.isNotEmpty() }?.let {
                                 "contains NeoForge classes ${it.sorted()}"
                             },
                             invalidFabricApiDependency.takeIf { it }?.let {
                                 "does not require fabric-api >=$fabricApiVersion"
+                            },
+                            invalidGraalDependency.takeIf { it }?.let {
+                                "does not require graalmc >=$graalMinimumVersion"
                             },
                         ).joinToString("; ")
                 )

@@ -23,11 +23,12 @@ repositories {
     exclusiveContent {
         forRepository {
             maven {
-                url "https://cursemaven.com"
+                name = "Modrinth"
+                url = "https://api.modrinth.com/maven"
             }
         }
         filter {
-            includeGroup "curse.maven"
+            includeGroup "maven.modrinth"
         }
     }
 }
@@ -64,7 +65,7 @@ dependencies {
     testImplementation libs.gson
     testImplementation libs.asm
     testRuntimeOnly libs.junit.platform.launcher
-    // 25.1.3.6; exported so every platform receives the same remapper SPI.
+    // Export the Graal API and remapper SPI; platform nodes select their loader build.
     api(libs.graal)
 
     compileOnly libs.jspecify

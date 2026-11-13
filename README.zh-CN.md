@@ -9,7 +9,7 @@
 [![License: LGPL-3.0](https://img.shields.io/badge/license-LGPL--3.0-blue.svg)](LICENSE)
 [![CI](https://github.com/NekoJS-Dev/NekoJS/actions/workflows/ci-build.yml/badge.svg)](https://github.com/NekoJS-Dev/NekoJS/actions/workflows/ci-build.yml)
 [![Release](https://img.shields.io/github/v/release/NekoJS-Dev/NekoJS?include_prereleases&label=release)](https://github.com/NekoJS-Dev/NekoJS/releases)
-[![Graal](https://img.shields.io/badge/Graal-%E2%89%A525.1.3.7-orange.svg)](https://www.curseforge.com/minecraft/mc-mods/graal)
+[![Graal](https://img.shields.io/badge/Graal-required-orange.svg)](https://www.curseforge.com/minecraft/mc-mods/graal)
 [![QQ 群](https://img.shields.io/badge/QQ%E7%BE%A4-1158525822-brightgreen.svg)](https://qm.qq.com/q/rbryak0K6k)
 
 [文档](wiki/home_cn.md) · [快速开始](wiki/quick-start_cn.md) · [下载](https://github.com/NekoJS-Dev/NekoJS/releases) · [问题反馈](https://github.com/NekoJS-Dev/NekoJS/issues) · [English docs](wiki/home_us.md)
@@ -50,13 +50,13 @@
 | NeoForge | 26.1.2、26.2.0 | 25 | 支持，功能最全 |
 | Fabric | 26.1.2、26.2 | 25 | 支持，部分功能还没移植 |
 
-所有版本都需要前置模组 [Graal](https://www.curseforge.com/minecraft/mc-mods/graal) **25.1.3.7 或更高**。各平台的具体差异见 [平台与兼容性](wiki/platform-compatibility_cn.md)。
+所有版本都需要前置模组 [Graal](https://www.curseforge.com/minecraft/mc-mods/graal)：**Fabric 和 NeoForge 均要求 GraalMC 25.5.0 或更高**，请使用[对应加载器的下载](wiki/quick-start_cn.md#wiki-section-2)。各平台的具体差异见 [平台与兼容性](wiki/platform-compatibility_cn.md)。
 
 ## 快速开始
 
 **1. 安装。** 从 [Releases](https://github.com/NekoJS-Dev/NekoJS/releases) 下载和你的 Minecraft 版本、加载器对应的 NekoJS，连同 Graal 一起放进 `mods/`，启动游戏。
 
-> NeoForge 1.21.1 的专用服务器要用文件名带 `-server` 的 jar，客户端用普通 jar，两个不要同时放。
+> 同一 Minecraft 版本和加载器的客户端、服务端使用同一个 NekoJS jar，不再区分 `-server` 产物。NekoJS 不内置 ICU4J；两个加载器的 GraalMC 25.5.0 均包含其使用的重定位 ICU。
 
 **2. 找到脚本目录。** 第一次启动后，游戏目录下会出现 `nekojs/`：
 

@@ -190,7 +190,7 @@ jobs:
           while IFS= read -r jar; do
             name="$(basename "$jar")"
             case "$name" in
-              *-sources.jar|*-javadoc.jar|*-dev.jar|*-plain.jar) continue ;;
+              *-sources.jar|*-javadoc.jar|*-dev.jar|*-plain.jar|*-server.jar) continue ;;
             esac
 
             # Fabric builds are CI artifacts only until the runtime smoke gate and release plan are approved.
@@ -220,16 +220,6 @@ jobs:
           path: artifacts/*.jar
           if-no-files-found: error
           retention-days: ${{ needs.analyze.outputs.is_release == 'true' && 90 || 14 }}
-
-      - name: Upload Fabric smoke artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: NekoJS-Fabric-Smoke-Jars
-          path: |
-            versions/26.1.2-fabric/build/libs/nekojs-fabric-*.jar
-            versions/26.2.0-fabric/build/libs/nekojs-fabric-*.jar
-          if-no-files-found: error
-          retention-days: 14
 
       - name: Upload test reports on failure
         # 放在 job 末尾 + if: ${{ !cancelled() && failure() }}：任何一步失败（common 检查 / NBT 冒烟 /
@@ -275,11 +265,8 @@ jobs:
       - name: Make gradlew executable
         run: chmod +x ./gradlew
 
-      - name: Download Fabric smoke artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: NekoJS-Fabric-Smoke-Jars
-          path: artifacts
+      - name: Build Fabric smoke artifact
+        run: ./gradlew :${{ matrix.node }}:remapJar --console=plain
 
       - name: Verify packaged Fabric artifact
         shell: bash
@@ -291,12 +278,16 @@ jobs:
             26.2.0-fabric) mc_version=26.2; fabric_api=0.159.0+26.2 ;;
             *) echo "unknown Fabric node: $node" >&2; exit 1 ;;
           esac
-          artifact="$(find artifacts -type f -name "nekojs-fabric-$mc_version-*.jar" | head -n 1)"
-          if [[ -z "$artifact" ]]; then
-            echo "No packaged Fabric artifact found for $node" >&2
-            find artifacts -type f -maxdepth 2 -print >&2
+          mapfile -t artifacts < <(find "versions/$node/build/libs" -maxdepth 1 -type f \
+            -name "nekojs-fabric-$mc_version-*.jar" \
+            ! -name "*-sources.jar" ! -name "*-javadoc.jar" ! -name "*-dev.jar" \
+            ! -name "*-plain.jar" ! -name "*-server.jar")
+          if [[ "${#artifacts[@]}" -ne 1 ]]; then
+            echo "Expected one packaged Fabric artifact for $node, found ${#artifacts[@]}" >&2
+            printf "%s\n" "${artifacts[@]}" >&2
             exit 1
           fi
+          artifact="${artifacts[0]}"
           entries="fabric-artifact-entries-$node.txt"
           jar tf "$artifact" | tee "$entries" >/dev/null
           for required in \
@@ -324,6 +315,11 @@ jobs:
           if grep -Eiq 'NeoForge|neoforged' "$entries"; then
             echo "NeoForge-named entries leaked into $artifact" >&2
             grep -Ei 'NeoForge|neoforged' "$entries" >&2
+            exit 1
+          fi
+          if grep -Eiq '(^|/)com/ibm/icu/|(^|/)icu4j-[^/]*\.jar$' "$entries"; then
+            echo "Bundled ICU entries leaked into $artifact" >&2
+            grep -Ei '(^|/)com/ibm/icu/|(^|/)icu4j-[^/]*\.jar$' "$entries" >&2
             exit 1
           fi
           metadata="$(unzip -p "$artifact" fabric.mod.json)"

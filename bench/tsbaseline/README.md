@@ -22,15 +22,16 @@ python bench/tsbaseline/run.py check --target build/tsbaseline-<tag>
 
 - **安装隔离**：`prepare` 只从 `--platform-source`（默认 v3 安装目录）复制加载器平台
   （NeoForge `libraries/`；Fabric 另加 `fabric-server-launch.jar`）。平台由加载器版本钉死，
-  与仓库源码无关；graal/fabric-api 属 curse.maven 钉版外部制品（8762962/8762963），同样
+  与仓库源码无关；Graal/fabric-api 属固定版本的外部制品（NeoForge Graal：Modrinth O8qtoV6d／Fabric Graal：CurseForge 9555615），同样
   从 platform-source 复制并记录 SHA256。其余一切（config、`nekojs/`、`.neko_probe/`、world）
   由**当前** jar 首次启动全新生成，验收脚本噪声为零。
 - **端口**：`--base-port`（默认 34500）起，每节点占 10：server=base+i*10，rcon=+1；
   rcon 密码由 revision+node 派生并记录在 `preparation-manifest.json`。
 - **JDK**：1.21.1 用 jdk-21.0.10，四个 26.x 节点用 jdk-25.0.2（沿用 v3 实测记录）；
   路径硬编码在 `run.py` 的 NODES 表，换机改表。
-- **jar 选择**：1.21.1 取 `nekojs-neoforge-1.21.1-*-server.jar`（专用服务端变体），
-  其余节点取对应 `nekojs-{neoforge|fabric}-<ver>-*.jar` 最新构建产物。
+- **jar 选择**：所有节点取对应 `nekojs-{neoforge|fabric}-<ver>-*.jar` 最新普通构建产物，
+  排除 sources/javadoc/dev/plain 和已停用的 server 分类器，客户端和服务端使用同一个 jar。
+  NekoJS 产物不内置 ICU4J；两种加载器的 GraalMC 25.5.0 都提供其使用的重定位 ICU。platform-source 须预先安装 `graalmc-neoforge-25.5.0.jar` 或 `graal-1504336-9555615.jar`，默认历史 v3 目录不保证具备新版文件；prepare 不自动下载依赖。
 - **生成**：RCON `nekojs probe typescript`，等待 `Probe generated: N files` 完成行；
   停服走 RCON `stop`，等 exit 0 与 `world/session.lock` 释放。
 - **进程回收**：启动即写 `<node>/server-process.json`（pid、微秒精度创建时刻、完整命令行、

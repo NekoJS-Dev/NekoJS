@@ -26,7 +26,7 @@ If something goes wrong, check the [FAQ](faq_us). If you see a `NEKO-xxxx` code,
 <a id="wiki-section-3"></a>
 ## Try it in one minute
 
-1. Put NekoJS and its dependency [Graal](https://www.curseforge.com/minecraft/mc-mods/graal) (25.1.3.7 or newer) in `mods/` and start the game.
+1. Put NekoJS and its dependency [Graal](https://www.curseforge.com/minecraft/mc-mods/graal) ([version requirements by loader](quick-start_us#wiki-section-2)) in `mods/` and start the game.
 2. A `nekojs/` folder appears in your game folder. Create `nekojs/server_scripts/hello.js`:
 
 ```javascript
