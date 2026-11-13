@@ -104,6 +104,46 @@ test {
     // 透传 golden 再生成开关：`-Dnekojs.golden.regenerate=true`（ApiManifestGoldenTest 等
     // golden 测试写回基线后跳过断言；与 :common:regenerateGoldens 的 probe golden 模式一致）
     systemProperty 'nekojs.golden.regenerate', System.getProperty('nekojs.golden.regenerate', 'false')
+
+    // These fixtures feed the npm Probe checks. Cache them with the test results so a cache hit
+    // restores declarations and consumers, not just reports. Add new build/probe-ts-* roots here.
+    outputs.dirs([
+        'community-probe-types', 'probe-ts',
+        'probe-ts-actual', 'probe-ts-api-modules',
+        'probe-ts-bean-exclusion', 'probe-ts-bean-inheritance',
+        'probe-ts-bean-method-projection', 'probe-ts-capture-return-contract',
+        'probe-ts-character-projection', 'probe-ts-class-bounds',
+        'probe-ts-collection-input', 'probe-ts-complete-capture',
+        'probe-ts-complete-capture-authored-optional', 'probe-ts-complete-capture-authored-stream',
+        'probe-ts-complete-capture-edited', 'probe-ts-complete-capture-reused',
+        'probe-ts-constable-values', 'probe-ts-constructor-input',
+        'probe-ts-constructor-members', 'probe-ts-dependency-closure',
+        'probe-ts-enum-heritage', 'probe-ts-erased-method-contract',
+        'probe-ts-event-dependencies', 'probe-ts-event-imports',
+        'probe-ts-field-method-selectors', 'probe-ts-generic-adapter',
+        'probe-ts-global-type-simplification', 'probe-ts-i18n',
+        'probe-ts-inherited-bean', 'probe-ts-inherited-interface',
+        'probe-ts-interface-binding', 'probe-ts-interface-merge',
+        'probe-ts-interface-overloads', 'probe-ts-interface-static',
+        'probe-ts-manual-array-references', 'probe-ts-manual-references',
+        'probe-ts-member-names', 'probe-ts-method-bounds',
+        'probe-ts-mixed-quote-import', 'probe-ts-mixin-declarations',
+        'probe-ts-mixin-hooks', 'probe-ts-native-recipe-handlers',
+        'probe-ts-node-ambient-classes', 'probe-ts-node-assert',
+        'probe-ts-node-callable-default', 'probe-ts-node-util-predicate',
+        'probe-ts-object-projection', 'probe-ts-owner-generics',
+        'probe-ts-raw-input', 'probe-ts-raw-output',
+        'probe-ts-recipe-input-alias', 'probe-ts-recipe-readable',
+        'probe-ts-registry-catalog', 'probe-ts-result-variance',
+        'probe-ts-sam-proxy-input', 'probe-ts-same-name-heritage',
+        'probe-ts-same-name-heritage-adapter', 'probe-ts-same-name-heritage-edited',
+        'probe-ts-same-name-heritage-functional', 'probe-ts-same-name-heritage-getter-imports',
+        'probe-ts-same-name-heritage-multiple', 'probe-ts-script-input-shapes',
+        'probe-ts-script-output', 'probe-ts-static-shadowing',
+        'probe-ts-stream-capture-authored', 'probe-ts-stream-capture-return',
+        'probe-ts-synthetic-contract', 'probe-ts-wildcard-collection',
+        'probe-ts-wildcard-optional'
+    ].collect { layout.buildDirectory.dir(it) }).withPropertyName('probeTypeScriptFixtures')
 }
 
 // Guard the common module's MC/loader-agnostic invariant: common must not import
