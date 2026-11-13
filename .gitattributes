@@ -14,6 +14,11 @@
 *.sh text eol=lf
 *.properties text eol=lf
 *.d.ts text eol=lf
+# Bundled script examples must match the LF cookbook blocks on every platform.
+*.js text eol=lf
+*.cjs text eol=lf
+*.ts text eol=lf
+*.tsx text eol=lf
 # 无扩展名脚本不匹配 *.sh，单独声明（仓库内 LF）
 gradlew text eol=lf
 scripts/check-translation-drift text eol=lf

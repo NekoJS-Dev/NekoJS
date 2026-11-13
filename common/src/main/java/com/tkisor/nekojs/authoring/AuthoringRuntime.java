@@ -254,11 +254,11 @@ public final class AuthoringRuntime implements AutoCloseable {
         if (source == null || source.length() > 2048) return null;
         try {
             Path path = source.startsWith("file:") ? Path.of(java.net.URI.create(source)) : Path.of(source);
-            Path game = paths.gameDir().toAbsolutePath().normalize();
+            Path game = NekoJSPaths.canonicalForm(paths.gameDir());
             if (!path.isAbsolute()) {
                 path = path.startsWith(paths.root().getFileName()) ? game.resolve(path) : paths.root().resolve(path);
             }
-            path = path.toAbsolutePath().normalize();
+            path = NekoJSPaths.canonicalForm(path);
             if (!path.startsWith(game)) return null;
             String relative = game.relativize(path).toString().replace('\\', '/');
             return relative.length() <= 1024 ? relative : null;

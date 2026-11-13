@@ -186,7 +186,7 @@ public final class DataGeneratorJS {
         }
         generatedBytes += bytes;
         if (writeObserver != null) {
-            writeObserver.onWrite(root.relativize(target).toString().replace('\\', '/'), bytes);
+            writeObserver.onWrite(NekoJSPaths.canonicalForm(root).relativize(target).toString().replace('\\', '/'), bytes);
         }
     }
 

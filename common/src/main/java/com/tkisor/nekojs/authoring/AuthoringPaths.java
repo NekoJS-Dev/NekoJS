@@ -85,11 +85,8 @@ public final class AuthoringPaths {
         }
         requireDirectory(gameDirectory);
         requireDirectoryIfPresent(root);
-        Path absolute = path.toAbsolutePath().normalize();
-        if (!absolute.startsWith(root)) {
-            throw new IOException("[NEKO-1019] Authoring path escapes the selected output directory.");
-        }
-        Path physical = canonical(absolute);
+        // Canonicalize before containment checks so filesystem aliases use the captured root spelling.
+        Path physical = canonical(path);
         if (!physical.startsWith(gameDirectory) || !physical.startsWith(root)) {
             throw new IOException("[NEKO-1019] Authoring path resolves outside the selected output directory.");
         }

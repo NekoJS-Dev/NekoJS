@@ -84,6 +84,28 @@ class AuthoringPathsTest {
     }
 
     @Test
+    void verifiesExistingAndMissingPathsThroughAnInternalAlias() throws Exception {
+        Path game = Files.createDirectory(directory.resolve("game"));
+        Path root = Files.createDirectory(game.resolve("output"));
+        Path existing = Files.writeString(root.resolve("current.json"), "retained");
+        Path alias = game.resolve("alias");
+        link(alias, root);
+        AuthoringPaths paths = AuthoringPaths.resolve(game, "output");
+
+        assertEquals(existing.toRealPath(), paths.verify(alias.resolve("current.json")));
+        assertEquals(root.toRealPath().resolve("missing/deeper.json"),
+                paths.verify(alias.resolve("missing/deeper.json")));
+        assertFalse(Files.exists(root.resolve("missing")));
+
+        Files.delete(alias);
+        Path sibling = Files.createDirectory(game.resolve("not-output"));
+        link(alias, sibling);
+        assertThrows(IOException.class, () -> paths.verify(alias.resolve("current.json")));
+        assertThrows(IOException.class, () -> paths.verify(alias.resolve("missing/deeper.json")));
+        assertEmpty(sibling);
+    }
+
+    @Test
     void rejectsConfiguredSymlinkEscapesIncludingMissingNestedSuffix() throws Exception {
         Path game = Files.createDirectory(directory.resolve("game"));
         Path outside = Files.createDirectory(directory.resolve("outside"));

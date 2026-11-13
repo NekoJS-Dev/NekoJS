@@ -66,7 +66,7 @@ class ProbeAuthoringPathsTest {
         ProbeExternalArtifacts artifacts = new ProbeExternalArtifacts() {
             @Override public void generate(Path output) { fail("The captured-path overload must be used."); }
             @Override public void generate(Path output, AuthoringPaths selected) throws Exception {
-                assertEquals(directory.resolve("nested/probe/output"), output);
+                assertEquals(paths.gameDir().resolve("nested/probe/output"), output);
                 artifactRoots.add(selected);
                 if (replacement.get() == null) {
                     Files.writeString(paths.config().resolve("ai.toml"), "[output]\ndirectory = \"custom/second-ai\"\n");
@@ -116,7 +116,7 @@ class ProbeAuthoringPathsTest {
         ProbeExternalArtifacts oldCallback = output::set;
         assertTrue(new ProbeCoordinator(paths, oldCallback)
                 .runProbe(emptySnapshot(), List.of(capture("typescript", context -> {}))).get(0).success());
-        assertEquals(directory.resolve("nested/probe/output"), output.get());
+        assertEquals(paths.gameDir().resolve("nested/probe/output"), output.get());
     }
 
     @Test void defaultArtifactsPutRolesUnderSelectedRootWithCorrectPointerNotProbeParent() throws Exception {
