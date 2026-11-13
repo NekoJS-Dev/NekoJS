@@ -1,6 +1,7 @@
 // Shared test tree for 26.x and 1.21.1: id construction goes through version guards, because
 // RecipeHolder takes a ResourceKey on 26.x and an Identifier on 1.21.1. Filters only read the
 // holder id and never the recipe value, which is passed as null; neither record validates it.
+//? if neoforge {
 package com.tkisor.nekojs.api.recipe;
 
 import com.tkisor.nekojs.wrapper.event.server.RecipeEventJS;
