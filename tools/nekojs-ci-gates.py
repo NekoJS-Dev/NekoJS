@@ -536,9 +536,18 @@ def source_roots(repo, node):
     """
     command = [gradle_wrapper(repo), "--quiet", "-I",
                str(repo / "tools/nekojs-source-roots.init.gradle"), ":%s:help" % node]
-    out = subprocess.run(command, cwd=str(repo), capture_output=True, text=True, shell=True)
+    try:
+        # POSIX shells treat the remaining list items as shell arguments, not Gradle arguments.
+        # Only the Windows batch wrapper needs shell dispatch.
+        out = subprocess.run(command, cwd=str(repo), capture_output=True, text=True,
+                             shell=sys.platform.startswith("win"))
+    except OSError as failure:
+        print("FAIL source-roots subject=%s node=%s input=tools/nekojs-source-roots.init.gradle "
+              "expected=source-roots-%s.json owner=build-convention owner :: "
+              "could not start Gradle: %s" % (node, node, node, failure))
+        return 1
     target = repo / "versions" / node / "build" / "nekojs-gates" / ("source-roots-%s.json" % node)
-    if not target.is_file():
+    if out.returncode != 0 or not target.is_file():
         print("FAIL source-roots subject=%s node=%s input=%s expected=探针产出 source-roots-%s.json "
               "owner=build-convention owner :: gradle 退出 %s；stdout 尾部 %r；stderr 尾部 %r"
               % (node, node, "tools/nekojs-source-roots.init.gradle", node, out.returncode,
