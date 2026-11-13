@@ -399,6 +399,11 @@ tasks.register("dumpCompileClasspath") {
 // ---- 测试任务（locale / 时区固定，避免依赖机器环境）--------------------------------
 
 tasks.test {
+    // The native JSX npm consumer needs these files even when this test task is restored from cache.
+    if (modern) {
+        outputs.dir(layout.buildDirectory.dir("probe-ts-native-jsx"))
+            .withPropertyName("nativeJsxProbeFixture")
+    }
     // 工单 33 gate 走独立 platformGateTest JVM（它建立进程级事件 schema，不能与普通用例同 JVM）
     useJUnitPlatform {
         excludeTags("platform-gate", "native-recipe-probe")
@@ -451,6 +456,9 @@ val nativeRecipeProbeTest = tasks.register<Test>("nativeRecipeProbeTest") {
     testClassesDirs = sourceSets.test.get().output.classesDirs
     classpath = sourceSets.test.get().runtimeClasspath
     useJUnitPlatform { includeTags("native-recipe-probe") }
+    // Keep the generated strict consumer with the results of its isolated producer task.
+    outputs.dir(layout.buildDirectory.dir("probe-ts-recipe-filter"))
+        .withPropertyName("nativeRecipeProbeFixture")
     systemProperty("user.language", "en")
     systemProperty("user.country", "US")
     systemProperty("user.timezone", "UTC")
