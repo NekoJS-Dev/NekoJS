@@ -433,6 +433,12 @@ val platformGateTest = tasks.register<Test>("platformGateTest") {
     useJUnitPlatform {
         includeTags("platform-gate")
     }
+    // Cache only this task's reports; source-root probes write other files in the same directory.
+    outputs.files(
+        layout.buildDirectory.file("nekojs-gates/spec-coverage-${project.name}.json"),
+        layout.buildDirectory.file("nekojs-gates/event-surface-${project.name}.json"),
+        layout.buildDirectory.file("nekojs-gates/declared-event-surface-${project.name}.json"),
+    ).withPropertyName("platformGateReports")
     // 节点身份是 event/surface 基线的一级键（同 loader 的不同 MC 节点可有合法差异）
     systemProperty("nekojs.node", project.name)
     systemProperty("user.language", "en")

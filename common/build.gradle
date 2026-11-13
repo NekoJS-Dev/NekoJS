@@ -144,6 +144,9 @@ test {
         'probe-ts-synthetic-contract', 'probe-ts-wildcard-collection',
         'probe-ts-wildcard-optional'
     ].collect { layout.buildDirectory.dir(it) }).withPropertyName('probeTypeScriptFixtures')
+    // The aggregate CI gate reads this report after test results are restored from cache.
+    outputs.file(layout.buildDirectory.file('nekojs-gates/declaration-parity.json'))
+        .withPropertyName('declarationParityReport')
 }
 
 // Guard the common module's MC/loader-agnostic invariant: common must not import
