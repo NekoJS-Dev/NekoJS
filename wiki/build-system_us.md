@@ -201,7 +201,7 @@ The main flow in `.github/workflows/ci-build.yml`:
 4. `npm run test:probe-types` (TypeScript type checks on generated declarations)
 5. `build` on all five nodes
 6. Extra checks: native recipe probe, JSX declarations, per-node source override selection, and the build gate report (`tools/nekojs-ci-gates.py`)
-7. For each Fabric node: build and verify a node-local remapped jar, then run a development server smoke test. Normal Fabric Dev-Jars remain CI artifacts; no separate smoke jar artifact is uploaded.
+7. For each Fabric node: build and verify the node-local final artifact with `jar` (26.x needs no remapping), then run a development server smoke test. Normal Fabric Dev-Jars remain CI artifacts; no separate smoke jar artifact is uploaded.
 
 A separate job runs `:common:check` again on JDK 21 to catch hidden dependencies on the Gradle daemon's JDK version.
 

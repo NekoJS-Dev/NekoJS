@@ -212,7 +212,7 @@ val platformGateTest = tasks.register<Test>("platformGateTest") {
 tasks.named("check") { dependsOn(platformGateTest) }
 
 // ---- fat-jar：内嵌引擎产物 + common 运行时（Graal 排除）——与 NeoForge 节点同构 ----
-// Loom 会在 remapJar 阶段重映射 jar；引擎与 Graal 不引用 MC 类，重映射对它们是恒等变换。
+// Minecraft 26.x uses unobfuscated names, so jar produces the final artifact without remapping.
 
 val embeddedCommonRuntime = files(
     Callable {

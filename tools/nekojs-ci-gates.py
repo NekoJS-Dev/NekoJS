@@ -119,13 +119,13 @@ SUBSET_SPEC = {
         "expect": ["26.1.2-fabric", "26.2.0-fabric"],
         "expectPlatform": "fabric",
         "skip": ["1.21.1", "26.1.2", "26.2.0"],
-        "commands": [":${{ matrix.node }}:remapJar"],
+        "commands": [":${{ matrix.node }}:jar"],
         "steps": ["Build Fabric smoke artifact", "Verify packaged Fabric artifact",
                   "Run Fabric development runtime smoke"],
         "workflow": ["- 26.1.2-fabric", "- 26.2.0-fabric",
                      'find "versions/$node/build/libs"'],
         "intentionalSkip": [
-            "Each Fabric matrix job builds its own remapped jar without publishing an intermediate "
+            "Each Fabric matrix job builds its own jar without publishing an intermediate "
             "artifact. Gradle checks the local assembly; the smoke job checks its node-local final "
             "jar and development runtime. Uploaded-byte identity is no longer claimed.",
             "NeoForge 节点不在此子集：artifact 面由 release-publish 子集覆盖",

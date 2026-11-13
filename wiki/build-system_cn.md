@@ -201,7 +201,7 @@ NekoJS 模组 jar 不内嵌 ICU4J。两个加载器均要求 GraalMC 25.5.0 或�
 4. `npm run test:probe-types`（对生成的声明文件做 TypeScript 类型检查）
 5. 五个节点的 `build`
 6. 原生配方 probe、JSX 声明、各节点源码覆盖选择、构建门禁报告（`tools/nekojs-ci-gates.py`）等额外检查
-7. 每个 Fabric 节点：构建并校验本 job 的 remap jar，再跑开发服务端冒烟测试；常规 Fabric Dev-Jars 仍作为 CI 产物，不上传单独的冒烟 jar 产物。
+7. 每个 Fabric 节点：通过 `jar` 任务构建并校验本 job 的最终产物（26.x 无需重映射），再跑开发服务端冒烟测试；常规 Fabric Dev-Jars 仍作为 CI 产物，不上传单独的冒烟 jar 产物。
 
 另有一个 job 用 JDK 21 再跑一次 `:common:check`，防止依赖 Gradle 守护进程的 JDK 版本。
 

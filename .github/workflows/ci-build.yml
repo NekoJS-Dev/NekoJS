@@ -266,7 +266,7 @@ jobs:
         run: chmod +x ./gradlew
 
       - name: Build Fabric smoke artifact
-        run: ./gradlew :${{ matrix.node }}:remapJar --console=plain
+        run: ./gradlew :${{ matrix.node }}:jar --console=plain
 
       - name: Verify packaged Fabric artifact
         shell: bash
