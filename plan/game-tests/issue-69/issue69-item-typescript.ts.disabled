@@ -1,0 +1,11 @@
+// The interface method must disappear before JavaScript-only validation.
+interface Issue69Shape {
+    issue69TypeOnlyMethod(): number;
+}
+
+console.info('ISSUE69_TS_LOAD');
+const issue69TsStack = Item.of('minecraft:stone', 2).copy();
+if (issue69TsStack.count !== 2) {
+    throw new Error('NEKO-ISSUE69-TS: Expected copied stack count 2');
+}
+console.info('ISSUE69_TS_PASS count=2');

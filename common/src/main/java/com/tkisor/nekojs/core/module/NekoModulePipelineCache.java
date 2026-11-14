@@ -204,8 +204,13 @@ public final class NekoModulePipelineCache implements AutoCloseable {
         ensureOpen();
         Path key = key(path);
         NekoTrustApprovedSource approval = approvedSource(key);
+        return prepare(key, readSource(key), approval);
+    }
+
+    private NekoPreparedModule prepare(Path key, SourceSnapshot source,
+                                       NekoTrustApprovedSource approval) throws IOException {
         try {
-            SourceSnapshot source = readSource(key);
+            pipeline.ensureBindingCurrent(key, source.binding());
             // Atomic check-then-act: previously get→miss→compute→put could let two threads
             // loading the same path both run the full pipeline. compute guarantees
             // a single pipeline run per (key, stamp); the inner stamp check avoids recomputing
@@ -225,6 +230,7 @@ public final class NekoModulePipelineCache implements AutoCloseable {
                     throw new PipelineException(ex);
                 }
             });
+            pipeline.ensureBindingCurrent(key, source.binding());
             publishSourceMap(key, entry.prepared());
             for (BiConsumer<Path, String> observer : preparationObservers) {
                 observer.accept(key, entry.prepared().cacheKey());
@@ -253,11 +259,22 @@ public final class NekoModulePipelineCache implements AutoCloseable {
         }
     }
 
-    /** Recheck an entry against this generation's schema using only reusable source facts. */
-    public void validateEntryBindings(Path path, String source) {
+    /** Recheck authored native JS or prepared frontend output against this generation's schema. */
+    public void validateEntryBindings(Path path) throws IOException {
         ensureOpen();
         rootOwner().ensureOpen();
-        builtinTransforms.validateBindings(path, source, bindingSchemaView);
+        if (!pipeline.memberValidationEnabled()) return;
+
+        Path key = key(path);
+        NekoTrustApprovedSource approval = approvedSource(key);
+        SourceSnapshot source = readSource(key);
+        // Classification and preparation share one captured frontend and source stamp.
+        String javascript = NekoModulePipeline.rawPreflightApplies(source.binding())
+                ? source.source() : prepare(key, source, approval).code();
+        pipeline.ensureBindingCurrent(key, source.binding());
+        // Prepared cache hits must still use the current generation's schema and reporter.
+        builtinTransforms.validateBindings(key, javascript, bindingSchemaView);
+        pipeline.ensureBindingCurrent(key, source.binding());
     }
 
     /**

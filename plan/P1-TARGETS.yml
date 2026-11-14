@@ -1,0 +1,6 @@
+version: 1
+status: historical
+superseded_by: "README.md"
+current_implementation_verification: pending
+# 原合并文档无视觉目标；不构成当前修复或人工游戏验收。
+targets: []

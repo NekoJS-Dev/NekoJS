@@ -55,6 +55,18 @@ class ScriptSourcePreflightTest {
     }
 
     @Test
+    void commentedMembersDoNotInventGlobalsOrHideRealTypos() {
+        Path file = file("commented-members");
+        String source = "PreflightFixture // binding\r\n"
+                + "/* continuation */ .configure(config => config /* receiver */ .valid());";
+        assertTrue(validate(file, source, true, false).isEmpty());
+        List<Observed> diagnostics = validate(file, source.replace(".valid()", ".missing()"), true, false);
+        assertEquals(1, diagnostics.size());
+        assertEquals("event-cb-preflight", diagnostics.getFirst().kind());
+        assertTrue(diagnostics.getFirst().message().contains("missing"));
+    }
+
+    @Test
     void unchangedSourceUsesTheCurrentSchemaOnEveryCall() {
         Path file = file("schema-change");
         String source = "PreflightFixture.missing();";

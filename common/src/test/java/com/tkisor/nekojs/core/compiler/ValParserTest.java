@@ -240,6 +240,59 @@ class ValParserTest {
     }
 
     @Test
+    void commentsBetweenChainedCallsKeepTheReceiverAndMemberOffset() {
+        String source = "e.getPlayer() // keep the receiver\r\n"
+                + "// continue the chain\r\n.getServer();";
+        ValNode.CallExpr outer = assertInstanceOf(ValNode.CallExpr.class, first(parse(source)));
+        ValNode.MemberAccess member = assertInstanceOf(ValNode.MemberAccess.class, outer.callee());
+        assertEquals("getServer", member.member());
+        assertEquals(source.indexOf("getServer"), member.start());
+        ValNode.CallExpr inner = assertInstanceOf(ValNode.CallExpr.class, member.object());
+        assertEquals("getPlayer", assertInstanceOf(ValNode.MemberAccess.class, inner.callee()).member());
+    }
+
+    @Test
+    void commentsMaySeparateMemberKeysAndCallArguments() {
+        for (String source : List.of(
+                "e./* member */getServer(/* empty */);",
+                "e?./* member */getServer(/* empty */);",
+                "e[/* key */'getServer'/* end */](/* first */'// literal'/* separator */, /* next */'/* literal */'/* end */);")) {
+            ValNode.CallExpr call = assertInstanceOf(ValNode.CallExpr.class, first(parse(source)), source);
+            ValNode.MemberAccess member = assertInstanceOf(ValNode.MemberAccess.class, call.callee(), source);
+            assertEquals("getServer", member.member(), source);
+            assertEquals(source.indexOf(member.bracket() ? "'getServer'" : "getServer"), member.start(), source);
+            if (member.bracket()) {
+                assertEquals(2, call.args().size());
+                assertEquals("// literal", assertInstanceOf(ValNode.StringLiteral.class, call.args().get(0)).value());
+                assertEquals("/* literal */", assertInstanceOf(ValNode.StringLiteral.class, call.args().get(1)).value());
+            } else {
+                assertTrue(call.args().isEmpty(), source);
+            }
+        }
+    }
+
+    @Test
+    void commentedComputedAccessAndFollowingStatementsKeepTheirBoundaries() {
+        String source = "e /* receiver */ ?.[/* key */key/* end */](); // statement\r\n"
+                + "after(); /* eof */";
+        ValNode.Block block = parse(source);
+        assertEquals(2, block.stmts().size());
+        ValNode.CallExpr firstCall = assertInstanceOf(ValNode.CallExpr.class, block.stmts().get(0));
+        ValNode.ComputedMemberAccess member = assertInstanceOf(ValNode.ComputedMemberAccess.class, firstCall.callee());
+        assertTrue(member.optional());
+        assertEquals("key", assertInstanceOf(ValNode.Identifier.class, member.key()).name());
+        ValNode.CallExpr following = assertInstanceOf(ValNode.CallExpr.class, block.stmts().get(1));
+        assertEquals("after", assertInstanceOf(ValNode.Identifier.class, following.callee()).name());
+        assertTimeoutPreemptively(java.time.Duration.ofSeconds(2), () -> {
+            for (String tail : List.of("// eof", "/* eof */")) {
+                assertInstanceOf(ValNode.CallExpr.class, first(parse("e.getServer() " + tail)));
+            }
+            parse("e.getServer() /* unclosed");
+            parse("e.getServer() /*");
+        });
+    }
+
+    @Test
     void parenthesizedArrowParametersAndGroupingKeepDistinctShapes() {
         ValNode.ArrowFunc twoParameters = assertInstanceOf(
                 ValNode.ArrowFunc.class, first(parse("(ctx, gui) => ctx.rect()")));

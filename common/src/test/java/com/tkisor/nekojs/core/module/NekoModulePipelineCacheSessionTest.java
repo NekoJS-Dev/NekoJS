@@ -2,6 +2,7 @@ package com.tkisor.nekojs.core.module;
 
 import com.tkisor.nekojs.api.ScriptType;
 import com.tkisor.nekojs.api.event.ScriptBindingSchema;
+import com.tkisor.nekojs.core.compiler.IScriptCompiler;
 import com.tkisor.nekojs.core.compiler.NekoCompilationPipeline;
 import com.tkisor.nekojs.core.compiler.ScriptCompilerRegistry;
 import com.tkisor.nekojs.core.config.SandboxConfig;
@@ -133,23 +134,101 @@ class NekoModulePipelineCacheSessionTest {
                 Map.of("SessionFixture", new ScriptBindingSchema.BindingMembers(Set.of("valid"))),
                 Set.of("console"), diagnostic -> candidateDiagnostics.incrementAndGet());
         Path entry = paths.serverScripts().resolve("entry-schema.js");
-        String source = "SessionFixture.missing();";
+        Files.createDirectories(entry.getParent());
+        Files.writeString(entry, "SessionFixture.missing();");
         try (NekoModulePipelineCache owner = newCache(paths)) {
             NekoModulePipelineCache active = owner.openSession(activeView);
             try (NekoModulePipelineCache candidate = owner.openSession(candidateView)) {
-                active.validateEntryBindings(entry, source);
-                candidate.validateEntryBindings(entry, source);
-                candidate.validateEntryBindings(entry, source);
+                active.validateEntryBindings(entry);
+                candidate.validateEntryBindings(entry);
+                candidate.validateEntryBindings(entry);
                 assertEquals(0, activeDiagnostics.get());
                 assertEquals(2, candidateDiagnostics.get(), "warm analysis must still report to the current sink");
                 candidate.installBindingSchemaView(activeView);
-                candidate.validateEntryBindings(entry, source);
+                candidate.validateEntryBindings(entry);
                 assertEquals(2, candidateDiagnostics.get());
             }
-            active.validateEntryBindings(entry, source);
+            active.validateEntryBindings(entry);
             assertEquals(0, activeDiagnostics.get());
             active.close();
-            assertThrows(IllegalStateException.class, () -> active.validateEntryBindings(entry, source));
+            assertThrows(IllegalStateException.class, () -> active.validateEntryBindings(entry));
+        }
+    }
+
+    @Test
+    void transpiledCacheHitsRecheckCurrentSchemaWithoutRecompiling() throws Exception {
+        TestPlatformInit.ensureInitialized(gameDir);
+        NekoJSPaths paths = NekoJSPaths.fromGameDir(gameDir);
+        AtomicInteger compilations = new AtomicInteger();
+        AtomicInteger activeDiagnostics = new AtomicInteger();
+        AtomicInteger candidateDiagnostics = new AtomicInteger();
+        ScriptCompilerRegistry compilers = ScriptCompilerRegistry.createRuntimeRegistry();
+        compilers.registerLanguage("javascript", Set.of(".custom"), new IScriptCompiler() {
+            public boolean canCompile(String extension) { return ".custom".equals(extension); }
+            public String compile(Path file, String source) {
+                compilations.incrementAndGet();
+                return "SessionFixture.missing();";
+            }
+        });
+        Path entry = paths.serverScripts().resolve("transpiled.custom");
+        Files.createDirectories(entry.getParent());
+        Files.writeString(entry, "def authored_only():\n    pass\n");
+        var allowed = new ScriptBindingSchema.View(
+                Map.of("SessionFixture", new ScriptBindingSchema.BindingMembers(Set.of("missing"))),
+                Set.of(), diagnostic -> activeDiagnostics.incrementAndGet());
+        var denied = new ScriptBindingSchema.View(
+                Map.of("SessionFixture", new ScriptBindingSchema.BindingMembers(Set.of("valid"))),
+                Set.of(), diagnostic -> candidateDiagnostics.incrementAndGet());
+        try (var owner = new NekoModulePipelineCache(
+                new NekoModulePipeline(new NekoCompilationPipeline(), compilers, SandboxConfig.defaultConfig()),
+                new SourceMapRegistry(paths.root()), new NekoEsmVirtualModuleRegistry(paths.root()), NekoTrustContext.local());
+             var active = owner.openSession(allowed);
+             var candidate = owner.openSession(allowed)) {
+            active.prepare(entry);
+            candidate.prepare(entry);
+            assertEquals(2, compilations.get());
+            assertEquals(0, activeDiagnostics.get());
+            candidate.installBindingSchemaView(denied);
+            candidate.validateEntryBindings(entry);
+            candidate.validateEntryBindings(entry);
+            active.validateEntryBindings(entry);
+            assertEquals(2, candidateDiagnostics.get(), "warm prepared output must use the candidate reporter");
+            assertEquals(0, activeDiagnostics.get());
+            assertEquals(2, compilations.get(), "entry revalidation must reuse prepared frontend output");
+            candidate.installBindingSchemaView(allowed);
+            candidate.validateEntryBindings(entry);
+            assertEquals(2, candidateDiagnostics.get());
+            Files.writeString(entry, "def changed_source():\n    pass\n");
+            candidate.validateEntryBindings(entry);
+            assertEquals(3, compilations.get(), "source changes invalidate prepared output");
+            compilers.registerLanguage("javascript", Set.of(".custom"), new IScriptCompiler() {
+                public boolean canCompile(String extension) { return ".custom".equals(extension); }
+                public String compile(Path file, String source) {
+                    compilations.incrementAndGet();
+                    return "SessionFixture.valid();";
+                }
+            });
+            candidate.installBindingSchemaView(denied);
+            candidate.validateEntryBindings(entry);
+            assertEquals(4, compilations.get(), "registry revisions invalidate prepared output");
+            assertEquals(2, candidateDiagnostics.get());
+        }
+    }
+
+    @Test
+    void disabledEntryValidationDoesNotReadOrPrepareButStillChecksSessionLiveness() throws Exception {
+        TestPlatformInit.ensureInitialized(gameDir);
+        NekoJSPaths paths = NekoJSPaths.fromGameDir(gameDir);
+        SandboxConfig disabled = new SandboxConfig(false, false, false, false, true, true, false, false);
+        try (var owner = new NekoModulePipelineCache(
+                new NekoModulePipeline(new NekoCompilationPipeline(), ScriptCompilerRegistry.createRuntimeRegistry(), disabled),
+                new SourceMapRegistry(paths.root()), new NekoEsmVirtualModuleRegistry(paths.root()), NekoTrustContext.local())) {
+            var session = owner.openSession();
+            Path missing = paths.serverScripts().resolve("not-present.custom");
+            session.validateEntryBindings(missing);
+            assertEquals(0, owner.preparedEntryCount());
+            session.close();
+            assertThrows(IllegalStateException.class, () -> session.validateEntryBindings(missing));
         }
     }
 

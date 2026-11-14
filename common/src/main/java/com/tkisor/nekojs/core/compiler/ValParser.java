@@ -324,13 +324,13 @@ public final class ValParser {
 
     private ValNode parseSuffix(ValNode obj) {
         while (pos < n) {
-            skipWs();
+            skipWsCmt();
             char c = peek();
             if (c == '.') {
-                pos++; skipWs(); int ms = pos; String m = readIdent(); if (m == null) break;
+                pos++; skipWsCmt(); int ms = pos; String m = readIdent(); if (m == null) break;
                 obj = new ValNode.MemberAccess(obj, m, false, ms, pos);
             } else if (c == '?' && peek(1) == '.') {
-                pos += 2; skipWs();
+                pos += 2; skipWsCmt();
                 if (peek() == '[') {
                     obj = parseBracketAccess(obj, true);
                 } else {
@@ -340,12 +340,12 @@ public final class ValParser {
             } else if (c == '[') {
                 obj = parseBracketAccess(obj, false);
             } else if (c == '(') {
-                pos++; skipWs();
+                pos++; skipWsCmt();
                 List<ValNode> args = new ArrayList<>();
                 while (pos < n && peek() != ')') {
                     int beforeArg = pos;
                     ValNode a = parseExpr(); if (a != null) args.add(a);
-                    skipWs(); if (peek() == ',') pos++; skipWs();
+                    skipWsCmt(); if (peek() == ',') pos++; skipWsCmt();
                     if (pos == beforeArg) pos++; // Guard against an infinite loop: force-skip an argument that was not consumed (such as ';')
                 }
                 if (peek() == ')') pos++;
@@ -358,15 +358,15 @@ public final class ValParser {
     private ValNode parseBracketAccess(ValNode obj, boolean optional) {
         int start = pos;
         if (peek() == '[') pos++;
-        skipWs();
+        skipWsCmt();
         if (peek() == '\'' || peek() == '"') {
             ValNode.StringLiteral literal = parseStringLiteral();
-            skipWs();
+            skipWsCmt();
             if (peek() == ']') pos++;
             return new ValNode.MemberAccess(obj, literal.value(), true, literal.start(), pos);
         }
         ValNode key = parseExpr();
-        skipWs();
+        skipWsCmt();
         if (peek() == ']') pos++;
         if (key == null) {
             key = new ValNode.Identifier("", start, pos);

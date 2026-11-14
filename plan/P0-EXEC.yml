@@ -1,0 +1,40 @@
+version: 1
+status: historical
+superseded_by: "README.md"
+current_implementation_verification: pending
+note: "旧合并文档验收记录，仅供历史参考；命令未按拆分范围重跑，不构成当前实现通过证据。"
+summary: { total: 4, passed: 0, failed: 0, not_run: 4 }
+historical_summary: { total: 4, passed: 4, failed: 0 }
+checks:
+  - id: C1
+    source: "EVIDENCE.md#E1"
+    assert: "The Chinese plan contains seven sections and twenty-four plugin/composition contract markers"
+    run: "& 'C:\\Users\\11515\\.dsh\\dsh-runtimes\\dsh-primary-runtime\\dependencies\\python\\python.exe' -c 'from pathlib import Path; import re; t=Path(\"plan/issue-69-preflight-false-positives.md\").read_text(encoding=\"utf-8\"); terms=[\"NekoJSPlugin.registerScriptPreflights\",\"nekojs:script_preflights\",\"nekojs:javascript\",\"languagePipelines\",\"sourceChecks\",\"outputChecks\",\"SOURCE\",\"OUTPUT\",\"FULL\",\"BINDINGS_ONLY\",\"ProbeBackendSelector\",\"默认值为空表\",\"完整进程重启\",\"scriptMemberValidation=false\",\"Point/Hook/Contributor\",\"LanguageBinding\",\"IScriptCompiler\",\"GraalJS\",\"安全\",\"schema\",\"PluginHookPairingTest\",\"不再直接调用内置验证器\",\"尚未运行\",\"静默回退\"]; sections=sum(x.startswith(\"## \") for x in t.splitlines()); headings=[x for x in t.splitlines() if x.startswith(\"#\")]; missing=[x for x in terms if x not in t]; chinese=all(re.search(r\"[\\u4e00-\\u9fff]\",x) for x in headings); print(f\"sections={sections}; required_terms={len(terms)}; missing={len(missing)}; chinese_headings={int(chinese)}\"); assert sections==7 and not missing and chinese'"
+    expect: "sections=7; required_terms=24; missing=0; chinese_headings=1; exit 0"
+    historical_measured: "sections=7; required_terms=24; missing=0; chinese_headings=1; exit 0"
+    historical_result: pass
+    result: not_run
+  - id: C2
+    source: "EVIDENCE.md#E2"
+    assert: "All twenty-nine local Markdown references resolve"
+    run: "& 'C:\\Users\\11515\\.dsh\\dsh-runtimes\\dsh-primary-runtime\\dependencies\\python\\python.exe' -c 'from pathlib import Path; import re; p=Path(\"plan/issue-69-preflight-false-positives.md\"); targets=re.findall(r\"\\]\\(([^)]+)\\)\",p.read_text(encoding=\"utf-8\")); paths=[p.parent/x.split(\"#\")[0] for x in targets if not x.startswith(\"http\")]; missing=[str(x) for x in paths if not x.is_file()]; print(f\"local_links={len(paths)}; missing={len(missing)}\"); assert len(paths)==29 and not missing'"
+    expect: "local_links=29; missing=0; exit 0"
+    historical_measured: "local_links=29; missing=0; exit 0"
+    historical_result: pass
+    result: not_run
+  - id: C3
+    source: "EVIDENCE.md#E3"
+    assert: "Only planning documents change and pre-existing work is preserved"
+    run: "& 'C:\\Users\\11515\\.dsh\\dsh-runtimes\\dsh-primary-runtime\\dependencies\\python\\python.exe' -c 'import subprocess; tracked=subprocess.check_output([\"git\",\"diff\",\"HEAD\",\"--name-only\"],text=True).splitlines(); untracked=subprocess.check_output([\"git\",\"ls-files\",\"--others\",\"--exclude-standard\"],text=True).splitlines(); unexpected=[x for x in untracked if not x.startswith((\"plan/\",\".plan-mode/\")) and x!=\"script_manager_content.txt\"]; print(f\"tracked_changes={len(tracked)}; unexpected_untracked={len(unexpected)}; original_untracked_preserved={int(\"script_manager_content.txt\" in untracked)}\"); assert not tracked and not unexpected and \"script_manager_content.txt\" in untracked'"
+    expect: "tracked_changes=0; unexpected_untracked=0; original_untracked_preserved=1; exit 0"
+    historical_measured: "tracked_changes=0; unexpected_untracked=0; original_untracked_preserved=1; exit 0"
+    historical_result: pass
+    result: not_run
+  - id: C4
+    source: "EVIDENCE.md#E4"
+    assert: "The proposed TOML has two independently assembled pipelines with four roles each and no obsolete alias"
+    run: "& 'C:\\Users\\11515\\.dsh\\dsh-runtimes\\dsh-primary-runtime\\dependencies\\python\\python.exe' -c 'from pathlib import Path; import re,tomllib; t=Path(\"plan/issue-69-preflight-false-positives.md\").read_text(encoding=\"utf-8\"); blocks=re.findall(r\"```toml\\n(.*?)```\",t,re.S); configs=[tomllib.loads(x) for x in blocks]; expected={\".js\":{\"frontend\":\"nekojs:javascript\",\"sourceChecks\":[\"nekojs:javascript\"],\"outputChecks\":[],\"probe\":{\"language\":\"typescript\",\"backend\":\"builtin\"}},\".py\":{\"frontend\":\"example:python\",\"sourceChecks\":[\"example:python-lint\"],\"outputChecks\":[\"nekojs:javascript\"],\"probe\":{\"language\":\"python\",\"backend\":\"builtin\"}}}; assert len(configs)==1 and configs[0][\"languagePipelines\"]==expected and \"languageFrontends\" not in configs[0]; print(\"toml_examples=1; pipelines=2; role_fields=8; obsolete_alias=0\")'"
+    expect: "toml_examples=1; pipelines=2; role_fields=8; obsolete_alias=0; exit 0"
+    historical_measured: "toml_examples=1; pipelines=2; role_fields=8; obsolete_alias=0; exit 0"
+    historical_result: pass
+    result: not_run

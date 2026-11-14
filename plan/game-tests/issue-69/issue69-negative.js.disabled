@@ -1,0 +1,6 @@
+// Enable separately by removing only .disabled from the deployment copy.
+console.info('ISSUE69_NEGATIVE_LOAD');
+if (false) {
+    Item.issue69MissingMember();
+}
+console.info('ISSUE69_NEGATIVE_EXECUTED unreachable-call-not-run');

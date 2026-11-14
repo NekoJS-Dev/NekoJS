@@ -1,0 +1,10 @@
+// Isolate Issue #69 acceptance from the developer's normal mods, scripts and saves.
+gradle.projectsEvaluated {
+    def node = gradle.rootProject.findProject(':26.1.2')
+    if (node == null) return
+    def client = node.extensions.getByName('neoForge').runs.getByName('client')
+    client.gameDirectory.set(gradle.rootProject.layout.buildDirectory.dir('issue69-live-26.1.2-neoforge'))
+    client.programArguments.addAll('--width', '1280', '--height', '720')
+    def world = gradle.startParameter.projectProperties.get('issue69World')
+    if (world) client.programArguments.addAll('--quickPlaySingleplayer', world)
+}

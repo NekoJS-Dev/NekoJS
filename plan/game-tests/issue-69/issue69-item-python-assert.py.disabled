@@ -1,0 +1,10 @@
+# This definition must be transpiled before JavaScript-only validation.
+def issue69_python_entry():
+    return 7
+
+print('ISSUE69_PY_LOAD')
+issue69_python_result = issue69_python_entry()
+assert issue69_python_result == 7, 'NEKO-ISSUE69-PY-RESULT: Expected function result 7'
+issue69_python_stack = Item.of('minecraft:stone', 2)
+assert issue69_python_stack.count == 2, 'NEKO-ISSUE69-PY-COUNT: Expected stack count 2'
+print('ISSUE69_PY_PASS result=7 count=2')

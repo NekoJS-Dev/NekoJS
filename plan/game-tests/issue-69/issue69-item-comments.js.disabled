@@ -1,0 +1,23 @@
+console.info('ISSUE69_JS_LOAD');
+
+const issue69LineStack = Item
+    // A full-line comment must not split the suffix chain.
+    .of('minecraft:stone', 2)
+    .copy();
+if (issue69LineStack.count !== 2) {
+    throw new Error('NEKO-ISSUE69-JS-LINE: Expected copied stack count 2');
+}
+
+const issue69EndStack = Item.of('minecraft:stone', 2) // Keep the next member in this chain.
+    .copy();
+if (issue69EndStack.count !== 2) {
+    throw new Error('NEKO-ISSUE69-JS-END: Expected copied stack count 2');
+}
+
+const issue69BlockStack = Item /* before member */ .of /* before call */ (
+    'minecraft:stone', /* between arguments */ 2
+) /* before copy */ .copy /* before copy call */ ();
+if (issue69BlockStack.count !== 2) {
+    throw new Error('NEKO-ISSUE69-JS-BLOCK: Expected copied stack count 2');
+}
+console.info('ISSUE69_JS_PASS line=end=block count=2');

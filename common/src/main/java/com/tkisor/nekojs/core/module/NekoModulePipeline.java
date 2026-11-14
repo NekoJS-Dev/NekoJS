@@ -132,9 +132,9 @@ public final class NekoModulePipeline {
         String extension = extension(file);
         // Run static checks at load time: scans for member access on global bindings (e.g., Utils, Platform, Items)
         // and reports errors to the in-game dashboard if members are missing. Does not abort compilation or execution.
-        // JS sources run this pre-compilation. Transpiled languages (.py, .ts, etc.) run this post-compilation
-        // on the JS output to avoid false positives from the parser treating non-JS syntax as invalid identifier calls.
-        if (config.scriptMemberValidation() && rawPreflightApplies(extension)) {
+        // Only the native JS frontend guarantees authored JS. Other frontends, including JS extension
+        // overrides, are checked after compilation so foreign syntax cannot become bogus global calls.
+        if (config.scriptMemberValidation() && rawPreflightApplies(binding)) {
             validateSource(file, rawSource, schemaView, transforms);
         }
         // Only transformation is reusable. Authorization and current-schema checks remain live.
@@ -142,7 +142,7 @@ public final class NekoModulePipeline {
                 ? prepareModule(file, rawSource, extension, binding)
                 : transforms.prepare(file, rawSource, binding,
                         () -> prepareModule(file, rawSource, extension, binding));
-        if (config.scriptMemberValidation() && !rawPreflightApplies(extension)) {
+        if (config.scriptMemberValidation() && !rawPreflightApplies(binding)) {
             validateSource(file, prepared.code(), schemaView, transforms);
         }
         ensureBindingCurrent(file, binding);
@@ -165,9 +165,13 @@ public final class NekoModulePipeline {
         return null;
     }
 
-    /** File extensions for sources that are already JS and can run JS-only pre-checks directly. */
-    static boolean rawPreflightApplies(String extension) {
-        return ".js".equals(extension) || ".mjs".equals(extension) || ".cjs".equals(extension) || ".jsx".equals(extension);
+    boolean memberValidationEnabled() {
+        return config.scriptMemberValidation();
+    }
+
+    /** Only this captured frontend guarantees that the authored source is JavaScript. */
+    static boolean rawPreflightApplies(LanguageBinding binding) {
+        return binding.plugin() == NekoJavaScriptLanguagePlugin.INSTANCE;
     }
 
     private NekoPreparedModule prepareModule(Path file, String rawSource, String extension,
@@ -255,7 +259,7 @@ public final class NekoModulePipeline {
         }
     }
 
-    private void ensureBindingCurrent(Path file, LanguageBinding binding) throws NekoModuleError {
+    void ensureBindingCurrent(Path file, LanguageBinding binding) throws NekoModuleError {
         if (compilers.capture(extension(file)).revision() != binding.registryRevision()) {
             throw NekoModuleError.prepare(NekoModuleError.displayPath(file), binding.identity().languageId(),
                     binding.identity().requestedMode(), "compiler registry changed during preparation", null);
