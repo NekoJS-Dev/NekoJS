@@ -2,7 +2,7 @@
 
 ## 2026-11-16: explicit event modules
 
-The approved breaking event publication migration is recorded in [event-module-migration](plan/event-module-migration.md). Native/plugin subscriptions are no longer globals. Their declarations use custom engine virtual modules under `nekojs:event/{stable,versioned}`; plugin routes append an optional owner, as in `nekojs:event/versioned/myaddon`. The previous event routes have no aliases.
+Native/plugin subscriptions are no longer globals after the approved breaking event publication migration. Their declarations use custom engine virtual modules under `nekojs:event/{stable,versioned}`; plugin routes append an optional owner, as in `nekojs:event/versioned/myaddon`. The previous event routes have no aliases.
 
 Regenerated with the canonical Gradle task, not hand-written snapshots:
 
@@ -20,4 +20,4 @@ The generator also removed the JDK-specific `VarHandle$AccessMode.valueFromOrdin
 
 Wiki topic digests use the existing exported `digest` helper in `scripts/wiki-docs.mjs`, scoped to 22 changed topics; human review remains pending. The global stamp CLI is blocked by preexisting structural failures. No checker was weakened. Baseline strict wiki check reports45 findings; the migrated tree currently reports25 existing navigation/structure findings, with no findings in the event namespace pages.
 
-Final normal test/consumer results belong in the migration record. No live-game acceptance or release is implied.
+Normal test and consumer checks must be rerun without the regeneration flag. No live-game acceptance or release is implied.
