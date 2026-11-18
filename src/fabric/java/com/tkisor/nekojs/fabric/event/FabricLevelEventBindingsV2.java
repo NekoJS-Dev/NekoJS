@@ -38,27 +38,27 @@ public final class FabricLevelEventBindingsV2 {
 
     /** Level save complete (server script, uncancellable). Payload {@link LevelSavedEventJS}. */
     public static final EventBusJS<LevelSavedEventJS, Void> SAVED =
-            LevelEvents.GROUP.server("saved", LevelSavedEventJS.class);
+            LevelEvents.GROUP.server("saved", LevelSavedEventJS.class, api -> api.versioned());
 
     /** Before explosion (server script; cancellable—if cancelled, the entire explosion is not processed). */
     public static final EventBusJS<LevelExplosionEventJS, Void> EXPLOSION_START =
             LevelEvents.GROUP.add("explosionStart", ScriptType.SERVER,
-                    EventBusJS.of(LevelExplosionEventJS.class, true));
+                    EventBusJS.of(LevelExplosionEventJS.class, true), api -> api.versioned());
 
     /** beforeExplosion: historical alias for explosionStart (same deprecated status as NeoForge side). */
     @Deprecated
     public static final EventBusJS<LevelExplosionEventJS, Void> BEFORE_EXPLOSION =
             LevelEvents.GROUP.add("beforeExplosion", ScriptType.SERVER,
-                    EventBusJS.of(LevelExplosionEventJS.class, true));
+                    EventBusJS.of(LevelExplosionEventJS.class, true), api -> api.versioned());
 
     /** Explosion detonation complete (server script, informational). */
     public static final EventBusJS<LevelExplosionEventJS, Void> EXPLOSION_DETONATE =
-            LevelEvents.GROUP.server("explosionDetonate", LevelExplosionEventJS.class);
+            LevelEvents.GROUP.server("explosionDetonate", LevelExplosionEventJS.class, api -> api.versioned());
 
     /** afterExplosion: historical alias for explosionDetonate (same deprecated status as NeoForge side). */
     @Deprecated
     public static final EventBusJS<LevelExplosionEventJS, Void> AFTER_EXPLOSION =
-            LevelEvents.GROUP.server("afterExplosion", LevelExplosionEventJS.class);
+            LevelEvents.GROUP.server("afterExplosion", LevelExplosionEventJS.class, api -> api.versioned());
 
     /**
      * Triggers initialization of this class, registering the buses above into {@code LevelEvents.GROUP}.

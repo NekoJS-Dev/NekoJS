@@ -162,6 +162,13 @@ final class Ticket24GameplayEventReloadHarness implements AutoCloseable {
             return groups;
         }
 
+        @Override
+        public List<com.tkisor.nekojs.api.event.ModuleEventGroup> moduleEventGroups() {
+            var registry = new com.tkisor.nekojs.api.event.EventGroupRegistry.Impl().scopedTo("nekojs");
+            groups.values().forEach(registry::register);
+            return registry.moduleGroups();
+        }
+
         @Override public List<com.tkisor.nekojs.api.JSTypeAdapter<?>> adapters() { return List.of(); }
         @Override public List<com.tkisor.nekojs.api.catalog.TypeDocCatalogEntry> typeDocs() { return List.of(); }
         @Override public List<com.tkisor.nekojs.api.catalog.ManualDeclarationCatalogEntry> manualDeclarations() { return List.of(); }

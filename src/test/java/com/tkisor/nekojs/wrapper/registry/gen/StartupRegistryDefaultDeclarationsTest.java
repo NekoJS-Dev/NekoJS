@@ -1,6 +1,15 @@
 package com.tkisor.nekojs.wrapper.registry.gen;
 
+import com.tkisor.nekojs.api.NekoJSPlugin;
 import com.tkisor.nekojs.api.catalog.NekoScriptCatalog;
+import com.tkisor.nekojs.api.contract.ApiContractIdentity;
+import com.tkisor.nekojs.api.contract.ApiContractKind;
+import com.tkisor.nekojs.api.contract.NormativeApiContract;
+import com.tkisor.nekojs.api.contract.VerifiedApiContract;
+import com.tkisor.nekojs.api.contract.VerifiedContractSet;
+import com.tkisor.nekojs.api.surface.ApiVersion;
+import com.tkisor.nekojs.api.plugin.OwnedPlugin;
+import com.tkisor.nekojs.api.plugin.PluginIdentity;
 import com.tkisor.nekojs.core.fs.NekoJSPaths;
 import com.tkisor.nekojs.core.plugin.NekoPluginBootstrap;
 import com.tkisor.nekojs.platform.IModInfo;
@@ -22,12 +31,29 @@ import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.net.URI;
 import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 class StartupRegistryDefaultDeclarationsTest {
     @TempDir Path temporary;
+
+    private static com.tkisor.nekojs.core.plugin.NekoPluginRuntime bootstrapOwned(NekoJSPlugin... plugins) {
+        List<OwnedPlugin> owned = Arrays.stream(plugins).map(plugin -> {
+            String owner = plugin instanceof NekoRegistryPointsPlugin ? "nekojs" : "startup-test-addon";
+            return new OwnedPlugin(new PluginIdentity(owner, plugin.getClass().getName(), URI.create("test:" + owner)), plugin);
+        }).toList();
+        ApiContractIdentity identity = new ApiContractIdentity(
+                "nekojs-core", ApiContractKind.PORTABLE, "portable-core", ApiVersion.parse("0.0.0"));
+        NormativeApiContract contract = new NormativeApiContract(2,
+                new NormativeApiContract.ContractIdentity(
+                        "nekojs-core", ApiContractKind.PORTABLE, "portable-core", ApiVersion.parse("0.0.0")),
+                null, List.of(), List.of(), List.of());
+        VerifiedContractSet contracts = VerifiedContractSet.of(VerifiedApiContract.create(identity, contract,
+                URI.create("test:/nekojs-core"), "nekojs/api-contract/preview", "sha256:preview", "sha256:preview"));
+        return NekoPluginBootstrap.bootstrapOwned(owned, new ScriptPropertyRegistry.Impl(), contracts);
+    }
 
     private void initializePlatform() {
         try {
@@ -41,7 +67,7 @@ class StartupRegistryDefaultDeclarationsTest {
     @Test
     void nestedItemDeclarationKeepsOneNullableCallableProperty() throws Exception {
         initializePlatform();
-        var runtime = NekoPluginBootstrap.bootstrap(List.of(new NekoRegistryPointsPlugin()), new ScriptPropertyRegistry.Impl());
+        var runtime = bootstrapOwned(new NekoRegistryPointsPlugin());
         var snapshot = NekoScriptCatalog.snapshot(runtime);
         String manual = com.tkisor.nekojs.probe.backend.typescript.RegistryBuilderTsRenderer
                 .render(snapshot.registryBuilderSurfaces());
@@ -110,7 +136,7 @@ class StartupRegistryDefaultDeclarationsTest {
                 collector.setDefault(net.minecraft.core.registries.Registries.VILLAGER_TYPE, "opaque");
             }
         };
-        var runtime = NekoPluginBootstrap.bootstrap(List.of(new NekoRegistryPointsPlugin(), addon), new ScriptPropertyRegistry.Impl());
+        var runtime = bootstrapOwned(new NekoRegistryPointsPlugin(), addon);
         var snapshot = NekoScriptCatalog.snapshot(runtime);
         var payload = com.tkisor.nekojs.probe.EventPayloadDeclarations.resolve(snapshot.events(), snapshot.registryBuilderSurfaces())
                 .get(RegistryEventJS.class);
@@ -129,7 +155,7 @@ class StartupRegistryDefaultDeclarationsTest {
     @Test
     void startupProxyCallsKeepRequiredCallbacksAmbiguityAndDeferredSupplierSemantics() {
         initializePlatform();
-        NekoPluginBootstrap.bootstrap(List.of(new NekoRegistryPointsPlugin()), new ScriptPropertyRegistry.Impl());
+        bootstrapOwned(new NekoRegistryPointsPlugin());
         var event = RegistryEventJS.create(new RegistryRepository(), "restricted-startup-test");
         try (var context = graal.graalvm.polyglot.Context.newBuilder("js")
                 .allowHostAccess(new com.tkisor.nekojs.core.NekoSharedHostAccess(List.of()).get())
@@ -166,7 +192,7 @@ class StartupRegistryDefaultDeclarationsTest {
                 collector.registerType(net.minecraft.core.registries.Registries.SOUND_EVENT, "basic", VariantSoundBuilder::new);
             }
         };
-        var runtime = NekoPluginBootstrap.bootstrap(List.of(new NekoRegistryPointsPlugin(), addon), new ScriptPropertyRegistry.Impl());
+        var runtime = bootstrapOwned(new NekoRegistryPointsPlugin(), addon);
         var types = NekoRegistryPointsPlugin.registryTypes();
         var soundRegistry = net.minecraft.core.registries.Registries.SOUND_EVENT;
         assertInstanceOf(VariantSoundBuilder.class, types.defaultType(soundRegistry)
@@ -186,7 +212,7 @@ class StartupRegistryDefaultDeclarationsTest {
     @Test
     void realPluginAndDefaultCollectorExposeTheProxyContractInBothBackends() throws Exception {
         initializePlatform();
-        var runtime = NekoPluginBootstrap.bootstrap(List.of(new NekoRegistryPointsPlugin()), new ScriptPropertyRegistry.Impl());
+        var runtime = bootstrapOwned(new NekoRegistryPointsPlugin());
         var snapshot = NekoScriptCatalog.snapshot(runtime);
         assertTrue(snapshot.manualDeclarations().stream().noneMatch(entry -> entry.id().equals("nekojs.registry")));
         var entries = snapshot.registryBuilderSurfaces();
@@ -214,7 +240,11 @@ class StartupRegistryDefaultDeclarationsTest {
                 "typescript", temporary.resolve("typescript"), declarations));
         var py = new PythonProbeBackend().render(new ProbeContext.Of(snapshot, classes, config, paths,
                 "python", temporary.resolve("python"), declarations));
-        String tsEvents = ts.get("@side-only/startup/events/index.d.ts");
+        String tsEvents = ts.get("@side-only/startup/bindings/api-modules.d.ts");
+        assertNotNull(tsEvents);
+        assertTrue(tsEvents.contains("nekojs:event/versioned"), tsEvents);
+        assertFalse(ts.getOrDefault("@side-only/startup/events/index.d.ts", "").contains("RegistryEvents"));
+        assertFalse(py.getOrDefault("nekojs/__init__.pyi", "").contains("RegistryEvents"));
         String pyEvents = py.get("nekojs/_events/startup/__init__.pyi");
         assertTrue(tsEvents.contains("event: StartupRegistryEvent"), tsEvents);
         assertFalse(tsEvents.contains("$RegistryEventJS"), tsEvents);

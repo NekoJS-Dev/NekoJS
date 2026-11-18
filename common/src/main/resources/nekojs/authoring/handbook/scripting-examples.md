@@ -41,6 +41,8 @@ Verification labels are evidence boundaries, not platform support promises: `iso
 ### [examples/server/player-login.js](../examples/server/player-login.js)
 
 ```js
+import { PlayerEvents } from "nekojs:event/versioned";
+
 // Place in server_scripts. The callback runs for future logins, not existing players.
 // NeoForge default. On Fabric, replace the entity property below with player.
 PlayerEvents.loggedIn(event => {
@@ -59,6 +61,8 @@ PlayerEvents.loggedIn(event => {
 ### [examples/server/recipes.js](../examples/server/recipes.js)
 
 ```js
+import { ServerEvents } from "nekojs:event/versioned";
+
 // Use a disposable world: this replaces the vanilla stick recipe.
 ServerEvents.recipes(event => {
     event.remove({ id: "minecraft:stick" });
@@ -91,6 +95,8 @@ ServerEvents.recipes(event => {
 ### [examples/server/item-tags.js](../examples/server/item-tags.js)
 
 ```js
+import { ServerEvents } from "nekojs:event/versioned";
+
 // Requires the NeoForge tag-reload path; follow server script reload with /reload.
 ServerEvents.tags("minecraft:item", event => {
     event.add("nekojs_example:stones", "minecraft:stone");
@@ -102,6 +108,8 @@ ServerEvents.tags("minecraft:item", event => {
 ### [examples/server/block-tags.js](../examples/server/block-tags.js)
 
 ```js
+import { ServerEvents } from "nekojs:event/versioned";
+
 // This block tag is separate from the item tag with the same name. NeoForge tag-reload path required.
 ServerEvents.tags("minecraft:block", event => {
     event.add("nekojs_example:stones", "minecraft:stone");
@@ -121,6 +129,8 @@ ServerEvents.tags("minecraft:block", event => {
 ### [examples/startup/registry.js](../examples/startup/registry.js)
 
 ```js
+import { RegistryEvents } from "nekojs:event/versioned";
+
 // STARTUP only: restart the whole process. Use a disposable world and matching client/server definitions.
 RegistryEvents.register(event => {
     event.item("nekojs_example:ruby", build => {
@@ -453,6 +463,8 @@ console.info("NekoJS authoring example loaded");
 ### [examples/event-subscription.js](../examples/event-subscription.js)
 
 ```js
+import { ServerEvents } from "nekojs:event/versioned";
+
 // Place in server_scripts. Observe the recipe event without changing recipes.
 ServerEvents.recipes(event => {
     console.info("NekoJS recipe authoring example loaded");

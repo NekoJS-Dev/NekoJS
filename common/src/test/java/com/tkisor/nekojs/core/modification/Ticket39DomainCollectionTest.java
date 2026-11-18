@@ -4,6 +4,8 @@ import com.tkisor.nekojs.api.ScriptType;
 import com.tkisor.nekojs.api.data.Binding;
 import com.tkisor.nekojs.api.JSTypeAdapter;
 import com.tkisor.nekojs.api.event.EventGroup;
+import com.tkisor.nekojs.api.event.EventGroupRegistry;
+import com.tkisor.nekojs.api.event.ModuleEventGroup;
 import com.tkisor.nekojs.api.event.EventBusJS;
 import com.tkisor.nekojs.api.plugin.IPluginRuntime;
 import com.tkisor.nekojs.core.DefaultScriptEventBridge;
@@ -65,7 +67,7 @@ class Ticket39DomainCollectionTest {
     /** Synthetic event bus backing the script-side ModEvents.modification(event => ...). */
     static final EventGroup GROUP = EventGroup.of("ModEvents");
     static final EventBusJS<CollectingEvent, Void> MODIFICATION =
-            GROUP.server("modification", CollectingEvent.class);
+            GROUP.server("modification", CollectingEvent.class, api -> api.versioned());
 
     /** Key-dispatch bus; domain collection must explicitly reject buses that carry a dispatch key. */
     static final EventBusJS<CollectingEvent, String> DISPATCHED =
@@ -203,6 +205,12 @@ class Ticket39DomainCollectionTest {
     }
 
     static final class StubPluginRuntime implements IPluginRuntime {
+        final EventGroupRegistry.Impl events = new EventGroupRegistry.Impl().scopedTo("modification-fixture");
+
+        StubPluginRuntime() {
+            events.register(GROUP);
+        }
+
         @Override
         public Map<String, Binding> bindings(ScriptType type) {
             return Map.of();
@@ -210,9 +218,11 @@ class Ticket39DomainCollectionTest {
 
         @Override
         public Map<String, EventGroup> eventGroups() {
-            return Map.of("ModEvents", GROUP);
+            return events.view();
         }
 
+        @Override public List<ModuleEventGroup> moduleEventGroups() { return events.moduleGroups(); }
+        @Override public List<EventGroup> lifecycleEventGroups() { return events.sources(); }
         @Override public List<JSTypeAdapter<?>> adapters() { return List.of(); }
         @Override public List<com.tkisor.nekojs.api.catalog.TypeDocCatalogEntry> typeDocs() { return List.of(); }
         @Override public List<com.tkisor.nekojs.api.catalog.ManualDeclarationCatalogEntry> manualDeclarations() { return List.of(); }
@@ -256,7 +266,8 @@ class Ticket39DomainCollectionTest {
         }
 
         void writeServerScript(String name, String source) throws Exception {
-            Files.writeString(ScriptTypeEnv.scriptsDir(ScriptType.SERVER).resolve(name), source);
+            Files.writeString(ScriptTypeEnv.scriptsDir(ScriptType.SERVER).resolve(name),
+                    "const { ModEvents } = require('nekojs:event/versioned/modification-fixture');\n" + source);
         }
 
         @Override

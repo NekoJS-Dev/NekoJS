@@ -165,7 +165,7 @@ class Ticket07RuntimeThreadsTest {
         final EventBusJS<TestEvent, Void> pingBus;
 
         Ticket07EventBridge() {
-            this.pingBus = group.server("ping", TestEvent.class);
+            this.pingBus = group.add("ping", ScriptType.SERVER, EventBusJS.of(TestEvent.class));
         }
 
         @Override

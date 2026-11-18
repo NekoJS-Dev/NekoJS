@@ -75,6 +75,8 @@ Scripts listen like this:
 
 ```javascript
 // server_scripts/greet.js
+import { MyEvents } from "nekojs:event/versioned/myaddon";
+
 MyEvents.playerGreet(event => {
   console.info(`${event.player.getName().getString()} was greeted: ${event.greeting}`)
 })
@@ -96,12 +98,14 @@ Keeping the group in interface constants is only a convention. `EventGroup` is a
 | `GROUP.server(name, eventClass, dispatchKey)` | Server | Dispatched by key; `client`/`startup` work the same way |
 | `GROUP.add(name, scriptType, bus)` | Your choice | Pass a bus you built yourself, for example to force it cancellable |
 
+Plain `server`/`client`/`startup` factories above publish versioned events by default, including keyed overloads. A final configuration callback replaces that default and publishes only its selected targets; an empty callback is an error (`NEKO-4057`). In contrast, `add(name, scriptType, bus)` without a callback keeps the bus private. Its configured overload requires a publication target too. Keyed factories put the callback after the dispatch key, and `add` puts it after the bus.
+
 The factory methods are shorthand for `add`, which checks two things:
 
 - A duplicate event name within the group throws `IllegalArgumentException`.
 - Event groups are frozen after startup; calling `add` afterwards throws `IllegalStateException`.
 
-**A duplicate group name is not an error.** `EventGroupRegistry` merges groups by name, so if two plugins use the same group name, their events end up in one group. This is the proper way to add events to someone else's group. Only a duplicate event name fails.
+**Names are owner-qualified.** Registrations from the same owner and group name merge disjoint source events; a duplicate source event name fails. Different owners can reuse the same group and event names without merging their publications. Import the owning plugin's module explicitly.
 
 <a id="wiki-section-5"></a>
 ### Dispatching by key
@@ -117,6 +121,8 @@ MyEvents.CUSTOM.post(new PlayerGreetEvent(player, "Hello"), someIdentifier);
 ```
 
 ```javascript
+import { MyEvents } from "nekojs:event/versioned/myaddon";
+
 MyEvents.custom('mymod:some_key', event => {
   // Runs only when the key is mymod:some_key
 })
@@ -142,7 +148,8 @@ So `PlayerGreetEvent` above is not cancellable. To make your own event cancellab
 
 ```java
 EventBusJS<PlayerGreetEvent, Void> PLAYER_GREET =
-    MyEvents.GROUP.add("playerGreet", ScriptType.SERVER, EventBusJS.of(PlayerGreetEvent.class, true));
+    MyEvents.GROUP.add("playerGreet", ScriptType.SERVER, EventBusJS.of(PlayerGreetEvent.class, true),
+        api -> api.versioned());
 
 boolean cancelled = PLAYER_GREET.post(new PlayerGreetEvent(player, "Hello"));
 ```
@@ -217,20 +224,55 @@ Keep the event group, event name, payload and cancel rules the same on both load
 <a id="wiki-section-11"></a>
 ## Publishing to API modules
 
-Event groups are provided as global names by default. You can also publish the same event in the `nekojs/api/version/<modid>` or `nekojs/api/stable/<modid>` module, so scripts can `import` it (see [Module system](module-system_us#wiki-api-modules)):
+Java plugin/native events are module-only. Use the default versioned factories or configure targets beside a source event, then call `registry.register(GROUP)` once in the event hook. A source added with unconfigured `add` stays internal. The plugin loader supplies the owning mod ID. See [Module system](module-system_us#wiki-api-modules).
 
 ```java
 EventBusJS<PlayerGreetEvent, Void> PLAYER_GREET = GROUP.server(
-        "playerGreet", PlayerGreetEvent.class,
-        publication -> publication.versioned().scriptTypes(ScriptType.SERVER));
+        "playerGreet", PlayerGreetEvent.class, api -> {
+            api.versioned().scriptTypes(ScriptType.SERVER);
+            api.stable().view(GreetingView.class, event -> new GreetingView(event.getGreeting()))
+                    .scriptTypes(ScriptType.SERVER);
+        });
+
+public record GreetingView(String greeting) {}
 ```
 
-Still register `GROUP` with `registerEvents`. If your mod ID is `myaddon`, server scripts can import `MyEvents` from `nekojs/api/version/myaddon`.
+For owner `myaddon`, import `MyEvents` from `nekojs:event/versioned/myaddon` for the original payload or `nekojs:event/stable/myaddon` for `GreetingView`. A category is an author's commitment, not automatic adaptation of native semantics.
 
-- Publishing reuses the original event; there is no extra bus and no extra native listener. The global form keeps working. A script that subscribes through both forms registers two listeners.
-- `publication.stable()` only accepts payloads that pass the stable public-type check. Use `stable(View.class, converter)` to convert, but this conversion is not allowed for cancellable events.
-- You can also call `GROUP.expose(...)` for a whole group. A stable group must list the events to publish with `events(...)`.
-- Unknown event names, duplicate publications and invalid views fail with `NEKO-4057`.
+- Both publications reuse one source bus, priority/order and generation-owned listener lifecycle. Subscribing through both creates two listeners. Candidate failure retains active listeners; ordinary reload does not rebuild the plugin runtime.
+- Both `stable()` and `versioned()` return the same `EventPublication<E>.Scope`, supporting `.view(Class, Function)` and `.scriptTypes(...)` in either order. Each converter receives the original source payload, not its sibling target's view. Views do not convert dispatch keys.
+- `scriptTypes(...)` is an exact set intersected with source visibility. A SERVER source normally matches SERVER, STARTUP and TEST; `.scriptTypes(ScriptType.SERVER)` selects SERVER only. Omitting scope retains the source range. There are no server/player path suffixes.
+- `api.stable()` uses the declared payload type, which must be portable. Delivered subclasses do not expose extra members. A converter narrows the payload view but cannot make a native dispatch-key type portable. Converted views of cancellable sources remain rejected in either category without a control mapping. Projected callbacks are synchronous; raw callbacks retain their source policy. Non-callable callbacks are rejected synchronously.
+- Invalid owner, duplicate publication, invalid portable type or invalid view fails with `NEKO-4057`.
+
+Stable can also be an independent portable source with no versioned sibling or conversion:
+
+```java
+EventBusJS<GreetingView, Void> GREETING = GROUP.server(
+        "greeting", GreetingView.class, api -> api.stable());
+GREETING.post(new GreetingView("Hello"));
+```
+
+A versioned target can likewise use `api.versioned().view(GreetingView.class, converter)`. Posting still uses the original source bus and its source payload type.
+
+### Event API migration
+
+| Previous form | Current form |
+|---|---|
+| Implicit global `ServerEvents` and other Java event groups | Explicit import from `nekojs:event/versioned` to preserve native payload semantics |
+| Official event module `nekojs/api/stable/events` | `nekojs:event/stable` |
+| Official event module `nekojs/api/versioned/events` | `nekojs:event/versioned` |
+| Plugin event `nekojs/plugins/<owner>/api/stable/events` | `nekojs:event/stable/<owner>` (for example, `nekojs:event/stable/myaddon`) |
+| Plugin event `nekojs/plugins/<owner>/api/versioned/events` | `nekojs:event/versioned/<owner>` (for example, `nekojs:event/versioned/myaddon`) |
+| Plugin Binding in `nekojs/api/stable/<owner>` / `nekojs/api/version/<owner>` | `nekojs/plugins/<owner>/api/stable` / `nekojs/plugins/<owner>/api/version` |
+| `GROUP.expose(...)` | Default versioned shortcut or per-event callback selecting `api.versioned()`, `api.stable()`, or both |
+| `registry.register(group, configure)` | Move choices into the source definition; call only `registry.register(group)` |
+| Plain `server` / `client` / `startup`, including keyed forms | Default versioned publication |
+| Configured factory or configured `add` | Only selected targets; empty callback rejected |
+| Unconfigured `add(name, scriptType, bus)` | Private source bus |
+| `api.stable(Class, Function)` | `api.stable().view(Class, Function)`; versioned supports the same view operation |
+
+The custom engine event virtual-module namespace has exactly two categories, `stable` and `versioned`, with an optional owner suffix; the table shows both official and plugin forms. The old event routes have no aliases. Java Event Groups have no automatic globals or Binding aggregate aliases. Ordinary Binding globals and module routes are unchanged by this event-route redesign, and script-created dynamic groups remain global. The `ScriptEvents` registrar below is imported from `nekojs:event/versioned`; its declaration/post behavior is unchanged. Native handlers must not switch blindly to stable: a portable view may omit native members and controls.
 
 <a id="wiki-section-12"></a>
 ## ScriptEvents: defining events in scripts
@@ -238,6 +280,8 @@ Still register `GROUP` with `registerEvents`. If your mod ID is `myaddon`, serve
 Script authors can declare their own event groups without Java. Declare them in a startup script, then listen to and fire them from server or client scripts:
 
 ```javascript
+import { ScriptEvents } from "nekojs:event/versioned";
+
 // startup_scripts/register_events.js
 ScriptEvents.server(event => event.register('MyEvents', 'bossKilled'))
 ScriptEvents.client(event => event.register('MyClientEvents', 'hudRefresh'))

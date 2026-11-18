@@ -2,7 +2,6 @@ package com.tkisor.nekojs.script;
 
 import com.tkisor.nekojs.api.JavaMemberIndex;
 import com.tkisor.nekojs.api.ScriptType;
-import com.tkisor.nekojs.api.event.EventGroup;
 import com.tkisor.nekojs.api.event.ScriptBindingSchema;
 import com.tkisor.nekojs.api.event.ScriptEventDefinition;
 import com.tkisor.nekojs.api.event.ScriptEventRegistry;
@@ -115,7 +114,7 @@ public final class ScriptEnvironmentFactory {
     }
 
     /**
-     * Installs event group bindings, plugin bindings, managed globals, the {@code global}/{@code shared}
+     * Installs dynamic script-event groups, plugin bindings, API modules, managed globals, the {@code global}/{@code shared}
      * state views, the binding schema and class-load telemetry into the given Context (BINDING stage).
      *
      * <p>Every write targets {@code context.getBindings("js")}, so a candidate Context and the active
@@ -164,7 +163,7 @@ public final class ScriptEnvironmentFactory {
             bindingSchema.put("shared", ScriptBindingSchema.BindingMembers.dynamicContainer());
 
             bindManagedGlobals(bindings, scriptType, bindingSchema, ApiGuestErrorFactory.create(context));
-            addEventGroupSchema(bindingSchema, pluginRuntime.eventGroups().values(), ScriptEventRegistry.groupsFor(scriptType));
+            addScriptEventGroupSchema(bindingSchema, ScriptEventRegistry.groupsFor(scriptType));
 
             // Known globals for the undefined-identifier check: whatever the runtime Context really exposes —
             // every globalThis property name (JS built-ins plus engine globals such as console) unioned
@@ -288,26 +287,9 @@ public final class ScriptEnvironmentFactory {
         return pluginRuntime.managedApiImplementation(globalId);
     }
 
-    /**
-     * Event groups are global bindings too ({@code ServerEvents}/{@code BlockEvents}/… are bound by
-     * eventBridge.bindEvents), so they must also go into {@link ScriptBindingSchema}:
-     * {@code EventCallbackSourceValidator} uses {@code schema.containsKey("ServerEvents")} to decide
-     * that a call is an event-group call before it validates the callback body. Without this step the
-     * event callback preflight (such as the {@code event.recipes} spelling check) silently stops working
-     * in production; unit tests registered the schema by hand, which hid the gap. Valid members of a
-     * group are its event names (bus names).
-     *
-     * <p>Members of the ScriptEvents custom groups ({@code ScriptEventGroupJS}) are the registered
-     * definition names. Existing entries (environment bindings, managed globals) are not overwritten;
-     * custom groups use {@code putIfAbsent}.
-     */
-    static void addEventGroupSchema(Map<String, ScriptBindingSchema.BindingMembers> schema,
-                                     Iterable<EventGroup> groups,
-                                     Map<String, Map<String, ScriptEventDefinition>> scriptEventGroups) {
-        for (EventGroup group : groups) {
-            schema.put(group.name(),
-                    new ScriptBindingSchema.BindingMembers(Set.copyOf(group.viewBuses().keySet())));
-        }
+    /** Adds only script-defined dynamic groups to the global binding schema. */
+    static void addScriptEventGroupSchema(Map<String, ScriptBindingSchema.BindingMembers> schema,
+                                         Map<String, Map<String, ScriptEventDefinition>> scriptEventGroups) {
         scriptEventGroups.forEach((name, definitions) ->
                 schema.putIfAbsent(name,
                         new ScriptBindingSchema.BindingMembers(Set.copyOf(definitions.keySet()))));

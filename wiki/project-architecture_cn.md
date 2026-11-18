@@ -14,8 +14,10 @@
 
 以 `server_scripts/recipes.py` 里的这段代码为例：
 
+Python 示例使用 [Python 脚本](python-scripts_cn#wiki-section-4) 中的本地 `event_bridge.js` 重新导出；编辑器专用的 `from nekojs import ...` 不能导入事件模块。
+
 ```python
-from nekojs import ServerEvents
+from event_bridge import ServerEvents
 
 def add_recipes(event):
     event.shapeless('minecraft:dirt', ['minecraft:sand'])
@@ -169,7 +171,7 @@ Fabric 没有全类路径注解扫描。新增一个没有平台守卫的内置�
 
 接口在 `api/event/`，实现在 `eventbus/`。
 
-- **`EventGroup`**：一个命名的事件组，例如 `ServerEvents`。用 `group.server("name", EventClass)`、`client(...)`、`startup(...)` 声明事件。
+- **`EventGroup`**：一个命名的事件组，例如 `ServerEvents`。不带回调的 `group.server("name", EventClass)`、`client(...)` 和 `startup(...)` 工厂默认发布 versioned，包括带 key 的重载。配置回调只发布明确选中的目标且不能为空；不带配置的 `add` 保持私有。`stable()` 和 `versioned()` 返回同一种 Scope，可选 `.view(Class, Function)` 和精确 `.scriptTypes(...)`。
 - **`EventBus` / `CancellableEventBus` / `DispatchEventBus`**：三种总线。dispatch 版按 key 分发，例如按物品或方块 id。
 - **`EventBusJS`**：面向脚本的 `ProxyExecutable`，让脚本可以写 `ServerEvents.recipes(cb)`。
 - **加载器桥**：`EventBusForgeBridge` 把 NeoForge `IEventBus` 上的事件接到 `EventBusJS`；Fabric 用 `FabricEventBusBridge` 接 Fabric callback。

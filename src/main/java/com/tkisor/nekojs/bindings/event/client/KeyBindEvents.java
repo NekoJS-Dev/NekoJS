@@ -32,7 +32,8 @@ import net.neoforged.neoforge.common.NeoForge;
  * state transitions detected from {@code ClientTickEvent.Post}. Fires on the client thread;
  * only visible in client_scripts.
  *
- * <p>Script usage:
+ * <p>Import {@code KeyBindEvents} from {@code nekojs:event/versioned} in client scripts.
+ * Script usage:
  * <ul>
  *   <li>{@code KeyBindEvents.register('mymod:my_key', 'key.keyboard.g', 'key.categories.misc')}
  *       — returns the {@link KeyMapping} handle (query {@code isDown()} / {@code consumeClick()}
@@ -61,7 +62,7 @@ import net.neoforged.neoforge.common.NeoForge;
  */
 public final class KeyBindEvents {
 
-    /** Event group exposed to scripts as the {@code KeyBindEvents} global. */
+    /** Source group published as {@code KeyBindEvents} in the versioned event module. */
     public static final EventGroup GROUP = EventGroup.of("KeyBindEvents");
 
     /** Dispatch key of the trigger buses: the full binding id, e.g. {@code 'nekojs:my_key'}. */
@@ -73,14 +74,14 @@ public final class KeyBindEvents {
      * {@code KeyMapping.isDown()}). Fires on the client thread; only visible in client_scripts.
      */
     public static final EventBusJS<KeyBindEventJS, String> PRESSED =
-            GROUP.client("pressed", KeyBindEventJS.class, KEY_DISPATCH);
+            GROUP.client("pressed", KeyBindEventJS.class, KEY_DISPATCH, api -> api.versioned());
 
     /**
      * Fired when a registered binding transitions from down to up. Fires on the client thread;
      * only visible in client_scripts.
      */
     public static final EventBusJS<KeyBindEventJS, String> RELEASED =
-            GROUP.client("released", KeyBindEventJS.class, KEY_DISPATCH);
+            GROUP.client("released", KeyBindEventJS.class, KEY_DISPATCH, api -> api.versioned());
 
     /**
      * Fired once per client tick while a registered binding is held down (not fired for
@@ -88,7 +89,7 @@ public final class KeyBindEvents {
      * client_scripts.
      */
     public static final EventBusJS<KeyBindEventJS, String> TICK =
-            GROUP.client("tick", KeyBindEventJS.class, KEY_DISPATCH);
+            GROUP.client("tick", KeyBindEventJS.class, KEY_DISPATCH, api -> api.versioned());
 
     /**
      * Key binding registration entry (unconventional bus, same shape as
@@ -96,7 +97,7 @@ public final class KeyBindEvents {
      * Form: {@code register(id, key[, category])}; returns the {@link KeyMapping} handle.
      */
     public static final RegisterBus REGISTER =
-            GROUP.add("register", ScriptType.CLIENT, new RegisterBus());
+            GROUP.add("register", ScriptType.CLIENT, new RegisterBus(), api -> api.versioned());
 
     private static final class Binding {
         final Identifier id;

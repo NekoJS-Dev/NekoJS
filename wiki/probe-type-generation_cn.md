@@ -81,7 +81,7 @@ Python 声明比 TypeScript 粗略：泛型都变成 `Any`，复杂的对象形�
 <a id="wiki-section-7"></a>
 ## 在脚本里使用生成的类型
 
-大多数时候你不用显式导入任何东西：全局绑定和事件参数的类型都已经有了。需要给自己的函数写类型时，可以导入：
+普通全局 Binding 和回调参数已有类型；Java 插件/原生事件组需要从明确的事件模块导入，不再生成全局声明。需要给自己的函数写类型时，可以导入：
 
 ```typescript
 import type { $ItemStack, $ItemStack_ } from 'java:net/minecraft/world/item'
@@ -201,6 +201,8 @@ maxDepth = 6
 ### modifyType
 
 ```javascript
+import { ProbeEvents } from "nekojs:event/versioned";
+
 // server_scripts/probe_patch.js
 ProbeEvents.modifyType(event => {
   const editor = event.forClass('net.minecraft.world.entity.player.Player')
@@ -250,6 +252,8 @@ ProbeEvents.modifyType(event => {
 ### assignType
 
 ```javascript
+import { ProbeEvents } from "nekojs:event/versioned";
+
 ProbeEvents.assignType(event => {
   // 所有声明里的 CompoundTag 都显示为 MyNbt
   event.assign('net.minecraft.nbt.CompoundTag', 'MyNbt')
@@ -262,6 +266,8 @@ ProbeEvents.assignType(event => {
 ### addGlobal 和 snippets
 
 ```javascript
+import { ProbeEvents } from "nekojs:event/versioned";
+
 ProbeEvents.addGlobal(event => {
   event.add('MyFlag', 'boolean')            // declare const MyFlag: boolean
   event.add('Helper', 'com.example.Helper') // 引用一个 Java 类
@@ -344,16 +350,16 @@ ProbeEvents.snippets(event => {
 
 ```text
 .neko_probe/python/nekojs/
-├── __init__.pyi    # 全局绑定、事件组、addGlobal；from nekojs import * 的目标
+├── __init__.pyi    # 普通全局 Binding、动态组、addGlobal；编辑器专用导入目标
 ├── py.typed        # PEP 561 标记
 ├── README.md
 ├── _java/          # Java 类型 stub，按包组织
-└── _events/        # 事件声明，按脚本类型组织
+└── _events/        # 内部源内省 stub；不是运行时事件模块导出
 ```
 
 这些目录名是内置 backend 自己的约定，probe 框架并不检查。框架只要求 `render` 返回相对路径到文本的映射。
 
-`nekojs/api/stable` 等 API 模块的声明写在 `@side-only/<side>/bindings/api-modules.d.ts`，见 [模块系统](module-system_cn#wiki-api-modules)。
+Binding 和事件 API 模块声明写在 `@side-only/<side>/bindings/api-modules.d.ts`。Java 插件/原生事件组只在明确发布的模块（`nekojs:event/stable`、`nekojs:event/versioned` 或带所有者的插件路径）里提供，不生成全局事件声明；脚本创建的动态组保留全局。Python 的 `_events` stub 用于内部源内省，不会导入运行时事件模块，也不会恢复 `from nekojs import ServerEvents`。见 [模块系统](module-system_cn#wiki-api-modules) 和 [Python 桥接](python-scripts_cn#wiki-section-4)。
 
 <a id="wiki-section-23"></a>
 ### 编辑器配置的合并

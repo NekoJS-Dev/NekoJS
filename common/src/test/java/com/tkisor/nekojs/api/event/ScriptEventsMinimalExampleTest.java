@@ -13,41 +13,48 @@ import com.tkisor.nekojs.api.surface.ApiSymbolId;
 import com.tkisor.nekojs.api.surface.EnvironmentKey;
 import com.tkisor.nekojs.bindings.static_access.ScriptEventsJS;
 import com.tkisor.nekojs.core.DefaultScriptEventBridge;
+import com.tkisor.nekojs.core.ScriptFilePolicy;
+import com.tkisor.nekojs.core.api.ApiModuleInstaller;
+import com.tkisor.nekojs.core.compiler.ScriptCompilerRegistry;
+import com.tkisor.nekojs.core.config.SandboxConfig;
+import com.tkisor.nekojs.core.error.DefaultErrorTracker;
+import com.tkisor.nekojs.core.fs.NekoJSFileSystem;
+import com.tkisor.nekojs.core.fs.NekoJSPaths;
+import com.tkisor.nekojs.core.fs.SandboxPolicy;
+import com.tkisor.nekojs.core.module.NekoModulePipelineCache;
+import com.tkisor.nekojs.core.module.NekoModuleResolver;
+import com.tkisor.nekojs.core.node.NekoNodeModuleInstaller;
+import com.tkisor.nekojs.core.node.NekoNodeRuntime;
+import com.tkisor.nekojs.testfixture.NekoModuleTestFixtures;
 import com.tkisor.nekojs.script.ScriptContextRegistry;
 import com.tkisor.nekojs.testfixture.TestPlatformInit;
 import graal.graalvm.polyglot.Context;
+import graal.graalvm.polyglot.io.IOAccess;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-/**
- * The smallest runnable chain for script events: follow the production sequence (STARTUP
- * declaration, {@code ScriptEvents.post}, SERVER listening and firing) end to end through a real
- * Graal evaluation.
- *
- * <p>The chain matches {@code ScriptManager.doLoadScripts}: bindEvents (built-in groups plus
- * dynamic groups), then script execution, then {@code ScriptEvents.post(registrar)}. The example
- * only uses what has passed the gate (dynamic declaration, listening and post) and does not touch
- * NativeEvents, the legacy/raw path (see {@code NativeEventsLegacyTierCharacterizationTest}).
- */
+/** Runs native registrar import, dynamic declaration, listening, and post through real guest contexts. */
 class ScriptEventsMinimalExampleTest {
 
     /** Startup side: declares the named event groups. */
     static final String STARTUP_EXAMPLE = """
-            // startup_scripts/events.js —— ScriptEvents 动态声明（票 14 示例）
+            import { ScriptEvents } from "nekojs:event/versioned";
             ScriptEvents.server(event => event.register('MyEvents', 'bossKilled'));
             ScriptEvents.client(event => event.register('HudEvents', 'cooldownEnded'));
             """;
 
     /** Server side: listens, then fires the event from the script itself. */
     static final String SERVER_EXAMPLE = """
-            // server_scripts/boss.js —— 监听动态事件并触发
+            // Script-defined dynamic groups remain global subscription namespaces.
             MyEvents.bossKilled(payload => {
               console.log('boss killed: ' + payload.boss);
             });
@@ -68,6 +75,9 @@ class ScriptEventsMinimalExampleTest {
     private DefaultScriptEventBridge bridge;
     private Context startupContext;
     private Context serverContext;
+    private NekoNodeRuntime startupRuntime;
+    private NekoModulePipelineCache cache;
+    private Path scriptDir;
 
     @BeforeAll
     static void initPlatform() {
@@ -75,28 +85,60 @@ class ScriptEventsMinimalExampleTest {
     }
 
     @BeforeEach
-    void setUp() {
+    void setUp() throws Exception {
         clearAllDefinitions();
         runtime = new StubRuntime();
-        runtime.eventGroups.put("ScriptEvents", ScriptEvents.GROUP);
+        runtime.events.scopedTo("nekojs").register(ScriptEvents.GROUP);
         scriptEvents = new ScriptEventsJS();
         scriptEvents.bindRuntime(runtime);
         bridge = new DefaultScriptEventBridge(scriptEvents);
         bridge.setPluginRuntime(runtime);
 
-        startupContext = Context.newBuilder("js").allowAllAccess(true).build();
+        NekoJSPaths paths = NekoJSPaths.get();
+        SandboxConfig config = SandboxConfig.defaultConfig();
+        ScriptCompilerRegistry compilers = ScriptCompilerRegistry.createRuntimeRegistry();
+        cache = NekoModuleTestFixtures.newCache(paths, compilers, config);
+        Files.createDirectories(paths.startupScripts());
+        scriptDir = Files.createTempDirectory(paths.startupScripts(), "script-events-example-");
+        IOAccess io = IOAccess.newBuilder().fileSystem(new NekoJSFileSystem(paths.root(),
+                new SandboxPolicy(config, paths), paths, cache)).build();
+        startupContext = Context.newBuilder("js").allowAllAccess(true).allowIO(io).build();
+        startupRuntime = NekoNodeModuleInstaller.install(startupContext, ScriptType.STARTUP,
+                new NekoModuleResolver(paths.gameDir(), paths.root(), paths.nodeModules(), new ScriptFilePolicy(compilers)),
+                paths, new DefaultErrorTracker(paths, config), config, cache);
+        ApiModuleInstaller.install(startupContext, runtime, ScriptType.STARTUP);
         ScriptContextRegistry.bind(startupContext, ScriptType.STARTUP);
         serverContext = Context.newBuilder("js").allowAllAccess(true).build();
         ScriptContextRegistry.bind(serverContext, ScriptType.SERVER);
     }
 
     @AfterEach
-    void tearDown() {
-        clearAllDefinitions();
-        ScriptContextRegistry.unbind(startupContext);
-        ScriptContextRegistry.unbind(serverContext);
-        startupContext.close();
-        serverContext.close();
+    void tearDown() throws Exception {
+        try {
+            if (bridge != null) bridge.clearListeners(ScriptType.STARTUP);
+            clearAllDefinitions();
+            ScriptContextRegistry.unbind(startupContext);
+            ScriptContextRegistry.unbind(serverContext);
+        } finally {
+            try {
+                if (startupRuntime != null) startupRuntime.close();
+            } finally {
+                try {
+                    if (startupContext != null) startupContext.close();
+                } finally {
+                    try {
+                        if (serverContext != null) serverContext.close();
+                    } finally {
+                        if (cache != null) cache.close();
+                        if (scriptDir != null) {
+                            try (var files = Files.walk(scriptDir)) {
+                                for (Path path : files.sorted(java.util.Comparator.reverseOrder()).toList()) Files.delete(path);
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 
     private static void clearAllDefinitions() {
@@ -106,10 +148,12 @@ class ScriptEventsMinimalExampleTest {
     }
 
     @Test
-    void minimalExampleRunsTheDeclareListenPostChain() {
-        // (1) STARTUP: bind the event groups (including the ScriptEvents registration bus) and run the declaring script
+    void minimalExampleRunsTheDeclareListenPostChain() throws Exception {
+        // STARTUP imports the native registrar bus instead of installing a global alias.
         bridge.bindEvents(startupContext.getBindings("js"), ScriptType.STARTUP);
-        startupContext.eval("js", STARTUP_EXAMPLE);
+        Path entry = Files.writeString(scriptDir.resolve("events.mjs"), STARTUP_EXAMPLE);
+        startupRuntime.moduleLoaderHost().loadEntry(entry.toString());
+        assertEquals(false, startupContext.getBindings("js").hasMember("ScriptEvents"));
 
         // (2) Production sequence: once the scripts have run, ScriptEvents.post(registrar) records the registrations
         ScriptEvents.post(scriptEvents);
@@ -135,10 +179,12 @@ class ScriptEventsMinimalExampleTest {
     }
 
     private static final class StubRuntime implements IPluginRuntime {
-        final Map<String, EventGroup> eventGroups = new java.util.LinkedHashMap<>();
+        final EventGroupRegistry.Impl events = new EventGroupRegistry.Impl();
 
         @Override public Map<String, Binding> bindings(ScriptType type) { return Map.of(); }
-        @Override public Map<String, EventGroup> eventGroups() { return eventGroups; }
+        @Override public Map<String, EventGroup> eventGroups() { return events.view(); }
+        @Override public List<ModuleEventGroup> moduleEventGroups() { return events.moduleGroups(); }
+        @Override public List<EventGroup> lifecycleEventGroups() { return events.sources(); }
         @Override public List<JSTypeAdapter<?>> adapters() { return List.of(); }
         @Override public List<TypeDocCatalogEntry> typeDocs() { return List.of(); }
         @Override public List<ManualDeclarationCatalogEntry> manualDeclarations() { return List.of(); }

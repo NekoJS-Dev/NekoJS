@@ -48,7 +48,8 @@ class Ticket26ClientInputHudSurfaceTest {
         EventGroupRegistry registry = new EventGroupRegistry.Impl().scopedTo("nekojs");
         new NekoJSCorePlugin().registerEvents(registry);
         new NekoJSCorePlugin().registerClientEvents(registry);
-        return registry.view();
+        return registry.view().values().stream().collect(java.util.stream.Collectors.toMap(
+                EventGroup::name, java.util.function.Function.identity()));
     }
 
     @Test

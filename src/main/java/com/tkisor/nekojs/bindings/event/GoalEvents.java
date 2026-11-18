@@ -11,7 +11,7 @@ import com.tkisor.nekojs.wrapper.event.entity.GoalRegisterEventJS;
 public interface GoalEvents {
     EventGroup GROUP = EventGroup.of("GoalEvents");
 
-    EventBusJS<GoalRegisterEventJS, Void> REGISTER = GROUP.startup("register", GoalRegisterEventJS.class);
+    EventBusJS<GoalRegisterEventJS, Void> REGISTER = GROUP.startup("register", GoalRegisterEventJS.class, api -> api.versioned());
 
     static void postRegister() {
         REGISTER.post(new GoalRegisterEventJS());

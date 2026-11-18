@@ -52,7 +52,7 @@ class ScriptEnvironmentBindingScopeTest {
             harness.install();
 
             assertKnownGlobals(harness.session.bindingSchemaView());
-            assertTrue(harness.observed.containsAll(List.of("events", "bindings", "value", "api", "groups")));
+            assertTrue(harness.observed.containsAll(List.of("events", "bindings", "value", "api")));
             assertNull(currentMarker());
         }
     }

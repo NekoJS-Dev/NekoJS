@@ -69,6 +69,8 @@ Then open `logs/nekojs/server.log` in your game folder and you will see `Hello, 
 Create `nekojs/server_scripts/recipes.js`:
 
 ```javascript
+import { ServerEvents } from "nekojs:event/versioned";
+
 ServerEvents.recipes(event => {
   // Remove every recipe that outputs sticks
   event.remove({ output: 'minecraft:stick' })
@@ -94,6 +96,8 @@ See [Recipe system](recipe-system_us) for more.
 New items must be registered in a **startup script**. Create `nekojs/startup_scripts/items.js`:
 
 ```javascript
+import { RegistryEvents } from "nekojs:event/versioned";
+
 RegistryEvents.register(event => {
   event.item('mymod:cool_gem', item => {
     item.maxStackSize = 16

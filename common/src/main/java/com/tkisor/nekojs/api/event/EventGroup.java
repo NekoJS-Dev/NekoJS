@@ -12,7 +12,9 @@ import java.util.Objects;
 
 /**
  * A named event group such as {@code ServerEvents}: a set of {@link EventBusJS} instances registered by
- * name and exposed to scripts. Call {@link #freeze()} after bootstrap registration; once frozen, no bus
+ * name. Unconfigured server/client/startup shortcuts publish versioned payloads. Configured declarations
+ * publish only their selected targets; {@link #add(String, ScriptType, EventBusJS)} without configuration
+ * keeps a source private. Call {@link #freeze()} after bootstrap registration; once frozen, no bus
  * can be added or removed.
  *
  * @author ZZZank
@@ -33,15 +35,6 @@ public class EventGroup {
         // LinkedHashMap: Maintains registration order, viewBuses()/probe directory iteration deterministic (HashMap's
         // String key iteration order depends on internal hashCode layout, fragile across JDK/runs)
         this.buses = new LinkedHashMap<>();
-    }
-
-    /** Declares a group-wide module publication; registration supplies the actual plugin owner. */
-    public EventGroup expose(java.util.function.Consumer<EventExposure> configure) {
-        checkMutable();
-        EventExposure exposure = new EventExposure();
-        Objects.requireNonNull(configure, "configure").accept(exposure);
-        publications.add(exposure.declaration());
-        return this;
     }
 
     java.util.List<ModuleEventGroup> modulePublications(String owner) {
@@ -72,37 +65,37 @@ public class EventGroup {
         return this.buses.get(busName);
     }
 
-    /** Registers an event bus that can be listened to by SERVER scripts (cannot be cancelled, no dispatch). */
+    /** Publishes a versioned source event for SERVER-compatible scripts, without a dispatch key. */
     public <E> EventBusJS<E, Void> server(String name, Class<E> type) {
-        return add(name, ScriptType.SERVER, EventBusJS.of(type));
+        return server(name, type, publication -> publication.versioned());
     }
 
-    /** Registers a bus for CLIENT scripts. It is not cancellable and has no dispatch key. */
+    /** Publishes a versioned source event for CLIENT-compatible scripts, without a dispatch key. */
     public <E> EventBusJS<E, Void> client(String name, Class<E> type) {
-        return add(name, ScriptType.CLIENT, EventBusJS.of(type));
+        return client(name, type, publication -> publication.versioned());
     }
 
-    /** Registers a bus for STARTUP scripts. It is not cancellable and has no dispatch key. */
+    /** Publishes a versioned source event for STARTUP-compatible scripts, without a dispatch key. */
     public <E> EventBusJS<E, Void> startup(String name, Class<E> type) {
-        return add(name, ScriptType.STARTUP, EventBusJS.of(type));
+        return startup(name, type, publication -> publication.versioned());
     }
 
-    /** Registers a bus for SERVER scripts that dispatches each event by {@code dispatchKey}. */
+    /** Publishes a versioned source event for SERVER-compatible scripts, dispatched by {@code dispatchKey}. */
     public <E, K> EventBusJS<E, K> server(String name, Class<E> type, DispatchKey<E, K> dispatchKey) {
-        return add(name, ScriptType.SERVER, EventBusJS.of(type, EventBusJS.eventCancellability(type), dispatchKey));
+        return server(name, type, dispatchKey, publication -> publication.versioned());
     }
 
-    /** Registers a bus for CLIENT scripts that dispatches each event by {@code dispatchKey}. */
+    /** Publishes a versioned source event for CLIENT-compatible scripts, dispatched by {@code dispatchKey}. */
     public <E, K> EventBusJS<E, K> client(String name, Class<E> type, DispatchKey<E, K> dispatchKey) {
-        return add(name, ScriptType.CLIENT, EventBusJS.of(type, EventBusJS.eventCancellability(type), dispatchKey));
+        return client(name, type, dispatchKey, publication -> publication.versioned());
     }
 
-    /** Registers a bus for STARTUP scripts that dispatches each event by {@code dispatchKey}. */
+    /** Publishes a versioned source event for STARTUP-compatible scripts, dispatched by {@code dispatchKey}. */
     public <E, K> EventBusJS<E, K> startup(String name, Class<E> type, DispatchKey<E, K> dispatchKey) {
-        return add(name, ScriptType.STARTUP, EventBusJS.of(type, EventBusJS.eventCancellability(type), dispatchKey));
+        return startup(name, type, dispatchKey, publication -> publication.versioned());
     }
 
-    /** Defines a source event and its module publications in the same declaration. */
+    /** Defines a source event and only the explicitly selected publications; empty configuration is invalid. */
     public <E> EventBusJS<E, Void> server(String name, Class<E> type,
                                         java.util.function.Consumer<EventPublication<E>> configure) {
         return add(name, ScriptType.SERVER, EventBusJS.of(type), configure);
@@ -133,8 +126,8 @@ public class EventGroup {
         return add(name, ScriptType.STARTUP, EventBusJS.of(type, EventBusJS.eventCancellability(type), dispatchKey), configure);
     }
 
-    public <E, K> EventBusJS<E, K> add(String name, ScriptType scriptType, EventBusJS<E, K> bus,
-                                      java.util.function.Consumer<EventPublication<E>> configure) {
+    public <E, K, BUS extends EventBusJS<E, K>> BUS add(String name, ScriptType scriptType, BUS bus,
+                                                       java.util.function.Consumer<EventPublication<E>> configure) {
         checkMutable();
         EventPublication<E> publication = new EventPublication<>(name);
         Objects.requireNonNull(configure, "configure").accept(publication);
@@ -145,7 +138,7 @@ public class EventGroup {
     }
 
     /**
-     * Adds a bus to this group with its {@code scriptType} and name, and returns it.
+     * Adds a private source bus with its {@code scriptType} and name, and returns it without publishing it.
      *
      * @throws {@link IllegalStateException} when the group is frozen
      * @throws {@link IllegalArgumentException} when a bus with this name is already registered
@@ -189,9 +182,8 @@ public class EventGroup {
                 throw new IllegalArgumentException("A bus with name '" + busName + "' has already been registered");
             }
         }
-        var declarations = other.publications.stream().map(publication -> publication.resolveEvents(other)).toList();
         other.buses.forEach((busName, registered) -> this.add(busName, registered.scriptType, registered.bus));
-        publications.addAll(declarations);
+        publications.addAll(other.publications);
     }
 
     /**

@@ -13,6 +13,8 @@ You can write scripts in TypeScript (`.ts`) and JSX (`.jsx`, `.tsx`). Put the fi
 Create `nekojs/server_scripts/typed_recipes.ts`:
 
 ```typescript
+import { ServerEvents } from "nekojs:event/versioned";
+
 interface MyRecipe {
   output: string
   inputs: string[]

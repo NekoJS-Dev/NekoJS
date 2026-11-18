@@ -34,7 +34,7 @@ class PostEffectDeclarationSurfaceTest {
         var registry = new com.tkisor.nekojs.api.event.EventGroupRegistry.Impl().scopedTo("nekojs");
         new NekoJSCorePlugin().registerClientEvents(registry);
 
-        var clientEvents = registry.view().get("ClientEvents");
+        var clientEvents = registry.view().get("nekojs:ClientEvents");
         assertTrue(clientEvents != null, "NekoJSCorePlugin must register the ClientEvents group");
         assertTrue(clientEvents.viewBuses().containsKey("postEffects"),
                 "the declaration face is ClientEvents.postEffects (existing resource/reload sub-events)");

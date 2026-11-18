@@ -7,7 +7,7 @@
 
 Python support is built into NekoJS. Put a `.py` file in a script folder and it loads just like a `.js` file.
 
-You don't need to install Python, and you don't need to `pip install` anything. NekoJS converts your Python code to JavaScript and runs it on Graal. That's why bindings such as `ServerEvents` and `Item` work exactly the same way in Python.
+You don't need to install Python, and you don't need to `pip install` anything. NekoJS converts your Python code to JavaScript and runs it on Graal. Ordinary Bindings such as `Item` remain available directly. Java plugin/native Event Groups are module-only; the recipe example below uses a local JavaScript bridge because Python import syntax cannot name their module paths.
 
 Keep in mind that this is not full Python. Only part of the syntax and built-in functions are supported, and there is no Python standard library. This page explains what works and what doesn't.
 
@@ -41,10 +41,10 @@ The import can take either of these forms:
 from nekojs import *
 
 # or import only the names you use
-from nekojs import Item, ServerEvents
+from nekojs import Item
 ```
 
-This line exists only for your editor. NekoJS removes it when converting the code, because the bindings already exist at runtime. A script without it still runs, but the editor won't recognize names like `ServerEvents`.
+This line exists only for your editor. NekoJS removes it when converting the code, because the bindings already exist at runtime. A script without it still runs, but the editor won't recognize ordinary Binding names like `Item`. This editor-only import does not load an event module or create an Event Group global.
 
 Don't write `import nekojs`, and don't rename with `as` (for example `from nekojs import Item as I`). NekoJS only removes the `from nekojs import ...` form. `import nekojs` is treated as importing a file called `nekojs` and fails; an alias becomes an undefined name at runtime.
 
@@ -60,10 +60,17 @@ For configuration details, see [Probe type generation](probe-type-generation_us)
 <a id="wiki-section-4"></a>
 ## A practical example
 
-Change recipes with Python in `server_scripts/recipes.py`:
+Create `server_scripts/event_bridge.js` first. Python dotted imports resolve local files, not bare NekoJS event module IDs; `from nekojs import ...` is erased and cannot load them. A local JavaScript module can re-export the group using the real module import:
+
+```javascript
+// server_scripts/event_bridge.js
+export { ServerEvents } from "nekojs:event/versioned";
+```
+
+Then change recipes in `server_scripts/recipes.py`:
 
 ```python
-from nekojs import ServerEvents
+from event_bridge import ServerEvents
 
 STICK_SOURCES = {
     'minecraft:cobblestone': 4,
@@ -273,7 +280,7 @@ Rules:
 - You can't create an instance of an imported class directly with `Box(1)`. Provide a function in that file that creates it (like `make_kit` above) and import the function.
 - There is no Python standard library. `import math` or `from typing import List` is treated as importing a file from the same folder and fails. For math, use JavaScript's `Math` directly, for example `Math.floor(x)`.
 
-NekoJS bindings such as `ServerEvents` and `Item` need no import; use them directly.
+Ordinary global Bindings such as `Item` need no runtime import. Java plugin/native Event Groups require a module import; use the local JavaScript bridge above. Python has no direct dotted-import spelling for `nekojs:event/versioned` or owner-qualified plugin event routes.
 
 <a id="wiki-section-14"></a>
 ## Support at a glance

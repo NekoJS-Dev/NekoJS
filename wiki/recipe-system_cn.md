@@ -13,6 +13,8 @@
 新建 `nekojs/server_scripts/recipes.js`：
 
 ```javascript
+import { ServerEvents } from "nekojs:event/versioned";
+
 ServerEvents.recipes(event => {
   // 删除所有产出木棍的配方
   event.remove({ output: 'minecraft:stick' })
@@ -61,6 +63,8 @@ ServerEvents.recipes(event => {
 - 键名拼错会直接报错 `NEKO-5003`，不会悄悄变成“选中全部”。
 
 ```javascript
+import { ServerEvents } from "nekojs:event/versioned";
+
 ServerEvents.recipes(event => {
   // minecraft 自己的木棍配方
   event.remove({ mod: 'minecraft', output: 'minecraft:stick' })
@@ -94,6 +98,8 @@ ServerEvents.recipes(event => {
 | `event.replaceOutput(filter, 旧产物, 新产物)` | 在选中的配方里替换产物，原来的数量保留 |
 
 ```javascript
+import { ServerEvents } from "nekojs:event/versioned";
+
 ServerEvents.recipes(event => {
   // 所有配方里的橡木木板换成白桦木板
   event.replaceInput({}, 'minecraft:oak_planks', 'minecraft:birch_planks')
@@ -142,6 +148,8 @@ ServerEvents.recipes(event => {
 | `event.smoking(产物, 原料)` / `event.campfireCooking(产物, 原料)` | 烟熏炉（100 tick）/ 营火（600 tick），只有两个参数的写法 |
 
 ```javascript
+import { ServerEvents } from "nekojs:event/versioned";
+
 ServerEvents.recipes(event => {
   event.shaped('minecraft:diamond_sword', [
     'D',
@@ -164,6 +172,8 @@ ServerEvents.recipes(event => {
 `event.recipes.<命名空间>.<类型>(...)` 可以添加任意配方类型，包括模组的配方：
 
 ```javascript
+import { ServerEvents } from "nekojs:event/versioned";
+
 ServerEvents.recipes(event => {
   event.recipes.minecraft.crafting_shaped(
     Item.of('minecraft:stick', 2), ['B'],
@@ -189,6 +199,8 @@ ServerEvents.recipes(event => {
 知道配方的完整 JSON 时，可以直接写。JSON 必须符合当前游戏版本和模组要求的格式：
 
 ```javascript
+import { ServerEvents } from "nekojs:event/versioned";
+
 ServerEvents.recipes(event => {
   // custom：传入完整 JSON，必须包含 type
   event.custom({
@@ -250,6 +262,8 @@ JSON 里可以直接放 `Ingredient.of(...)` 和 `Item.of(...)`，它们会被�
 | `.validate()` | 检查配方能否被游戏读取 |
 
 ```javascript
+import { ServerEvents } from "nekojs:event/versioned";
+
 ServerEvents.recipes(event => {
   event.forEach({ output: 'minecraft:iron_ingot', recipeType: 'minecraft:smelting' }, recipe => {
     console.info(`找到配方：${recipe.id()}`)
@@ -266,6 +280,8 @@ ServerEvents.recipes(event => {
 Minecraft 26.x 上，合成配方可以决定原料合成后怎么处理：工具掉耐久而不是消失，催化剂原样留下，或者换成别的物品。这只对工作台和背包里的合成有效。
 
 ```javascript
+import { ServerEvents } from "nekojs:event/versioned";
+
 ServerEvents.recipes(event => {
   // 铁镐作为工具：每次合成掉 1 点耐久，回到合成格
   event.shaped('minecraft:diamond_pickaxe', ['PDD', ' S ', ' S '], {
@@ -389,6 +405,8 @@ schema 描述一种配方有哪些字段。NekoJS 启动时会自动扫描已安
 没有 schema 的配方类型也能用 `event.recipes` 添加，只要传入一个包含全部字段的对象：
 
 ```javascript
+import { ServerEvents } from "nekojs:event/versioned";
+
 ServerEvents.recipes(event => {
   event.recipes.mymod.unknown_type({
     some_field: 'value',

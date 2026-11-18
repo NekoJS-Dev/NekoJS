@@ -39,17 +39,34 @@ class StableServerEventsTest {
                 .filter(group -> group.category() == BindingExposure.Category.STABLE
                         && group.group().name().equals("ServerEvents"))
                 .findFirst().orElseThrow();
-        assertEquals("nekojs/api/stable", publication.moduleId());
+        assertEquals("nekojs:event/stable", publication.moduleId());
+        var versioned = registry.moduleGroups().stream()
+                .filter(group -> group.category() == BindingExposure.Category.VERSION
+                        && group.group().name().equals("ServerEvents"))
+                .findFirst().orElseThrow();
+        assertEquals("nekojs:event/versioned", versioned.moduleId());
+        assertEquals(registry.view().get("nekojs:ServerEvents").viewBuses().keySet(), versioned.events());
+        assertTrue(versioned.events().containsAll(java.util.Set.of("tickPre", "tickPost", "recipes")));
+        for (var source : registry.view().values()) {
+            var nativePublication = registry.moduleGroups().stream()
+                    .filter(group -> group.category() == BindingExposure.Category.VERSION
+                            && group.group().name().equals(source.name()))
+                    .findFirst().orElseThrow();
+            assertEquals(source.viewBuses().keySet(), nativePublication.events(), source.name());
+        }
         assertEquals(java.util.Set.of("tickPre", "tickPost"), publication.events());
+        assertTrue(publication.available(ScriptType.SERVER));
         assertFalse(publication.available(ScriptType.CLIENT));
         assertFalse(publication.available(ScriptType.STARTUP));
+        assertFalse(publication.available(ScriptType.TEST));
         assertEquals(StableServerTickEvent.class, publication.views().get("tickPre").type());
+        assertEquals(StableServerTickEvent.class, publication.views().get("tickPost").type());
         var raw = new ArrayList<Object>();
         try (var context = Context.newBuilder("js").allowAllAccess(true).build()) {
             ScriptContextRegistry.bind(context, ScriptType.SERVER);
             try {
                 context.getBindings("js").putMember("stable", new ModuleEventGroupProxy(context, publication, ScriptType.SERVER));
-                context.getBindings("js").putMember("rawPre", pre);
+                context.getBindings("js").putMember("versioned", new ModuleEventGroupProxy(context, versioned, ScriptType.SERVER));
                 context.getBindings("js").putMember("recordRaw", (graal.graalvm.polyglot.proxy.ProxyExecutable) values -> {
                     raw.add(values[0].asHostObject());
                     return null;
@@ -63,7 +80,7 @@ class StableServerEventsTest {
                             seen.push(e.tick);
                         });
                         stable.tickPost(e => seen.push(e.tick));
-                        rawPre(e => recordRaw(e));
+                        versioned.tickPre(e => recordRaw(e));
                         """);
                 pre.post(prePayload);
                 post.post(postPayload);

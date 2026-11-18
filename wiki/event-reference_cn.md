@@ -16,9 +16,11 @@
 <a id="wiki-section-2"></a>
 ## ⚡ 如何使用事件
 
-所有事件都以 Events 结尾，通过 .addListener(callback) 注册。
+先从事件模块明确导入事件组，再在脚本顶层用 `Group.event(callback)` 订阅。需要保留原生载荷语义时用 `nekojs:event/versioned`；`nekojs:event/stable` 只提供声明过的可移植视图，不会自动兼容原生成员。Java 事件组不再自动提供全局名字，也不从旧 Binding 聚合模块导出。见 [迁移表](event-extensions_cn#wiki-section-11)。
 
 ```javascript
+import { PlayerEvents } from "nekojs:event/versioned";
+
 // 示例：玩家登录时发送消息
 PlayerEvents.loggedIn(event => {
   event.player.sendMessage('欢迎回来！');

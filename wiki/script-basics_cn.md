@@ -83,6 +83,8 @@ NekoJS 根据文件所在的目录决定脚本在什么时机运行、能调用�
 global.counter = global.counter ?? 0
 
 // server_scripts/b.js
+import { ServerEvents } from "nekojs:event/versioned";
+
 ServerEvents.tickPost(event => {
   global.counter++
 })

@@ -111,7 +111,7 @@ class TypeScriptOwnerGenericTest {
                 null, Map.of(), List.of());
         var config = new ProbeConfig(true, ".neko_probe", new ProbeConfig.ScanConfig(
                 List.of(getClass().getPackageName()), List.of(), List.of(), List.of(), 1, "SMART"));
-        var context = new ProbeContext.Of(snapshot, types, config, NekoJSPaths.fromGameDir(output),
+        var context = new ProbeContext.Of(com.tkisor.nekojs.probe.ProbeEventFixtures.publishVersioned(snapshot), types, config, NekoJSPaths.fromGameDir(output),
                 "typescript", output, List.of());
         var files = new TypeScriptProbeBackend().render(context);
         for (var entry : files.entrySet()) {
@@ -236,8 +236,8 @@ class TypeScriptOwnerGenericTest {
                 null, Map.of(), List.of());
         var config = new ProbeConfig(true, ".neko_probe", new ProbeConfig.ScanConfig(
                 List.of("unrelated.primary"), List.of(), List.of(), List.of(), 1, "SMART"));
-        var context = new ProbeContext.Of(snapshot, List.of(), config, NekoJSPaths.fromGameDir(output),
-                "typescript", output, List.of());
+        var context = new ProbeContext.Of(com.tkisor.nekojs.probe.ProbeEventFixtures.publishVersioned(snapshot),
+                List.of(), config, NekoJSPaths.fromGameDir(output), "typescript", output, List.of());
         var files = new TypeScriptProbeBackend().render(context);
         for (var entry : files.entrySet()) {
             Path target = output.resolve(entry.getKey());
@@ -245,9 +245,10 @@ class TypeScriptOwnerGenericTest {
             Files.writeString(target, entry.getValue());
         }
         Files.writeString(output.resolve("tsconfig.json"), """
-                {"compilerOptions":{"strict":true,"noEmit":true,"skipLibCheck":false,"target":"ES2022","module":"ESNext","moduleResolution":"Bundler","types":[],"baseUrl":".","paths":{"java:*": ["@package/*"]}},"include":["@package/**/*.d.ts","@manual/**/*.d.ts","@side-only/server/events/index.d.ts","exercise.ts"]}
+                {"compilerOptions":{"strict":true,"noEmit":true,"skipLibCheck":false,"target":"ES2022","module":"ESNext","moduleResolution":"Bundler","types":[],"baseUrl":".","paths":{"java:*": ["@package/*"]}},"include":["@package/**/*.d.ts","@manual/**/*.d.ts","@side-only/server/bindings/api-modules.d.ts","exercise.ts"]}
                 """);
         Files.writeString(output.resolve("exercise.ts"), """
+                import { OwnerEvents } from 'nekojs:event/versioned';
                 import type { $TypeScriptOwnerGenericTest$Owner$Inner as Inner } from 'java:com/tkisor/nekojs/probe/ir';
                 declare const inner: Inner<any, string>;
                 const returned: OwnerOutput = ownedAccept(inner);
@@ -264,7 +265,7 @@ class TypeScriptOwnerGenericTest {
                 // @ts-expect-error Raw dispatch erasure preserves the host shape.
                 OwnerEvents.visit(12, event => {});
                 """);
-        String events = files.get("@side-only/server/events/index.d.ts");
-        assertTrue(events.contains("extra: $TypeScriptOwnerGenericTest$Owner$Inner<any, any>"), events);
+        String events = files.get("@side-only/server/bindings/api-modules.d.ts");
+        assertTrue(events.contains("extra: import(\"java:com/tkisor/nekojs/probe/ir\").$TypeScriptOwnerGenericTest$Owner$Inner<any, any>"), events);
     }
 }

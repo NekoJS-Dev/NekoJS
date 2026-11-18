@@ -82,12 +82,14 @@ class Ticket24GameplayEventReloadLifecycleTest {
     @Test
     void multipleSuccessfulReloadsDispatchEachGenerationExactlyOnce() throws Exception {
         harness.writeScript(ScriptType.SERVER, "lifecycle.js", """
+                const { PlayerEvents } = require('nekojs:event/versioned');
                 PlayerEvents.loggedIn(event => event.add('gen1'))
                 """);
         harness.loadScripts(ScriptType.SERVER);
         assertEquals(List.of("gen1"), post(PlayerEvents.LOGGED_IN));
 
         harness.writeScript(ScriptType.SERVER, "lifecycle.js", """
+                const { PlayerEvents } = require('nekojs:event/versioned');
                 PlayerEvents.loggedIn(event => event.add('gen2'))
                 """);
         harness.reloadScripts(ScriptType.SERVER);
@@ -96,6 +98,7 @@ class Ticket24GameplayEventReloadLifecycleTest {
                         + " and the old generation's listener is gone (no duplicate dispatch)");
 
         harness.writeScript(ScriptType.SERVER, "lifecycle.js", """
+                const { PlayerEvents, LevelEvents } = require('nekojs:event/versioned');
                 PlayerEvents.loggedIn(event => event.add('gen3'))
                 LevelEvents.loaded(event => event.add('level-gen3'))
                 """);
@@ -115,6 +118,7 @@ class Ticket24GameplayEventReloadLifecycleTest {
     @Test
     void aFailedReloadKeepsTheOldGenerationServingWithoutDoubleRegistration() throws Exception {
         harness.writeScript(ScriptType.SERVER, "lifecycle.js", """
+                const { PlayerEvents } = require('nekojs:event/versioned');
                 PlayerEvents.loggedIn(event => event.add('old'))
                 """);
         harness.loadScripts(ScriptType.SERVER);
@@ -141,6 +145,7 @@ class Ticket24GameplayEventReloadLifecycleTest {
         });
 
         harness.writeScript(ScriptType.SERVER, "lifecycle.js", """
+                const { PlayerEvents } = require('nekojs:event/versioned');
                 PlayerEvents.loggedIn(event => event.add('new'))
                 """);
         assertThrows(NekoReloadException.class, () -> harness.reloadScripts(ScriptType.SERVER),
@@ -159,6 +164,7 @@ class Ticket24GameplayEventReloadLifecycleTest {
     @Test
     void cancellationFollowsTheActiveGenerationAcrossReloads() throws Exception {
         harness.writeScript(ScriptType.SERVER, "cancel.js", """
+                const { CommandEvents } = require('nekojs:event/versioned');
                 CommandEvents.command(event => { event.add('cancel-gen'); return true })
                 """);
         harness.loadScripts(ScriptType.SERVER);
@@ -166,6 +172,7 @@ class Ticket24GameplayEventReloadLifecycleTest {
         assertEquals(List.of("cancel-gen"), cancelled);
 
         harness.writeScript(ScriptType.SERVER, "cancel.js", """
+                const { CommandEvents } = require('nekojs:event/versioned');
                 CommandEvents.command(event => { event.add('observe-gen'); return false })
                 """);
         harness.reloadScripts(ScriptType.SERVER);
@@ -174,6 +181,7 @@ class Ticket24GameplayEventReloadLifecycleTest {
                 "after the swap the listener runs but does not cancel anymore");
 
         harness.writeScript(ScriptType.SERVER, "cancel.js", """
+                const { CommandEvents } = require('nekojs:event/versioned');
                 CommandEvents.command(event => { event.add('cancel-gen2'); return true })
                 """);
         harness.reloadScripts(ScriptType.SERVER);
@@ -184,6 +192,7 @@ class Ticket24GameplayEventReloadLifecycleTest {
     void cancellationResultIsObservableFromThePostSide() throws Exception {
         // The post-side return value is the observable "script cancellation" result (the platform bridge relays it back as setCanceled)
         harness.writeScript(ScriptType.SERVER, "cancel.js", """
+                const { CommandEvents } = require('nekojs:event/versioned');
                 CommandEvents.command(event => true)
                 """);
         harness.loadScripts(ScriptType.SERVER);
@@ -194,6 +203,7 @@ class Ticket24GameplayEventReloadLifecycleTest {
         assertTrue(bus.post(probe), "a cancelling script listener makes the family post report true");
 
         harness.writeScript(ScriptType.SERVER, "cancel.js", """
+                const { CommandEvents } = require('nekojs:event/versioned');
                 CommandEvents.command(event => false)
                 """);
         harness.reloadScripts(ScriptType.SERVER);
@@ -203,6 +213,7 @@ class Ticket24GameplayEventReloadLifecycleTest {
     @Test
     void entityFamilyLifecycleListenersFollowTheSameGenerationSwap() throws Exception {
         harness.writeScript(ScriptType.SERVER, "entity.js", """
+                const { EntityEvents } = require('nekojs:event/versioned');
                 EntityEvents.joinLevel(event => event.add('join'))
                 EntityEvents.death(event => event.add('death'))
                 EntityEvents.drops(event => event.add('drops'))
@@ -219,6 +230,7 @@ class Ticket24GameplayEventReloadLifecycleTest {
         assertEquals(List.of("leave"), post(EntityEvents.LEAVE_LEVEL));
 
         harness.writeScript(ScriptType.SERVER, "entity.js", """
+                const { EntityEvents } = require('nekojs:event/versioned');
                 EntityEvents.joinLevel(event => event.add('join-2'))
                 """);
         harness.reloadScripts(ScriptType.SERVER);
@@ -234,6 +246,7 @@ class Ticket24GameplayEventReloadLifecycleTest {
     @Test
     void goalStartupFamilyRoundTripsThroughTheProductionPostingSite() throws Exception {
         harness.writeScript(ScriptType.STARTUP, "goals.js", """
+                const { GoalEvents } = require('nekojs:event/versioned');
                 GoalEvents.register(event => event.add('goal'))
                 """);
         harness.loadScripts(ScriptType.STARTUP);

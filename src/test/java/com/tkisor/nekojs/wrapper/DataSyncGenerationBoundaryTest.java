@@ -2,7 +2,6 @@ package com.tkisor.nekojs.wrapper;
 
 import com.tkisor.nekojs.api.ScriptType;
 import com.tkisor.nekojs.api.data.Binding;
-import com.tkisor.nekojs.api.event.EventGroupJS;
 import com.tkisor.nekojs.api.inject.EntityExtension;
 import com.tkisor.nekojs.api.inject.EntityPDataStore;
 import com.tkisor.nekojs.api.plugin.IPluginRuntime;
@@ -137,7 +136,7 @@ class DataSyncGenerationBoundaryTest {
 
         @Override
         public void bindEvents(Value bindings, ScriptType type) {
-            bindings.putMember("NetworkEvents", new EventGroupJS(NetworkEvents.GROUP, type));
+            // Native event groups are available only through their explicit module.
         }
 
         @Override
@@ -166,7 +165,14 @@ class DataSyncGenerationBoundaryTest {
 
         @Override
         public Map<String, com.tkisor.nekojs.api.event.EventGroup> eventGroups() {
-            return Map.of("NetworkEvents", NetworkEvents.GROUP);
+            return Map.of("nekojs:NetworkEvents", NetworkEvents.GROUP);
+        }
+
+        @Override
+        public List<com.tkisor.nekojs.api.event.ModuleEventGroup> moduleEventGroups() {
+            var registry = new com.tkisor.nekojs.api.event.EventGroupRegistry.Impl().scopedTo("nekojs");
+            registry.register(NetworkEvents.GROUP);
+            return registry.moduleGroups();
         }
 
         @Override public List<com.tkisor.nekojs.api.JSTypeAdapter<?>> adapters() { return List.of(); }
@@ -395,6 +401,7 @@ class DataSyncGenerationBoundaryTest {
         try (ManagerHarness harness = new ManagerHarness(ScriptType.SERVER)) {
             pushClientData("tick:counter", "303");
             harness.writeScript("entry.js", """
+                    const { NetworkEvents } = require('nekojs:event/versioned');
                     Recorder.record('read', clientData.get('tick:counter'));
                     NetworkEvents.server('probe', function () { Recorder.hit('l1'); });
                     """);
@@ -402,6 +409,7 @@ class DataSyncGenerationBoundaryTest {
             assertEquals(303, harness.recorder.valueOf("read"), "v1 script must read the synced value");
 
             harness.writeScript("entry.js", """
+                    const { NetworkEvents } = require('nekojs:event/versioned');
                     Recorder.record('read2', clientData.get('tick:counter'));
                     NetworkEvents.server('probe', function () { Recorder.hit('l2'); });
                     """);
@@ -440,6 +448,7 @@ class DataSyncGenerationBoundaryTest {
         try (ManagerHarness harness = new ManagerHarness(ScriptType.SERVER)) {
             pushClientData("tick:counter", "55");
             harness.writeScript("entry.js", """
+                    const { NetworkEvents } = require('nekojs:event/versioned');
                     NetworkEvents.server('probe', function () {
                         Recorder.record('active-read', clientData.get('tick:counter'));
                         Recorder.hit('active-l');
@@ -449,6 +458,7 @@ class DataSyncGenerationBoundaryTest {
 
             Context active = currentContext(harness.manager);
             harness.writeScript("entry.js", """
+                    const { NetworkEvents } = require('nekojs:event/versioned');
                     NetworkEvents.server('probe', function () { Recorder.hit('candidate-l'); });
                     Recorder.readyForCancellation();
                     const end = Date.now() + 2_000;
@@ -478,6 +488,7 @@ class DataSyncGenerationBoundaryTest {
     void closeKeepsReceiveFaceSafeAndNeverTouchesClosedContext() throws Exception {
         try (ManagerHarness harness = new ManagerHarness(ScriptType.SERVER)) {
             harness.writeScript("entry.js", """
+                    const { NetworkEvents } = require('nekojs:event/versioned');
                     NetworkEvents.server('probe', function () { Recorder.hit('l1'); });
                     """);
             harness.loadAndRun();

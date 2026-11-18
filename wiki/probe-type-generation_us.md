@@ -81,7 +81,7 @@ Python declarations are coarser than TypeScript: generics become `Any` and compl
 <a id="wiki-section-7"></a>
 ## Using generated types in scripts
 
-Most of the time you import nothing: global bindings and event parameters already have types. To type your own functions, import them:
+Ordinary global Bindings and callback parameters already have types. Import Java plugin/native Event Groups from their explicit event modules; they are not global declarations. To type your own functions, import their types:
 
 ```typescript
 import type { $ItemStack, $ItemStack_ } from 'java:net/minecraft/world/item'
@@ -201,6 +201,8 @@ Wherever a type is expected you can pass a string. A string containing `.` is a 
 ### modifyType
 
 ```javascript
+import { ProbeEvents } from "nekojs:event/versioned";
+
 // server_scripts/probe_patch.js
 ProbeEvents.modifyType(event => {
   const editor = event.forClass('net.minecraft.world.entity.player.Player')
@@ -250,6 +252,8 @@ Editor methods:
 ### assignType
 
 ```javascript
+import { ProbeEvents } from "nekojs:event/versioned";
+
 ProbeEvents.assignType(event => {
   // Show CompoundTag as MyNbt in every declaration
   event.assign('net.minecraft.nbt.CompoundTag', 'MyNbt')
@@ -262,6 +266,8 @@ ProbeEvents.assignType(event => {
 ### addGlobal and snippets
 
 ```javascript
+import { ProbeEvents } from "nekojs:event/versioned";
+
 ProbeEvents.addGlobal(event => {
   event.add('MyFlag', 'boolean')            // declare const MyFlag: boolean
   event.add('Helper', 'com.example.Helper') // refers to a Java class
@@ -344,16 +350,16 @@ Output of the built-in Python backend (default `.neko_probe/python/nekojs/`):
 
 ```text
 .neko_probe/python/nekojs/
-├── __init__.pyi    # Global bindings, event groups, addGlobal; target of from nekojs import *
+├── __init__.pyi    # Ordinary global Bindings, dynamic groups, addGlobal; editor-only import target
 ├── py.typed        # PEP 561 marker
 ├── README.md
 ├── _java/          # Java type stubs, one folder per package
-└── _events/        # Event declarations, one folder per script type
+└── _events/        # Internal source introspection stubs; not runtime event module exports
 ```
 
 These folder names are conventions of the built-in backends. The probe framework does not check them; it only requires `render` to return a map from relative paths to text.
 
-Declarations for API modules such as `nekojs/api/stable` go to `@side-only/<side>/bindings/api-modules.d.ts`. See [Module system](module-system_us#wiki-api-modules).
+Binding and event API module declarations go to `@side-only/<side>/bindings/api-modules.d.ts`. Java plugin/native Event Groups appear only in their explicit publication modules (`nekojs:event/stable`, `nekojs:event/versioned`, or owner-qualified plugin routes), not in global event declarations. Script-created dynamic groups remain global. Python `_events` stubs support internal source introspection; they do not import runtime event modules or restore `from nekojs import ServerEvents`. See [Module system](module-system_us#wiki-api-modules) and the [Python bridge](python-scripts_us#wiki-section-4).
 
 <a id="wiki-section-23"></a>
 ### Editor config merging

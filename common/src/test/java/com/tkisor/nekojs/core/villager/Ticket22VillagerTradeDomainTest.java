@@ -6,6 +6,8 @@ import com.tkisor.nekojs.api.ScriptTypeViews;
 import com.tkisor.nekojs.api.data.Binding;
 import com.tkisor.nekojs.api.event.EventBusJS;
 import com.tkisor.nekojs.api.event.EventGroup;
+import com.tkisor.nekojs.api.event.EventGroupRegistry;
+import com.tkisor.nekojs.api.event.ModuleEventGroup;
 import com.tkisor.nekojs.api.plugin.IPluginRuntime;
 import com.tkisor.nekojs.api.villager.VillagerTradeDeclarationEvent;
 import com.tkisor.nekojs.api.villager.VillagerTradeQuery;
@@ -71,10 +73,10 @@ class Ticket22VillagerTradeDomainTest {
     /** Synthetic event group the scripts subscribe to (the production surface is ServerEvents). */
     static final EventGroup GROUP = EventGroup.of("TradeEvents");
     static final EventBusJS<VillagerTradeDeclarationEventJS, Void> DECLARATION =
-            GROUP.server("declaration", VillagerTradeDeclarationEventJS.class);
+            GROUP.server("declaration", VillagerTradeDeclarationEventJS.class, api -> api.versioned());
     static final EventBusJS<VillagerTradeReloadEventJS, Void> RELOAD =
-            GROUP.server("reload", VillagerTradeReloadEventJS.class);
-    static final EventBusJS<ProbeEvent, Void> PROBE = GROUP.server("probe", ProbeEvent.class);
+            GROUP.server("reload", VillagerTradeReloadEventJS.class, api -> api.versioned());
+    static final EventBusJS<ProbeEvent, Void> PROBE = GROUP.server("probe", ProbeEvent.class, api -> api.versioned());
 
     /** Payload that reads the generation-bound query from inside a real script callback. */
     public static final class ProbeEvent {
@@ -196,13 +198,17 @@ class Ticket22VillagerTradeDomainTest {
 
     static final class StubPluginRuntime implements IPluginRuntime {
         final SyntheticCollector collector;
+        final EventGroupRegistry.Impl events = new EventGroupRegistry.Impl().scopedTo("trade-fixture");
 
         StubPluginRuntime(SyntheticCollector collector) {
             this.collector = collector;
+            events.register(GROUP);
         }
 
         @Override public Map<String, Binding> bindings(ScriptType type) { return Map.of(); }
-        @Override public Map<String, EventGroup> eventGroups() { return Map.of("TradeEvents", GROUP); }
+        @Override public Map<String, EventGroup> eventGroups() { return events.view(); }
+        @Override public List<ModuleEventGroup> moduleEventGroups() { return events.moduleGroups(); }
+        @Override public List<EventGroup> lifecycleEventGroups() { return events.sources(); }
         @Override public List<JSTypeAdapter<?>> adapters() { return List.of(); }
         @Override public List<com.tkisor.nekojs.api.catalog.TypeDocCatalogEntry> typeDocs() { return List.of(); }
         @Override public List<com.tkisor.nekojs.api.catalog.ManualDeclarationCatalogEntry> manualDeclarations() { return List.of(); }
@@ -245,7 +251,8 @@ class Ticket22VillagerTradeDomainTest {
         }
 
         void writeServerScript(String name, String source) throws Exception {
-            Files.writeString(ScriptTypeEnv.scriptsDir(ScriptType.SERVER).resolve(name), source);
+            Files.writeString(ScriptTypeEnv.scriptsDir(ScriptType.SERVER).resolve(name),
+                    "const { TradeEvents } = require('nekojs:event/versioned/trade-fixture');\n" + source);
         }
 
         void load() {

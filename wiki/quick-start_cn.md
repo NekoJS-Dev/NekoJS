@@ -69,6 +69,8 @@ console.info('Hello, NekoJS!')
 新建 `nekojs/server_scripts/recipes.js`：
 
 ```javascript
+import { ServerEvents } from "nekojs:event/versioned";
+
 ServerEvents.recipes(event => {
   // 删除所有产出木棍的配方
   event.remove({ output: 'minecraft:stick' })
@@ -94,6 +96,8 @@ ServerEvents.recipes(event => {
 注册新物品必须写在**启动脚本**里。新建 `nekojs/startup_scripts/items.js`：
 
 ```javascript
+import { RegistryEvents } from "nekojs:event/versioned";
+
 RegistryEvents.register(event => {
   event.item('mymod:cool_gem', item => {
     item.maxStackSize = 16

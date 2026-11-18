@@ -196,21 +196,15 @@ public final class FabricCorePlugin implements NekoJSPlugin, EventsPoint.Contrib
         // Mixin-side entity event subset (drops/finalizeSpawn/tickPre/tickPost/leaveLevel; merges with the
         // same-named FabricEntityEventBindings.ENTITY_EVENTS)
         registry.register(com.tkisor.nekojs.bindings.event.EntityEvents.GROUP);
-        for (var group : registry.view().values()) {
-            // Both ServerEvents contributors already declare their own version publication.
-            if (!group.name().equals("ServerEvents")) registry.register(group, expose -> expose.versioned());
-        }
     }
 
     @Override
     public void registerClientEvents(EventGroupRegistry registry) {
         // Client tick event (CLIENT scripts are loaded by NekoJSFabricClient on CLIENT_STARTED)
         registry.register(com.tkisor.nekojs.fabric.event.FabricClientEventBindings.CLIENT_EVENTS);
-        registry.register(com.tkisor.nekojs.fabric.event.FabricClientEventBindings.CLIENT_EVENTS, expose -> expose.versioned());
         // Script key bindings (register/pressed/released/tick; twin KeyBindEvents, polled by
         // NekoJSFabricClient)
         registry.register(com.tkisor.nekojs.bindings.event.client.KeyBindEvents.GROUP);
-        registry.register(com.tkisor.nekojs.bindings.event.client.KeyBindEvents.GROUP, expose -> expose.versioned());
     }
 
     @Override

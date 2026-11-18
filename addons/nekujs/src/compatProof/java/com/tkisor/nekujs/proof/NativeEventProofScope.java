@@ -26,7 +26,8 @@ public final class NativeEventProofScope implements EventGroupRegistry, AutoClos
     private final Map<String, EventGroup> groups = new LinkedHashMap<>();
     private final com.tkisor.nekojs.api.event.EventGroup nativeGroup =
             com.tkisor.nekojs.api.event.EventGroup.of("CommonAddedEvents");
-    private final EventBusJS<KubeEvent, Void> respawn = nativeGroup.server("playerRespawn", KubeEvent.class);
+    private final EventBusJS<KubeEvent, Void> respawn = nativeGroup.add(
+            "playerRespawn", com.tkisor.nekojs.api.ScriptType.SERVER, EventBusJS.of(KubeEvent.class));
     private boolean closed;
 
     public NativeEventProofScope() {

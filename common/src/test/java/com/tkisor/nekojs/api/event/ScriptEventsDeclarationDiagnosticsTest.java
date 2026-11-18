@@ -177,8 +177,8 @@ class ScriptEventsDeclarationDiagnosticsTest {
     @Test
     void builtInGroupUnknownMemberAndWrongSideAreDiagnosed() {
         EventGroup builtIn = EventGroup.of("BuiltInEvents");
-        builtIn.server("tick", String.class);
-        builtIn.client("render", String.class);
+        builtIn.add("tick", ScriptType.SERVER, EventBusJS.of(String.class));
+        builtIn.add("render", ScriptType.CLIENT, EventBusJS.of(String.class));
         EventGroupJS serverView = new EventGroupJS(builtIn, ScriptType.SERVER);
 
         IllegalArgumentException unknown = assertThrows(IllegalArgumentException.class,

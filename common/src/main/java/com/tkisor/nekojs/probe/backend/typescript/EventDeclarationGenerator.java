@@ -155,16 +155,38 @@ public final class EventDeclarationGenerator {
 
     /** Renders module namespaces without declaring legacy global event groups. */
     public String generateModuleNamespaces(List<EventCatalogEntry> events) {
+        return generateModuleNamespaces(events, List.of());
+    }
+
+    public String generateModuleNamespaces(List<EventCatalogEntry> events, List<RegistryBuilderSurfaceEntry> builders) {
+        Map<Class<?>, EventPayload> payloads = EventPayloadDeclarations.resolve(events, builders);
         TypeAliasRegistry inline = aliasRegistry.withReferences((fqn, symbol) ->
                 "import(\"java:" + fqn.substring(0, fqn.lastIndexOf('.')).replace('.', '/')
                         + "\")." + symbol);
         StringBuilder output = new StringBuilder();
+        if (events.stream().flatMap(event -> callShapes(event, inline).stream())
+                .anyMatch(AdapterAliasGenerator.RenderedShape::usesRegistry)) {
+            output.append("    import type { RegistryTypes } from \"@special/types\";\n");
+        }
+        for (EventPayload payload : payloads.values()) {
+            output.append("interface ").append(payload.name()).append(" {\n");
+            for (RegistryBuilderSurfaceEntry.Member member : payload.members()) {
+                output.append("    ");
+                switch (member.kind()) {
+                    case WRITABLE_PROPERTY -> output.append(member.name()).append(": ").append(member.tsType());
+                    case READ_ONLY_PROPERTY -> output.append("readonly ").append(member.name()).append(": ").append(member.tsType());
+                    case METHOD -> output.append(member.tsType());
+                }
+                output.append(";\n");
+            }
+            output.append("}\n");
+        }
         Map<String, List<EventCatalogEntry>> groups = events.stream().collect(Collectors.groupingBy(
                 EventCatalogEntry::group, TreeMap::new, Collectors.toList()));
         groups.forEach((name, entries) -> {
             output.append("    export namespace ").append(name).append(" {\n");
             entries.stream().sorted(Comparator.comparing(EventCatalogEntry::name))
-                    .forEach(event -> output.append(generateEventMethod(event, null, inline)));
+                    .forEach(event -> output.append(generateEventMethod(event, payloads.get(event.eventType()), inline)));
             output.append("    }\n");
         });
         return output.toString();

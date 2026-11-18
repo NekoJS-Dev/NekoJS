@@ -85,7 +85,7 @@ class NekoScriptCatalogScriptEventsTest {
     void dynamicAndStaticGroupsCoexistWithoutDuplicates() {
         EventGroupRegistry registry = new EventGroupRegistry.Impl();
         EventGroup group = EventGroup.of("ProbeEvents");
-        group.server("modifyType", String.class);
+        group.add("modifyType", ScriptType.SERVER, EventBusJS.of(String.class));
         registry.register(group);
         registerDefinition("MyEvents", "myHurt", ScriptType.SERVER, String.class);
 

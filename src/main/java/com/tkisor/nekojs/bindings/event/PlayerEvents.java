@@ -23,47 +23,47 @@ public interface PlayerEvents {
     EventGroup GROUP = EventGroup.of("PlayerEvents");
 
     EventBusJS<PlayerEvent.PlayerLoggedInEvent, Void> LOGGED_IN =
-            GROUP.server("loggedIn", PlayerEvent.PlayerLoggedInEvent.class);
+            GROUP.server("loggedIn", PlayerEvent.PlayerLoggedInEvent.class, api -> api.versioned());
     EventBusJS<PlayerEvent.PlayerLoggedOutEvent, Void> LOGGED_OUT =
-            GROUP.server("loggedOut", PlayerEvent.PlayerLoggedOutEvent.class);
+            GROUP.server("loggedOut", PlayerEvent.PlayerLoggedOutEvent.class, api -> api.versioned());
     EventBusJS<ServerChatEvent, Void> CHAT =
-            GROUP.server("chat", ServerChatEvent.class);
+            GROUP.server("chat", ServerChatEvent.class, api -> api.versioned());
     EventBusJS<PlayerTickEvent.Post, Void> TICK_POST =
-            GROUP.server("tickPost", PlayerTickEvent.Post.class);
+            GROUP.server("tickPost", PlayerTickEvent.Post.class, api -> api.versioned());
     EventBusJS<PlayerTickEvent.Pre, Void> TICK_PRE =
-            GROUP.server("tickPre", PlayerTickEvent.Pre.class);
+            GROUP.server("tickPre", PlayerTickEvent.Pre.class, api -> api.versioned());
     EventBusJS<PlayerEvent.Clone, Void> CLONED =
-            GROUP.server("cloned", PlayerEvent.Clone.class);
+            GROUP.server("cloned", PlayerEvent.Clone.class, api -> api.versioned());
     EventBusJS<PlayerEvent.PlayerRespawnEvent, Void> RESPAWNED =
-            GROUP.server("respawned", PlayerEvent.PlayerRespawnEvent.class);
+            GROUP.server("respawned", PlayerEvent.PlayerRespawnEvent.class, api -> api.versioned());
     EventBusJS<PlayerEvent.PlayerChangedDimensionEvent, Void> CHANGED_DIMENSION =
-            GROUP.server("changedDimension", PlayerEvent.PlayerChangedDimensionEvent.class);
+            GROUP.server("changedDimension", PlayerEvent.PlayerChangedDimensionEvent.class, api -> api.versioned());
     EventBusJS<AdvancementEvent.AdvancementEarnEvent, Void> ADVANCEMENT =
-            GROUP.server("advancement", AdvancementEvent.AdvancementEarnEvent.class);
+            GROUP.server("advancement", AdvancementEvent.AdvancementEarnEvent.class, api -> api.versioned());
     EventBusJS<PlayerContainerEvent.Open, Void> CONTAINER_OPENED =
-            GROUP.server("containerOpened", PlayerContainerEvent.Open.class);
+            GROUP.server("containerOpened", PlayerContainerEvent.Open.class, api -> api.versioned());
     // inventoryOpened: a cross-version compatibility alias for containerOpened. Scripts should migrate to containerOpened.
     @Deprecated
     EventBusJS<PlayerContainerEvent.Open, Void> INVENTORY_OPENED =
-            GROUP.server("inventoryOpened", PlayerContainerEvent.Open.class);
+            GROUP.server("inventoryOpened", PlayerContainerEvent.Open.class, api -> api.versioned());
     EventBusJS<PlayerContainerEvent.Close, Void> CONTAINER_CLOSED =
-            GROUP.server("containerClosed", PlayerContainerEvent.Close.class);
+            GROUP.server("containerClosed", PlayerContainerEvent.Close.class, api -> api.versioned());
     // inventoryClosed: a cross-version compatibility alias for containerClosed. Scripts should migrate to containerClosed.
     @Deprecated
     EventBusJS<PlayerContainerEvent.Close, Void> INVENTORY_CLOSED =
-            GROUP.server("inventoryClosed", PlayerContainerEvent.Close.class);
+            GROUP.server("inventoryClosed", PlayerContainerEvent.Close.class, api -> api.versioned());
     EventBusJS<PlayerInteractEvent.EntityInteract, Void> ENTITY_INTERACT =
-            GROUP.server("entityInteract", PlayerInteractEvent.EntityInteract.class);
+            GROUP.server("entityInteract", PlayerInteractEvent.EntityInteract.class, api -> api.versioned());
     EventBusJS<PlayerEvent.ItemCraftedEvent, Item> CRAFTED =
-            GROUP.server("crafted", PlayerEvent.ItemCraftedEvent.class, dispatchByItem(PlayerEvent.ItemCraftedEvent::getCrafting));
+            GROUP.server("crafted", PlayerEvent.ItemCraftedEvent.class, dispatchByItem(PlayerEvent.ItemCraftedEvent::getCrafting), api -> api.versioned());
     EventBusJS<PlayerEvent.ItemSmeltedEvent, Item> SMELTED =
-            GROUP.server("smelted", PlayerEvent.ItemSmeltedEvent.class, dispatchByItem(PlayerEvent.ItemSmeltedEvent::getSmelting));
+            GROUP.server("smelted", PlayerEvent.ItemSmeltedEvent.class, dispatchByItem(PlayerEvent.ItemSmeltedEvent::getSmelting), api -> api.versioned());
     EventBusJS<PlayerDestroyItemEvent, Item> DESTROYED =
-            GROUP.server("destroyed", PlayerDestroyItemEvent.class, dispatchByItem(PlayerDestroyItemEvent::getOriginal));
+            GROUP.server("destroyed", PlayerDestroyItemEvent.class, dispatchByItem(PlayerDestroyItemEvent::getOriginal), api -> api.versioned());
 
     /** Player inventory change: dispatched by item id ({@code PlayerEvents.inventoryChanged('minecraft:stone', ...)}). */
     EventBusJS<InventoryChangedEventJS, Item> INVENTORY_CHANGED =
-            GROUP.server("inventoryChanged", InventoryChangedEventJS.class, dispatchByInventoryItem());
+            GROUP.server("inventoryChanged", InventoryChangedEventJS.class, dispatchByInventoryItem(), api -> api.versioned());
 
     private static <T> DispatchKey<T, Item> dispatchByItem(Function<T, ItemStack> toStack) {
         return DispatchKey.of(Item.class, toStack.andThen(ItemStack::getItem));

@@ -148,6 +148,7 @@ class PackResourceStabilityTest {
         for (int index = 0; index < count; index++) {
             String id = "pack" + index;
             fixture.pack(id, "", "", """
+                    const { FixtureEvents } = require('nekojs:event/versioned/pack-fixture');
                     if (typeof privateOwner !== 'undefined') throw Error('owner context reused');
                     globalThis.privateOwner = '%s';
                     globalThis.privatePayload = new Array(4096).fill('payload');

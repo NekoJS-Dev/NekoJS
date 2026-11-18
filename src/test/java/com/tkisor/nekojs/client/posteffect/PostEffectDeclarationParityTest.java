@@ -51,7 +51,7 @@ class PostEffectDeclarationParityTest {
         EventGroupRegistry.Impl groups = new EventGroupRegistry.Impl().scopedTo("nekojs");
         coreType.getMethod("registerClientEvents", EventGroupRegistry.class)
                 .invoke(coreType.getDeclaredConstructor().newInstance(), groups);
-        var clientEvents = groups.view().get("ClientEvents");
+        var clientEvents = groups.view().get("nekojs:ClientEvents");
         assertNotNull(clientEvents);
         if (pluginType == null) {
             assertNull(optionalClass("com.tkisor.nekojs.client.posteffect.PostEffectsJS"));
@@ -74,13 +74,19 @@ class PostEffectDeclarationParityTest {
         assertNotNull(binding);
         var bus = clientEvents.getBusHolder("postEffects").getBus(ScriptType.CLIENT);
         assertNotNull(bus);
+        var event = EventCatalogEntry.of(bus.groupName(), bus.eventName(), bus.scriptType(),
+                bus.eventType(), null, bus.canCancel(), bus.canDispatch());
         var snapshot = new NekoScriptCatalogSnapshot(
                 List.of(ScriptType.CLIENT),
                 List.of(BindingCatalogEntry.of(binding.name(), ScriptType.CLIENT, binding.valueType(), false)),
-                List.of(EventCatalogEntry.of(bus.groupName(), bus.eventName(), bus.scriptType(),
-                        bus.eventType(), null, bus.canCancel(), bus.canDispatch())),
+                List.of(event),
                 List.of(), List.of(), List.of(), List.of(), List.of(), List.of(), List.of(), List.of(), List.of(),
-                new TypeOutputLayout(Path.of("types"), Path.of("snippets")), Map.of(), List.of());
+                List.of(),
+                new TypeOutputLayout(Path.of("types"), Path.of("snippets")), Map.of(), List.of(),
+                List.of(), List.of(), List.of(),
+                List.of(new com.tkisor.nekojs.api.catalog.ModuleEventCatalogEntry(
+                        "nekojs:event/versioned", "nekojs",
+                        com.tkisor.nekojs.api.data.BindingExposure.Category.VERSION, ScriptType.CLIENT, event)));
         var config = new ProbeConfig(true, ".neko_probe", new ProbeConfig.ScanConfig(
                 List.of("com.tkisor.nekojs.client.posteffect"), List.of(), List.of(), List.of(), 1, "SMART"));
         var classes = List.copyOf(ProbeCoordinator.collectClasses(snapshot, config));
@@ -113,15 +119,17 @@ class PostEffectDeclarationParityTest {
             assertNoMethod(runtime, "has", typescript);
             assertTrue(payload.contains("declaredCount"));
             assertTrue(runtime.contains("active"));
-            String eventFile = typescript ? "@side-only/client/events/index.d.ts"
+            String eventFile = typescript ? "@side-only/client/bindings/api-modules.d.ts"
                     : "nekojs/_events/client/__init__.pyi";
             String events = first.get(eventFile);
             assertNotNull(events);
-            assertTrue(events.lines().anyMatch(line -> line.contains("postEffects(")
-                    && line.contains(typescript ? "$PostEffectEventJS" : "PostEffectEventJS")));
+            if (typescript) assertTrue(events.contains("declare module \"nekojs:event/versioned\""));
+            assertTrue(events.contains(typescript ? "function postEffects(" : "def postEffects(")
+                    && events.contains(typescript ? "$PostEffectEventJS" : "PostEffectEventJS"), events);
             String globalFile = typescript ? "@side-only/client/bindings/index.d.ts" : "nekojs/__init__.pyi";
             String globals = first.get(globalFile);
             assertNotNull(globals);
+            assertFalse(globals.contains("ClientEvents"), "Native event groups must not become globals");
             assertTrue(globals.contains(typescript ? "PostEffects: $PostEffectsJS" : "PostEffects: PostEffectsJS"));
         }
     }

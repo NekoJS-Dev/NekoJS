@@ -80,6 +80,7 @@ class PostEffectDeclarationLifecycleTest {
     @Test
     void declaredEffectsInstallOnlyAtTheCommitPoint() throws Exception {
         harness.writeClientScript("fx.js", """
+                const { ClientEvents } = require('nekojs:event/versioned');
                 ClientEvents.postEffects(event => event.register('nekojs:gray', { chainJson: '%s' }))
                 """.formatted(chainJson("minecraft:post/invert")));
 
@@ -97,6 +98,7 @@ class PostEffectDeclarationLifecycleTest {
     @Test
     void candidateCollectionStaysInertUntilCommitThenSwapsTheGeneration() throws Exception {
         harness.writeClientScript("fx.js", """
+                const { ClientEvents } = require('nekojs:event/versioned');
                 ClientEvents.postEffects(event => event.register('nekojs:gray', { chainJson: '%s' }))
                 """.formatted(chainJson("minecraft:post/invert")));
         harness.loadAndApplyInitialPlan();
@@ -117,6 +119,7 @@ class PostEffectDeclarationLifecycleTest {
         });
 
         harness.writeClientScript("fx.js", """
+                const { ClientEvents } = require('nekojs:event/versioned');
                 ClientEvents.postEffects(event => event.register('nekojs:sepia', { chainJson: '%s' }))
                 """.formatted(chainJson("minecraft:post/blur")));
         harness.reloadClientScripts();
@@ -138,6 +141,7 @@ class PostEffectDeclarationLifecycleTest {
     @Test
     void invalidChainJsonFailsTheWholeBatchAndKeepsTheOldActiveGeneration() throws Exception {
         harness.writeClientScript("fx.js", """
+                const { ClientEvents } = require('nekojs:event/versioned');
                 ClientEvents.postEffects(event => event.register('nekojs:gray', { chainJson: '%s' }))
                 """.formatted(chainJson("minecraft:post/invert")));
         harness.loadAndApplyInitialPlan();
@@ -147,6 +151,7 @@ class PostEffectDeclarationLifecycleTest {
         // The candidate JSON is invalid, so the STATE_PLAN preflight rejects the whole batch and the old
         // generation stays usable.
         harness.writeClientScript("fx.js", """
+                const { ClientEvents } = require('nekojs:event/versioned');
                 ClientEvents.postEffects(event => {
                   event.register('nekojs:broken', { chainJson: '{not json' })
                 })
@@ -166,11 +171,13 @@ class PostEffectDeclarationLifecycleTest {
     @Test
     void collectionErrorFailsTheWholeBatchInDomainPlanAndALaterCandidateStillCommits() throws Exception {
         harness.writeClientScript("fx.js", """
+                const { ClientEvents } = require('nekojs:event/versioned');
                 ClientEvents.postEffects(event => event.register('nekojs:gray', { chainJson: '%s' }))
                 """.formatted(chainJson("minecraft:post/invert")));
         harness.loadAndApplyInitialPlan();
 
         harness.writeClientScript("fx.js", """
+                const { ClientEvents } = require('nekojs:event/versioned');
                 ClientEvents.postEffects(event => {
                   event.register('nekojs:sepia', { chainJson: '%s' })
                   event.register('nekojs:bad id', { chainJson: '{}' })
@@ -188,6 +195,7 @@ class PostEffectDeclarationLifecycleTest {
         // The candidate resources are dropped with the failure, so the next normal reload can still
         // commit.
         harness.writeClientScript("fx.js", """
+                const { ClientEvents } = require('nekojs:event/versioned');
                 ClientEvents.postEffects(event => event.register('nekojs:sepia', { chainJson: '%s' }))
                 """.formatted(chainJson("minecraft:post/blur")));
         harness.reloadClientScripts();
@@ -198,6 +206,7 @@ class PostEffectDeclarationLifecycleTest {
     @Test
     void removedDeclarationRetiresInsteadOfStayingStale() throws Exception {
         harness.writeClientScript("fx.js", """
+                const { ClientEvents } = require('nekojs:event/versioned');
                 ClientEvents.postEffects(event => event.register('nekojs:gray', { chainJson: '%s' }))
                 """.formatted(chainJson("minecraft:post/invert")));
         harness.loadAndApplyInitialPlan();
@@ -217,6 +226,7 @@ class PostEffectDeclarationLifecycleTest {
     @Test
     void explicitUnregisterRetiresAnIdDeclaredEarlierInTheSameBatch() throws Exception {
         harness.writeClientScript("fx.js", """
+                const { ClientEvents } = require('nekojs:event/versioned');
                 ClientEvents.postEffects(event => {
                   event.register('nekojs:gray', { chainJson: '%s' })
                   event.register('nekojs:sepia', { chainJson: '%s' })
@@ -226,6 +236,7 @@ class PostEffectDeclarationLifecycleTest {
         assertEquals(List.of("nekojs:gray", "nekojs:sepia"), PostEffectDeclarationHarness.installedIds());
 
         harness.writeClientScript("fx.js", """
+                const { ClientEvents } = require('nekojs:event/versioned');
                 ClientEvents.postEffects(event => {
                   event.register('nekojs:gray', { chainJson: '%s' })
                   event.unregister('nekojs:sepia')
@@ -253,6 +264,7 @@ class PostEffectDeclarationLifecycleTest {
         long emptyBatchGeneration = harness.owner.activeGeneration();
 
         harness.writeClientScript("fx.js", """
+                const { ClientEvents } = require('nekojs:event/versioned');
                 ClientEvents.postEffects(event => event.register('nekojs:gray', { chainJson: '%s' }))
                 """.formatted(chainJson("minecraft:post/invert")));
         harness.reloadClientScripts();
@@ -274,6 +286,7 @@ class PostEffectDeclarationLifecycleTest {
         // public read of what the active generation is now, so nothing may write it while the candidate
         // is built.
         harness.writeClientScript("fx.js", """
+                const { ClientEvents } = require('nekojs:event/versioned');
                 ClientEvents.postEffects(event => event.register('nekojs:gray', { chainJson: '%s' }))
                 """.formatted(chainJson("minecraft:post/invert")));
         harness.loadAndApplyInitialPlan();
@@ -294,6 +307,7 @@ class PostEffectDeclarationLifecycleTest {
             }
         });
         harness.writeClientScript("fx.js", """
+                const { ClientEvents } = require('nekojs:event/versioned');
                 ClientEvents.postEffects(event => event.register('nekojs:sepia', { chainJson: '%s' }))
                 """.formatted(chainJson("minecraft:post/blur")));
         assertThrows(NekoReloadException.class, harness::reloadClientScripts);

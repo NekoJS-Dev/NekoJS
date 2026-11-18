@@ -5,6 +5,8 @@ Use CLIENT scripts and the matching instance's Probe declarations. Painter `Clie
 ## Named HUD and world registrations
 
 ```javascript
+import { ClientEvents } from "nekojs:event/versioned";
+
 // nekojs/client_scripts/render-example.js
 ClientEvents.hudRender("nekojs:status", {
   layer: "foreground",
@@ -38,6 +40,8 @@ Contexts are frame-owned. Do not store them, their raw graphics, matrices, or na
 ## Post-effect declarations use a real builder
 
 ```javascript
+import { ClientEvents } from "nekojs:event/versioned";
+
 // NeoForge 26.x: nekojs/client_scripts/effect-declarations.js
 ClientEvents.postEffects(event => {
   event.register("nekojs:sample_blur", build => {

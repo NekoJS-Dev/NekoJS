@@ -23,6 +23,8 @@ NekoJS 的脚本 API 只有几种固定写法。认识这几种写法之后，�
 事件按用途分组，比如 `ServerEvents`、`PlayerEvents`、`ClientEvents`。在组名后面加事件名，再传入回调函数：
 
 ```javascript
+import { PlayerEvents } from "nekojs:event/versioned";
+
 // server_scripts/welcome.js
 PlayerEvents.loggedIn(event => {
   event.entity.sendMessage('Welcome to NekoJS!')
@@ -50,6 +52,8 @@ PlayerEvents.loggedIn(event => {
 创建新内容时，先传 ID 等必要参数，**最后**传一个配置回调。回调收到的 `build` 用来设置这个新内容的属性：
 
 ```javascript
+import { RegistryEvents } from "nekojs:event/versioned";
+
 // startup_scripts/content.js
 RegistryEvents.register(event => {
   event.item('nekojs_example:ruby', build => {

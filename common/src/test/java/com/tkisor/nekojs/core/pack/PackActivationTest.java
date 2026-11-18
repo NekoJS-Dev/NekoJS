@@ -32,6 +32,8 @@ import java.util.Map;
 import static org.junit.jupiter.api.Assertions.*;
 
 class PackActivationTest {
+    static final String EVENT_IMPORT =
+            "const { FixtureEvents } = require('nekojs:event/versioned/pack-fixture');\n";
     // Platform log appenders retain a Windows handle until the test JVM exits.
     @TempDir(cleanup = org.junit.jupiter.api.io.CleanupMode.NEVER) Path temporary;
     @BeforeAll static void initialize() { TestPlatformInit.ensureInitialized(); }
@@ -129,8 +131,8 @@ class PackActivationTest {
 
     @Test void activeEventCloseWaitsForGuestReturnAndStopsSiblingCallbacks() throws Exception {
         try (Fixture fixture = new Fixture(temporary)) {
-            fixture.pack("economy", "", "", "Recorder.keep('old',()=>42); FixtureEvents.pulse(e=>{Recorder.closeRoot(); Recorder.record('returned');});");
-            fixture.pack("shop", "\"economy\":\"*\"", "", "FixtureEvents.pulse(e=>Recorder.record('sibling')); ");
+            fixture.pack("economy", "", "", EVENT_IMPORT + "Recorder.keep('old',()=>42); FixtureEvents.pulse(e=>{Recorder.closeRoot(); Recorder.record('returned');});");
+            fixture.pack("shop", "\"economy\":\"*\"", "", EVENT_IMPORT + "FixtureEvents.pulse(e=>Recorder.record('sibling')); ");
             fixture.root.reload(ScriptType.SERVER);
             fixture.recorder.closeAction = fixture.root::close;
             fixture.pulse.post(new Object());
@@ -197,20 +199,20 @@ class PackActivationTest {
 
     @Test void listenersTimersAndPartialInitializationKeepTheirActivationOwner() throws Exception {
         try (Fixture fixture = new Fixture(temporary)) {
-            fixture.pack("economy", "", "", "FixtureEvents.pulse(e=>Recorder.record('economy')); setTimeout(()=>Recorder.record('economy-timer'),0);");
-            fixture.pack("chat", "", "", "FixtureEvents.pulse(e=>Recorder.record('chat')); setTimeout(()=>Recorder.record('chat-timer'),0);");
+            fixture.pack("economy", "", "", EVENT_IMPORT + "FixtureEvents.pulse(e=>Recorder.record('economy')); setTimeout(()=>Recorder.record('economy-timer'),0);");
+            fixture.pack("chat", "", "", EVENT_IMPORT + "FixtureEvents.pulse(e=>Recorder.record('chat')); setTimeout(()=>Recorder.record('chat-timer'),0);");
             fixture.root.reload(ScriptType.SERVER); fixture.root.flushReadyNodeTimers(ScriptType.SERVER);
             fixture.awaitTimer("economy-timer"); fixture.awaitTimer("chat-timer");
             fixture.pulse.post(new Object());
             assertEquals(1, fixture.recorder.calls("economy")); assertEquals(1, fixture.recorder.calls("chat"));
             assertEquals(1, fixture.recorder.calls("economy-timer")); assertEquals(1, fixture.recorder.calls("chat-timer"));
-            fixture.script("economy", "FixtureEvents.pulse(e=>Recorder.record('bad-listener')); setTimeout(()=>Recorder.record('bad-timer'),0); throw Error('partial candidate');");
+            fixture.script("economy", EVENT_IMPORT + "FixtureEvents.pulse(e=>Recorder.record('bad-listener')); setTimeout(()=>Recorder.record('bad-timer'),0); throw Error('partial candidate');");
             var rejected = fixture.root.reloadPack(ScriptType.SERVER, "economy");
             assertFalse(rejected.success()); assertNotNull(rejected.report().sourceLocation());
             fixture.root.flushReadyNodeTimers(ScriptType.SERVER); fixture.pulse.post(new Object());
             assertEquals(2, fixture.recorder.calls("economy")); assertEquals(2, fixture.recorder.calls("chat"));
             assertEquals(0, fixture.recorder.calls("bad-listener")); assertEquals(0, fixture.recorder.calls("bad-timer"));
-            fixture.script("economy", "FixtureEvents.pulse(e=>Recorder.record('new-listener')); setTimeout(()=>Recorder.record('new-timer'),0);");
+            fixture.script("economy", EVENT_IMPORT + "FixtureEvents.pulse(e=>Recorder.record('new-listener')); setTimeout(()=>Recorder.record('new-timer'),0);");
             assertTrue(fixture.root.reloadPack(ScriptType.SERVER, "economy").success());
             fixture.root.flushReadyNodeTimers(ScriptType.SERVER); fixture.pulse.post(new Object());
             assertEquals(2, fixture.recorder.calls("economy")); assertEquals(3, fixture.recorder.calls("chat"));
@@ -302,12 +304,12 @@ class PackActivationTest {
                     });
                 }
             });
-            fixture.pack("chat", "", "", "Recorder.record('chat'); FixtureEvents.pulse(event=>event.add('chat'));");
+            fixture.pack("chat", "", "", EVENT_IMPORT + "Recorder.record('chat'); FixtureEvents.pulse(event=>event.add('chat'));");
             Path world = temporary.resolve("contribution-world");
             fixture.packAt(world.resolve("nekojs_packs"), "economy", "", "",
-                    "FixtureEvents.pulse(event=>event.add('economy'));");
+                    EVENT_IMPORT + "FixtureEvents.pulse(event=>event.add('economy'));");
             fixture.packAt(world.resolve("nekojs_packs"), "shop", "\"economy\":\"*\"", "",
-                    "FixtureEvents.pulse(event=>event.add('shop'));");
+                    EVENT_IMPORT + "FixtureEvents.pulse(event=>event.add('shop'));");
             ScriptPackRegistry.get().activateWorldPacks(world); fixture.root.reload(ScriptType.SERVER);
             assertEquals(java.util.Set.of("chat", "economy", "shop"), java.util.Set.copyOf(committed.get()));
             long chat = fixture.activations().get("GLOBAL:chat");
@@ -373,7 +375,7 @@ class PackActivationTest {
         final Engine engine = Engine.newBuilder().build();
         final Recorder recorder = new Recorder();
         final com.tkisor.nekojs.api.event.EventGroup group = com.tkisor.nekojs.api.event.EventGroup.of("FixtureEvents");
-        final com.tkisor.nekojs.api.event.EventBusJS<Object, Void> pulse = group.server("pulse", Object.class);
+        final com.tkisor.nekojs.api.event.EventBusJS<Object, Void> pulse = group.server("pulse", Object.class, api -> api.versioned());
         final NekoRuntimeRoot root;
         Fixture(Path directory) throws Exception {
             this(directory, SandboxConfig.defaultConfig());
@@ -382,10 +384,14 @@ class PackActivationTest {
             paths = NekoJSPaths.fromGameDir(directory);
             Field field = NekoJSPaths.class.getDeclaredField("INSTANCE"); field.setAccessible(true); field.set(null, paths);
             ScriptPackRegistry.get().deactivateWorldPacks(); ScriptPackRegistry.get().refreshGlobalPacks();
+            var events = new com.tkisor.nekojs.api.event.EventGroupRegistry.Impl().scopedTo("pack-fixture");
+            events.register(group);
             IPluginRuntime plugins = (IPluginRuntime) Proxy.newProxyInstance(IPluginRuntime.class.getClassLoader(), new Class[]{IPluginRuntime.class},
                     (proxy, method, arguments) -> {
                         if (method.getName().equals("bindings")) return Map.of("Recorder", Binding.of("Recorder", recorder));
-                        if (method.getName().equals("eventGroups")) return Map.of("FixtureEvents", group);
+                        if (method.getName().equals("eventGroups")) return events.view();
+                        if (method.getName().equals("moduleEventGroups")) return events.moduleGroups();
+                        if (method.getName().equals("lifecycleEventGroups")) return events.sources();
                         if (method.getReturnType() == Map.class) return Map.of();
                         if (method.getReturnType() == List.class) return List.of();
                         return null;

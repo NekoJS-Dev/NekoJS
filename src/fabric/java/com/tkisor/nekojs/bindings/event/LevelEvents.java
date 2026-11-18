@@ -14,11 +14,11 @@ public interface LevelEvents {
     EventGroup GROUP = EventGroup.of("LevelEvents");
 
     EventBusJS<LevelEventJS, Void> LOADED =
-            GROUP.server("loaded", LevelEventJS.class);
+            GROUP.server("loaded", LevelEventJS.class, api -> api.versioned());
     EventBusJS<LevelEventJS, Void> UNLOADED =
-            GROUP.server("unloaded", LevelEventJS.class);
+            GROUP.server("unloaded", LevelEventJS.class, api -> api.versioned());
     EventBusJS<LevelEventJS, Void> TICK_PRE =
-            GROUP.server("tickPre", LevelEventJS.class);
+            GROUP.server("tickPre", LevelEventJS.class, api -> api.versioned());
     EventBusJS<LevelEventJS, Void> TICK_POST =
-            GROUP.server("tickPost", LevelEventJS.class);
+            GROUP.server("tickPost", LevelEventJS.class, api -> api.versioned());
 }

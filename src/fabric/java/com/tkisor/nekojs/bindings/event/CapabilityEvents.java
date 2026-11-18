@@ -8,7 +8,7 @@ import com.tkisor.nekojs.wrapper.event.registry.CapabilityRegistryEventJS;
 public interface CapabilityEvents {
     EventGroup GROUP = EventGroup.of("CapabilityEvents");
     EventBusJS<CapabilityRegistryEventJS, Void> REGISTER =
-            GROUP.startup("register", CapabilityRegistryEventJS.class);
+            GROUP.startup("register", CapabilityRegistryEventJS.class, api -> api.versioned());
 
     static void postAndApply() {
         CapabilityRegistryEventJS event = new CapabilityRegistryEventJS();

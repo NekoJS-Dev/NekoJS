@@ -143,7 +143,7 @@ NekoJS 不会因为脚本运行太久而中断它。死循环或永远不会完�
 | `NEKO-4054` | Item component string conversion failed | 物品组件字符串无法解析或序列化 |
 | `NEKO-4055` | Authoring query or transport request rejected | AI 查询或请求被拒绝；响应中的返回码和 JSON 路径说明了具体原因 |
 | `NEKO-4056` | Resource ID conversion rejected | 资源 ID 格式不对，或不是真实存在的原生 ID；旧的 `ID.of` 解析规则不变 |
-| `NEKO-4057` | API module publication or access rejected | 检查模组归属、暴露目标、导出名、公共类型、事件白名单和当前脚本类型 |
+| `NEKO-4057` | API publication, access or event callback rejected | 检查模组归属、暴露目标、导出名、公共类型（包括载荷及分派键类型的可移植性）、配置回调是否选择了至少一个逐事件发布目标、精确脚本范围和监听器是否可调用；投影回调不能返回 Promise |
 | `NEKO-4060` | Script options rejected | 配置对象里有未知字段、类型错误或超出范围的值，注册被拒绝 |
 | `NEKO-4061` | Post-effect builder rejected | 后处理 builder 已在回调结束后关闭，或配置无效；这次声明不生效 |
 | `NEKO-4062` | Render registration rejected | 渲染注册的参数、回调或元数据无效 |

@@ -194,14 +194,13 @@ class NekoRuntimeRootReloadResultTest {
     void stableTickSnapshotsUseSourceValuesAcrossSuccessfulAndFailedReloadWithoutDuplicateListeners() throws Exception {
         var registry = new com.tkisor.nekojs.api.event.EventGroupRegistry.Impl().scopedTo("nekojs");
         var group = EventGroup.of("ServerEvents");
-        var pre = group.server("tickPre", SourceTick.class);
-        var post = group.server("tickPost", SourceTick.class);
+        var pre = group.server("tickPre", SourceTick.class, api -> api.stable().view(
+                com.tkisor.nekojs.api.event.StableServerTickEvent.class,
+                event -> new com.tkisor.nekojs.api.event.StableServerTickEvent(event.tick())).scriptTypes(ScriptType.SERVER));
+        var post = group.server("tickPost", SourceTick.class, api -> api.stable().view(
+                com.tkisor.nekojs.api.event.StableServerTickEvent.class,
+                event -> new com.tkisor.nekojs.api.event.StableServerTickEvent(event.tick())).scriptTypes(ScriptType.SERVER));
         registry.register(group);
-        registry.register(group, e -> e.stable().scriptTypes(ScriptType.SERVER).events("tickPre", "tickPost")
-                .view("tickPre", com.tkisor.nekojs.api.event.StableServerTickEvent.class,
-                        (SourceTick event) -> new com.tkisor.nekojs.api.event.StableServerTickEvent(event.tick()))
-                .view("tickPost", com.tkisor.nekojs.api.event.StableServerTickEvent.class,
-                        (SourceTick event) -> new com.tkisor.nekojs.api.event.StableServerTickEvent(event.tick())));
         var seen = new java.util.ArrayList<String>();
         var recorder = (graal.graalvm.polyglot.proxy.ProxyExecutable) arguments -> {
             seen.add(arguments[0].asString() + ":" + arguments[1].asLong());
@@ -220,7 +219,7 @@ class NekoRuntimeRootReloadResultTest {
         try (var stream = Files.list(dir)) {
             for (Path path : stream.toList()) Files.deleteIfExists(path);
         }
-        String source = "const { ServerEvents: ticks } = require('nekojs/api/stable');\n"
+        String source = "const { ServerEvents: ticks } = require('nekojs:event/stable');\n"
                 + "ticks.tickPre(e => recordTick('v1-pre', e.tick));\n"
                 + "ticks.tickPost(e => recordTick('v1-post', e.tick));\n";
         writeScript(ScriptType.SERVER, "stable-ticks.js", source);

@@ -33,23 +33,23 @@ public interface RecipeViewerEvents {
 
     /** Adds entries to the viewer. Scripts pass item or fluid ids, or objects. */
     EventBusJS<RecipeViewerEntryListJS, String> ADD_ENTRIES =
-            GROUP.client("addEntries", RecipeViewerEntryListJS.class, ENTRY_TYPE_KEY);
+            GROUP.client("addEntries", RecipeViewerEntryListJS.class, ENTRY_TYPE_KEY, api -> api.versioned());
 
     /** Removes entries from the viewer. This is not a permanent removal: other paths can still
      * make them visible. */
     EventBusJS<RecipeViewerEntryListJS, String> REMOVE_ENTRIES =
-            GROUP.client("removeEntries", RecipeViewerEntryListJS.class, ENTRY_TYPE_KEY);
+            GROUP.client("removeEntries", RecipeViewerEntryListJS.class, ENTRY_TYPE_KEY, api -> api.versioned());
 
     /** Hides recipes by recipe id; the call can be narrowed to a category. */
     EventBusJS<RecipeViewerRecipeListJS, Void> REMOVE_RECIPES =
-            GROUP.client("removeRecipes", RecipeViewerRecipeListJS.class);
+            GROUP.client("removeRecipes", RecipeViewerRecipeListJS.class, api -> api.versioned());
 
     /** Hides a whole viewer category by category id. */
     EventBusJS<RecipeViewerCategoryListJS, Void> REMOVE_CATEGORIES =
-            GROUP.client("removeCategories", RecipeViewerCategoryListJS.class);
+            GROUP.client("removeCategories", RecipeViewerCategoryListJS.class, api -> api.versioned());
 
     /** Attaches tooltip information to entries. Applied during JEI registration and refreshed
      * after a resource reload. */
     EventBusJS<RecipeViewerInformationJS, Void> ADD_INFORMATION =
-            GROUP.client("addInformation", RecipeViewerInformationJS.class);
+            GROUP.client("addInformation", RecipeViewerInformationJS.class, api -> api.versioned());
 }

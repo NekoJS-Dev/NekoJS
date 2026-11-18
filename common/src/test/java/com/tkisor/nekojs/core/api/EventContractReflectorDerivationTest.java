@@ -77,8 +77,8 @@ class EventContractReflectorDerivationTest {
     @Test
     void eachBusDerivesExactlyOneContractEventWithTierDispatchCancelAndPayload() {
         EventGroup group = EventGroup.of("ServerEvents");
-        group.server("plain", SamplePayload.class);
-        group.server("dispatched", EmptyPayload.class, DispatchKey.string());
+        group.add("plain", ScriptType.SERVER, EventBusJS.of(SamplePayload.class));
+        group.add("dispatched", ScriptType.SERVER, EventBusJS.of(EmptyPayload.class, EventBusJS.eventCancellability(EmptyPayload.class), DispatchKey.string()));
         group.add("cancellable", ScriptType.SERVER, EventBusJS.of(SamplePayload.class, true));
 
         List<NormativeApiContract.ContractEvent> events =
@@ -120,12 +120,12 @@ class EventContractReflectorDerivationTest {
     @Test
     void serverClientAndMixedSidesKeepDistinctEntries() {
         EventGroup serverOnly = EventGroup.of("ServerEvents");
-        serverOnly.server("started", EmptyPayload.class);
+        serverOnly.add("started", ScriptType.SERVER, EventBusJS.of(EmptyPayload.class));
         EventGroup clientOnly = EventGroup.of("ClientEvents");
-        clientOnly.client("render", EmptyPayload.class);
+        clientOnly.add("render", ScriptType.CLIENT, EventBusJS.of(EmptyPayload.class));
         EventGroup mixed = EventGroup.of("MixedEvents");
-        mixed.startup("early", EmptyPayload.class);
-        mixed.server("late", EmptyPayload.class);
+        mixed.add("early", ScriptType.STARTUP, EventBusJS.of(EmptyPayload.class));
+        mixed.add("late", ScriptType.SERVER, EventBusJS.of(EmptyPayload.class));
 
         List<NormativeApiContract.ContractEvent> events = EventContractReflector.extractEvents(
                 List.of(serverOnly, clientOnly, mixed));

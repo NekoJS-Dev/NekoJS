@@ -1,11 +1,13 @@
 package com.tkisor.nekojs.script;
 
 import com.tkisor.nekojs.api.ScriptType;
+import com.tkisor.nekojs.api.event.EventBusJS;
 import com.tkisor.nekojs.api.event.EventGroup;
 import com.tkisor.nekojs.api.event.EventSchemaRegistry;
 import com.tkisor.nekojs.api.event.ManagedCallbackSchemaRegistry;
 import com.tkisor.nekojs.api.event.ScriptBindingSchema;
 import com.tkisor.nekojs.api.event.ScriptErrorReporter;
+import com.tkisor.nekojs.api.event.ScriptEventDefinition;
 import com.tkisor.nekojs.core.compiler.EventCallbackSourceValidator;
 import com.tkisor.nekojs.testfixture.TestPlatformInit;
 import org.junit.jupiter.api.AfterEach;
@@ -22,13 +24,7 @@ import java.util.Set;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-/**
- * Wiring of event groups into {@link ScriptBindingSchema}: in production, event groups
- * (ServerEvents/BlockEvents...) are bound by eventBridge.bindEvents, but the schema only collected
- * environment bindings and managed globals, so {@code schema.containsKey(groupName)} in
- * {@code EventCallbackSourceValidator} was always false and event callback preflight silently did
- * nothing. This is a real incident: a typo in {@code event.rec} produced no error on reload.
- */
+/** Preserves global schema wiring and callback preflight for script-defined dynamic groups. */
 class EventGroupSchemaWiringTest {
 
     public static class TestRecipeEvent {
@@ -48,8 +44,13 @@ class EventGroupSchemaWiringTest {
         ScriptErrorReporter.set((type, kind, t) -> reported.add(String.valueOf(t.getMessage())));
 
         group = EventGroup.of("ServerEvents");
-        group.server("recipes", TestRecipeEvent.class);
+        group.add("recipes", ScriptType.SERVER, EventBusJS.of(TestRecipeEvent.class));
         EventSchemaRegistry.registerGroup(group);
+    }
+
+    private ScriptEventDefinition definition() {
+        return new ScriptEventDefinition("ServerEvents", "recipes", ScriptType.SERVER, "startup.js",
+                group.getBusHolder("recipes").getBus(ScriptType.SERVER), () -> {});
     }
 
     @AfterEach
@@ -61,7 +62,8 @@ class EventGroupSchemaWiringTest {
     void eventGroupEntersSchemaWithBusNamesAsMembers() {
         Map<String, ScriptBindingSchema.BindingMembers> schema = new HashMap<>();
         schema.put("Utils", new ScriptBindingSchema.BindingMembers(Set.of("serverTell")));
-        ScriptEnvironmentFactory.addEventGroupSchema(schema, List.of(group), Map.of("ScriptEvents", Map.of()));
+        ScriptEnvironmentFactory.addScriptEventGroupSchema(schema, Map.of(
+                "ServerEvents", Map.of("recipes", definition()), "ScriptEvents", Map.of()));
 
         assertTrue(schema.containsKey("ServerEvents"), "event group must enter the binding schema");
         assertTrue(schema.get("ServerEvents").contains("recipes"), "bus names are the group's members");
@@ -73,7 +75,7 @@ class EventGroupSchemaWiringTest {
     void wiredSchemaMakesCallbackPreflightFlagUnknownMember() {
         // Builds the schema in the same order as ScriptEnvironmentFactory.create: environment bindings, then event groups
         Map<String, ScriptBindingSchema.BindingMembers> schema = new HashMap<>();
-        ScriptEnvironmentFactory.addEventGroupSchema(schema, List.of(group), Map.of());
+        ScriptEnvironmentFactory.addScriptEventGroupSchema(schema, Map.of("ServerEvents", Map.of("recipes", definition())));
         ScriptBindingSchema.View view = new ScriptBindingSchema.View(schema, Set.of());
 
         Path file = com.tkisor.nekojs.script.ScriptTypeEnv.scriptsDir(ScriptType.SERVER).resolve("main.js");
@@ -90,7 +92,7 @@ class EventGroupSchemaWiringTest {
     @Test
     void wiredSchemaDoesNotFlagLegitimateMemberAccess() {
         Map<String, ScriptBindingSchema.BindingMembers> schema = new HashMap<>();
-        ScriptEnvironmentFactory.addEventGroupSchema(schema, List.of(group), Map.of());
+        ScriptEnvironmentFactory.addScriptEventGroupSchema(schema, Map.of("ServerEvents", Map.of("recipes", definition())));
         ScriptBindingSchema.View view = new ScriptBindingSchema.View(schema, Set.of());
 
         Path file = com.tkisor.nekojs.script.ScriptTypeEnv.scriptsDir(ScriptType.SERVER).resolve("ok.js");

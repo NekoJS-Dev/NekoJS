@@ -35,6 +35,14 @@ class AuthoringProbePublicationTest {
         String environment = AuthoringEnvironment.id(AuthoringEnvironment.current());
         JsonObject index = AuthoringSnapshotFiles.load(api, environment);
         assertNotNull(index);
+        var events = index.getAsJsonObject("resources").getAsJsonArray("events");
+        assertFalse(events.isEmpty());
+        assertTrue(events.asList().stream().map(com.google.gson.JsonElement::getAsJsonObject)
+                .allMatch(event -> event.get("moduleId").getAsString().equals("nekojs:event/versioned")));
+        assertTrue(index.getAsJsonObject("resources").getAsJsonArray("symbols").asList().stream()
+                .map(com.google.gson.JsonElement::getAsJsonObject)
+                .noneMatch(symbol -> symbol.get("kind").getAsString().equals("binding")
+                        && symbol.get("name").getAsString().equals("SampleEvents")));
         JsonObject scope = AuthoringJson.obj("environmentId", environment, "snapshotId", index.get("snapshotId"), "scriptType", "SERVER", "language", "typescript", "memberView", "declared");
         try (AuthoringQuery query = new AuthoringQuery(environment)) {
             query.publish(new AuthoringSnapshot(index));

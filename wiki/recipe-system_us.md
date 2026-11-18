@@ -13,6 +13,8 @@ Recipe scripts go in `server_scripts/`, inside a `ServerEvents.recipes` handler.
 Create `nekojs/server_scripts/recipes.js`:
 
 ```javascript
+import { ServerEvents } from "nekojs:event/versioned";
+
 ServerEvents.recipes(event => {
   // Remove every recipe that makes sticks
   event.remove({ output: 'minecraft:stick' })
@@ -61,6 +63,8 @@ How filters combine:
 - A misspelled key throws `NEKO-5003`. It never silently turns into "select everything".
 
 ```javascript
+import { ServerEvents } from "nekojs:event/versioned";
+
 ServerEvents.recipes(event => {
   // Minecraft's own stick recipes
   event.remove({ mod: 'minecraft', output: 'minecraft:stick' })
@@ -94,6 +98,8 @@ Keep in mind:
 | `event.replaceOutput(filter, oldResult, newResult)` | Replaces a result in the selected recipes and keeps the original count |
 
 ```javascript
+import { ServerEvents } from "nekojs:event/versioned";
+
 ServerEvents.recipes(event => {
   // Use birch planks instead of oak planks everywhere
   event.replaceInput({}, 'minecraft:oak_planks', 'minecraft:birch_planks')
@@ -142,6 +148,8 @@ Completion for item IDs, tags and mod names comes from `/nekojs probe`. After ad
 | `event.smoking(result, ingredient)` / `event.campfireCooking(result, ingredient)` | Smoker (100 ticks) / campfire (600 ticks); two-argument form only |
 
 ```javascript
+import { ServerEvents } from "nekojs:event/versioned";
+
 ServerEvents.recipes(event => {
   event.shaped('minecraft:diamond_sword', [
     'D',
@@ -164,6 +172,8 @@ ServerEvents.recipes(event => {
 `event.recipes.<namespace>.<type>(...)` adds any recipe type, including recipes from mods:
 
 ```javascript
+import { ServerEvents } from "nekojs:event/versioned";
+
 ServerEvents.recipes(event => {
   event.recipes.minecraft.crafting_shaped(
     Item.of('minecraft:stick', 2), ['B'],
@@ -189,6 +199,8 @@ Having a mod installed does not mean every one of its recipe types has a ready-m
 If you know a recipe's full JSON, you can write it directly. The JSON must match the format your game version and the mod expect:
 
 ```javascript
+import { ServerEvents } from "nekojs:event/versioned";
+
 ServerEvents.recipes(event => {
   // custom: pass the complete JSON, including type
   event.custom({
@@ -250,6 +262,8 @@ Each recipe returned by `find`, `forEach` and similar methods supports:
 | `.validate()` | Checks that the game can read the recipe |
 
 ```javascript
+import { ServerEvents } from "nekojs:event/versioned";
+
 ServerEvents.recipes(event => {
   event.forEach({ output: 'minecraft:iron_ingot', recipeType: 'minecraft:smelting' }, recipe => {
     console.info(`Found recipe: ${recipe.id()}`)
@@ -266,6 +280,8 @@ The object returned when you add a recipe (for example from `event.shaped(...)`)
 On Minecraft 26.x, a crafting recipe can decide what happens to an ingredient after crafting: a tool loses durability instead of disappearing, a catalyst stays, or the ingredient turns into another item. This only applies to crafting tables and the inventory crafting grid.
 
 ```javascript
+import { ServerEvents } from "nekojs:event/versioned";
+
 ServerEvents.recipes(event => {
   // The iron pickaxe is a tool: it loses 1 durability and goes back to the grid
   event.shaped('minecraft:diamond_pickaxe', ['PDD', ' S ', ' S '], {
@@ -389,6 +405,8 @@ To see the schema in use from a script, use `RecipeSchema` in [Global bindings](
 You can still add a recipe type that has no schema through `event.recipes`. Pass one object with all the fields:
 
 ```javascript
+import { ServerEvents } from "nekojs:event/versioned";
+
 ServerEvents.recipes(event => {
   event.recipes.mymod.unknown_type({
     some_field: 'value',

@@ -13,9 +13,9 @@ public interface CommandEvents {
     EventGroup GROUP = EventGroup.of("CommandEvents");
 
     EventBusJS<RegisterCommandsEvent, Void> REGISTER =
-            GROUP.server("register", RegisterCommandsEvent.class);
+            GROUP.server("register", RegisterCommandsEvent.class, api -> api.versioned());
     EventBusJS<CommandEvent, Void> COMMAND =
-            GROUP.server("command", CommandEvent.class);
+            GROUP.server("command", CommandEvent.class, api -> api.versioned());
 
     EventBusForgeBridge FORGE_BRIDGE = EventBusForgeBridge.create(NeoForge.EVENT_BUS)
             .bind(REGISTER)

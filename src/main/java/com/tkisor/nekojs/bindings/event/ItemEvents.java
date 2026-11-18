@@ -25,7 +25,7 @@ public interface ItemEvents {
     EventGroup GROUP = EventGroup.of("ItemEvents");
 
     EventBusJS<PlayerInteractEvent.RightClickItem, Item> RIGHT_CLICKED =
-            GROUP.server("rightClicked", PlayerInteractEvent.RightClickItem.class, dispatchByItem(PlayerInteractEvent::getItemStack));
+            GROUP.server("rightClicked", PlayerInteractEvent.RightClickItem.class, dispatchByItem(PlayerInteractEvent::getItemStack), api -> api.versioned());
 
     /**
      * Runtime item property modification (server scripts, posted-object mode). The platform domain
@@ -36,30 +36,30 @@ public interface ItemEvents {
      * the NeoForge bus.
      */
     EventBusJS<ItemModificationEventJS, Void> MODIFICATION =
-            GROUP.server("modification", ItemModificationEventJS.class);
+            GROUP.server("modification", ItemModificationEventJS.class, api -> api.versioned());
 
     EventBusJS<ItemTooltipEvent, Item> TOOLTIP =
-            GROUP.client("tooltip", ItemTooltipEvent.class, dispatchByItem(ItemTooltipEvent::getItemStack));
+            GROUP.client("tooltip", ItemTooltipEvent.class, dispatchByItem(ItemTooltipEvent::getItemStack), api -> api.versioned());
 
     EventBusJS<ItemEntityPickupEvent.Pre, Item> CAN_PICK_UP =
-            GROUP.server("canPickUp", ItemEntityPickupEvent.Pre.class, dispatchByPickupItem());
+            GROUP.server("canPickUp", ItemEntityPickupEvent.Pre.class, dispatchByPickupItem(), api -> api.versioned());
     // pickedUpPre: a redundant alias for canPickUp (the same Pre event). The cross-platform main
     // names are canPickUp/pickedUp (some loaders have no separate Pre event), so scripts should
     // migrate to canPickUp.
     @Deprecated
     EventBusJS<ItemEntityPickupEvent.Pre, Item> PICKED_UP_PRE =
-            GROUP.server("pickedUpPre", ItemEntityPickupEvent.Pre.class, dispatchByPickupItem());
+            GROUP.server("pickedUpPre", ItemEntityPickupEvent.Pre.class, dispatchByPickupItem(), api -> api.versioned());
     EventBusJS<ItemEntityPickupEvent.Post, Item> PICKED_UP =
-            GROUP.server("pickedUp", ItemEntityPickupEvent.Post.class, dispatchByPickupItem());
+            GROUP.server("pickedUp", ItemEntityPickupEvent.Post.class, dispatchByPickupItem(), api -> api.versioned());
     EventBusJS<ItemTossEvent, Item> DROPPED =
-            GROUP.server("dropped", ItemTossEvent.class, dispatchByItem(event -> event.getEntity().getItem()));
+            GROUP.server("dropped", ItemTossEvent.class, dispatchByItem(event -> event.getEntity().getItem()), api -> api.versioned());
     EventBusJS<PlayerInteractEvent.EntityInteract, Item> ENTITY_INTERACTED =
-            GROUP.server("entityInteracted", PlayerInteractEvent.EntityInteract.class, dispatchByItem(PlayerInteractEvent.EntityInteract::getItemStack));
+            GROUP.server("entityInteracted", PlayerInteractEvent.EntityInteract.class, dispatchByItem(PlayerInteractEvent.EntityInteract::getItemStack), api -> api.versioned());
     // Item use finished (finished eating food, using up a shield or bow, and so on). Matches KubeJS
     // foodEaten and is based on LivingEntityUseItemEvent.Finish. Scripts can tell food apart with
     // event.item.isEdible() and similar checks.
     EventBusJS<LivingEntityUseItemEvent.Finish, Item> FOOD_EATEN =
-            GROUP.server("foodEaten", LivingEntityUseItemEvent.Finish.class, dispatchByItem(LivingEntityUseItemEvent::getItem));
+            GROUP.server("foodEaten", LivingEntityUseItemEvent.Finish.class, dispatchByItem(LivingEntityUseItemEvent::getItem), api -> api.versioned());
 
     private static <T> DispatchKey<T, Item> dispatchByItem(Function<T, ItemStack> toStack) {
         return DispatchKey.of(Item.class, toStack.andThen(ItemStack::getItem));

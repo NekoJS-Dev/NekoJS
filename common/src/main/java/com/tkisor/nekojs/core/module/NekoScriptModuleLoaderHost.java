@@ -1,5 +1,7 @@
 package com.tkisor.nekojs.core.module;
 
+import com.tkisor.nekojs.core.api.ApiModuleNamespace;
+
 import com.tkisor.nekojs.api.annotation.CalledByDynamicCode;
 import com.tkisor.nekojs.core.compiler.NekoModuleMode;
 import com.tkisor.nekojs.core.error.SourceMapRegistry;
@@ -328,7 +330,7 @@ public final class NekoScriptModuleLoaderHost {
             NekoResolvedModule resolved = resolveChild(parentPath, specifier);
             recordDependency(parentPath, resolved);
             if (resolved.special()) {
-                if (resolved.specifier().startsWith("nekojs/api/")) return esmRewriter.apiModuleUri(resolved.specifier()).toString();
+                if (ApiModuleNamespace.isReserved(resolved.specifier())) return esmRewriter.apiModuleUri(resolved.specifier()).toString();
                 if ("nekojs/jsx-runtime".equals(resolved.specifier())) {
                     // Native ESM linking needs the runtime names before guest evaluation.
                     return esmRewriter.syntheticNamedModuleUri(resolved.specifier(), "jsx", "jsxs", "Fragment", "UI").toString();

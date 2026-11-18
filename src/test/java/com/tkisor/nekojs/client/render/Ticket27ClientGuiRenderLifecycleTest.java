@@ -87,15 +87,18 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
     }
 
     private static String hudScript(String id) {
-        return "ClientEvents.hudRender('" + id + "', { layer: 'normal' }, ctx => ctx.add('" + id + "'))\n";
+        return "const { ClientEvents } = require('nekojs:event/versioned');\n"
+                + "ClientEvents.hudRender('" + id + "', { layer: 'normal' }, ctx => ctx.add('" + id + "'))\n";
     }
 
     private static String worldScript(String id) {
-        return "ClientEvents.worldRender('" + id + "', { layer: 'normal' }, ctx => ctx.add('" + id + "'))\n";
+        return "const { ClientEvents } = require('nekojs:event/versioned');\n"
+                + "ClientEvents.worldRender('" + id + "', { layer: 'normal' }, ctx => ctx.add('" + id + "'))\n";
     }
 
     private static String listenerScript() {
         return """
+                const { ClientEvents } = require('nekojs:event/versioned');
                 ClientEvents.screenRender(event => { global.screenSeen = true })
                 ClientEvents.hud(painter => { global.hudSeen = true })
                 """;

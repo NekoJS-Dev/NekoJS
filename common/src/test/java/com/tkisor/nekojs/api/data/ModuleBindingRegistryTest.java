@@ -8,6 +8,13 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 class ModuleBindingRegistryTest {
+    @Test void pluginNamedEventsCannotOccupyTheOfficialEventModule() {
+        var registry = new BindingRegistry.BindingRegistryImpl(ScriptType.SERVER).scopedTo("events");
+        registry.register(Binding.of("Helper", "helper"), api -> api.stable());
+        assertEquals("nekojs/plugins/events/api/stable", registry.moduleBindings().getFirst().moduleId());
+        assertNotEquals("nekojs:event/stable", registry.moduleBindings().getFirst().moduleId());
+    }
+
     @BeforeAll static void initialize() { TestPlatformInit.ensureInitialized(); }
 
     @Test void moduleTargetsAreIndependentAndNeverBecomeGlobals() {
@@ -19,7 +26,7 @@ class ModuleBindingRegistryTest {
         addon.register(Binding.of("Value", "addon"), e -> e.stable());
         engine.register(Binding.of("Value", "global"));
         assertEquals("global", root.viewRegistered().get("Value").value());
-        assertEquals(java.util.List.of("nekojs/api/stable", "nekojs/api/version", "nekojs/api/stable/example"),
+        assertEquals(java.util.List.of("nekojs/api/stable", "nekojs/api/version", "nekojs/plugins/example/api/stable"),
                 root.moduleBindings().stream().map(ModuleBinding::moduleId).toList());
         assertThrows(UnsupportedOperationException.class, () -> root.moduleBindings().clear());
     }

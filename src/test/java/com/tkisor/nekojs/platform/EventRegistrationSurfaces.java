@@ -106,7 +106,7 @@ final class EventRegistrationSurfaces {
                     ? ite.getCause() : error;
             return Registration.failure(cause.getClass().getName() + ": " + cause.getMessage());
         }
-        out.putAll(registry.view());
+        registry.view().values().forEach(group -> out.put(group.name(), group));
         return new Registration(out, null);
     }
 

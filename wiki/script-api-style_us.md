@@ -23,6 +23,8 @@ The NekoJS script API uses only a few fixed patterns. Once you know them, you ca
 Events are grouped by purpose, such as `ServerEvents`, `PlayerEvents` and `ClientEvents`. Add the event name after the group and pass a callback:
 
 ```javascript
+import { PlayerEvents } from "nekojs:event/versioned";
+
 // server_scripts/welcome.js
 PlayerEvents.loggedIn(event => {
   event.entity.sendMessage('Welcome to NekoJS!')
@@ -50,6 +52,8 @@ See [Global bindings](global-bindings_us) for the full list.
 To create something new, pass the required arguments such as the ID first, and a configuration callback **last**. The `build` object the callback receives sets the new content's properties:
 
 ```javascript
+import { RegistryEvents } from "nekojs:event/versioned";
+
 // startup_scripts/content.js
 RegistryEvents.register(event => {
   event.item('nekojs_example:ruby', build => {

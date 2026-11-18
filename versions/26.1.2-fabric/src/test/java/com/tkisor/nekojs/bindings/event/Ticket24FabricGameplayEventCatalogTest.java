@@ -117,7 +117,8 @@ class Ticket24FabricGameplayEventCatalogTest {
         EventGroupRegistry registry = new EventGroupRegistry.Impl().scopedTo("nekojs");
         new FabricCorePlugin().registerEvents(registry);
         new FabricCorePlugin().registerClientEvents(registry);
-        return registry.view();
+        return registry.view().values().stream().collect(java.util.stream.Collectors.toMap(
+                EventGroup::name, java.util.function.Function.identity()));
     }
 
     @BeforeAll

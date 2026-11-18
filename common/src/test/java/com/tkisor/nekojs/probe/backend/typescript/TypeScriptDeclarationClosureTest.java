@@ -102,7 +102,7 @@ class TypeScriptDeclarationClosureTest {
         var config = new ProbeConfig(true, ".neko_probe", new ProbeConfig.ScanConfig(
                 List.of("unrelated.primary"), List.of(), List.of(), List.of(), 1, "SMART"));
         assertTrue(ProbeCoordinator.collectClasses(snapshot, config).isEmpty());
-        var context = new ProbeContext.Of(snapshot, List.of(), config, NekoJSPaths.fromGameDir(temp),
+        var context = new ProbeContext.Of(com.tkisor.nekojs.probe.ProbeEventFixtures.publishVersioned(snapshot), List.of(), config, NekoJSPaths.fromGameDir(temp),
                 "typescript", temp.resolve("typescript"), List.of());
         Map<String, String> files = new TypeScriptProbeBackend().render(context);
         String module = files.get("@package/com/tkisor/nekojs/probe/backend/typescript/index.d.ts");
@@ -147,11 +147,11 @@ class TypeScriptDeclarationClosureTest {
                     List.of("unrelated.primary"), List.of(),
                     excluded ? List.of("othermod.events") : List.of(), List.of(), 1, "SMART"));
             assertTrue(ProbeCoordinator.collectClasses(snapshot, config).isEmpty());
-            var context = new ProbeContext.Of(snapshot, List.of(), config, NekoJSPaths.fromGameDir(temp),
+            var context = new ProbeContext.Of(com.tkisor.nekojs.probe.ProbeEventFixtures.publishVersioned(snapshot), List.of(), config, NekoJSPaths.fromGameDir(temp),
                     "typescript", temp.resolve("typescript"), List.of());
             Map<String, String> files = new TypeScriptProbeBackend().render(context);
-            assertTrue(files.get("@side-only/server/events/index.d.ts").contains(
-                    "import { $EventTypes$Key, $EventTypes$Payload } from \"java:othermod/events\";"));
+            assertTrue(files.get("@side-only/server/bindings/api-modules.d.ts").contains(
+                    "import(\"java:othermod/events\").$EventTypes$Key"));
             var report = com.google.gson.JsonParser.parseString(files.get("@special/dependencies.json")).getAsJsonObject();
             assertEquals(!excluded, report.get("complete").getAsBoolean());
             assertEquals(0, report.get("primaryClassCount").getAsInt());
@@ -174,9 +174,10 @@ class TypeScriptDeclarationClosureTest {
                     Files.writeString(file, entry.getValue());
                 }
                 Files.writeString(output.resolve("tsconfig.json"), """
-                        {"compilerOptions":{"strict":true,"noEmit":true,"skipLibCheck":false,"target":"ES2022","module":"ESNext","moduleResolution":"Bundler","types":[],"baseUrl":".","paths":{"java:*": ["@package/*"]}},"include":["@package/**/*.d.ts","@side-only/server/events/index.d.ts","exercise.ts"]}
+                        {"compilerOptions":{"strict":true,"noEmit":true,"skipLibCheck":false,"target":"ES2022","module":"ESNext","moduleResolution":"Bundler","types":[],"baseUrl":".","paths":{"java:*": ["@package/*"]}},"include":["@package/**/*.d.ts","@side-only/server/bindings/api-modules.d.ts","exercise.ts"]}
                         """);
                 Files.writeString(output.resolve("exercise.ts"), """
+                        import { ExternalEvents } from 'nekojs:event/versioned';
                         import type { $EventTypes$Key as Key } from 'java:othermod/events';
                         declare const key: Key;
                         ExternalEvents.visit(key, event => {
@@ -206,10 +207,10 @@ class TypeScriptDeclarationClosureTest {
         var config = new ProbeConfig(true, ".neko_probe", new ProbeConfig.ScanConfig(
                 List.of("unrelated.primary"), List.of(), List.of(othermod.events.EventTypes.Key.class.getName()),
                 List.of(), 1, "SMART"));
-        var context = new ProbeContext.Of(snapshot, List.of(), config, NekoJSPaths.fromGameDir(temp),
+        var context = new ProbeContext.Of(com.tkisor.nekojs.probe.ProbeEventFixtures.publishVersioned(snapshot), List.of(), config, NekoJSPaths.fromGameDir(temp),
                 "typescript", temp.resolve("typescript"), List.of());
         Map<String, String> files = new TypeScriptProbeBackend().render(context);
-        assertFalse(files.get("@side-only/server/events/index.d.ts").contains("$EventTypes$Key"));
+        assertFalse(files.get("@side-only/server/bindings/api-modules.d.ts").contains("$EventTypes$Key"));
         var report = com.google.gson.JsonParser.parseString(files.get("@special/dependencies.json")).getAsJsonObject();
         assertTrue(report.get("complete").getAsBoolean());
         assertEquals(1, report.get("referencedClassCount").getAsInt());
@@ -288,7 +289,7 @@ class TypeScriptDeclarationClosureTest {
         var config = new ProbeConfig(true, ".neko_probe", new ProbeConfig.ScanConfig(
                 List.of(Root.class.getPackageName()), List.of(), excludes, List.of(), 1, "SMART"));
         var paths = NekoJSPaths.fromGameDir(temp);
-        return new ProbeContext.Of(snapshot, List.of(Root.class), config, paths, "typescript",
+        return new ProbeContext.Of(com.tkisor.nekojs.probe.ProbeEventFixtures.publishVersioned(snapshot), List.of(Root.class), config, paths, "typescript",
                 temp.resolve("typescript"), ir);
     }
 }

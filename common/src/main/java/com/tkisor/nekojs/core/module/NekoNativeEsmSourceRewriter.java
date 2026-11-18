@@ -1,5 +1,7 @@
 package com.tkisor.nekojs.core.module;
 
+import com.tkisor.nekojs.core.api.ApiModuleNamespace;
+
 import com.tkisor.nekojs.core.compiler.NekoModuleMode;
 import com.tkisor.nekojs.core.module.esm.NekoEsmLinker;
 import com.tkisor.nekojs.core.module.esm.NekoEsmLinkException;
@@ -203,7 +205,7 @@ public final class NekoNativeEsmSourceRewriter {
 
         private java.net.URI syntheticObjectModule(NekoEsmStatement statement, String specifier) {
             Set<String> namedExports = statement == null ? Set.of() : requestedExportNames(statement);
-            if (specifier.startsWith("nekojs/api/")) {
+            if (ApiModuleNamespace.isReserved(specifier)) {
                 Set<String> available = apiExports.get(specifier);
                 if (available == null || !available.containsAll(namedExports)) {
                     throw new IllegalArgumentException("[NEKO-4057] API module or requested export is unavailable: " + specifier + " " + namedExports);

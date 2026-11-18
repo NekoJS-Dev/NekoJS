@@ -14,8 +14,10 @@ It starts with one example that touches every part, then covers each module.
 
 Take this code in `server_scripts/recipes.py`:
 
+The Python example uses the local `event_bridge.js` re-export from [Python scripts](python-scripts_us#wiki-section-4); the editor-only `from nekojs import ...` cannot import event modules.
+
 ```python
-from nekojs import ServerEvents
+from event_bridge import ServerEvents
 
 def add_recipes(event):
     event.shapeless('minecraft:dirt', ['minecraft:sand'])
@@ -169,7 +171,7 @@ Modules:
 
 Interfaces live in `api/event/`; implementations live in `eventbus/`.
 
-- **`EventGroup`**: a named Event Group, such as `ServerEvents`. Declare events with `group.server("name", EventClass)`, `client(...)` or `startup(...)`.
+- **`EventGroup`**: a named Event Group, such as `ServerEvents`. Plain `group.server("name", EventClass)`, `client(...)` and `startup(...)` factories, including keyed overloads, default to versioned publication. A configuration callback selects only its explicit targets and cannot be empty; unconfigured `add` stays private. Both `stable()` and `versioned()` return the same Scope with optional `.view(Class, Function)` and exact `.scriptTypes(...)`.
 - **`EventBus` / `CancellableEventBus` / `DispatchEventBus`**: the three bus kinds. The dispatch bus routes by key, such as an item or block id.
 - **`EventBusJS`**: the script-facing `ProxyExecutable` that lets scripts write `ServerEvents.recipes(cb)`.
 - **Loader bridges**: `EventBusForgeBridge` connects events on a NeoForge `IEventBus` to `EventBusJS`; Fabric uses `FabricEventBusBridge` for Fabric callbacks.

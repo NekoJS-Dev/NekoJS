@@ -20,7 +20,6 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -358,51 +357,11 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
      */
     @Override
     public Object execute(Value... args) {
-        if (args.length == 0) {
-            throw new IllegalArgumentException("EventBus requires at least one arg");
-        }
-        if (canDispatch() && args.length == 1 && parsePriority(args[0]) != null) {
-            // listen("HIGH") on a dispatch bus must keep the legacy missing-listener error
-            // instead of treating "HIGH" as a key with no listener.
-            throw new IllegalArgumentException("EventBus requires a listener after priority");
-        }
-
-        // DEFECT-D6: optional priority as the first argument. args[0] is parsed as a
-        // priority name (HIGHEST/HIGH/NORMAL/LOW/LOWEST, case-insensitive) only when
-        // either the bus is NOT dispatchable, or when a key + listener still follow
-        // after the priority (>= 3 args). Call shapes:
-        //   listen(listener)                  -> NORMAL
-        //   listen("key", listener)           -> NORMAL (dispatch), "key" is NOT a priority name
-        //   listen("HIGH", listener)          -> non-dispatch: HIGH priority;
-        //                                       dispatch: key "HIGH", NORMAL priority
-        //   listen("HIGH", "key", listener)   -> HIGH priority (dispatch)
-        byte priority = CommonPriority.NORMAL;
-        int offset = priorityArgOffset(args, canDispatch());
-        if (offset > 0) {
-            priority = parsePriority(args[0]);
-            if (args.length <= offset) {
-                throw new IllegalArgumentException("EventBus requires a listener after priority");
-            }
-        }
-
-        Value[] rest = new Value[args.length - offset];
-        System.arraycopy(args, offset, rest, 0, rest.length);
-
-        Value listener;
-        Value key = null;
-        if (canDispatch()) {
-            boolean keyed = rest.length > 1;
-            listener = keyed ? rest[1] : rest[0];
-            if (keyed) {
-                key = rest[0];
-            }
-        } else {
-            listener = rest[0];
-        }
-
+        var subscription = com.tkisor.nekojs.core.api.EventSubscriptionArguments.parse(args, canDispatch());
+        Value listener = subscription.listener();
         ScriptType type = ScriptContextRegistry.scriptTypeOf(listener.getContext());
         String scriptId = ScriptContextRegistry.currentScriptIdOf(listener.getContext());
-        PendingListener pending = new PendingListener(this, priority, listener, key, type, scriptId);
+        PendingListener pending = new PendingListener(this, subscription.priority(), listener, subscription.key(), type, scriptId);
         if (ScriptManager.collectPendingListener(listener.getContext(), pending)) {
             // Candidate generation: suspend registration, activate on commit (see class comment)
             return true;
@@ -421,32 +380,7 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
      * {@code "HIGH"} instead of misreading {@code "HIGH"} as a priority.
      */
     static int priorityArgOffset(Value[] args, boolean dispatchable) {
-        if (args.length == 0 || parsePriority(args[0]) == null) {
-            return 0;
-        }
-        if (!dispatchable) {
-            return 1;
-        }
-        return args.length >= 3 ? 1 : 0;
-    }
-
-    /**
-     * Parse a JS value as a {@link CommonPriority} name. Returns {@code null} when
-     * the value is not a string or does not match a priority name, so callers can
-     * distinguish "not a priority" (e.g. a dispatch key string) from a valid name.
-     * Matching is case-insensitive.
-     */
-    private static Byte parsePriority(Value value) {
-        if (value == null || !value.isString()) return null;
-        String name = value.asString().trim().toUpperCase(Locale.ROOT);
-        return switch (name) {
-            case "HIGHEST" -> CommonPriority.HIGHEST;
-            case "HIGH" -> CommonPriority.HIGH;
-            case "NORMAL" -> CommonPriority.NORMAL;
-            case "LOW" -> CommonPriority.LOW;
-            case "LOWEST" -> CommonPriority.LOWEST;
-            default -> null;
-        };
+        return com.tkisor.nekojs.core.api.EventSubscriptionArguments.priorityArgOffset(args, dispatchable);
     }
 
     /**

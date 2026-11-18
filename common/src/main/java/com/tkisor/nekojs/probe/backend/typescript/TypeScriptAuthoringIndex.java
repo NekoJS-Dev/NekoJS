@@ -105,6 +105,7 @@ final class TypeScriptAuthoringIndex {
                     "incompleteReasons", List.of("Read the emitted module declaration for its callback signature.")));
         }
         for (var event : context.snapshot().events()) {
+            if (!event.scriptDefined()) continue;
             List<String> types = context.snapshot().scriptTypes().stream().filter(event.scriptType()::test).map(Enum::name).sorted().toList();
             events.add(AuthoringJson.obj("symbolId", "event:" + AuthoringJson.hash(event.group() + ":" + event.name() + ":" + String.join(",", types)),
                     "name", event.name(), "kind", "event", "group", event.group(), "cancellable", event.cancellable(),

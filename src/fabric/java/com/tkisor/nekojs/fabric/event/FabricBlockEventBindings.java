@@ -33,14 +33,14 @@ public final class FabricBlockEventBindings {
     private static final EventBusJS<BlockRightClickEventJS, Block> RIGHT_CLICKED =
             BlockEvents.GROUP.add("rightClicked", ScriptType.SERVER, EventBusJS.of(
                     BlockRightClickEventJS.class, true,
-                    DispatchKey.of(Block.class, event -> event.getBlock())));
+                    DispatchKey.of(Block.class, event -> event.getBlock())), api -> api.versioned());
 
     /** Left-click on a block, dispatched by Block; cancellable. A script returns true to consume
      * the interaction, which maps to SUCCESS. */
     private static final EventBusJS<BlockLeftClickEventJS, Block> LEFT_CLICKED =
             BlockEvents.GROUP.add("leftClicked", ScriptType.SERVER, EventBusJS.of(
                     BlockLeftClickEventJS.class, true,
-                    DispatchKey.of(Block.class, event -> event.getBlock())));
+                    DispatchKey.of(Block.class, event -> event.getBlock())), api -> api.versioned());
 
     public static void register() {
         FabricEventBusBridge bridge = FabricEventBusBridge.create();

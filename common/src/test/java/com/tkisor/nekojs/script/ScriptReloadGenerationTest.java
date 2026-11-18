@@ -136,8 +136,8 @@ class ScriptReloadGenerationTest {
         volatile ScriptManager manager;
 
         TestEventBridge() {
-            this.pingBus = group.server("ping", TestEvent.class);
-            this.langBus = group.server("lang", TestEvent.class, DispatchKey.string());
+            this.pingBus = group.add("ping", ScriptType.SERVER, EventBusJS.of(TestEvent.class));
+            this.langBus = group.add("lang", ScriptType.SERVER, EventBusJS.of(TestEvent.class, EventBusJS.eventCancellability(TestEvent.class), DispatchKey.string()));
         }
 
         @Override

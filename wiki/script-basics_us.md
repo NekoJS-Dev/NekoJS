@@ -104,6 +104,8 @@ Each script file has its own scope: a variable defined in one file is not visibl
 global.counter = global.counter ?? 0
 
 // server_scripts/b.js
+import { ServerEvents } from "nekojs:event/versioned";
+
 ServerEvents.tickPost(event => {
   global.counter++
 })

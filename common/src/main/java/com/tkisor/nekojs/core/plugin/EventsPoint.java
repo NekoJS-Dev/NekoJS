@@ -8,8 +8,9 @@ import java.util.Map;
 
 /**
  * The built-in {@code nekojs:events} extension point; a self-contained Point file (ADR-0001).
- * The merge policy is {@link MergePolicy#failFast}: a duplicate event group name is reported by
- * the registry at registration time.
+ * The registry merges same-owner source groups with disjoint events, preserving each event's
+ * explicit module publications. Other owners are isolated. Source groups are not Script API globals.
+ * These registration rules are separate from the Point's {@link MergePolicy#failFast} product merge policy.
  *
  * <p>The twin point {@code nekojs:client_events} ({@link ClientEventsPoint}) depends on this one.
  * This is the first built-in use of the V2 dependency semantics (ADR-0002).
@@ -39,16 +40,16 @@ public final class EventsPoint {
     }
 
     public static final class Snapshot extends java.util.AbstractMap<String, EventGroup> {
-        private final Map<String, EventGroup> globals;
+        private final Map<String, EventGroup> sourceIndex;
         private final java.util.List<com.tkisor.nekojs.api.event.ModuleEventGroup> modules;
         private final java.util.List<EventGroup> sources;
-        Snapshot(Map<String, EventGroup> globals, java.util.List<com.tkisor.nekojs.api.event.ModuleEventGroup> modules,
+        Snapshot(Map<String, EventGroup> sourceIndex, java.util.List<com.tkisor.nekojs.api.event.ModuleEventGroup> modules,
                  java.util.List<EventGroup> sources) {
-            this.globals = Map.copyOf(globals);
+            this.sourceIndex = Map.copyOf(sourceIndex);
             this.modules = java.util.List.copyOf(modules);
             this.sources = java.util.List.copyOf(sources);
         }
-        @Override public java.util.Set<Entry<String, EventGroup>> entrySet() { return globals.entrySet(); }
+        @Override public java.util.Set<Entry<String, EventGroup>> entrySet() { return sourceIndex.entrySet(); }
         public java.util.List<com.tkisor.nekojs.api.event.ModuleEventGroup> modules() { return modules; }
         public java.util.List<EventGroup> sources() { return sources; }
     }

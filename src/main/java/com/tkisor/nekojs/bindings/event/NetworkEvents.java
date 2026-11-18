@@ -14,6 +14,7 @@ import com.tkisor.nekojs.wrapper.network.NetworkDataEventJS;
  * {@link com.tkisor.nekojs.api.ScriptType} and is cleaned up on {@code /nekojs reload}.
  *
  * <pre>{@code
+ * import { NetworkEvents } from "nekojs:event/versioned";
  * // server_scripts: receive packets sent by a client
  * NetworkEvents.server("my_channel", event => {
  *   console.log(event.channel, event.data, event.player)
@@ -45,9 +46,9 @@ public interface NetworkEvents {
 
     /** SERVER bus: packets from client to server. Scripts listen in server_scripts. */
     EventBusJS<NetworkDataEventJS, String> SERVER =
-            GROUP.server("server", NetworkDataEventJS.class, CHANNEL_KEY);
+            GROUP.server("server", NetworkDataEventJS.class, CHANNEL_KEY, api -> api.versioned());
 
     /** CLIENT bus: packets from server to client. Scripts listen in client_scripts. */
     EventBusJS<NetworkDataEventJS, String> CLIENT =
-            GROUP.client("client", NetworkDataEventJS.class, CHANNEL_KEY);
+            GROUP.client("client", NetworkDataEventJS.class, CHANNEL_KEY, api -> api.versioned());
 }

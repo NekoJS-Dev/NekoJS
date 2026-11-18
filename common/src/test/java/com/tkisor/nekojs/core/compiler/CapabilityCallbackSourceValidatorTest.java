@@ -1,6 +1,7 @@
 package com.tkisor.nekojs.core.compiler;
 
 import com.tkisor.nekojs.api.ScriptType;
+import com.tkisor.nekojs.api.event.EventBusJS;
 import com.tkisor.nekojs.api.event.EventGroup;
 import com.tkisor.nekojs.api.event.EventSchemaRegistry;
 import com.tkisor.nekojs.api.event.ManagedCallbackSchemaRegistry;
@@ -47,7 +48,7 @@ class CapabilityCallbackSourceValidatorTest {
         TestPlatformInit.ensureInitialized();
         ManagedCallbackSchemaRegistry.clear();
         EventGroup group = EventGroup.of("CapabilityPreflightEvents");
-        group.startup("register", CapabilityEvent.class);
+        group.add("register", ScriptType.STARTUP, EventBusJS.of(CapabilityEvent.class));
         EventSchemaRegistry.registerGroup(group);
         view = new ScriptBindingSchema.View(Map.of("CapabilityPreflightEvents",
                 new ScriptBindingSchema.BindingMembers(Set.of("register"))), Set.of());

@@ -295,6 +295,8 @@ Try them in a test world, one scenario at a time. Put server examples in `nekojs
 Put this code in `nekojs/server_scripts/authoring-examples/player-login.js`, run `/nekojs reload`, then leave and log in again:
 
 ```javascript
+import { PlayerEvents } from "nekojs:event/versioned";
+
 // Place in server_scripts. The callback runs for future logins, not existing players.
 PlayerEvents.loggedIn(event => {
     event.entity.sendMessage("Welcome to NekoJS!");
@@ -309,6 +311,8 @@ You receive `Welcome to NekoJS!` when you log in; players already online do not.
 This example replaces the vanilla stick recipe, so use a test world. Put it in `nekojs/server_scripts/authoring-examples/recipes.js`:
 
 ```javascript
+import { ServerEvents } from "nekojs:event/versioned";
+
 // Use a disposable world: this replaces the vanilla stick recipe.
 ServerEvents.recipes(event => {
     event.remove({ id: "minecraft:stick" });

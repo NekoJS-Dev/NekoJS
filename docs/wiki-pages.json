@@ -39,8 +39,8 @@
       "us": "Home",
       "legacy": "Home.md",
       "legacyDigest": "8a23f3adcd66ce695a7ae461affa8d4fcef28afd3f6bfa4534a1de18c4ecdf66",
-      "sourceDigest": "a7cd9f6107fb2f3b39f67b10cb54742ae40b6fee6afd5d024f8fa81a4d6762b0",
-      "translationDigest": "38305c97777d30e8009eb3407096fae8989bfd19924ae9b2fd93940ee69f4111",
+      "sourceDigest": "4638606504300495465efc1e7e579bf2835a274b5785538a4c43daff61c004df",
+      "translationDigest": "73242cb61fae34590d427a3665525fc74d3c9452206f33a33bddf5ddc755bd8d",
       "translationStatus": "draft",
       "humanReview": "pending"
     },
@@ -63,8 +63,8 @@
       "us": "Quick start",
       "legacy": "快速开始.md",
       "legacyDigest": "6d7f5c999e495c3bf63ad6aab85a2a83cf6959be653897e5db8127e5698738e5",
-      "sourceDigest": "e839de046060c2c9169a2f1eb70e3a76d2fb2b693f04478db2179dd5deeff6a7",
-      "translationDigest": "46fd2250cef227229c6600c96391a96c3ba14d2036495c37af10502940510991",
+      "sourceDigest": "e0dc72c96178553cc0b1e6490d4355b09f73a080d0ee4d889c630731e1a929ce",
+      "translationDigest": "e0bccd003a4e61e897b14a4e80a783ce62a459b9767790a657c7bc03c850944b",
       "translationStatus": "draft",
       "humanReview": "pending"
     },
@@ -85,8 +85,8 @@
       "us": "FAQ",
       "legacy": "常见问题.md",
       "legacyDigest": "4227fde9d00259fa332da0d80d6c931a5c4066468b57a4cc4221c17ed5d3893a",
-      "sourceDigest": "f9bdedb9aad5d86187d49626c2ed3c2e5ecd55e8e3a0a4f63166283eabde68b6",
-      "translationDigest": "3910f74e3c26c9f716517c5b2446898ac4b9ba8a90f1cb5a763746dca3f6b781",
+      "sourceDigest": "8637575600ae74564f7dc0b7ea4ee770a9132bb1cfa12c62ea43b3d2c9043afb",
+      "translationDigest": "a27f787454685ab006572a759b320eb8ff1d86aaf58eaa994e35202d1cd65d5b",
       "translationStatus": "draft",
       "humanReview": "pending"
     },
@@ -97,8 +97,8 @@
       "us": "Script basics",
       "legacy": "脚本基础.md",
       "legacyDigest": "0ce1e75bc6f3baaeec81c50f6396e58ac64e129ef160a242ab62426fd186a6b2",
-      "sourceDigest": "a6fc2aaaf23cee02ced3b8ff927b121b9ad816fc6735cda31ca0b07813583315",
-      "translationDigest": "e8f30d8121283f6b565550e2dd483261828058d22a20ee225687334cefafae85",
+      "sourceDigest": "bcdbec5de2af9bca8b4447781d4f586c1489f4754da77f8261066f3ddbbdde88",
+      "translationDigest": "ca05b785abd53aa043e2d1f2cf33a2b54a39a5ee17e88e6a2da37079e2d8f4fd",
       "translationStatus": "draft",
       "humanReview": "pending"
     },
@@ -109,8 +109,8 @@
       "us": "Script API conventions",
       "translationStatus": "draft",
       "humanReview": "pending",
-      "sourceDigest": "16b5b277e945ba34e3afde11870fbdbf0554b780593920db25f1c2414c31f253",
-      "translationDigest": "9ef823603e776cac5d87193925e583370001e522f5004f23afc0f264813f7d61"
+      "sourceDigest": "f05e4f1df3af7965567f6423b38d6b7b2fb27863b237b1b51d4ad743695883f7",
+      "translationDigest": "bf778a1a68816a9aa7f68c059ace963ed85e87058d4a7395037fa3e9acf0e466"
     },
     {
       "id": "script-properties",
@@ -131,8 +131,8 @@
       "us": "Global bindings",
       "legacy": "全局绑定.md",
       "legacyDigest": "610f273af3dd06e75482b76e2461f623711f6cc21ca87a8e3ddb495b967dd794",
-      "sourceDigest": "bd697ad344a422b29a306e7a5ca7fcd9fe2f591ffd5a2d7e70f4af482a01d206",
-      "translationDigest": "7936682a2368fb740c2d5746707f86582f7230f834232f736aad36f6b76d16bf",
+      "sourceDigest": "7a689893417c6e37abb4e239337ae8904644bc2d7a3022859278f378623f97c7",
+      "translationDigest": "124cc3c37db4ceac217610313ef556a006997a91350cafb2f2835ff9a5e7dab4",
       "translationStatus": "draft",
       "humanReview": "pending"
     },
@@ -143,8 +143,8 @@
       "us": "Data, state and persistence",
       "translationStatus": "draft",
       "humanReview": "pending",
-      "sourceDigest": "5f2ddbebdbbf625d0a83b37eff6790763e7004137d9cdb09c1fea95d8cbc81e0",
-      "translationDigest": "ea105eafca8e4b41c81773565a965221c760ac36230b6396d5d3a70367c16444"
+      "sourceDigest": "15b7cd000f5f6e2216902eec7edc8e0276630d8829e3212aa8ffd37b3038803c",
+      "translationDigest": "f9152fd8f5f718cb4887b5ae478897c914175df94878b0b8b0dbd61c11259536"
     },
     {
       "id": "python-scripts",
@@ -153,8 +153,8 @@
       "us": "Python scripts",
       "legacy": "Python-脚本.md",
       "legacyDigest": "0486bddda0dfbeed2bb7efd4d21e5f0d70529ac9e615c1b0738531e2277f24e9",
-      "sourceDigest": "88a163d7d3bb33a0a12e63796bab284352d77b01c419e11acedd9fbae9d901ac",
-      "translationDigest": "b6319eabcafdc4bf9aed0410b9e02a22c94084a9f066d2437d3e612f6bde94e9",
+      "sourceDigest": "1cff49ea41d1da85a1de8de6a901aaadcf8c856ebf81af85b5a24853802688f2",
+      "translationDigest": "60fac387df67232678507985847a566c331a50122a8661a5e79c25b0d645d0c5",
       "translationStatus": "draft",
       "humanReview": "pending"
     },
@@ -177,8 +177,8 @@
       "us": "Event reference",
       "legacy": "事件参考.md",
       "legacyDigest": "c4981ab0f0a357d3a49de5ff8472bd180447e5148f6078ca3f792cf32974c3d1",
-      "sourceDigest": "79ffbaeae6c2471405b02642d713500188e0d22742052f7c609a0352d3c5da8d",
-      "translationDigest": "07dc7fe25d0a7893e3bbda9743c2a70586a738e98b3f243a0750171deef0e628",
+      "sourceDigest": "cf874983d94d3e793248101767455d07a15a8edcba859174be8b5ba0f33f6d0d",
+      "translationDigest": "9ed959d54f28ea801de17a9aee1d2f87f5b535c5fe6d062ce963993b77e16c12",
       "translationStatus": "draft",
       "humanReview": "pending"
     },
@@ -189,8 +189,8 @@
       "us": "AI-assisted authoring",
       "translationStatus": "draft",
       "humanReview": "pending",
-      "sourceDigest": "2c62d3dd549357b998149939b36b520cc17d30298993804139fcf71b454d73df",
-      "translationDigest": "c7c4b5f2b1dfc502d0f9363cec07210e8f073ad7e23373ec13073b10b11d44b1"
+      "sourceDigest": "96832faedc75ee2bb8452b61aaad1ed71202bc43fe3e9060463513648a057ce1",
+      "translationDigest": "c835061c235a0125c83180cfded33c158371727abc1b69ef4dbcafc068c4ee3a"
     },
     {
       "id": "commands",
@@ -212,8 +212,8 @@
       "legacy": "en_us/Error-Reference.md",
       "sourceLocale": "us",
       "legacyDigest": "d655593a3910daa974f0cc8410ad608cb0fb8c8850922ee4fc61314b1ee57e3c",
-      "sourceDigest": "373762cc11935afb88428dd1fac4e16e05d9a21bf64371e55dd47fa97dca31b4",
-      "translationDigest": "4f5f750672b5360a857df319801d4dc02882d9733401e64eb7ca565474b8c54f",
+      "sourceDigest": "89ebe22c0f3aaa4a9dfdd5b9840dae89acae97b345b5c061b7efee39d2cdd9ee",
+      "translationDigest": "cf54bff5f3bc39c61f19d8a717888d2b284dd23d4ae361f1c06af0cba6c78a76",
       "translationStatus": "draft",
       "humanReview": "pending"
     },
@@ -235,8 +235,8 @@
       "us": "Recipe system",
       "legacy": "配方系统.md",
       "legacyDigest": "0b2b7b0b0a0ba172772be0500acb67de680f2b31aec02b079cbc417da267cd70",
-      "sourceDigest": "eb8650307391640fd7278980266b0b307699c5828ade242d84173f43aa277d55",
-      "translationDigest": "4ba877a560258e553789a445bab764521a1953cdd1d25492a29e2c502e33d57c",
+      "sourceDigest": "ddaa8bae76a91c76a0e2100fb7dcc2d4d6c2b3f44b289618b377febfc1797d71",
+      "translationDigest": "46bdc04cbbf19d4dcb26026e947e4174ed95556bebac0c51f4dfcf22baff8fef",
       "translationStatus": "draft",
       "humanReview": "pending"
     },
@@ -247,8 +247,8 @@
       "us": "Registering new content",
       "legacy": "注册新内容.md",
       "legacyDigest": "9d4c07f0f1f6e614adf427a2b67cc547f85ce2d72c324c35b90ec59922788f02",
-      "sourceDigest": "b50be54f678b5151ffc3d1fbe968b8bdc57e2e665614af3b2a4f910efcba4e72",
-      "translationDigest": "7c7b4fcb93aab5a3f118aeb70fb8288bcb80b69e67f1949f850f3570301f978e",
+      "sourceDigest": "0b79a5c7471fa7c5508198c54bccd32a2e9ba5c1b3bbe2e334350da4dffbcd64",
+      "translationDigest": "6cfa2a8955c178ad289b9208dcdf5b8d4a99f3ddc182b553ac210668fc9af55f",
       "translationStatus": "draft",
       "humanReview": "pending"
     },
@@ -259,8 +259,8 @@
       "us": "Module system",
       "legacy": "模块系统.md",
       "legacyDigest": "73cefc50be0c9117fa9d11cbf225810eac2ea3bae2fe9bcdc8762b257647ced0",
-      "sourceDigest": "4b3d9ce787fa4f67870a9cfa5a897166b235e3d04249e642ef6f494ce4a915f0",
-      "translationDigest": "5db1068e45745fb8236fd49527e12c744bde443d6eaf2329ecd6f38a48a5a663",
+      "sourceDigest": "572cefd9a8cf53583c42647646561347e8b53311ce484225eb6ee381599493a3",
+      "translationDigest": "1f8081c73c8310f5cf3407477c9fdd166f397e35fd423cef197ecf6642654c81",
       "translationStatus": "draft",
       "humanReview": "pending"
     },
@@ -271,8 +271,8 @@
       "us": "TypeScript and JSX",
       "legacy": "TypeScript-与-JSX.md",
       "legacyDigest": "aa041878196d981ec2fe66dc6fceb92074042db75395b5435ea60718c9588903",
-      "sourceDigest": "c76e61a4a0cc151e5a87df3a5df0f83966d7833a055b08733d821d527ac0af93",
-      "translationDigest": "f4e9e006b0cc53fa76b4b2147304243c7ce4b431ffd1b0a416cb55094e910469",
+      "sourceDigest": "e39f97014300d3262d96a6b437bffa4c2dc81b7ef90e25c6369411be97ce89d2",
+      "translationDigest": "4569aaee71d0d0528aa47b5a56243cd14c36af9480d17bb5ad95dfbb481c1c5c",
       "translationStatus": "draft",
       "humanReview": "pending"
     },
@@ -283,8 +283,8 @@
       "us": "JSX client UI",
       "legacy": "JSX-客户端UI.md",
       "legacyDigest": "00a93c7a13042dd12d92c4e0ac97365e43ee9e3ee7f854e7de57f80ec42a41d1",
-      "sourceDigest": "b70f1db57575fd130803982a0e49dfb90c368d69cbe2769bcbe938250ebce8c8",
-      "translationDigest": "0926804c8705085585456af4b7d87a3e00abe46b93a3c5db2a6863e2b7dcc749",
+      "sourceDigest": "4fd00e4a9936ab16e319f4bcea67c2b8c705584a391f56f0764e055ad6659149",
+      "translationDigest": "819c6ffea1a49d4c88ca12e6b565a1bd6ad34a0c7e0a892a19b36cbe99fd3409",
       "translationStatus": "draft",
       "humanReview": "pending"
     },
@@ -295,8 +295,8 @@
       "us": "Client rendering and post effects",
       "translationStatus": "draft",
       "humanReview": "pending",
-      "sourceDigest": "d6d20d8873799bd68c36ecde317679178b44ee07c30e148e61e2fa189023b600",
-      "translationDigest": "3f7a8c99f0d9f8b5d81c2a316b326dae0431310cef36dd8066826a4c524eeef9"
+      "sourceDigest": "914194600d198d6be94a513763665123512464a2b9d8fe3808b461f557a9e5c5",
+      "translationDigest": "1907ca40fbff6b04d8547db9f3d42d9c0801f27d2a4f5276e3e787ca50064f72"
     },
     {
       "id": "mixinjs",
@@ -328,7 +328,7 @@
       "legacy": "插件开发.md",
       "legacyDigest": "3b1e293cebb15b3e967150bc4897f4c866cf663a09cdcaef77b8bd20e0795fd7",
       "sourceDigest": "a30fe00c8dd6afbb8b672dee398f7c6749aa76e940d68f2322491bab26dcce55",
-      "translationDigest": "6e7bb0420cf03a1db8d54234042f1f9382c67ccc94d2e0aa3cabc601f309ebc1",
+      "translationDigest": "51bfb72b9669ec6444c036c3943ed54ee32029ae34c2e970677bdfa037c28cb4",
       "translationStatus": "draft",
       "humanReview": "pending"
     },
@@ -351,8 +351,8 @@
       "us": "Event extensions",
       "legacy": "事件扩展.md",
       "legacyDigest": "033267bec13dfcc33faa9370b097ad6cb5128edd84fa6d37ca5dffdab69fab9d",
-      "sourceDigest": "13f52be049dcd0c8d009d81b43a20af260a1b3f2823c97c2f46b79c4180cb781",
-      "translationDigest": "8b320ff623f47457837d9ba5c8dde4e4abae183897960cd6cbbaf9c1fb6ab864",
+      "sourceDigest": "bd1ebbc5c9627517c5d7fad01f155c076d0cc174e1be1c9c06a0b837f9e9c463",
+      "translationDigest": "865e908f20ea7e73ece734a2411846e2f4cb6bbbc9b125b0da8654267eb87e44",
       "translationStatus": "draft",
       "humanReview": "pending"
     },
@@ -375,8 +375,8 @@
       "us": "Project architecture",
       "legacy": "项目架构.md",
       "legacyDigest": "d80a5b1aa46ea88a728ed973d2e313333c61b639cbb830a5aae90492d365fb6d",
-      "sourceDigest": "1825d52ee5ee2d0507365f4d46bf71c9952a96b1e0cf397638311dbfc29b02cb",
-      "translationDigest": "72bd1add15e5a7d7b8f4587193a0d36c4603bb3c1f8dbbc41ad6057b57d58b7f",
+      "sourceDigest": "cac4e77ff2e2c6d6b9ca0fafa67ba140633c18b367faf4b9cd722283502c7dbf",
+      "translationDigest": "a89832d54be5c06df6b7180709804b8f623bdd2895eabed0f74b5b4a4b684c08",
       "translationStatus": "draft",
       "humanReview": "pending"
     },
@@ -387,8 +387,8 @@
       "us": "Probe type generation",
       "legacy": "Probe-类型生成.md",
       "legacyDigest": "e04220b9b877582ad6ba0a05d95573c1ed3945c00cbccf36bc79e899bd1a3cab",
-      "sourceDigest": "e270fe379f5143f9093311306abbffef8bbaf887a9e6fec80c7bb82fc9fc37a9",
-      "translationDigest": "3e62d50829095f8984edab45df29f91e3cec40c73f8a317ef0e19d59279d2c3b",
+      "sourceDigest": "6146dd90cba8d34e861ddc7ed927f07609cbc826b4d93bd89a8d916a81baedbf",
+      "translationDigest": "2bfc010245f651c2e04cbbb1947c0bb2252a8f9326898131f9e9dfc02ea04832",
       "translationStatus": "draft",
       "humanReview": "pending"
     },
@@ -399,8 +399,8 @@
       "us": "Build system",
       "legacy": "构建系统.md",
       "legacyDigest": "53a393be55a9dc6d69f026c619dab10b0d0aa9913fee45e35d160c9b571d91c1",
-      "sourceDigest": "5dc35cef17bef9331d34e61d4f0f74431c22484a243c6037edce21757b32aaa0",
-      "translationDigest": "2e11153c768f27bcbf4f29512cfd3bf3734342aef1d95f4e76cce7cef52437a2",
+      "sourceDigest": "d423205a015f62a2b396a83412b21aa635626a6f4bf5b5e4b9f572f197f2ce72",
+      "translationDigest": "0e46d749f68e60c64f9a0e1e7caeb939e2ecb825935a7de166dc4961f66a0682",
       "translationStatus": "draft",
       "humanReview": "pending"
     },
@@ -410,7 +410,9 @@
       "cn": "JSX 进阶控件与工作区",
       "us": "JSX advanced controls and workspace",
       "translationStatus": "draft",
-      "humanReview": "pending"
+      "humanReview": "pending",
+      "sourceDigest": "a505fa4e841b66f1a44a2f34f2a1f468ac8417bbf22eca7d73dc13efb9c94d44",
+      "translationDigest": "41e4ff4bb8ffa93cba55ac9e934d00e2d6485f8c50e22d28bfe9db1b0aa9679f"
     },
     {
       "id": "ai-support-protocol",
@@ -418,7 +420,9 @@
       "cn": "AI 查询协议与底层接口",
       "us": "AI query protocol and low-level API",
       "translationStatus": "draft",
-      "humanReview": "pending"
+      "humanReview": "pending",
+      "sourceDigest": "309d0d618dd42abcd98d9e4d34173eaed05806ea3d6844092dde5aa9bb391d53",
+      "translationDigest": "b393acd3afa89d2b859255cc4af9a8c4fbba0fed5974a86c6bbab674614e0590"
     }
   ]
 }

@@ -1,9 +1,12 @@
 package com.tkisor.nekojs.authoring;
 
 import com.google.gson.JsonObject;
+import com.tkisor.nekojs.api.ScriptType;
 import graal.graalvm.polyglot.Context;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
+import java.nio.file.Path;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.regex.Pattern;
@@ -12,6 +15,9 @@ import static org.junit.jupiter.api.Assertions.*;
 
 /** Checks shipped scenario sources and their isolated platform-call contracts, not live game effects. */
 class AuthoringScriptExamplesTest {
+    @TempDir
+    Path gameDir;
+
     @Test
     void everyShippedSourceHasInstallationEvidenceAndAnIdenticalCookbookBlock() throws Exception {
         AuthoringBundle bundle = AuthoringBundle.load();
@@ -53,10 +59,11 @@ class AuthoringScriptExamplesTest {
 
     @Test
     void recipeExampleRegistersOneDeferredCallbackAndThreePreciselyNamedRecipes() throws Exception {
-        try (Context context = context("""
+        try (AuthoringExampleModuleHarness harness = new AuthoringExampleModuleHarness(gameDir, ScriptType.SERVER, false)) {
+            Context context = harness.context;
+            fixtures(context, """
                 globalThis.callbacks = [];
                 globalThis.calls = [];
-                globalThis.ServerEvents = {recipes: callback => callbacks.push(callback)};
                 globalThis.Item = {of: (id, count = 1) => ({item: id, count})};
                 globalThis.Ingredient = {of: id => ({ingredient: id})};
                 globalThis.recipeEvent = {
@@ -65,8 +72,9 @@ class AuthoringScriptExamplesTest {
                     shapeless: (result, ingredients) => ({id: id => calls.push({kind: "shapeless", id, result, ingredients})}),
                     smelting: (result, ingredient, xp, cookTime) => ({id: id => calls.push({kind: "smelting", id, result, ingredient, xp, cookTime})})
                 };
-                """)) {
-            run(context, "server/recipes.js");
+                """);
+            harness.defineVersionedEvents("({ServerEvents: {recipes: callback => callbacks.push(callback)}})");
+            harness.runExample("server/recipes.js");
             assertEquals(1, context.eval("js", "callbacks.length").asInt());
             assertEquals(0, context.eval("js", "calls.length").asInt(), "world-facing work is deferred to the recipe event");
             context.eval("js", "callbacks[0](recipeEvent)");
@@ -93,14 +101,16 @@ class AuthoringScriptExamplesTest {
 
     @Test
     void loginExampleUsesTheDocumentedFabricPlayerVariantOnlyWhenTheEventFires() throws Exception {
-        try (Context context = context("""
+        try (AuthoringExampleModuleHarness harness = new AuthoringExampleModuleHarness(gameDir, ScriptType.SERVER, false)) {
+            Context context = harness.context;
+            fixtures(context, """
                 globalThis.callbacks = [];
-                globalThis.PlayerEvents = {loggedIn: callback => callbacks.push(callback)};
                 globalThis.sent = [];
                 globalThis.playerReads = 0;
                 globalThis.login = {get player() {playerReads++; return {sendMessage: text => sent.push(text)};}};
-                """)) {
-            context.eval("js", documentedFabricLoginVariant(AuthoringBundle.load().read("examples/server/player-login.js")));
+                """);
+            harness.defineVersionedEvents("({PlayerEvents: {loggedIn: callback => callbacks.push(callback)}})");
+            harness.runSource("server/player-login.js", documentedFabricLoginVariant(AuthoringBundle.load().read("examples/server/player-login.js")));
             assertEquals(1, context.eval("js", "callbacks.length").asInt());
             assertEquals(0, context.eval("js", "playerReads").asInt());
             context.eval("js", "callbacks[0](login)");
@@ -112,14 +122,16 @@ class AuthoringScriptExamplesTest {
 
     @Test
     void loginExampleUsesTheEntityPropertyForTheNativeNeoForgePayload() throws Exception {
-        try (Context context = context("""
+        try (AuthoringExampleModuleHarness harness = new AuthoringExampleModuleHarness(gameDir, ScriptType.SERVER, false)) {
+            Context context = harness.context;
+            fixtures(context, """
                 globalThis.callbacks = [];
-                globalThis.PlayerEvents = {loggedIn: callback => callbacks.push(callback)};
                 globalThis.sent = [];
                 globalThis.entityReads = 0;
                 globalThis.login = {get entity() {entityReads++; return {sendMessage: text => sent.push(text)};}};
-                """)) {
-            run(context, "server/player-login.js");
+                """);
+            harness.defineVersionedEvents("({PlayerEvents: {loggedIn: callback => callbacks.push(callback)}})");
+            harness.runExample("server/player-login.js");
             assertEquals(1, context.eval("js", "callbacks.length").asInt());
             assertEquals(0, context.eval("js", "entityReads").asInt());
             assertEquals(0, context.eval("js", "sent.length").asInt());
@@ -133,16 +145,18 @@ class AuthoringScriptExamplesTest {
     @Test
     void tagExamplesTargetSeparateRegistriesAndQueueTheDocumentedPlainIds() throws Exception {
         for (String registry : new String[]{"item", "block"}) {
-            try (Context context = context("""
+            try (AuthoringExampleModuleHarness harness = new AuthoringExampleModuleHarness(gameDir, ScriptType.SERVER, false)) {
+                Context context = harness.context;
+                fixtures(context, """
                     globalThis.subscriptions = [];
                     globalThis.edits = [];
-                    globalThis.ServerEvents = {tags: (registry, callback) => subscriptions.push({registry, callback})};
                     globalThis.tags = {
                         add: (tag, entry) => edits.push({kind: "add", tag, entry}),
                         remove: (tag, entry) => edits.push({kind: "remove", tag, entry})
                     };
-                    """)) {
-                run(context, "server/" + registry + "-tags.js");
+                    """);
+                harness.defineVersionedEvents("({ServerEvents: {tags: (registry, callback) => subscriptions.push({registry, callback})}})");
+                harness.runExample("server/" + registry + "-tags.js");
                 assertEquals(1, context.eval("js", "subscriptions.length").asInt());
                 assertEquals("minecraft:" + registry, context.eval("js", "subscriptions[0].registry").asString());
                 assertEquals(0, context.eval("js", "edits.length").asInt());
@@ -163,10 +177,11 @@ class AuthoringScriptExamplesTest {
 
     @Test
     void registryExampleConfiguresBuildersLastAndDoesNotDuplicateTheImplicitBlockItem() throws Exception {
-        try (Context context = context("""
+        try (AuthoringExampleModuleHarness harness = new AuthoringExampleModuleHarness(gameDir, ScriptType.STARTUP, false)) {
+            Context context = harness.context;
+            fixtures(context, """
                 globalThis.callbacks = [];
                 globalThis.created = [];
-                globalThis.RegistryEvents = {register: callback => callbacks.push(callback)};
                 globalThis.registry = {
                     item: (id, configure) => {
                         const properties = Object.seal({maxStackSize: 64, rarity: "common"});
@@ -177,8 +192,9 @@ class AuthoringScriptExamplesTest {
                         configure(properties); created.push({kind: "block", id, properties});
                     }
                 };
-                """)) {
-            run(context, "startup/registry.js");
+                """);
+            harness.defineVersionedEvents("({RegistryEvents: {register: callback => callbacks.push(callback)}})");
+            harness.runExample("startup/registry.js");
             assertEquals(1, context.eval("js", "callbacks.length").asInt());
             assertEquals(0, context.eval("js", "created.length").asInt());
             context.eval("js", "callbacks[0](registry)");
@@ -240,8 +256,12 @@ class AuthoringScriptExamplesTest {
 
     private static Context context(String fixtures) {
         Context context = Context.newBuilder("js").build();
-        context.eval("js", "globalThis.messages = []; globalThis.console = {info: text => messages.push(String(text))}; " + fixtures);
+        fixtures(context, fixtures);
         return context;
+    }
+
+    private static void fixtures(Context context, String fixtures) {
+        context.eval("js", "globalThis.messages = []; globalThis.console = {info: text => messages.push(String(text))}; " + fixtures);
     }
 
     static String documentedFabricLoginVariant(String canonicalSource) {

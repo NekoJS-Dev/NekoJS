@@ -28,8 +28,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 /**
  * End-to-end coverage of success, failure, duplicate, type conflict, missing
  * co-registration and drain failure. Every case runs from the only caller-facing
- * interface ({@code RegistryEvents.register}, bound through the production
- * {@link EventGroupJS} plus a real GraalJS listener) through to the observable result of
+ * interface ({@code RegistryEvents.register}, bound through a directly injected
+ * {@link EventGroupJS} source fixture and a real GraalJS listener) to the observable result of
  * a Runtime drain ({@link StartupRegistryRuntime.DrainResult}: definition, registry, node
  * and error origin). The test never reads private repository fields.
  *
@@ -101,9 +101,8 @@ class StartupRegistryRuntimeEndToEndTest {
         return new RegistryTypesPoint.RegistryTypes(collector.byRegistry, collector.defaults, collector.builderClasses);
     }
 
-    /** Drives one full collection: the script installs its listener through the production
-     * EventGroupJS binding on the register bus, and the post happens while the Context is
-     * still alive. */
+    /** Drives one full collection through a directly injected source-bus fixture. The bare
+     * Context stays alive while listeners run; runtime module imports are tested separately. */
     private static StartupRegistryRuntime collect(String script, ErrorLog errors) {
         StartupRegistryRuntime runtime = new StartupRegistryRuntime(NODE);
         try (Context context = Context.newBuilder("js").allowAllAccess(true).build()) {

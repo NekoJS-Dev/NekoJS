@@ -10,9 +10,11 @@ This page lists every NekoJS event group: when each event fires, which script ty
 <a id="wiki-section-2"></a>
 ## Listening to an event
 
-Call a method on an event group at the **top level** of your script and pass it a callback:
+Import the event group explicitly, then call its event method at the **top level** of your script and pass it a callback. Existing native handlers use `nekojs:event/versioned`; `nekojs:event/stable` provides only declared portable views, not automatic native compatibility. Java event groups have no automatic globals or old Binding aggregate exports. See the [migration table](event-extensions_us#wiki-section-11):
 
 ```javascript
+import { PlayerEvents } from "nekojs:event/versioned";
+
 // server_scripts/welcome.js
 PlayerEvents.loggedIn(event => {
   console.info('A player joined the server')
@@ -31,6 +33,8 @@ The `event` argument is the event object. Read data with property syntax, such a
 Many events can be filtered by id; the tables below mark them as "by id". Put the id before the callback and the event only fires for that object:
 
 ```javascript
+import { BlockEvents } from "nekojs:event/versioned";
+
 // Fires only when diamond ore is broken
 BlockEvents.broken('minecraft:diamond_ore', event => {
   console.info('Diamond ore was broken')
@@ -50,6 +54,8 @@ Depending on the event, the id is an item id, a block id, an entity type id, or 
 When several callbacks listen to the same event, you can put a priority first: `HIGHEST`, `HIGH`, `NORMAL` (default), `LOW` or `LOWEST`. Case does not matter.
 
 ```javascript
+import { PlayerEvents, BlockEvents } from "nekojs:event/versioned";
+
 PlayerEvents.loggedIn('HIGH', event => { /* runs earlier */ })
 
 // Events filtered by id need all three: priority, id, callback
@@ -64,6 +70,8 @@ Watch out: with only two arguments, an event filtered by id treats the first one
 To cancel an event that supports it, `return true` from the callback. For example, to stop players from breaking stone:
 
 ```javascript
+import { BlockEvents } from "nekojs:event/versioned";
+
 BlockEvents.broken('minecraft:stone', event => {
   return true
 })
@@ -119,6 +127,8 @@ Server lifecycle, ticks and data loading. Use them in `server_scripts`.
 | `tradeDeclaration` / `tradeReload` | On startup and reload | Villager trades; only take effect on NeoForge |
 
 ```javascript
+import { ServerEvents } from "nekojs:event/versioned";
+
 // server_scripts/lifecycle.js
 ServerEvents.started(event => {
   console.info('Server started')
@@ -148,6 +158,8 @@ The `table` passed to the `modify` callbacks has these methods:
 - Entry: `item(id)`, `weight(weight)`, `when(condition JSON)`. `addEntry` also accepts a plain item id string.
 
 ```javascript
+import { ServerEvents } from "nekojs:event/versioned";
+
 // server_scripts/loot.js
 ServerEvents.lootTables(event => {
   // Edit the JSON directly: add a diamond to dungeon chests
@@ -200,6 +212,8 @@ Bulk edits with `'*'` or a function only reach blocks and entities that already 
 A global loot modifier applies to **every drop** instead of replacing a whole table. There is no event for it; write data pack files with `generateData` instead (NeoForge only):
 
 ```javascript
+import { ServerEvents } from "nekojs:event/versioned";
+
 // server_scripts/modifiers.js
 ServerEvents.generateData('after_mods', event => {
   // 1) Add the modifier to the enabled list. Use replace: false so other mods' lists survive
@@ -232,6 +246,8 @@ NeoForge only. Filtered by registry id, such as `'minecraft:item'` or `'minecraf
 | `getEntries(tag)` | Read a tag's current entries |
 
 ```javascript
+import { ServerEvents } from "nekojs:event/versioned";
+
 // server_scripts/tags.js
 ServerEvents.tags('minecraft:item', event => {
   event.add('minecraft:logs', 'mymod:custom_log')
@@ -268,6 +284,8 @@ Player events. Use them in `server_scripts`.
 | `inventoryChanged` | Item id | — | A slot in the inventory changes. `event.item` is the item stack, `event.slot` the slot number |
 
 ```javascript
+import { PlayerEvents } from "nekojs:event/versioned";
+
 // server_scripts/players.js
 PlayerEvents.loggedIn(event => {
   // The player is event.entity on NeoForge and event.player on Fabric
@@ -303,6 +321,8 @@ Entity events. Use them in `server_scripts`. Most can be filtered by entity type
 | `useItemStarted` / `useItemTick` / `useItemStopped` / `useItemFinished` | Item id | The first three are cancellable | Starts using / each tick while using / released early / finished using an item. NeoForge only |
 
 ```javascript
+import { EntityEvents } from "nekojs:event/versioned";
+
 // server_scripts/entities.js
 EntityEvents.death('minecraft:zombie', event => {
   console.info('A zombie died at ' + event.entity.blockPosition())
@@ -340,6 +360,8 @@ Block events. Use them in `server_scripts`. Most are filtered by block id.
 | `modification` | — | **Change block properties**; see below. Not filtered by id |
 
 ```javascript
+import { BlockEvents } from "nekojs:event/versioned";
+
 // server_scripts/blocks.js
 BlockEvents.broken('minecraft:diamond_ore', event => {
   console.info(event.player.getName().getString() + ' mined diamond ore')
@@ -372,6 +394,8 @@ Changes properties such as hardness and light level of existing blocks. Supporte
 | `jumpFactor` | Number | Jump height multiplier. Vanilla blocks are between 0.5 and 1 |
 
 ```javascript
+import { BlockEvents } from "nekojs:event/versioned";
+
 // server_scripts/block_mods.js
 BlockEvents.modification(event => {
   event.modify('minecraft:stone', block => {
@@ -410,6 +434,8 @@ Item events. All except `tooltip` go in `server_scripts`. Most are filtered by i
 | `tooltip` | Client | — | **Change item tooltips**; see below |
 
 ```javascript
+import { ItemEvents } from "nekojs:event/versioned";
+
 // server_scripts/items.js
 ItemEvents.rightClicked('minecraft:stick', event => {
   event.player.displayClientMessage(Text.of('You wave the stick'), false)
@@ -443,6 +469,8 @@ Changes properties such as stack size, rarity and food values of existing items.
 | `tool` | Lets the item mine every block as a tool; set to `null` to remove |
 
 ```javascript
+import { ItemEvents } from "nekojs:event/versioned";
+
 // server_scripts/item_mods.js
 ItemEvents.modification(event => {
   event.modify('minecraft:diamond', item => {
@@ -482,6 +510,8 @@ A few details:
 Goes in `client_scripts` and is filtered by item id. Apply changes with `/nekojs reload client`.
 
 ```javascript
+import { ItemEvents } from "nekojs:event/versioned";
+
 // client_scripts/tooltips.js
 ItemEvents.tooltip('minecraft:diamond', event => {
   // NeoForge uses event.toolTip, Fabric uses event.lines
@@ -517,6 +547,8 @@ Lets server scripts and client scripts send each other messages. Filtered by cha
 In this example the client sends a request and the server replies.
 
 ```javascript
+import { NetworkEvents } from "nekojs:event/versioned";
+
 // client_scripts/menu.js
 NetworkEvents.client('my_channel', event => {
   console.info('Server replied:', event.data)
@@ -527,6 +559,8 @@ NetworkEvents.client('my_channel', event => {
 ```
 
 ```javascript
+import { NetworkEvents } from "nekojs:event/versioned";
+
 // server_scripts/menu.js
 NetworkEvents.server('my_channel', event => {
   console.info(event.player.getName().getString() + ' sent:', event.data)
@@ -546,6 +580,8 @@ Registers new items, blocks, entities and other content. Goes in `startup_script
 | `register` | In the callback, register content with `event.item(id, b => {})`, `event.block(...)`, `event.entityType(...)` and similar methods |
 
 ```javascript
+import { RegistryEvents } from "nekojs:event/versioned";
+
 // startup_scripts/items.js
 RegistryEvents.register(event => {
   event.item('mymod:cool_gem', item => {
@@ -586,6 +622,8 @@ Capability names are `'item'`, `'energy'` and `'fluid'`.
 | `registerBlockNative` / `registerBlockEntityNative` / `registerEntityNative` / `registerItemNative` | Same arguments as above, but the second parameter is another mod's native capability object |
 
 ```javascript
+import { CapabilityEvents } from "nekojs:event/versioned";
+
 // startup_scripts/capabilities.js
 // Replace 'mymod:battery' with a block entity type you registered
 // Each block entity gets its own energy storage, keyed by position (not saved to disk in this example)
@@ -645,6 +683,8 @@ Registers custom commands. Use it in `server_scripts`.
 | `command` | Cancellable | A command is about to run. Cancel it to stop the command. NeoForge only |
 
 ```javascript
+import { CommandEvents } from "nekojs:event/versioned";
+
 // server_scripts/commands.js
 const Commands = Java.type('net.minecraft.commands.Commands')
 
@@ -679,6 +719,8 @@ Adds custom key bindings that players can change in the Controls screen. Goes in
 `pressed`, `released` and `tick` can all be filtered by key binding id.
 
 ```javascript
+import { KeyBindEvents } from "nekojs:event/versioned";
+
 // client_scripts/keybinds.js
 // Without a namespace, the id defaults to nekojs. Keys look like 'key.keyboard.g' or 'key.mouse.left'
 // The category can be a vanilla one (such as 'movement') or your own (such as 'mymod:my_keys')
@@ -728,6 +770,8 @@ Client ticks, drawing and resource generation. Goes in `client_scripts`; apply c
 `hud` fires every frame over the game view, and its callback receives the painter directly. `screenRender` fires every frame while a screen is open, with the painter at `event.painter`.
 
 ```javascript
+import { ClientEvents } from "nekojs:event/versioned";
+
 // client_scripts/hud.js
 ClientEvents.hud(painter => {
   // A status panel in the top-right corner
@@ -786,6 +830,8 @@ Keep in mind:
 NeoForge only. `hudRender` registers a HUD drawing function by id, with a layer and order; `worldRender` draws lines and boxes in the world. Registering the same id again replaces the old one.
 
 ```javascript
+import { ClientEvents } from "nekojs:event/versioned";
+
 // client_scripts/boss_bar.js
 // layer: 'background' | 'normal' | 'foreground'; within a layer, lower priority draws first
 ClientEvents.hudRender('boss_bar', { layer: 'normal', priority: 0 }, (ctx, gui) => {
@@ -812,6 +858,8 @@ An error in one drawing function only affects that function and shows up in the 
 NeoForge only. `generateAssets` writes files into the `nekojs/assets` resource pack, with paths relative to that folder; `lang` collects translations by language code. Both run when the client loads resources (game start, `/nekojs reload client`).
 
 ```javascript
+import { ClientEvents } from "nekojs:event/versioned";
+
 // client_scripts/assets.js
 ClientEvents.generateAssets(event => {
   event.json('mymod/models/item/cool_gem.json', {
@@ -878,6 +926,8 @@ Changes what JEI shows. Goes in `client_scripts`. Only available on NeoForge wit
 | `addInformation` | — | Add an information page to an entry: `event.add(id, text)` |
 
 ```javascript
+import { RecipeViewerEvents } from "nekojs:event/versioned";
+
 // client_scripts/jei.js
 RecipeViewerEvents.addEntries('item', event => {
   event.add('mymod:cool_gem')
@@ -911,6 +961,8 @@ Adjusts the code completion that `/nekojs probe` generates. Goes in `server_scri
 Type arguments: a string containing `.` is a full Java class name; anything else is a basic type name such as `'string'`, `'number'` or `'boolean'`. Build complex types with `event.type(...)`, `event.array(...)` and `event.union(...)`.
 
 ```javascript
+import { ProbeEvents } from "nekojs:event/versioned";
+
 // server_scripts/probe_patch.js
 ProbeEvents.modifyType(event => {
   const editor = event.forClass('net.minecraft.world.entity.player.Player')

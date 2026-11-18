@@ -29,7 +29,7 @@ public interface ItemEvents {
      * effect immediately. */
     EventBusJS<ItemTooltipEventJS, Item> TOOLTIP =
             GROUP.client("tooltip", ItemTooltipEventJS.class,
-                    DispatchKey.of(Item.class, event -> event.getItemStack().getItem()));
+                    DispatchKey.of(Item.class, event -> event.getItemStack().getItem()), api -> api.versioned());
 
     // ---- Server side: mixin hook batch (see FabricItemEventBindingsV2 / fabric/mixin/*) ----
 
@@ -38,7 +38,7 @@ public interface ItemEvents {
     EventBusJS<ItemEntityPickupEventJS, Item> CAN_PICK_UP =
             GROUP.add("canPickUp", ScriptType.SERVER, EventBusJS.of(
                     ItemEntityPickupEventJS.class, true,
-                    DispatchKey.of(Item.class, event -> event.getItem().getItem())));
+                    DispatchKey.of(Item.class, event -> event.getItem().getItem())), api -> api.versioned());
 
     /** Deprecated alias for the same pre pick-up event as canPickUp; canPickUp is the main name
      * across platforms. */
@@ -46,37 +46,37 @@ public interface ItemEvents {
     EventBusJS<ItemEntityPickupEventJS, Item> PICKED_UP_PRE =
             GROUP.add("pickedUpPre", ScriptType.SERVER, EventBusJS.of(
                     ItemEntityPickupEventJS.class, true,
-                    DispatchKey.of(Item.class, event -> event.getItem().getItem())));
+                    DispatchKey.of(Item.class, event -> event.getItem().getItem())), api -> api.versioned());
 
     /** Successful pick-up (server scripts): dispatched by item id. Notification only; cannot be
      * cancelled. */
     EventBusJS<ItemEntityPickupEventJS, Item> PICKED_UP =
             GROUP.server("pickedUp", ItemEntityPickupEventJS.class,
-                    DispatchKey.of(Item.class, event -> event.getItem().getItem()));
+                    DispatchKey.of(Item.class, event -> event.getItem().getItem()), api -> api.versioned());
 
     /** Player drops an item (server scripts): dispatched by item id. Notification only; Fabric cannot
      * cancel it. */
     EventBusJS<ItemDroppedEventJS, Item> DROPPED =
             GROUP.server("dropped", ItemDroppedEventJS.class,
-                    DispatchKey.of(Item.class, event -> event.getItem().getItem()));
+                    DispatchKey.of(Item.class, event -> event.getItem().getItem()), api -> api.versioned());
 
     /** Finished using an item (finished eating food, using up a shield or bow, and so on): dispatched
      * by item id; {@code event.isFood()} tells whether the item is food. */
     EventBusJS<ItemUseFinishedEventJS, Item> FOOD_EATEN =
             GROUP.server("foodEaten", ItemUseFinishedEventJS.class,
-                    DispatchKey.of(Item.class, event -> event.getItem().getItem()));
+                    DispatchKey.of(Item.class, event -> event.getItem().getItem()), api -> api.versioned());
 
     /** Player right-clicks an entity (server scripts): dispatched by the main-hand item id at
      * interaction time; returning true cancels the interaction. */
     EventBusJS<PlayerEntityInteractEventJS, Item> ENTITY_INTERACTED =
             GROUP.add("entityInteracted", ScriptType.SERVER, EventBusJS.of(
                     PlayerEntityInteractEventJS.class, true,
-                    DispatchKey.of(Item.class, event -> event.getItem().getItem())));
+                    DispatchKey.of(Item.class, event -> event.getItem().getItem())), api -> api.versioned());
 
     // modification (posted-object mode): the platform domain owner posts it at the server startup
     // collection point (about-to-start) and during the candidate DOMAIN_PLAN phase of a SERVER
     // reload. The events collect into an inert plan and the Adapter applies them at the commit
     // point; no bus event is involved.
     EventBusJS<ItemModificationEventJS, Void> MODIFICATION =
-            GROUP.server("modification", ItemModificationEventJS.class);
+            GROUP.server("modification", ItemModificationEventJS.class, api -> api.versioned());
 }

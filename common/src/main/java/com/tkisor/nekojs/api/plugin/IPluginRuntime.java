@@ -33,6 +33,7 @@ public interface IPluginRuntime {
         return List.of();
     }
 
+    /** Internal owner-qualified source index, not automatically injected Script API globals. */
     Map<String, EventGroup> eventGroups();
 
     default List<com.tkisor.nekojs.api.event.ModuleEventGroup> moduleEventGroups() { return List.of(); }

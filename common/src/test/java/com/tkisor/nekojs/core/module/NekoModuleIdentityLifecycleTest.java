@@ -113,7 +113,7 @@ class NekoModuleIdentityLifecycleTest {
         Path dir = paths.serverScripts().resolve("src");
         Files.writeString(dir.resolve("api.cjs"), "module.exports = require('nekojs/api/stable');");
         Files.writeString(dir.resolve("api.mjs"), "import * as api from 'nekojs/api/stable';\n"
-                + "import { answer as addon } from 'nekojs/api/version/addon';\n"
+                + "import { answer as addon } from 'nekojs/plugins/addon/api/version';\n"
                 + "export const result = api.answer + addon;\n"
                 + "export const same = api.default === globalThis.__nekoNodeResolve('nekojs/api/stable');");
         Value cjs = asValue(host.loadEntry("./server_scripts/src/api.cjs"));

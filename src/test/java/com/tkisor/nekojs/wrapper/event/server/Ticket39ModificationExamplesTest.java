@@ -35,8 +35,9 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
  */
 class Ticket39ModificationExamplesTest {
 
-    /** examples/item-modification.js (kept identical to the source file). */
+    /** Item component modification through the explicit versioned event module. */
     private static final String ITEM_EXAMPLE = """
+            const { ItemEvents } = require('nekojs:event/versioned');
             ItemEvents.modification(event => {
               event.modify('minecraft:diamond', item => {
                 item.maxStackSize = 16
@@ -57,8 +58,9 @@ class Ticket39ModificationExamplesTest {
             })
             """;
 
-    /** examples/item-setter-property-parity.js (kept identical to the source file). */
+    /** Equivalent setter and Bean-property declarations. */
     private static final String PARITY_EXAMPLE = """
+            const { ItemEvents } = require('nekojs:event/versioned');
             ItemEvents.modification(event => {
               event.modify('minecraft:diamond', item => {
                 item.maxStackSize = 16
@@ -71,8 +73,9 @@ class Ticket39ModificationExamplesTest {
             })
             """;
 
-    /** examples/block-modification.js (kept identical to the source file). */
+    /** Block property modifications collected through the same module contract. */
     private static final String BLOCK_EXAMPLE = """
+            const { BlockEvents } = require('nekojs:event/versioned');
             BlockEvents.modification(event => {
               event.modify('minecraft:stone', block => {
                 block.hardness = 2.0
@@ -89,8 +92,9 @@ class Ticket39ModificationExamplesTest {
             })
             """;
 
-    /** The A part of examples/declaration-removal-recovery.js (kept identical to the source file). */
+    /** Initial declaration removed by the later recovery generation. */
     private static final String REMOVAL_EXAMPLE = """
+            const { ItemEvents } = require('nekojs:event/versioned');
             ItemEvents.modification(event => {
               event.modify('minecraft:diamond', item => item.setMaxStackSize(16))
             })

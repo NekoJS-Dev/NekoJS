@@ -65,7 +65,8 @@ class Ticket26ClientInputHudLifecycleTest {
     }
 
     private static String hudScript(String id) {
-        return "ClientEvents.hudRender('" + id + "', { layer: 'normal' }, ctx => ctx.add('" + id + "'))\n";
+        return "const { ClientEvents } = require('nekojs:event/versioned');\n"
+                + "ClientEvents.hudRender('" + id + "', { layer: 'normal' }, ctx => ctx.add('" + id + "'))\n";
     }
 
     @Test
@@ -218,6 +219,7 @@ class Ticket26ClientInputHudLifecycleTest {
         // one listener after the commit, and still one after another reload (no duplicate
         // registration).
         harness.writeClientScript("keys.js", """
+                const { KeyBindEvents } = require('nekojs:event/versioned');
                 KeyBindEvents.pressed('ticket26:key_a', event => { global.pressedId = event.id })
                 KeyBindEvents.register('ticket26:key_a', 'key.keyboard.g')
                 """);
@@ -238,6 +240,7 @@ class Ticket26ClientInputHudLifecycleTest {
         });
 
         harness.writeClientScript("keys.js", """
+                const { KeyBindEvents } = require('nekojs:event/versioned');
                 KeyBindEvents.pressed('ticket26:key_a', event => { global.pressedId = event.id })
                 KeyBindEvents.register('ticket26:key_a', 'key.keyboard.g')
                 """);

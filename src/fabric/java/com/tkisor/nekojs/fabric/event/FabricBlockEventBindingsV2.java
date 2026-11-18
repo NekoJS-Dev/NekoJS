@@ -52,20 +52,20 @@ public final class FabricBlockEventBindingsV2 {
     public static final EventBusJS<BlockPortalSpawnEventJS, Block> PORTAL_SPAWN =
             BlockEvents.GROUP.add("portalSpawn", ScriptType.SERVER, EventBusJS.of(
                     BlockPortalSpawnEventJS.class, true,
-                    DispatchKey.of(Block.class, BlockPortalSpawnEventJS::getBlock)));
+                    DispatchKey.of(Block.class, BlockPortalSpawnEventJS::getBlock)), api -> api.versioned());
 
     /** A block receives a neighbor notification (server scripts, dispatched by the notified block;
      * cancellable). */
     public static final EventBusJS<BlockNeighborNotifyEventJS, Block> NEIGHBOR_NOTIFY =
             BlockEvents.GROUP.add("neighborNotify", ScriptType.SERVER, EventBusJS.of(
                     BlockNeighborNotifyEventJS.class, true,
-                    DispatchKey.of(Block.class, BlockNeighborNotifyEventJS::getBlock)));
+                    DispatchKey.of(Block.class, BlockNeighborNotifyEventJS::getBlock)), api -> api.versioned());
 
     /** Farmland is trampled (server scripts, dispatched by the farmland block; cancellable). */
     public static final EventBusJS<BlockFarmlandTrampleEventJS, Block> FARMLAND_TRAMPLE =
             BlockEvents.GROUP.add("farmlandTrample", ScriptType.SERVER, EventBusJS.of(
                     BlockFarmlandTrampleEventJS.class, true,
-                    DispatchKey.of(Block.class, BlockFarmlandTrampleEventJS::getBlock)));
+                    DispatchKey.of(Block.class, BlockFarmlandTrampleEventJS::getBlock)), api -> api.versioned());
 
     /**
      * A block is placed (server scripts; cancellable). On 26.x, NeoForge binds both
@@ -77,14 +77,14 @@ public final class FabricBlockEventBindingsV2 {
     public static final EventBusJS<BlockPlacedEventJS, Block> PLACED =
             BlockEvents.GROUP.add("placed", ScriptType.SERVER, EventBusJS.of(
                     BlockPlacedEventJS.class, true,
-                    DispatchKey.of(Block.class, BlockPlacedEventJS::getBlock)));
+                    DispatchKey.of(Block.class, BlockPlacedEventJS::getBlock)), api -> api.versioned());
 
     /** An entity places a block (server scripts; cancellable); posts to both buses at the same site
      * as {@link #PLACED}. */
     public static final EventBusJS<BlockPlacedEventJS, Block> ENTITY_PLACED =
             BlockEvents.GROUP.add("entityPlaced", ScriptType.SERVER, EventBusJS.of(
                     BlockPlacedEventJS.class, true,
-                    DispatchKey.of(Block.class, BlockPlacedEventJS::getBlock)));
+                    DispatchKey.of(Block.class, BlockPlacedEventJS::getBlock)), api -> api.versioned());
 
     /**
      * A fluid hardens into a block (server scripts; cancellable). Covers the obsidian / cobblestone
@@ -95,19 +95,19 @@ public final class FabricBlockEventBindingsV2 {
     public static final EventBusJS<BlockFluidPlacedEventJS, Block> FLUID_PLACED =
             BlockEvents.GROUP.add("fluidPlaced", ScriptType.SERVER, EventBusJS.of(
                     BlockFluidPlacedEventJS.class, true,
-                    DispatchKey.of(Block.class, BlockFluidPlacedEventJS::getBlock)));
+                    DispatchKey.of(Block.class, BlockFluidPlacedEventJS::getBlock)), api -> api.versioned());
 
     /** A block random-ticks (server scripts, dispatched by block; not cancellable; high frequency, so
      * it short-circuits when there are no listeners). */
     public static final EventBusJS<BlockRandomTickEventJS, Block> RANDOM_TICK =
             BlockEvents.GROUP.server("randomTick", BlockRandomTickEventJS.class,
-                    DispatchKey.of(Block.class, BlockRandomTickEventJS::getBlock));
+                    DispatchKey.of(Block.class, BlockRandomTickEventJS::getBlock), api -> api.versioned());
 
     /** A block entity ticks (server scripts, dispatched by BlockEntityType; not cancellable; high
      * frequency). */
     public static final EventBusJS<BlockEntityTickEventJS, BlockEntityType<?>> BLOCK_ENTITY_TICK =
             BlockEvents.GROUP.server("blockEntityTick", BlockEntityTickEventJS.class,
-                    DispatchKey.of(BlockEntityType.class, BlockEntityTickEventJS::getType));
+                    DispatchKey.of(BlockEntityType.class, BlockEntityTickEventJS::getType), api -> api.versioned());
 
     /** Initializes this class so its buses register into {@code BlockEvents.GROUP} (see the freeze
      * rule in the class comment). */

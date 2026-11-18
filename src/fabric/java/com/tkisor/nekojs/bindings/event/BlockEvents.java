@@ -18,11 +18,11 @@ public final class BlockEvents {
 
     public static final EventBusJS<BlockBrokenEventJS, Block> BROKEN =
             GROUP.add("broken", ScriptType.SERVER, EventBusJS.of(
-                    BlockBrokenEventJS.class, true, dispatchByBlock(BlockBrokenEventJS::getBlock)));
+                    BlockBrokenEventJS.class, true, dispatchByBlock(BlockBrokenEventJS::getBlock)), api -> api.versioned());
 
     /** Posted by the modification domain owner, not a Fabric callback. */
     public static final EventBusJS<BlockModificationEventJS, Void> MODIFICATION =
-            GROUP.server("modification", BlockModificationEventJS.class);
+            GROUP.server("modification", BlockModificationEventJS.class, api -> api.versioned());
 
     static <T> DispatchKey<T, Block> dispatchByBlock(Function<T, Block> toKey) {
         return DispatchKey.of(Block.class, toKey);

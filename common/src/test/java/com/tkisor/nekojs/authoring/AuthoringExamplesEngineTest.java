@@ -1,33 +1,16 @@
 package com.tkisor.nekojs.authoring;
 
 import com.tkisor.nekojs.api.ScriptType;
+import com.tkisor.nekojs.api.event.EventGroup;
+import com.tkisor.nekojs.api.event.EventGroupRegistry;
 import com.tkisor.nekojs.bindings.static_access.TestJS;
-import com.tkisor.nekojs.core.ScriptFilePolicy;
-import com.tkisor.nekojs.core.NekoSharedHostAccess;
-import com.tkisor.nekojs.core.compiler.NekoCompilationPipeline;
-import com.tkisor.nekojs.core.compiler.NekoJsxLanguagePlugin;
-import com.tkisor.nekojs.core.compiler.NekoTsxLanguagePlugin;
-import com.tkisor.nekojs.core.compiler.NekoTypeScriptLanguagePlugin;
-import com.tkisor.nekojs.core.compiler.ScriptCompilerRegistry;
-import com.tkisor.nekojs.core.config.SandboxConfig;
-import com.tkisor.nekojs.core.error.DefaultErrorTracker;
-import com.tkisor.nekojs.core.error.SourceMapRegistry;
-import com.tkisor.nekojs.core.fs.NekoJSFileSystem;
+import com.tkisor.nekojs.core.api.ModuleEventGroupProxy;
 import com.tkisor.nekojs.core.fs.NekoJSPaths;
-import com.tkisor.nekojs.core.fs.SandboxPolicy;
-import com.tkisor.nekojs.core.log.NekoJSLoggers;
-import com.tkisor.nekojs.core.module.NekoEsmVirtualModuleRegistry;
-import com.tkisor.nekojs.core.module.NekoModulePipeline;
-import com.tkisor.nekojs.core.module.NekoModulePipelineCache;
-import com.tkisor.nekojs.core.module.NekoModuleResolver;
 import com.tkisor.nekojs.core.module.NekoScriptModuleLoaderHost;
-import com.tkisor.nekojs.core.module.NekoTrustContext;
-import com.tkisor.nekojs.core.node.NekoNodeModuleInstaller;
-import com.tkisor.nekojs.core.node.NekoNodeRuntime;
-import com.tkisor.nekojs.testfixture.TestPlatformInit;
+import com.tkisor.nekojs.script.ScriptContextRegistry;
 import graal.graalvm.polyglot.Context;
 import graal.graalvm.polyglot.Value;
-import graal.graalvm.polyglot.io.IOAccess;
+import graal.graalvm.polyglot.proxy.ProxyObject;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -54,21 +37,12 @@ class AuthoringExamplesEngineTest {
 
     private NekoJSPaths paths;
     private Context context;
-    private NekoNodeRuntime runtime;
+    private AuthoringExampleModuleHarness harness;
     private NekoScriptModuleLoaderHost loader;
-    private boolean ownsTestLogger;
 
     @AfterEach
-    void close() throws Exception {
-        try {
-            if (runtime != null) runtime.close();
-        } finally {
-            try {
-                if (context != null) context.close();
-            } finally {
-                if (ownsTestLogger) closeTestLogger();
-            }
-        }
+    void close() {
+        if (harness != null) harness.close();
     }
 
     @Test
@@ -93,7 +67,8 @@ class AuthoringExamplesEngineTest {
     @ValueSource(strings = {"entity", "player"})
     void bundledLoginWelcomesCanonicalNeoForgeAndDocumentedFabricVariant(String property) throws Exception {
         boot(ScriptType.SERVER, true);
-        context.eval("js", "globalThis.loginCallbacks = []; globalThis.PlayerEvents = {loggedIn: callback => loginCallbacks.push(callback)};");
+        context.eval("js", "globalThis.loginCallbacks = [];");
+        harness.defineVersionedEvents("({PlayerEvents: {loggedIn: callback => loginCallbacks.push(callback)}})");
         RecordingLoginPlayer player = new RecordingLoginPlayer();
         LoginPayload payload = property.equals("entity") ? new EntityLoginPayload(player) : new PlayerLoginPayload(player);
         Path entry = copyExample("server/player-login.js", paths.serverScripts().resolve("examples/player-login.js"));
@@ -110,6 +85,49 @@ class AuthoringExamplesEngineTest {
         context.getBindings("js").getMember("loginCallbacks").getArrayElement(0).executeVoid(payload);
         assertEquals(1, payload.reads, "The callback must read only the supported native Bean property");
         assertEquals(List.of("Welcome to NekoJS!"), player.messages);
+    }
+
+    @Test
+    void pythonImportsTheLocalNamedEventBridgeAndSubscribesToTheNativeBusOnce() throws Exception {
+        boot(ScriptType.SERVER, true);
+        EventGroup group = EventGroup.of("ServerEvents");
+        var recipes = group.server("recipes", RecordingRecipeEvent.class, api -> api.versioned());
+        EventGroupRegistry.Impl registry = new EventGroupRegistry.Impl().scopedTo("nekojs");
+        registry.register(group);
+        harness.defineVersionedEvents(context.asValue(ProxyObject.fromMap(Map.of(
+                "ServerEvents", new ModuleEventGroupProxy(context, registry.moduleGroups().getFirst(), ScriptType.SERVER)))));
+        Path bridge = paths.serverScripts().resolve("examples/event_bridge.js");
+        Files.createDirectories(bridge.getParent());
+        Files.writeString(bridge, "export { ServerEvents } from \"nekojs:event/versioned\";\n");
+        RecordingRecipeEvent event = new RecordingRecipeEvent();
+        assertFalse(recipes.hasListeners());
+        ScriptContextRegistry.bind(context, ScriptType.SERVER);
+        try {
+            harness.runSource("recipes.py", """
+                    from event_bridge import ServerEvents
+
+                    def add_recipes(event):
+                        event.record()
+
+                    ServerEvents.recipes(add_recipes)
+                    """);
+            assertEquals(0, event.calls, "the imported Python callback must remain deferred");
+            assertTrue(recipes.hasListeners());
+            assertTrue(recipes.postChecked(event));
+            assertEquals(1, event.calls, "one native dispatch must invoke exactly one Python listener");
+            assertFalse(context.getBindings("js").hasMember("ServerEvents"));
+        } finally {
+            group.clearListeners(ScriptType.SERVER);
+            ScriptContextRegistry.unbind(context);
+        }
+        assertFalse(recipes.hasListeners());
+        assertTrue(recipes.postChecked(event));
+        assertEquals(1, event.calls, "released imported subscriptions must not fire again");
+    }
+
+    public static final class RecordingRecipeEvent {
+        private int calls;
+        public void record() { calls++; }
     }
 
     public abstract static class LoginPayload {
@@ -135,9 +153,6 @@ class AuthoringExamplesEngineTest {
 
     @Test
     void bundledTestScriptUsesTheRealAssertionBinding() throws Exception {
-        Object cfg = log4jConfiguration();
-        ownsTestLogger = cfg.getClass().getMethod("getAppender", String.class)
-                .invoke(cfg, "NekoJS-File-test") == null;
         boot(ScriptType.TEST);
         TestJS assertions = new TestJS();
         context.getBindings("js").putMember("Test", assertions);
@@ -396,36 +411,10 @@ class AuthoringExamplesEngineTest {
     }
 
     private void boot(ScriptType type, boolean nativeBeanInterop) throws Exception {
-        // Keep process-global paths on the shared fixture; module sources remain isolated below.
-        TestPlatformInit.ensureInitialized();
-        paths = NekoJSPaths.fromGameDir(gameDir);
-        paths.initFolders();
-        ScriptCompilerRegistry compilers = ScriptCompilerRegistry.createRuntimeRegistry();
-        compilers.register(NekoTypeScriptLanguagePlugin.INSTANCE);
-        compilers.register(NekoJsxLanguagePlugin.INSTANCE);
-        compilers.register(NekoTsxLanguagePlugin.INSTANCE);
-        SandboxConfig config = SandboxConfig.defaultConfig();
-        NekoModulePipelineCache cache = new NekoModulePipelineCache(
-                new NekoModulePipeline(new NekoCompilationPipeline(), compilers, config),
-                new SourceMapRegistry(paths.root()), new NekoEsmVirtualModuleRegistry(paths.root()),
-                NekoTrustContext.local());
-        IOAccess ioAccess = IOAccess.newBuilder()
-                .fileSystem(new NekoJSFileSystem(paths.root(), new SandboxPolicy(config, paths), paths, cache))
-                .build();
-        Context.Builder contextBuilder = Context.newBuilder("js").allowAllAccess(true).allowIO(ioAccess);
-        if (nativeBeanInterop) {
-            // Match the production host policy and Bean access, without changing unrelated example fixtures.
-            contextBuilder.allowExperimentalOptions(true)
-                    .allowHostAccess(new NekoSharedHostAccess(List.of()).get())
-                    .option("js.foreign-object-prototype", "true")
-                    .option("js.nashorn-compat", "true")
-                    .option("js.ecmascript-version", "latest");
-        }
-        context = contextBuilder.build();
-        runtime = NekoNodeModuleInstaller.install(context, type,
-                new NekoModuleResolver(paths.gameDir(), paths.root(), paths.nodeModules(), new ScriptFilePolicy(compilers)),
-                paths, new DefaultErrorTracker(paths, config), config, cache);
-        loader = context.getBindings("js").getMember("__nekoScriptModuleLoaderHost").asHostObject();
+        harness = new AuthoringExampleModuleHarness(gameDir, type, nativeBeanInterop);
+        paths = harness.paths;
+        context = harness.context;
+        loader = harness.loader;
     }
 
     private Path copyExample(String name, Path target) throws IOException {
@@ -441,42 +430,6 @@ class AuthoringExamplesEngineTest {
     private static Value asValue(Object exports) {
         assertTrue(exports instanceof Value, "module exports must remain a guest value");
         return (Value) exports;
-    }
-
-    private static Object log4jContext() throws Exception {
-        return Class.forName("org.apache.logging.log4j.LogManager")
-                .getMethod("getContext", boolean.class).invoke(null, false);
-    }
-
-    private static Object log4jConfiguration() throws Exception {
-        Object ctx = log4jContext();
-        return ctx.getClass().getMethod("getConfiguration").invoke(ctx);
-    }
-
-    private static void closeTestLogger() throws Exception {
-        // Log4j core is runtime-only here; mirror the existing logger test cleanup without stopping shared logging.
-        synchronized (NekoJSLoggers.class) {
-            Object ctx = log4jContext();
-            Object cfg = ctx.getClass().getMethod("getConfiguration").invoke(ctx);
-            var appendersField = NekoJSLoggers.class.getDeclaredField("APPENDERS");
-            appendersField.setAccessible(true);
-            List<?> appenders = (List<?>) appendersField.get(null);
-            for (Object appender : new ArrayList<>(appenders)) {
-                String name = (String) appender.getClass().getMethod("getName").invoke(appender);
-                if ("NekoJS-Collapse-test".equals(name)) {
-                    appenders.remove(appender);
-                    appender.getClass().getMethod("flush").invoke(appender);
-                }
-            }
-            for (String name : List.of("NekoJS-Collapse-test", "NekoJS-Async-test", "NekoJS-File-test")) {
-                cfg.getClass().getMethod("removeAppender", String.class).invoke(cfg, name);
-            }
-            cfg.getClass().getMethod("removeLogger", String.class).invoke(cfg, "nekojs.test");
-            ctx.getClass().getMethod("updateLoggers").invoke(ctx);
-            var cacheField = NekoJSLoggers.class.getDeclaredField("CACHE");
-            cacheField.setAccessible(true);
-            ((Map<?, ?>) cacheField.get(null)).remove("test");
-        }
     }
 
     private static final String CLIENT_UI_HOST = """

@@ -1,0 +1,39 @@
+# Event publication boundary fixes
+
+## Scope and agreed seams
+
+Repair the event registration and stable/version publication defects reviewed with the maintainer. Preserve source buses, generation ownership, priority/key parsing, cancellation, existing async behavior, and both registration overloads' current merge semantics. No new Script API or Plugin API, configuration, plugins, or version bump. No commit or push requested.
+
+Tests observe registration and real GraalJS subscriptions/delivery, not private parsing helpers or reflection-only seams.
+
+## Red/green evidence
+
+- Native selector: the stable registration test initially failed because registration accepted a native-package sentinel selector. After checking the key type with the existing stable public-type validator, it passed.
+- Invalid callback: the delegated JS tracer initially failed because `listen(42)` did not throw. After the common bus subscription check before PendingListener creation, it passed.
+- Identity payload: a stable event declared through a portable interface exposed implementation-only methods. The regression failed before identity narrowing and passed afterward; its version sibling still receives the original object.
+- Compatibility slices caught and corrected intermediate wrapper issues: scalars must retain their representation, and Java interfaces must also be narrowed rather than skipped by nested-return-value exemptions. Existing BindingValueProxy policy remains unchanged.
+- The initial identity fixture used a Bean property on an unconfigured raw Graal host object; its observation was corrected to the actual Java getter. Intermediate duplicate fixture naming and incorrect dispatch class qualification caused compile failures, not behavioral reds.
+
+## Implementation and contracts
+
+- EventExposure validates stable selector types, including projected payloads. Version publications still allow native selectors. Existing native bridge exemptions remain.
+- EventBusJS rejects non-callable selected callbacks synchronously with NEKO-4057 before candidate or active listeners are created. Overload parsing and extra-argument behavior remain unchanged.
+- ModuleEventGroupProxy narrows unprojected stable host objects to the declared event type using the existing public-type proxy. Version events retain their raw bus; scalar and array representations are preserved. No deep generic/container portability guarantee is added.
+- Docs distinguish legacy-plus-inline registration from configured module-only registration, and actual disjoint merge/duplicate rejection rules. Ordinary stable publication is not a managed contract proof or automatic semantic adapter.
+
+## Verification
+
+- Individual public-boundary red/green loops: passed. The first expanded 8-class run passed 57 tests with no failures/skips.
+- Independent Spec review caught selected-callback bypass with ignored trailing arguments: both stable identity and explicit projection wrapped the last argument, not the callback selected by the source bus. Three new public JS tracer invocations failed before the fix. Existing argument selection now lives in an engine-internal parser shared by source buses and module views, without widening Plugin API. Those tracers and original subscription tests passed afterward.
+- Expanded suite covering publication, raw callbacks, stable public types, catalog, Probe declarations, priority keys, and reload generations: final XML aggregation across these 8 classes reports 60 tests, 0 skipped/failures/errors. Expanded command: `./gradlew.bat --no-daemon :common:test --tests '*ModuleEventExposureTest' --tests '*EventBusJSCallbackValidationTest' --tests '*EventGroupPublicationTest' --tests '*ModulePublicTypesTest' --tests '*NekoScriptCatalogEventsTest' --tests '*ApiModuleProbeDeclarationTest' --tests '*EventBusJSPriorityKeyTest' --tests '*ScriptReloadGenerationTest' --console=plain`. The final full-suite run includes all three review-driven regression invocations.
+- First full `./gradlew.bat --no-daemon :common:check guardLint --continue --console=plain`: 3019 tests, 2 failed, 4 skipped. Failures were LegacyProbeTreeTest.legacyTreeMatchesGolden and ProbeOutputCompatibilityTest.legacyFilesStillExistWithManagedOutput. checkCommonIsolation and verifyAddonFixtureDependencySurface passed; guardLint passed (433 guards, 639 files, 0 warnings). This preceded the review-driven shared-parser fix. Final rerun of the same command: 3022 tests, 2 failed, 4 skipped; the same two legacy golden failures, with @mixin/index.d.ts line 63 VarHandle$AccessMode drift. The prior committed [baseline comparison](issue-69-verification.md#原始提交对照) records the identical failures on untouched aa4ec104. No Probe/golden or gate changes were made to hide them. checkCommonIsolation, verifyAddonFixtureDependencySurface and guardLint passed again (433 guards, 639 files, 0 warnings). The four skips retain existing Windows filename and absent common RecipeEventJS conditions.
+- Five-node isolated StableServerEventsTest matrix passed: 1.21.1, 26.1.2, 26.2.0, 26.1.2-fabric, 26.2.0-fabric; each XML reports 1 test, 0 skipped/failures/errors. Command: `./gradlew.bat --no-daemon :1.21.1:platformGateTest --tests '*StableServerEventsTest' :26.1.2:platformGateTest --tests '*StableServerEventsTest' :26.2.0:platformGateTest --tests '*StableServerEventsTest' :26.1.2-fabric:platformGateTest --tests '*StableServerEventsTest' :26.2.0-fabric:platformGateTest --tests '*StableServerEventsTest' --continue --console=plain`. This is focused platform JUnit coverage, not live-game or full-node-build acceptance.
+- `npm ci && npm run test:probe-types && npm run test:wiki`: passed (all configured Probe consumers, 8 wiki tool tests). Node 24.19.0/npm 11.17.0 were used locally; CI uses Node 22.
+- Strict wiki check: baseline 9f6fe23a reproduced 45 problems in an isolated git-archive copy. The changed error-reference topic initially added two stale digest reports. Its two digests were regenerated with the existing exported canonical `digest` helper after the unchanged CLI checker verified no structural problem in that topic. The normal `stamp error-reference` command checks unrelated topics too, so their existing structural failures prevent scoped CLI stamping; no generator or gate was weakened. Only error-reference hashes changed; translation draft/human review pending remain. Final strict check still reports the same 45 baseline problems and none for error-reference.
+- Independent Standards review: no documented-standard violations or actionable smell findings in final shared-parser source. Independent Spec review: selected-callback finding fixed and re-reviewed; no additional demonstrated spec defect. Final tracked diff plus both new Java files reviewed for scope, language, ownership and public contracts; git diff --check passed. Changed documentation adds no new local link destinations. No unrelated scratch files were changed; no commit or push performed.
+- Shared-worktree evidence review (2026-11-18): retained common JUnit XML after the route migration and declaration refinement still shows `EventBusJSCallbackValidationTest` 11/11 and `ModuleEventExposureTest` 13/13, with no skips or failures. The latter covers selecting and wrapping the callback even with ignored trailing arguments. The two legacy golden failures and strict wiki findings were not cleared by this review. See the [migration review](event-module-migration.md#shared-worktree-evidence-review-2026-11-18) for the current node report check; no Gradle or npm matrix was repeated.
+- Live-game verification: not run. Maintainer acceptance: pending.
+
+## Remaining gaps
+
+Conservative public-type validation, native bridge exemptions, and container behavior remain. Selector conversion is not introduced; selectors rejected for stable publication can remain available through version publication.

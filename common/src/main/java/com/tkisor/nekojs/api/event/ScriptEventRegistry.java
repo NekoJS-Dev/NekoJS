@@ -16,7 +16,7 @@ public final class ScriptEventRegistry {
 
     public static synchronized void validateAvailable(IPluginRuntime runtime, ScriptType targetType, String groupName, String eventName) {
         Objects.requireNonNull(runtime, "runtime");
-        if (runtime.eventGroups().containsKey(groupName)) {
+        if (runtime.eventGroups().values().stream().anyMatch(group -> group.name().equals(groupName))) {
             throw new IllegalArgumentException("Script event group conflicts with built-in event group: " + groupName);
         }
         for (ScriptType type : ScriptType.all()) {

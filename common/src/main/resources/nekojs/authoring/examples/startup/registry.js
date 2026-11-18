@@ -1,3 +1,5 @@
+import { RegistryEvents } from "nekojs:event/versioned";
+
 // STARTUP only: restart the whole process. Use a disposable world and matching client/server definitions.
 RegistryEvents.register(event => {
     event.item("nekojs_example:ruby", build => {

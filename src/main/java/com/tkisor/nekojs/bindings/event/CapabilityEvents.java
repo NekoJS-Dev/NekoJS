@@ -15,6 +15,6 @@ public interface CapabilityEvents {
 
     /** Collects providers which are committed by the native registration callback. */
     EventBusJS<CapabilityRegistryEventJS, Void> REGISTER =
-            GROUP.startup("register", CapabilityRegistryEventJS.class);
+            GROUP.startup("register", CapabilityRegistryEventJS.class, api -> api.versioned());
 }
 //?}

@@ -1,6 +1,7 @@
 package com.tkisor.nekojs.core.module;
 
 import com.tkisor.nekojs.api.ScriptType;
+import com.tkisor.nekojs.core.api.ApiModuleNamespace;
 import com.tkisor.nekojs.core.fs.ScriptPathProvider;
 
 import java.io.IOException;
@@ -251,10 +252,11 @@ public final class NekoEsmVirtualModuleRegistry implements NekoVirtualModuleView
         return ScriptPathProvider.typeOf(resolved);
     }
 
-    /** Recognizes shared Java and Node names before filesystem-based ownership lookup. */
+    /** Recognizes shared Java, Node, and reserved engine modules before filesystem ownership lookup. */
     private static boolean isSharedVirtualModule(String moduleId) {
         return moduleId.startsWith("java:") || moduleId.startsWith("java.")
-                || moduleId.startsWith("java/") || moduleId.startsWith("node:");
+                || moduleId.startsWith("java/") || moduleId.startsWith("node:")
+                || ApiModuleNamespace.isReserved(moduleId);
     }
 
     private static String stableKey(String moduleId) {

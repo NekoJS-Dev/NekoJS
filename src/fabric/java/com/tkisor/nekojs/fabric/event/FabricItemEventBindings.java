@@ -29,7 +29,7 @@ public final class FabricItemEventBindings {
     private static final EventBusJS<ItemRightClickEventJS, Item> RIGHT_CLICKED =
             ITEM_EVENTS.add("rightClicked", ScriptType.SERVER, EventBusJS.of(
                     ItemRightClickEventJS.class, true,
-                    DispatchKey.of(Item.class, event -> event.getItemStack().getItem())));
+                    DispatchKey.of(Item.class, event -> event.getItemStack().getItem())), api -> api.versioned());
 
     private FabricItemEventBindings() {}
 

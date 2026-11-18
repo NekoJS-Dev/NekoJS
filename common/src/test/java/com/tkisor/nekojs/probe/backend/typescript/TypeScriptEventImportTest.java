@@ -43,9 +43,10 @@ class TypeScriptEventImportTest {
         Map<String, String> files = backend.render(context(output, List.of(first, second, arrays), adapters));
         write(files, output);
         Files.writeString(output.resolve("tsconfig.json"), """
-                {"compilerOptions":{"strict":true,"noEmit":true,"skipLibCheck":false,"target":"ES2022","module":"ESNext","moduleResolution":"Bundler","types":[],"baseUrl":".","paths":{"java:*": ["@package/*"]}},"include":["@package/**/*.d.ts","@side-only/server/events/index.d.ts","exercise.ts"]}
+                {"compilerOptions":{"strict":true,"noEmit":true,"skipLibCheck":false,"target":"ES2022","module":"ESNext","moduleResolution":"Bundler","types":[],"baseUrl":".","paths":{"java:*": ["@package/*"]}},"include":["@package/**/*.d.ts","@side-only/server/bindings/api-modules.d.ts","@side-only/server/events/index.d.ts","exercise.ts"]}
                 """);
         Files.writeString(output.resolve("exercise.ts"), """
+                import { IdentityEvents } from 'nekojs:event/versioned';
                 import type { $EventTypes$Key as FirstKey } from 'java:othermod/events';
                 import type { $EventTypes$Key as SecondKey } from 'java:othermod/events/second';
                 declare const first: FirstKey;
@@ -70,15 +71,16 @@ class TypeScriptEventImportTest {
                 // @ts-expect-error Array dispatch inputs use the same local import mapping.
                 IdentityEvents.arrays([first], event => {});
                 """);
-        String events = files.get("@side-only/server/events/index.d.ts");
-        assertTrue(events.contains("$EventTypes$Payload as "), events);
-        assertTrue(events.contains("$EventTypes$Key_ as "), events);
+        String events = files.get("@side-only/server/bindings/api-modules.d.ts");
+        assertTrue(events.contains("import(\"java:othermod/events\").$EventTypes$Payload"), events);
+        assertTrue(events.contains("import(\"java:othermod/events/second\").$EventTypes$Key_"), events);
         String reversed = backend.render(context(output, List.of(arrays, second, first), adapters))
-                .get("@side-only/server/events/index.d.ts");
-        assertEquals(imports(events), imports(reversed));
+                .get("@side-only/server/bindings/api-modules.d.ts");
+        assertEquals(events, reversed);
         String reused = backend.render(context(output, List.of(first), List.of(adapters.getFirst())))
-                .get("@side-only/server/events/index.d.ts");
-        assertTrue(reused.contains("import { $EventTypes$Key, $EventTypes$Key_, $EventTypes$Payload } from \"java:othermod/events\";"), reused);
+                .get("@side-only/server/bindings/api-modules.d.ts");
+        assertTrue(reused.contains("import(\"java:othermod/events\").$EventTypes$Key_"), reused);
+        assertFalse(reused.contains("java:othermod/events/second"), reused);
         assertFalse(reused.contains("$NekoImport"), reused);
     }
 
@@ -104,9 +106,10 @@ class TypeScriptEventImportTest {
         Map<String, String> files = new TypeScriptProbeBackend().render(context);
         write(files, output);
         Files.writeString(output.resolve("tsconfig.json"), """
-                {"compilerOptions":{"strict":true,"noEmit":true,"skipLibCheck":false,"target":"ES2022","module":"ESNext","moduleResolution":"Bundler","types":[],"baseUrl":".","paths":{"java:*": ["@package/*"]}},"include":["@package/**/*.d.ts","@side-only/server/events/index.d.ts","exercise.ts"]}
+                {"compilerOptions":{"strict":true,"noEmit":true,"skipLibCheck":false,"target":"ES2022","module":"ESNext","moduleResolution":"Bundler","types":[],"baseUrl":".","paths":{"java:*": ["@package/*"]}},"include":["@package/**/*.d.ts","@side-only/server/bindings/api-modules.d.ts","@side-only/server/events/index.d.ts","exercise.ts"]}
                 """);
         Files.writeString(output.resolve("exercise.ts"), """
+                import { PayloadEvents } from 'nekojs:event/versioned';
                 PayloadEvents.reflected(event => {
                     const count: number = event.count;
                     // @ts-expect-error Local payload names must not replace reflected types.
@@ -119,11 +122,11 @@ class TypeScriptEventImportTest {
                     // @ts-expect-error Replaced payloads do not expose host fields.
                     event.hiddenHostMember;
                 });
-                PayloadEvents.custom(payload => {});
-                PayloadEvents.custom.post({ custom: 12 });
+                globalThis.PayloadEvents.custom(payload => {});
+                globalThis.PayloadEvents.custom.post({ custom: 12 });
                 """);
-        String events = files.get("@side-only/server/events/index.d.ts");
-        assertTrue(events.contains("$EventTypes$Payload as "), events);
+        String events = files.get("@side-only/server/bindings/api-modules.d.ts");
+        assertTrue(events.contains("import(\"java:othermod/events\").$EventTypes$Payload"), events);
         assertTrue(events.contains("interface $EventTypes$Payload {"), events);
         assertFalse(events.contains("$TypeScriptEventImportTest$PayloadHost"), events);
         assertFalse(files.containsKey("@package/com/tkisor/nekojs/probe/backend/typescript/index.d.ts"));
@@ -140,12 +143,8 @@ class TypeScriptEventImportTest {
                 null, Map.of(), List.of());
         var config = new ProbeConfig(true, ".neko_probe", new ProbeConfig.ScanConfig(
                 List.of("unrelated.primary"), List.of(), List.of(), List.of(), 1, "SMART"));
-        return new ProbeContext.Of(snapshot, List.of(), config, NekoJSPaths.fromGameDir(output),
+        return new ProbeContext.Of(com.tkisor.nekojs.probe.ProbeEventFixtures.publishVersioned(snapshot), List.of(), config, NekoJSPaths.fromGameDir(output),
                 "typescript", output, List.of());
-    }
-
-    private static List<String> imports(String declaration) {
-        return declaration.lines().filter(line -> line.startsWith("import ")).toList();
     }
 
     private static void write(Map<String, String> files, Path output) throws Exception {

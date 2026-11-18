@@ -866,6 +866,8 @@ JSX screens suit settings pages, forms and lists, anything you click and type in
 HUD and world drawing are per-frame callbacks. You handle coordinates yourself, and there is no layout or input:
 
 ```javascript
+import { ClientEvents } from "nekojs:event/versioned";
+
 ClientEvents.hud(painter => {
   painter.rect(8, 8, 120, 18, 0xB020252B)
   painter.text('Quest in progress', 14, 14, 0xFFFFFFFF)

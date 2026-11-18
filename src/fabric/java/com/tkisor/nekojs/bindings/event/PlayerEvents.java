@@ -27,34 +27,34 @@ public interface PlayerEvents {
     EventGroup GROUP = EventGroup.of("PlayerEvents");
 
     EventBusJS<PlayerContainerEventJS, Void> CONTAINER_OPENED =
-            GROUP.server("containerOpened", PlayerContainerEventJS.class);
+            GROUP.server("containerOpened", PlayerContainerEventJS.class, api -> api.versioned());
     // inventoryOpened: a cross-version compatibility alias for containerOpened. Scripts should
     // migrate to containerOpened.
     @Deprecated
     EventBusJS<PlayerContainerEventJS, Void> INVENTORY_OPENED =
-            GROUP.server("inventoryOpened", PlayerContainerEventJS.class);
+            GROUP.server("inventoryOpened", PlayerContainerEventJS.class, api -> api.versioned());
     EventBusJS<PlayerContainerEventJS, Void> CONTAINER_CLOSED =
-            GROUP.server("containerClosed", PlayerContainerEventJS.class);
+            GROUP.server("containerClosed", PlayerContainerEventJS.class, api -> api.versioned());
     // inventoryClosed: a cross-version compatibility alias for containerClosed. Scripts should
     // migrate to containerClosed.
     @Deprecated
     EventBusJS<PlayerContainerEventJS, Void> INVENTORY_CLOSED =
-            GROUP.server("inventoryClosed", PlayerContainerEventJS.class);
+            GROUP.server("inventoryClosed", PlayerContainerEventJS.class, api -> api.versioned());
 
     // crafted / smelted: dispatched by the resulting item id (the same dispatchByItem scheme as
     // PlayerEvents on NeoForge)
     EventBusJS<PlayerCraftedEventJS, Item> CRAFTED =
             GROUP.server("crafted", PlayerCraftedEventJS.class,
-                    DispatchKey.of(Item.class, e -> e.getResult().getItem()));
+                    DispatchKey.of(Item.class, e -> e.getResult().getItem()), api -> api.versioned());
     EventBusJS<PlayerCraftedEventJS, Item> SMELTED =
             GROUP.server("smelted", PlayerCraftedEventJS.class,
-                    DispatchKey.of(Item.class, e -> e.getResult().getItem()));
+                    DispatchKey.of(Item.class, e -> e.getResult().getItem()), api -> api.versioned());
     EventBusJS<PlayerDestroyItemEventJS, Item> DESTROYED =
             GROUP.server("destroyed", PlayerDestroyItemEventJS.class,
-                    DispatchKey.of(Item.class, e -> e.getItemStack().getItem()));
+                    DispatchKey.of(Item.class, e -> e.getItemStack().getItem()), api -> api.versioned());
 
     EventBusJS<PlayerAdvancementEventJS, Void> ADVANCEMENT =
-            GROUP.server("advancement", PlayerAdvancementEventJS.class);
+            GROUP.server("advancement", PlayerAdvancementEventJS.class, api -> api.versioned());
 
     // entityInteract: on NeoForge this is an ICancellableEvent. Fabric has no ICancellableEvent
     // check chain (the default cancellability predicate of EventGroup.server is always false on
@@ -62,14 +62,14 @@ public interface PlayerEvents {
     // handling of ServerboundInteractPacket, so interactOn does not run.
     EventBusJS<PlayerEntityInteractEventJS, Void> ENTITY_INTERACT =
             GROUP.add("entityInteract", ScriptType.SERVER,
-                    EventBusJS.of(PlayerEntityInteractEventJS.class, true));
+                    EventBusJS.of(PlayerEntityInteractEventJS.class, true), api -> api.versioned());
 
     EventBusJS<PlayerChangedDimensionEventJS, Void> CHANGED_DIMENSION =
-            GROUP.server("changedDimension", PlayerChangedDimensionEventJS.class);
+            GROUP.server("changedDimension", PlayerChangedDimensionEventJS.class, api -> api.versioned());
 
     // inventoryChanged: dispatched by item id, the same declaration as in the shared tree on
     // NeoForge (listener attachment is in FabricPlayerEventBindings.registerLifecycle).
     EventBusJS<InventoryChangedEventJS, Item> INVENTORY_CHANGED =
             GROUP.server("inventoryChanged", InventoryChangedEventJS.class,
-                    DispatchKey.of(Item.class, e -> e.getItem().getItem()));
+                    DispatchKey.of(Item.class, e -> e.getItem().getItem()), api -> api.versioned());
 }

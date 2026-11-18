@@ -552,6 +552,7 @@ public final class TypeScriptProbeBackend implements ProbeBackend {
     private void renderEventDeclarations(NekoScriptCatalogSnapshot snapshot, Map<String, String> files) {
         for (ScriptType type : ScriptType.all()) {
             List<EventCatalogEntry> events = snapshot.events().stream()
+                    .filter(EventCatalogEntry::scriptDefined)
                     .filter(e -> e.scriptType().test(type))
                     .toList();
             if (events.isEmpty()) continue;
@@ -591,9 +592,13 @@ public final class TypeScriptProbeBackend implements ProbeBackend {
                 moduleEvents.computeIfAbsent(entry.moduleId(), key -> new ArrayList<>()).add(entry.event());
             });
             Map<String, String> eventNamespaces = new TreeMap<>();
-            moduleEvents.forEach((id, entries) -> eventNamespaces.put(id, eventGenerator.generateModuleNamespaces(entries)));
+            moduleEvents.forEach((id, entries) -> eventNamespaces.put(id,
+                    eventGenerator.generateModuleNamespaces(entries, snapshot.registryBuilderSurfaces())));
             files.put("@side-only/" + type.name + "/bindings/api-modules.d.ts",
-                    bindingGenerator.generateModules(modules, eventNamespaces));
+                    (EventPayloadDeclarations.resolve(moduleEvents.values().stream().flatMap(List::stream).toList(),
+                            snapshot.registryBuilderSurfaces()).isEmpty() ? ""
+                            : "/// <reference path=\"../../../@event-builders/index.d.ts\" />\n")
+                            + bindingGenerator.generateModules(modules, eventNamespaces));
             String mixinDeclarations = MixinHookDeclarations.render(mixinPlans, type);
             String mixinImport = "";
             if (!mixinDeclarations.isEmpty()) {
@@ -720,7 +725,8 @@ public final class TypeScriptProbeBackend implements ProbeBackend {
             return;
         }
         files.put("@registry-builders/index.d.ts", RegistryBuilderTsRenderer.render(entries));
-        var payloads = EventPayloadDeclarations.resolve(snapshot.events(), entries);
+        var payloads = EventPayloadDeclarations.resolve(java.util.stream.Stream.concat(snapshot.events().stream(),
+                snapshot.moduleEvents().stream().map(com.tkisor.nekojs.api.catalog.ModuleEventCatalogEntry::event)).toList(), entries);
         var eventBuilders = entries.stream().filter(entry -> entry.eventPayload() != null
                 && payloads.containsKey(entry.eventPayload().eventType())).distinct().toList();
         if (!eventBuilders.isEmpty()) {

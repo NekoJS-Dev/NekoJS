@@ -14,31 +14,31 @@ public interface LevelEvents {
     EventGroup GROUP = EventGroup.of("LevelEvents");
 
     EventBusJS<LevelEvent.Load, Void> LOADED =
-            GROUP.server("loaded", LevelEvent.Load.class);
+            GROUP.server("loaded", LevelEvent.Load.class, api -> api.versioned());
     EventBusJS<LevelEvent.Unload, Void> UNLOADED =
-            GROUP.server("unloaded", LevelEvent.Unload.class);
+            GROUP.server("unloaded", LevelEvent.Unload.class, api -> api.versioned());
     EventBusJS<LevelEvent.Save, Void> SAVED =
-            GROUP.server("saved", LevelEvent.Save.class);
+            GROUP.server("saved", LevelEvent.Save.class, api -> api.versioned());
     EventBusJS<LevelTickEvent.Pre, Void> TICK_PRE =
-            GROUP.server("tickPre", LevelTickEvent.Pre.class);
+            GROUP.server("tickPre", LevelTickEvent.Pre.class, api -> api.versioned());
     EventBusJS<LevelTickEvent.Post, Void> TICK_POST =
-            GROUP.server("tickPost", LevelTickEvent.Post.class);
+            GROUP.server("tickPost", LevelTickEvent.Post.class, api -> api.versioned());
     // tick: a bare-name alias for tickPost. Scripts should migrate to tickPre/tickPost.
     @Deprecated
     EventBusJS<LevelTickEvent.Post, Void> TICK =
-            GROUP.server("tick", LevelTickEvent.Post.class);
+            GROUP.server("tick", LevelTickEvent.Post.class, api -> api.versioned());
     EventBusJS<ExplosionEvent.Start, Void> EXPLOSION_START =
-            GROUP.server("explosionStart", ExplosionEvent.Start.class);
+            GROUP.server("explosionStart", ExplosionEvent.Start.class, api -> api.versioned());
     // beforeExplosion: a legacy alias for explosionStart. Scripts should migrate to explosionStart.
     @Deprecated
     EventBusJS<ExplosionEvent.Start, Void> BEFORE_EXPLOSION =
-            GROUP.server("beforeExplosion", ExplosionEvent.Start.class);
+            GROUP.server("beforeExplosion", ExplosionEvent.Start.class, api -> api.versioned());
     EventBusJS<ExplosionEvent.Detonate, Void> EXPLOSION_DETONATE =
-            GROUP.server("explosionDetonate", ExplosionEvent.Detonate.class);
+            GROUP.server("explosionDetonate", ExplosionEvent.Detonate.class, api -> api.versioned());
     // afterExplosion: a legacy alias for explosionDetonate. Scripts should migrate to explosionDetonate.
     @Deprecated
     EventBusJS<ExplosionEvent.Detonate, Void> AFTER_EXPLOSION =
-            GROUP.server("afterExplosion", ExplosionEvent.Detonate.class);
+            GROUP.server("afterExplosion", ExplosionEvent.Detonate.class, api -> api.versioned());
 
     EventBusForgeBridge FORGE_BRIDGE = EventBusForgeBridge.create(NeoForge.EVENT_BUS)
             .bind(LOADED)

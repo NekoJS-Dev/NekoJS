@@ -186,6 +186,8 @@ NekoJS 不是完整的 Node.js，能用的内置模块见 [Node.js 兼容](nodej
 `ServerEvents.tickPost` 之类的事件每秒触发 20 次，里面的代码要尽量轻。把计算结果缓存起来，或者用计数器每隔几个 tick 才执行一次：
 
 ```javascript
+import { ServerEvents } from "nekojs:event/versioned";
+
 let ticks = 0
 ServerEvents.tickPost(event => {
   if (++ticks % 20 !== 0) return // 每秒只执行一次

@@ -100,6 +100,8 @@ On top of the vanilla methods, NekoJS adds these to every item stack:
 Item stacks, entities and players can all store your own data with `pdata()`:
 
 ```javascript
+import { PlayerEvents } from "nekojs:event/versioned";
+
 // server_scripts/pdata.js
 PlayerEvents.loggedIn(event => {
   const data = event.entity.pdata()
@@ -236,6 +238,8 @@ Style methods don't change the original text. They return new text, so you can k
 The 16 color shortcuts are `black`, `darkBlue`, `darkGreen`, `darkAqua`, `darkRed`, `darkPurple`, `gold`, `gray`, `darkGray`, `blue`, `green`, `aqua`, `red`, `lightPurple`, `yellow` and `white`.
 
 ```javascript
+import { PlayerEvents } from "nekojs:event/versioned";
+
 // server_scripts/welcome.js (event.entity on NeoForge, event.player on Fabric)
 PlayerEvents.loggedIn(event => {
   const msg = Text.of('Click for a diamond')
@@ -396,6 +400,8 @@ Keys are global, so scripts that use the same key affect each other. Add your ow
 Server scripts push data to clients, and client scripts read it. This is the usual way to feed a HUD.
 
 ```javascript
+import { PlayerEvents } from "nekojs:event/versioned";
+
 // server_scripts/boss.js
 PlayerEvents.loggedIn(event => {
   ClientData.sync('boss_hp', { name: 'Example Golem', hp: 0.42 })
@@ -476,6 +482,8 @@ On NeoForge, members not listed here go to NeoForge's own `Capabilities` class, 
 In server scripts, build an entity selector in code (like `@e[...]` in a command) and find entities with it. This example finds up to 5 cows near a player when they log in:
 
 ```javascript
+import { PlayerEvents } from "nekojs:event/versioned";
+
 // server_scripts/cows.js (event.entity on NeoForge, event.player on Fabric)
 PlayerEvents.loggedIn(event => {
   const player = event.entity
@@ -508,6 +516,8 @@ PlayerEvents.loggedIn(event => {
 Add villager trades with the `ServerEvents.tradeDeclaration` event. `VillagerTrades` is only for looking at the current trades.
 
 ```javascript
+import { ServerEvents } from "nekojs:event/versioned";
+
 // server_scripts/trades.js
 ServerEvents.tradeDeclaration(event => {
   event.add('minecraft:farmer/level_1', {
@@ -572,6 +582,8 @@ Write `eventType` as the full class name, with `$` for nested classes. Returning
 `ScriptEvents` is an event group, not a binding, but it often goes with them: declare your own events in a startup script, then fire and listen to them from server or client scripts.
 
 ```javascript
+import { ScriptEvents } from "nekojs:event/versioned";
+
 // startup_scripts/events.js
 ScriptEvents.server(event => event.register('MyEvents', 'bossKilled'))
 
@@ -594,6 +606,8 @@ Shows which recipe types exist and which fields each one has. Read-only.
 | `RecipeSchema.describe(namespace, type)` | The fields and forms of one recipe type |
 
 ```javascript
+import { ServerEvents } from "nekojs:event/versioned";
+
 ServerEvents.started(event => {
   console.info(RecipeSchema.types('minecraft'))
   console.info(RecipeSchema.describe('minecraft', 'smelting'))

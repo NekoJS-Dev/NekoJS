@@ -383,7 +383,7 @@ public final class PythonProbeBackend implements ProbeBackend {
         return new PyAdapterAlias(name, alias.inputTypes(), alias.importFqns(), alias.note());
     }
 
-    /** nekojs/__init__.pyi: Global bindings + event group entry + {@code probe.add_global} global declarations (target of {@code from nekojs import *}). */
+    /** Renders global Bindings, dynamic script groups, and Probe-added globals for {@code from nekojs import *}. */
     private void writeBindingsInit(Map<String, String> files, NekoScriptCatalogSnapshot snapshot, Set<String> availableFqns,
                                    ApiTypeRefPyRenderer typeR, List<GlobalDecl> globals) {
         List<BindingCatalogEntry> bindings = snapshot.bindings().stream()
@@ -391,7 +391,7 @@ public final class PythonProbeBackend implements ProbeBackend {
                 .toList();
 
         // Event group name (by side); when binding name hits group name, binding type points to <Group>Type class in nekojs._events/<side>
-        Map<ScriptType, List<String>> groupsBySide = eventGroupsBySide(snapshot.events());
+        Map<ScriptType, List<String>> groupsBySide = eventGroupsBySide(snapshot.events().stream().filter(EventCatalogEntry::scriptDefined).toList());
 
         Set<String> reserved = new LinkedHashSet<>(List.of("Any"));
         for (BindingCatalogEntry binding : bindings) {
@@ -436,8 +436,7 @@ public final class PythonProbeBackend implements ProbeBackend {
             }
             allNames.add(b.name());
         }
-        // Event group entry: Group name without corresponding entry in binding directory (DefaultScriptEventBridge exposes event group globally at runtime),
-        // backfill pointing to _events class to ensure `ServerEvents.recipes(...)` has completions
+        // Dynamic script-defined groups remain global; Java event sources are available only through publications.
         for (var e : groupsBySide.entrySet()) {
             ScriptType side = e.getKey();
             for (String group : e.getValue()) {

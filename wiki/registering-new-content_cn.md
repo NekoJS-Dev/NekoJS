@@ -13,6 +13,8 @@
 新建 `nekojs/startup_scripts/content.js`：
 
 ```javascript
+import { RegistryEvents } from "nekojs:event/versioned";
+
 RegistryEvents.register(event => {
   event.item('mymod:cool_gem', item => {
     item.maxStackSize = 16
@@ -41,6 +43,8 @@ RegistryEvents.register(event => {
 `event` 上的方法以注册表命名，例如 `event.item`、`event.block`、`event.entityType`。每个方法接收两个参数：ID 和一个配置函数。
 
 ```javascript
+import { RegistryEvents } from "nekojs:event/versioned";
+
 RegistryEvents.register(event => {
   event.item('mymod:ruby', item => {
     item.maxStackSize = 16   // 普通设置：直接赋值
@@ -94,6 +98,8 @@ RegistryEvents.register(event => {
 ### 食物
 
 ```javascript
+import { RegistryEvents } from "nekojs:event/versioned";
+
 RegistryEvents.register(event => {
   event.item('mymod:cheese', item => {
     item.food(food => {
@@ -119,6 +125,8 @@ RegistryEvents.register(event => {
 需要设置上面没有的属性时，可以直接写物品组件。值的格式和原版数据包里的组件 JSON 一样：
 
 ```javascript
+import { RegistryEvents } from "nekojs:event/versioned";
+
 RegistryEvents.register(event => {
   event.item('mymod:gem', item => {
     item.component('minecraft:rarity', 'epic')
@@ -148,6 +156,8 @@ RegistryEvents.register(event => {
 | `tag(...)` | — | 把**方块**加入标签 |
 
 ```javascript
+import { RegistryEvents } from "nekojs:event/versioned";
+
 RegistryEvents.register(event => {
   event.block('mymod:ruby_ore', block => {
     block.hardness = 3.0
@@ -173,6 +183,8 @@ RegistryEvents.register(event => {
 一次 `event.fluid` 会注册一整套可以放置、流动、用桶装起来的流体：
 
 ```javascript
+import { RegistryEvents } from "nekojs:event/versioned";
+
 RegistryEvents.register(event => {
   event.fluid('mymod:molten_iron', fluid => {
     fluid.density = 3000
@@ -205,6 +217,8 @@ RegistryEvents.register(event => {
 ## 实体
 
 ```javascript
+import { RegistryEvents } from "nekojs:event/versioned";
+
 RegistryEvents.register(event => {
   event.entityType('mymod:test_mob', mob => {
     mob.category = 'monster'
@@ -242,6 +256,8 @@ RegistryEvents.register(event => {
 想让实体沿用某个现有生物的行为和外观，可以指定 Java 类和渲染器：
 
 ```javascript
+import { RegistryEvents } from "nekojs:event/versioned";
+
 const Zombie = Java.type('net.minecraft.world.entity.monster.zombie.Zombie')
 
 RegistryEvents.register(event => {
@@ -283,6 +299,8 @@ RegistryEvents.register(event => {
 `GoalEvents.register` 不创建新实体，而是给已有实体（包括原版生物）加行为。同样写在 `startup_scripts` 里：
 
 ```javascript
+import { GoalEvents } from "nekojs:event/versioned";
+
 GoalEvents.register(event => {
   event.forType('minecraft:pig', goals => {
     goals.panic(0, 2.0).randomStroll(6, 0.8)
@@ -294,6 +312,8 @@ GoalEvents.register(event => {
 ## 创造标签页
 
 ```javascript
+import { RegistryEvents } from "nekojs:event/versioned";
+
 RegistryEvents.register(event => {
   event.creativeModeTab('mymod:main', tab => {
     tab.title = '我的模组'
@@ -310,6 +330,8 @@ RegistryEvents.register(event => {
 ## 其他内容
 
 ```javascript
+import { RegistryEvents } from "nekojs:event/versioned";
+
 RegistryEvents.register(event => {
   // 状态效果：category 可以是 'beneficial'、'harmful'、'neutral'（默认）
   event.mobEffect('mymod:shock', effect => {
@@ -344,6 +366,8 @@ RegistryEvents.register(event => {
 ### 附魔（仅 NeoForge 1.21.1）
 
 ```javascript
+import { RegistryEvents } from "nekojs:event/versioned";
+
 RegistryEvents.register(event => {
   event.enchantment('mymod:ice_bane', ench => {
     ench.supportedItems = 'minecraft:enchantable/weapon'
@@ -368,6 +392,8 @@ RegistryEvents.register(event => {
 物品、方块、流体、实体和附魔可以在注册时直接加入标签，不用再单独写数据包 JSON：
 
 ```javascript
+import { RegistryEvents } from "nekojs:event/versioned";
+
 RegistryEvents.register(event => {
   event.item('mymod:ruby_pickaxe', item => {
     item.maxDamage = 500
@@ -423,6 +449,8 @@ RegistryEvents.register(event => {
 只放了物品材质、不想手写模型时，可以让 NekoJS 生成模型：
 
 ```javascript
+import { RegistryEvents } from "nekojs:event/versioned";
+
 RegistryEvents.register(event => {
   event.item('mymod:cool_gem', item => {
     item.texture('mymod:item/cool_gem')
@@ -450,6 +478,8 @@ enabled = true
 然后在 `server_scripts` 里写：
 
 ```javascript
+import { DynamicRegistryEvents } from "nekojs:event/versioned";
+
 DynamicRegistryEvents.dynamicRegistry(event => {
   event.item('mymod:ruby', item => {
     item.maxStackSize = 64

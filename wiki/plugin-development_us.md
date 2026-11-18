@@ -231,11 +231,12 @@ registry.register(Binding.of("MyHelper", new MyHelperJS()), exposure -> exposure
 ```
 
 ```javascript
-import { MyHelper } from 'nekojs/api/version/myaddon'
+import { MyHelper } from 'nekojs/plugins/myaddon/api/version'
 ```
 
 - `myaddon` in the module path is the mod ID that owns the plugin, as reported by the loader.
-- `versioned()` exports to `nekojs/api/version/<modid>`; `stable()` exports to `nekojs/api/stable/<modid>`. Choose exactly one.
+- `versioned()` exports to `nekojs/plugins/<modid>/api/version`; `stable()` exports to `nekojs/plugins/<modid>/api/stable`. Choose exactly one. The Binding category remains `version`; event groups use separate custom virtual modules such as `nekojs:event/versioned/<modid>`.
+- Migrate old `nekojs/api/version/<modid>` and `nekojs/api/stable/<modid>` Binding imports to those owner-first paths. Those old Binding routes are not aliases. Official Binding modules (`nekojs/api/version`, `nekojs/api/stable`) and ordinary global Binding behavior are unchanged. This Binding migration is separate from the event virtual-module routes.
 - `stable()` rejects public types that expose Minecraft or loader classes. A class that must expose native types needs `@ScriptNativeBridge` to pass.
 - This form does **not** also create a global variable.
 - A missing mod owner, an invalid export name or a duplicate export fails with `NEKO-4057`.

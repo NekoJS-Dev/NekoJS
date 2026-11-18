@@ -101,8 +101,8 @@ class RegistryStartupMinimalExampleTest {
         return new RegistryTypesPoint.RegistryTypes(collector.byRegistry, collector.defaults, collector.builderClasses);
     }
 
-    /** Runs the production sequence: installs the listener in a STARTUP context (the same
-     * EventGroupJS binding production uses), then collects once before the first pass. */
+    /** Installs a source-bus listener directly in a bare STARTUP context, then collects once
+     * before the first pass. Runtime module imports are covered by the lifecycle fixtures. */
     private static StartupRegistryRuntime runExample() {
         StartupRegistryRuntime runtime = new StartupRegistryRuntime(NODE);
         try (Context context = Context.newBuilder("js").allowAllAccess(true).build()) {

@@ -1,6 +1,7 @@
 package com.tkisor.nekojs.authoring;
 
 import com.google.gson.JsonObject;
+import com.tkisor.nekojs.api.ScriptType;
 import com.tkisor.nekojs.core.fs.NekoJSPaths;
 import graal.graalvm.polyglot.Context;
 import org.junit.jupiter.api.Test;
@@ -56,12 +57,14 @@ class AuthoringBundleTest {
         NekoJSPaths paths = NekoJSPaths.fromGameDir(directory);
         paths.initFolders(); AuthoringBundleExporter.export(bundle, paths, true);
         assertEquals(bundle.read("templates/AGENTS.md"), Files.readString(directory.resolve(AuthoringPaths.DEFAULT_DIRECTORY).resolve("AGENTS.md")));
-        try (Context context = Context.newBuilder("js").build()) {
-            context.eval("js", "globalThis.messages = []; globalThis.callbacks = []; globalThis.console = {info: text => messages.push(text)}; globalThis.ServerEvents = {recipes: callback => callbacks.push(callback)};");
+        try (AuthoringExampleModuleHarness harness = new AuthoringExampleModuleHarness(directory, ScriptType.SERVER, false)) {
+            Context context = harness.context;
+            context.eval("js", "globalThis.messages = []; globalThis.callbacks = []; globalThis.console = {info: text => messages.push(text)};");
+            harness.defineVersionedEvents("({ServerEvents: {recipes: callback => callbacks.push(callback)}})");
             context.eval("js", bundle.read("examples/greeting.js"));
             assertEquals(1, context.eval("js", "messages.length").asInt());
             context.eval("js", "messages.length = 0");
-            context.eval("js", bundle.read("examples/event-subscription.js"));
+            harness.runExample("event-subscription.js");
             assertEquals(1, context.eval("js", "callbacks.length").asInt());
             assertEquals(0, context.eval("js", "messages.length").asInt());
             context.eval("js", "callbacks[0]({})");

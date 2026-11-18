@@ -31,7 +31,8 @@ public record ModuleEventGroup(String owner, BindingExposure.Category category, 
         new ModuleBinding(owner, category, ScriptType.STARTUP, Binding.of(group.name(), group));
     }
     public String moduleId() {
-        return "nekojs/api/" + category.path() + ("nekojs".equals(owner) ? "" : "/" + owner);
+        String publication = category == BindingExposure.Category.STABLE ? "stable" : "versioned";
+        return "nekojs:event/" + publication + ("nekojs".equals(owner) ? "" : "/" + owner);
     }
     public boolean available(ScriptType type) {
         return events.stream().anyMatch(name -> supports(name, type));

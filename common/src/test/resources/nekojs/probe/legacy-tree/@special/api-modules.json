@@ -1,0 +1,71 @@
+{
+  "profile": "unresolved",
+  "exports": {
+    "SERVER:nekojs:event/versioned:SampleEvents.cancellable": {
+      "category": "VERSION",
+      "nativeBridge": false,
+      "facets": [
+        "callback:[]",
+        "event:cancel=true:dispatch=false",
+        "key:none",
+        "payload.call:getMessage():java.lang.String:varargs=false:annotations=[]",
+        "payload.read:message:java.lang.String"
+      ]
+    },
+    "SERVER:nekojs:event/versioned:SampleEvents.dispatch": {
+      "category": "VERSION",
+      "nativeBridge": false,
+      "facets": [
+        "callback:[]",
+        "event:cancel=false:dispatch=true",
+        "key:com.tkisor.nekojs.probe.LegacyProbeFixture$SampleDispatchKey",
+        "payload.call:getResult():java.lang.String:varargs=false:annotations=[]",
+        "payload.read:result:java.lang.String"
+      ]
+    },
+    "STARTUP:nekojs:event/versioned:SampleEvents.cancellable": {
+      "category": "VERSION",
+      "nativeBridge": false,
+      "facets": [
+        "callback:[]",
+        "event:cancel=true:dispatch=false",
+        "key:none",
+        "payload.call:getMessage():java.lang.String:varargs=false:annotations=[]",
+        "payload.read:message:java.lang.String"
+      ]
+    },
+    "STARTUP:nekojs:event/versioned:SampleEvents.dispatch": {
+      "category": "VERSION",
+      "nativeBridge": false,
+      "facets": [
+        "callback:[]",
+        "event:cancel=false:dispatch=true",
+        "key:com.tkisor.nekojs.probe.LegacyProbeFixture$SampleDispatchKey",
+        "payload.call:getResult():java.lang.String:varargs=false:annotations=[]",
+        "payload.read:result:java.lang.String"
+      ]
+    },
+    "TEST:nekojs:event/versioned:SampleEvents.cancellable": {
+      "category": "VERSION",
+      "nativeBridge": false,
+      "facets": [
+        "callback:[]",
+        "event:cancel=true:dispatch=false",
+        "key:none",
+        "payload.call:getMessage():java.lang.String:varargs=false:annotations=[]",
+        "payload.read:message:java.lang.String"
+      ]
+    },
+    "TEST:nekojs:event/versioned:SampleEvents.dispatch": {
+      "category": "VERSION",
+      "nativeBridge": false,
+      "facets": [
+        "callback:[]",
+        "event:cancel=false:dispatch=true",
+        "key:com.tkisor.nekojs.probe.LegacyProbeFixture$SampleDispatchKey",
+        "payload.call:getResult():java.lang.String:varargs=false:annotations=[]",
+        "payload.read:result:java.lang.String"
+      ]
+    }
+  }
+}

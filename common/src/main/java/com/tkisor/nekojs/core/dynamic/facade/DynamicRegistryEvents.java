@@ -12,6 +12,7 @@ import com.tkisor.nekojs.api.event.EventGroup;
  *
  * <h2>JS API (SERVER scripts)</h2>
  * <pre>
+ * import { DynamicRegistryEvents } from "nekojs:event/versioned";
  * DynamicRegistryEvents.dynamicRegistry(event => {
  *     event.item('mymod:ruby', b => { b.maxStackSize = 16; b.rarity = 'epic' })
  *     event.soundEvent('mymod:boom', b => { b.fixedRange(16) })

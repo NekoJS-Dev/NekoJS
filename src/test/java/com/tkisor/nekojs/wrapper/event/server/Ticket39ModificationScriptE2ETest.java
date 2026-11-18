@@ -75,6 +75,7 @@ class Ticket39ModificationScriptE2ETest {
     void startupCollectionPointAppliesScriptDeclarationOnceForTheInitialGeneration() throws Exception {
         assertTrue(VanillaRegistryProbe.available());
         harness.writeServerScript("mod.js", """
+                const { ItemEvents } = require('nekojs:event/versioned');
                 ItemEvents.modification(event => {
                   event.modify('minecraft:diamond', item => {
                     item.maxStackSize = 16
@@ -97,6 +98,7 @@ class Ticket39ModificationScriptE2ETest {
     void candidateStaysInertUntilCommitAndReloadAppliesTheNewPlan() throws Exception {
         // Run one successful commit first, so the active plan sets maxStackSize to 16.
         harness.writeServerScript("mod.js", """
+                const { ItemEvents } = require('nekojs:event/versioned');
                 ItemEvents.modification(event => event.modify('minecraft:diamond', item => item.setMaxStackSize(16)))
                 """);
         loadServerScripts();
@@ -116,6 +118,7 @@ class Ticket39ModificationScriptE2ETest {
             }
         });
         harness.writeServerScript("mod.js", """
+                const { ItemEvents } = require('nekojs:event/versioned');
                 ItemEvents.modification(event => event.modify('minecraft:diamond', item => item.setMaxStackSize(32)))
                 """);
 
@@ -130,6 +133,7 @@ class Ticket39ModificationScriptE2ETest {
     @Test
     void removedDeclarationRestoresNekoJsBaselineInsteadOfStayingStale() throws Exception {
         harness.writeServerScript("mod.js", """
+                const { ItemEvents } = require('nekojs:event/versioned');
                 ItemEvents.modification(event => event.modify('minecraft:diamond', item => item.setMaxStackSize(16)))
                 """);
         loadServerScripts();
@@ -150,6 +154,7 @@ class Ticket39ModificationScriptE2ETest {
     @Test
     void rejectedBatchKeepsOldActivePlanWithoutPartialApply() throws Exception {
         harness.writeServerScript("mod.js", """
+                const { ItemEvents } = require('nekojs:event/versioned');
                 ItemEvents.modification(event => event.modify('minecraft:diamond', item => item.setMaxStackSize(16)))
                 """);
         loadServerScripts();
@@ -160,6 +165,7 @@ class Ticket39ModificationScriptE2ETest {
         // The pre-check rejects a value outside 1..99: the whole batch is not committed and the
         // old active value keeps serving.
         harness.writeServerScript("mod.js", """
+                const { ItemEvents } = require('nekojs:event/versioned');
                 ItemEvents.modification(event => {
                   event.modify('minecraft:diamond', item => item.setMaxStackSize(500))
                 })
@@ -177,6 +183,7 @@ class Ticket39ModificationScriptE2ETest {
     @Test
     void collectionErrorFailsWholeBatchAndNextGoodReloadStillCommits() throws Exception {
         harness.writeServerScript("mod.js", """
+                const { ItemEvents } = require('nekojs:event/versioned');
                 ItemEvents.modification(event => event.modify('minecraft:diamond', item => item.setMaxStackSize(16)))
                 """);
         loadServerScripts();
@@ -184,6 +191,7 @@ class Ticket39ModificationScriptE2ETest {
         assertEquals(16, maxStackSizeOfDiamond());
 
         harness.writeServerScript("mod.js", """
+                const { ItemEvents } = require('nekojs:event/versioned');
                 ItemEvents.modification(event => {
                   event.modify('minecraft:diamond', item => item.setMaxStackSize(32))
                   event.modify('minecraft:no_such_item', item => item.setMaxStackSize(1))
@@ -203,6 +211,7 @@ class Ticket39ModificationScriptE2ETest {
         // Candidate resources are dropped with the failure, so the next ordinary reload still
         // commits.
         harness.writeServerScript("mod.js", """
+                const { ItemEvents } = require('nekojs:event/versioned');
                 ItemEvents.modification(event => event.modify('minecraft:diamond', item => item.setMaxStackSize(48)))
                 """);
         harness.root.reload(ScriptType.SERVER);
@@ -212,6 +221,7 @@ class Ticket39ModificationScriptE2ETest {
     @Test
     void propertyWriteAndExplicitSetterScriptsProduceTheSameAppliedResult() throws Exception {
         harness.writeServerScript("mod.js", """
+                const { ItemEvents } = require('nekojs:event/versioned');
                 ItemEvents.modification(event => {
                   event.modify('minecraft:diamond', item => {
                     item.maxStackSize = 24
@@ -229,6 +239,7 @@ class Ticket39ModificationScriptE2ETest {
         harness.close();
         harness = new Ticket39ModificationScriptHarness(Map.of());
         harness.writeServerScript("mod.js", """
+                const { ItemEvents } = require('nekojs:event/versioned');
                 ItemEvents.modification(event => {
                   event.modify('minecraft:diamond', item => {
                     item.setMaxStackSize(24)

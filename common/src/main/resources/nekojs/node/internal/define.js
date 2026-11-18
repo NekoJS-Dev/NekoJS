@@ -45,9 +45,15 @@
     return !!(options && options.force)
   }
 
+  function isApiModuleId(id) {
+    return id === 'nekojs/api' || id.startsWith('nekojs/api/') ||
+      id === 'nekojs/plugins' || id.startsWith('nekojs/plugins/') ||
+      id === 'nekojs:event' || id.startsWith('nekojs:event/')
+  }
+
   function define(names, value) {
     for (const name of Array.isArray(names) ? names : [names]) {
-      if (name.startsWith('nekojs/api/')) throw new Error('[NEKO-4057] API module routes are reserved: ' + name)
+      if (isApiModuleId(name)) throw new Error('[NEKO-4057] API module routes are reserved: ' + name)
       modules[name] = value
     }
     return value
@@ -224,7 +230,7 @@
   globalThis.__nekoNodeBuiltins = modules
   globalThis.__nekoNodeDefine = define
   globalThis.__nekoNodeDefineApi = (id, value) => {
-    if (!id.startsWith('nekojs/api/') || Object.prototype.hasOwnProperty.call(modules, id)) {
+    if (!isApiModuleId(id) || Object.prototype.hasOwnProperty.call(modules, id)) {
       throw new Error('[NEKO-4057] API module route cannot be replaced: ' + id)
     }
     Object.defineProperty(modules, id, { value, enumerable: true, writable: false, configurable: false })

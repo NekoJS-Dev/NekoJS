@@ -59,7 +59,7 @@ class DynamicRegistryDeclarationParityTest {
     }
 
     private static List<EventCatalogEntry> catalogServerEntries() {
-        EventGroupRegistry registry = new EventGroupRegistry.Impl();
+        EventGroupRegistry registry = new EventGroupRegistry.Impl().scopedTo("nekojs");
         registry.register(DynamicRegistryEvents.GROUP);
         return NekoScriptCatalog.events(new StubRuntime(registry.view()), ScriptType.SERVER);
     }
@@ -75,7 +75,7 @@ class DynamicRegistryDeclarationParityTest {
         assertFalse(entry.scriptDefined(), "payload 是真实事件类（DynamicRegistryEventJS）");
         assertFalse(entry.dispatchable(), "普通总线（不分发 key）");
 
-        EventGroupRegistry registry = new EventGroupRegistry.Impl();
+        EventGroupRegistry registry = new EventGroupRegistry.Impl().scopedTo("nekojs");
         registry.register(DynamicRegistryEvents.GROUP);
         assertTrue(NekoScriptCatalog.events(new StubRuntime(registry.view()), ScriptType.CLIENT).isEmpty(),
                 "CLIENT 侧过滤零条目");

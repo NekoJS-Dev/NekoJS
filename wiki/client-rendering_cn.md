@@ -25,6 +25,8 @@
 全平台通用的最简写法。新建 `nekojs/client_scripts/painter.js` 并执行 `/nekojs reload client`：
 
 ```javascript
+import { ClientEvents } from "nekojs:event/versioned";
+
 // 1. 游戏主画面 HUD：每帧在左上角画半透明底框和白字
 ClientEvents.hud(painter => {
   painter.rect(8, 8, 120, 18, 0xB020252B)
@@ -69,6 +71,8 @@ ClientEvents.screenRender(event => {
 当你的整合包有多个 HUD 模块，需要精确控制谁画在原版血条前面、谁画在后面，或者方便单独替换某块 HUD 时，用带 ID 的 `ClientEvents.hudRender`：
 
 ```javascript
+import { ClientEvents } from "nekojs:event/versioned";
+
 // nekojs/client_scripts/named-hud.js
 ClientEvents.hudRender('nekojs:status', {
   layer: 'foreground', // 图层：'background'（原版HUD下）| 'normal'（默认）| 'foreground'（最上层）
@@ -88,6 +92,8 @@ ClientEvents.hudRender('nekojs:status', {
 用来在世界方块坐标上画领地边界、机器工作范围或任务引导线：
 
 ```javascript
+import { ClientEvents } from "nekojs:event/versioned";
+
 // nekojs/client_scripts/world-lines.js
 // 在世界坐标 (0, 64, 0) 到 (1, 65, 1) 画一个一格大的纯绿线框
 ClientEvents.worldRender('nekojs:origin-box', {
@@ -113,6 +119,8 @@ ClientEvents.worldRender('nekojs:origin-box', {
 最简单的用法是直接调用原版内置滤镜（下面结合 26.x 的 `KeyBindEvents` 实现按 `G` 键切换反色）：
 
 ```javascript
+import { KeyBindEvents } from "nekojs:event/versioned";
+
 // nekojs/client_scripts/effect-key.js
 KeyBindEvents.register('nekojs:toggle_invert', 'key.keyboard.g')
 
@@ -139,6 +147,8 @@ KeyBindEvents.pressed('nekojs:toggle_invert', event => {
 在 `ClientEvents.postEffects` 中可以用脚本配置自定义模糊或着色器参数（下例写法仅适用于 **NeoForge 26.x**）：
 
 ```javascript
+import { ClientEvents } from "nekojs:event/versioned";
+
 // nekojs/client_scripts/effect-declarations.js
 ClientEvents.postEffects(event => {
   event.register('nekojs:sample_blur', build => {

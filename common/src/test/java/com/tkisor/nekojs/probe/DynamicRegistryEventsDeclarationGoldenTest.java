@@ -75,15 +75,19 @@ class DynamicRegistryEventsDeclarationGoldenTest {
 
     @Test
     void facadeEventDeclarationMatchesGolden() throws Exception {
-        EventGroupRegistry registry = new EventGroupRegistry.Impl();
+        EventGroupRegistry registry = new EventGroupRegistry.Impl().scopedTo("nekojs");
         registry.register(DynamicRegistryEvents.GROUP);
         List<EventCatalogEntry> serverEntries =
                 NekoScriptCatalog.events(new StubRuntime(registry.view()), ScriptType.SERVER);
         assertEquals(1, serverEntries.size(), "冻结的 facade 面恰好一条 SERVER 总线");
 
         TypeAliasRegistry aliases = new TypeAliasRegistry();
-        String actual = new EventDeclarationGenerator(aliases, new AdapterAliasGenerator(aliases))
-                .generate(serverEntries, ScriptType.SERVER);
+        String moduleId = "nekojs:event/versioned";
+        String actual = new com.tkisor.nekojs.probe.backend.typescript.BindingDeclarationGenerator().generateModules(
+                Map.of(moduleId, List.of()), Map.of(moduleId,
+                        new EventDeclarationGenerator(aliases, new AdapterAliasGenerator(aliases))
+                                .generateModuleNamespaces(serverEntries, DynamicBuilderSurfaces.derive())));
+        assertFalse(actual.contains("declare global"), actual);
 
         maybeRegenerate("dynamic-registry-events.expected.d.ts", actual);
         assertEquals(resource("dynamic-registry-events.expected.d.ts"), normalize(actual),

@@ -100,37 +100,24 @@ public class NekoJSCorePlugin implements NekoJSPlugin, com.tkisor.nekojs.core.pl
     @Override
     public void registerEvents(EventGroupRegistry registry) {
         registry.register(PlayerEvents.GROUP);
-        registry.register(PlayerEvents.GROUP, expose -> expose.versioned());
         registry.register(ServerEvents.GROUP);
         registry.register(BlockEvents.GROUP);
-        registry.register(BlockEvents.GROUP, expose -> expose.versioned());
         registry.register(ItemEvents.GROUP);
-        registry.register(ItemEvents.GROUP, expose -> expose.versioned());
         registry.register(EntityEvents.GROUP);
-        registry.register(EntityEvents.GROUP, expose -> expose.versioned());
         registry.register(GoalEvents.GROUP);
-        registry.register(GoalEvents.GROUP, expose -> expose.versioned());
         registry.register(CommandEvents.GROUP);
-        registry.register(CommandEvents.GROUP, expose -> expose.versioned());
         registry.register(CapabilityEvents.GROUP);
-        registry.register(CapabilityEvents.GROUP, expose -> expose.versioned());
         registry.register(LevelEvents.GROUP);
-        registry.register(LevelEvents.GROUP, expose -> expose.versioned());
         registry.register(ScriptEvents.GROUP);
-        registry.register(ScriptEvents.GROUP, expose -> expose.versioned());
         registry.register(NetworkEvents.GROUP);
-        registry.register(NetworkEvents.GROUP, expose -> expose.versioned());
         registry.register(ProbeEvents.GROUP);
-        registry.register(ProbeEvents.GROUP, expose -> expose.versioned());
     }
 
     @Override
     public void registerClientEvents(EventGroupRegistry registry) {
         registry.register(ClientEvents.GROUP);
-        registry.register(ClientEvents.GROUP, expose -> expose.versioned());
 //? if >=26 {
         registry.register(KeyBindEvents.GROUP);
-        registry.register(KeyBindEvents.GROUP, expose -> expose.versioned());
 //?}
     }
 

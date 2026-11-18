@@ -79,7 +79,8 @@ class ScriptInputShapeDeclarationTest {
                 othermod.events.EventTypes.Payload.class, null, false, false);
         Path output = Path.of("build/probe-ts-script-input-shapes/callable");
         Map<String, String> files = new TypeScriptProbeBackend().render(context(output, List.of(callable, ordinary), List.of()));
-        String events = files.get("@side-only/server/events/index.d.ts");
+        String events = files.get("@side-only/server/bindings/api-modules.d.ts")
+                .replace("import(\"java:othermod/events\").", "");
         assertTrue(events.contains("function paint(\n"
                 + "            name: string,\n"
                 + "            options: { format: (\"fast\" | \"precise\"), labels?: Record<string, string>, target?: $EventTypes$Key_, count?: number },\n"
@@ -89,10 +90,12 @@ class ScriptInputShapeDeclarationTest {
         assertTrue(events.contains("function ordinary(handler: ((event: $EventTypes$Payload) => void)): void;"), events);
         assertFalse(events.contains("paint(handler:"), events);
         assertFalse(events.contains("UnusedPayload"), events);
-        assertTrue(events.contains("import { $EventTypes$Key, $EventTypes$Key_, $EventTypes$Payload } from \"java:othermod/events\";"), events);
+        assertTrue(files.get("@side-only/server/bindings/api-modules.d.ts")
+                .contains("import(\"java:othermod/events\").$EventTypes$Key_"), events);
         assertTrue(files.get("@package/othermod/events/index.d.ts").contains("count: number"));
         assertFalse(files.containsKey("@package/com/tkisor/nekojs/probe/testfixture/input/index.d.ts"));
         writeFixture(files, output, """
+                import { TypedEvents } from 'nekojs:event/versioned';
                 TypedEvents.paint('demo', { format: 'fast', labels: { source: 'test' }, target: 'key' }, (key, payload) => {
                     const name: string = key.name;
                     const count: number = payload.count;
@@ -191,7 +194,7 @@ class ScriptInputShapeDeclarationTest {
                 null, Map.of(), List.of());
         var config = new ProbeConfig(true, ".neko_probe", new ProbeConfig.ScanConfig(
                 List.of("unrelated.primary"), List.of(), List.of(), List.of(), 1, "SMART"));
-        return new ProbeContext.Of(snapshot, List.of(), config, NekoJSPaths.fromGameDir(output),
+        return new ProbeContext.Of(com.tkisor.nekojs.probe.ProbeEventFixtures.publishVersioned(snapshot), List.of(), config, NekoJSPaths.fromGameDir(output),
                 "typescript", output, List.of());
     }
 
@@ -202,7 +205,7 @@ class ScriptInputShapeDeclarationTest {
             Files.writeString(target, entry.getValue());
         }
         Files.writeString(output.resolve("tsconfig.json"), """
-                {"compilerOptions":{"strict":true,"noEmit":true,"skipLibCheck":false,"target":"ES2022","module":"ESNext","moduleResolution":"Bundler","types":[],"baseUrl":".","paths":{"java:*": ["@package/*"]}},"include":["@package/**/*.d.ts","@side-only/server/events/index.d.ts","exercise.ts"]}
+                {"compilerOptions":{"strict":true,"noEmit":true,"skipLibCheck":false,"target":"ES2022","module":"ESNext","moduleResolution":"Bundler","types":[],"baseUrl":".","paths":{"java:*": ["@package/*"]}},"include":["@package/**/*.d.ts","@side-only/server/bindings/api-modules.d.ts","exercise.ts"]}
                 """);
         Files.writeString(output.resolve("exercise.ts"), exercise);
     }

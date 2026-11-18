@@ -33,32 +33,32 @@ public interface EntityEvents {
     // to 0 while the native damage chain still runs, so damagePost still fires with 0 damage.
     EventBusJS<LivingDamageEvent.Pre, EntityType<?>> DAMAGE_PRE =
             GROUP.add("damagePre", ScriptType.SERVER, EventBusJS.of(
-                    LivingDamageEvent.Pre.class, true, dispatchByEntity(LivingDamageEvent::getEntity)));
+                    LivingDamageEvent.Pre.class, true, dispatchByEntity(LivingDamageEvent::getEntity)), api -> api.versioned());
     EventBusJS<LivingDamageEvent.Post, EntityType<?>> DAMAGE_POST =
-            GROUP.server("damagePost", LivingDamageEvent.Post.class, dispatchByEntity(LivingDamageEvent::getEntity));
+            GROUP.server("damagePost", LivingDamageEvent.Post.class, dispatchByEntity(LivingDamageEvent::getEntity), api -> api.versioned());
 
     EventBusJS<LivingDeathEvent, EntityType<?>> DEATH =
-            GROUP.server("death", LivingDeathEvent.class, dispatchByEntity(LivingDeathEvent::getEntity));
+            GROUP.server("death", LivingDeathEvent.class, dispatchByEntity(LivingDeathEvent::getEntity), api -> api.versioned());
     EventBusJS<LivingDropsEvent, EntityType<?>> DROPS =
-            GROUP.server("drops", LivingDropsEvent.class, dispatchByEntity(LivingDropsEvent::getEntity));
+            GROUP.server("drops", LivingDropsEvent.class, dispatchByEntity(LivingDropsEvent::getEntity), api -> api.versioned());
     EventBusJS<FinalizeSpawnEvent, EntityType<?>> FINALIZE_SPAWN =
-            GROUP.server("finalizeSpawn", FinalizeSpawnEvent.class, dispatchByEntity(FinalizeSpawnEvent::getEntity));
+            GROUP.server("finalizeSpawn", FinalizeSpawnEvent.class, dispatchByEntity(FinalizeSpawnEvent::getEntity), api -> api.versioned());
     EventBusJS<EntityTickEvent.Pre, EntityType<?>> TICK_Pre =
-            GROUP.server("tickPre", EntityTickEvent.Pre.class, dispatchByEntityType());
+            GROUP.server("tickPre", EntityTickEvent.Pre.class, dispatchByEntityType(), api -> api.versioned());
     EventBusJS<EntityTickEvent.Post, EntityType<?>> TICK_Post =
-            GROUP.server("tickPost", EntityTickEvent.Post.class, dispatchByEntityType());
+            GROUP.server("tickPost", EntityTickEvent.Post.class, dispatchByEntityType(), api -> api.versioned());
     EventBusJS<EntityJoinLevelEvent, EntityType<?>> JOIN_LEVEL =
-            GROUP.server("joinLevel", EntityJoinLevelEvent.class, dispatchByEntityType());
+            GROUP.server("joinLevel", EntityJoinLevelEvent.class, dispatchByEntityType(), api -> api.versioned());
     EventBusJS<EntityLeaveLevelEvent, EntityType<?>> LEAVE_LEVEL =
-            GROUP.server("leaveLevel", EntityLeaveLevelEvent.class, dispatchByEntityType());
+            GROUP.server("leaveLevel", EntityLeaveLevelEvent.class, dispatchByEntityType(), api -> api.versioned());
     EventBusJS<LivingEntityUseItemEvent.Start, Item> USE_START =
-            GROUP.server("useItemStarted", LivingEntityUseItemEvent.Start.class, dispatchByItem(LivingEntityUseItemEvent::getItem));
+            GROUP.server("useItemStarted", LivingEntityUseItemEvent.Start.class, dispatchByItem(LivingEntityUseItemEvent::getItem), api -> api.versioned());
     EventBusJS<LivingEntityUseItemEvent.Stop, Item> USE_STOP =
-            GROUP.server("useItemStopped", LivingEntityUseItemEvent.Stop.class, dispatchByItem(LivingEntityUseItemEvent::getItem));
+            GROUP.server("useItemStopped", LivingEntityUseItemEvent.Stop.class, dispatchByItem(LivingEntityUseItemEvent::getItem), api -> api.versioned());
     EventBusJS<LivingEntityUseItemEvent.Finish, Item> USE_FINISHED =
-            GROUP.server("useItemFinished", LivingEntityUseItemEvent.Finish.class, dispatchByItem(LivingEntityUseItemEvent::getItem));
+            GROUP.server("useItemFinished", LivingEntityUseItemEvent.Finish.class, dispatchByItem(LivingEntityUseItemEvent::getItem), api -> api.versioned());
     EventBusJS<LivingEntityUseItemEvent.Tick, Item> USE_TICK =
-            GROUP.server("useItemTick", LivingEntityUseItemEvent.Tick.class, dispatchByItem(LivingEntityUseItemEvent::getItem));
+            GROUP.server("useItemTick", LivingEntityUseItemEvent.Tick.class, dispatchByItem(LivingEntityUseItemEvent::getItem), api -> api.versioned());
 
     private static <T> DispatchKey<T, Item> dispatchByItem(Function<T, ItemStack> toStack) {
         return DispatchKey.of(Item.class, toStack.andThen(ItemStack::getItem));

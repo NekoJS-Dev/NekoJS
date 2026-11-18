@@ -5,7 +5,6 @@ import com.tkisor.nekojs.api.data.BindingExposure;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
-import java.util.Objects;
 import java.util.function.Function;
 
 /** Declares independent stable and version publications of one source event. */
@@ -17,30 +16,21 @@ public final class EventPublication<E> {
 
     EventPublication(String name) { this.name = name; }
 
+    /** Selects the versioned target; uses the source payload unless a view is configured. */
     public Scope versioned() {
         return select(BindingExposure.Category.VERSION);
     }
 
-    /** Publishes the source payload itself; stable public-type validation still applies. */
+    /** Selects the stable target; validates the source payload or configured view as a portable public type. */
     public Scope stable() {
         return select(BindingExposure.Category.STABLE);
-    }
-
-    public <V> Scope stable(Class<V> type, Function<E, V> converter) {
-        Objects.requireNonNull(type, "type");
-        Objects.requireNonNull(converter, "converter");
-        Scope scope = stable();
-        scope.exposure.view(name, type, converter);
-        return scope;
     }
 
     private Scope select(BindingExposure.Category category) {
         if (frozen || !categories.add(category)) {
             throw new IllegalArgumentException("[NEKO-4057] Event publication target is frozen or duplicated: " + name);
         }
-        EventExposure exposure = new EventExposure().events(name);
-        if (category == BindingExposure.Category.STABLE) exposure.stable();
-        else exposure.versioned();
+        EventExposure exposure = new EventExposure(name, category);
         exposures.add(exposure);
         return new Scope(exposure);
     }
@@ -53,10 +43,21 @@ public final class EventPublication<E> {
         return exposures.stream().map(EventExposure::declaration).toList();
     }
 
-    /** Optional exact script scope for one publication, independent of its sibling target. */
+    /** Payload view and exact script scope for one target, independent of its sibling target. */
     public final class Scope {
         private final EventExposure exposure;
         private Scope(EventExposure exposure) { this.exposure = exposure; }
+
+        /**
+         * Projects the source host payload for this target only; without a view, the source payload is used.
+         * Cancellable sources require a control mapping and cannot use this projection.
+         */
+        public <V> Scope view(Class<V> type, Function<? super E, ? extends V> converter) {
+            if (frozen) throw new IllegalArgumentException("[NEKO-4057] Event publication is frozen: " + name);
+            exposure.<E, V>view(type, converter);
+            return this;
+        }
+
         public Scope scriptTypes(ScriptType... types) {
             if (frozen) throw new IllegalArgumentException("[NEKO-4057] Event publication is frozen: " + name);
             exposure.scriptTypes(types);

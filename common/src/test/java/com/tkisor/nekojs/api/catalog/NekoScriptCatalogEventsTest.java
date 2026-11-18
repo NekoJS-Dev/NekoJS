@@ -3,6 +3,7 @@ package com.tkisor.nekojs.api.catalog;
 import com.tkisor.nekojs.api.JSTypeAdapter;
 import com.tkisor.nekojs.api.ScriptType;
 import com.tkisor.nekojs.api.data.Binding;
+import com.tkisor.nekojs.api.event.EventBusJS;
 import com.tkisor.nekojs.api.event.EventGroup;
 import com.tkisor.nekojs.api.event.EventGroupRegistry;
 import com.tkisor.nekojs.api.plugin.IPluginRuntime;
@@ -44,8 +45,8 @@ class NekoScriptCatalogEventsTest {
     void eachBusAppearsExactlyOnceTaggedWithItsCanonicalScriptType() {
         EventGroupRegistry registry = new EventGroupRegistry.Impl();
         EventGroup group = EventGroup.of("ProbeEvents");
-        group.server("modifyType", String.class);
-        group.server("addGlobal", Integer.class);
+        group.add("modifyType", ScriptType.SERVER, EventBusJS.of(String.class));
+        group.add("addGlobal", ScriptType.SERVER, EventBusJS.of(Integer.class));
         registry.register(group);
 
         List<EventCatalogEntry> events = NekoScriptCatalog.events(new StubRuntime(registry.view()));
@@ -62,7 +63,7 @@ class NekoScriptCatalogEventsTest {
     void sideFilterAdmitsServerBusExactlyOncePerSide() {
         EventGroupRegistry registry = new EventGroupRegistry.Impl();
         EventGroup group = EventGroup.of("ProbeEvents");
-        group.server("modifyType", String.class);
+        group.add("modifyType", ScriptType.SERVER, EventBusJS.of(String.class));
         registry.register(group);
 
         List<EventCatalogEntry> events = NekoScriptCatalog.events(new StubRuntime(registry.view()));
@@ -80,8 +81,8 @@ class NekoScriptCatalogEventsTest {
     void mixedSideGroupsKeepDistinctEntries() {
         EventGroupRegistry registry = new EventGroupRegistry.Impl();
         EventGroup group = EventGroup.of("Mixed");
-        group.startup("early", String.class);
-        group.server("late", Integer.class);
+        group.add("early", ScriptType.STARTUP, EventBusJS.of(String.class));
+        group.add("late", ScriptType.SERVER, EventBusJS.of(Integer.class));
         registry.register(group);
 
         List<EventCatalogEntry> events = NekoScriptCatalog.events(new StubRuntime(registry.view()));
@@ -95,12 +96,11 @@ class NekoScriptCatalogEventsTest {
     }
 
     @Test
-    void modulePublicationScopeMatchesTheRuntimeWithoutChangingLegacyVisibility() {
+    void modulePublicationScopeMatchesTheRuntimeWithoutChangingSourceDiscovery() {
         var registry = new EventGroupRegistry.Impl().scopedTo("nekojs");
         var group = EventGroup.of("StableTicks");
-        group.server("tickPre", String.class);
+        group.server("tickPre", String.class, api -> api.stable().scriptTypes(ScriptType.SERVER));
         registry.register(group);
-        registry.register(group, e -> e.stable().events("tickPre").scriptTypes(ScriptType.SERVER));
         var runtime = new StubRuntime(registry.view()) {
             @Override public List<com.tkisor.nekojs.api.event.ModuleEventGroup> moduleEventGroups() { return registry.moduleGroups(); }
         };
@@ -108,6 +108,37 @@ class NekoScriptCatalogEventsTest {
         assertEquals(List.of(ScriptType.SERVER), snapshot.moduleEvents().stream().map(ModuleEventCatalogEntry::scriptType).toList());
         assertEquals(String.class, snapshot.moduleEvents().getFirst().event().eventType());
         assertTrue(snapshot.events().getFirst().scriptType().test(ScriptType.STARTUP));
+    }
+
+    @Test
+    void ownersCanPublishIdenticalNamesWithoutExportingPrivateSources() {
+        var registry = new EventGroupRegistry.Impl();
+        var official = EventGroup.of("Changes");
+        official.server("changed", String.class, api -> {
+            api.versioned();
+            api.stable().scriptTypes(ScriptType.SERVER);
+        });
+        official.add("privateSource", ScriptType.SERVER, EventBusJS.of(Integer.class));
+        var addon = EventGroup.of("Changes");
+        addon.server("changed", Integer.class, api -> api.versioned());
+        registry.scopedTo("nekojs").register(official);
+        registry.scopedTo("addon").register(addon);
+        var runtime = new StubRuntime(registry.view()) {
+            @Override public List<com.tkisor.nekojs.api.event.ModuleEventGroup> moduleEventGroups() {
+                return registry.moduleGroups();
+            }
+        };
+        var snapshot = NekoScriptCatalog.snapshot(runtime, ScriptType.SERVER);
+        assertEquals(3, snapshot.events().size(), "all native sources remain available for discovery");
+        assertEquals(3, snapshot.moduleEvents().size(), "only explicit publications become module exports");
+        assertEquals(java.util.Set.of("nekojs:event/stable", "nekojs:event/versioned",
+                        "nekojs:event/versioned/addon"),
+                snapshot.moduleEvents().stream().map(ModuleEventCatalogEntry::moduleId).collect(java.util.stream.Collectors.toSet()));
+        assertTrue(snapshot.moduleEvents().stream().allMatch(entry -> entry.event().name().equals("changed")));
+        assertTrue(snapshot.bindings().isEmpty());
+        assertTrue(snapshot.legacySurface().stream().noneMatch(symbol -> symbol.id().kind().equals("event")));
+        var addonEntry = snapshot.moduleEvents().stream().filter(entry -> entry.owner().equals("addon")).findFirst().orElseThrow();
+        assertEquals(Integer.class, addonEntry.event().eventType());
     }
 
     private static class StubRuntime implements IPluginRuntime {

@@ -14,5 +14,5 @@ public interface CommandEvents {
     EventGroup GROUP = EventGroup.of("CommandEvents");
 
     EventBusJS<CommandRegistryEventJS, Void> REGISTER =
-            GROUP.server("register", CommandRegistryEventJS.class);
+            GROUP.server("register", CommandRegistryEventJS.class, api -> api.versioned());
 }

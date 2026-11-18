@@ -38,18 +38,18 @@ public final class KeyBindEvents {
             DispatchKey.of(String.class, KeyBindEventJS::getId);
 
     public static final EventBusJS<KeyBindEventJS, String> PRESSED =
-            GROUP.client("pressed", KeyBindEventJS.class, KEY_DISPATCH);
+            GROUP.client("pressed", KeyBindEventJS.class, KEY_DISPATCH, api -> api.versioned());
 
     public static final EventBusJS<KeyBindEventJS, String> RELEASED =
-            GROUP.client("released", KeyBindEventJS.class, KEY_DISPATCH);
+            GROUP.client("released", KeyBindEventJS.class, KEY_DISPATCH, api -> api.versioned());
 
     public static final EventBusJS<KeyBindEventJS, String> TICK =
-            GROUP.client("tick", KeyBindEventJS.class, KEY_DISPATCH);
+            GROUP.client("tick", KeyBindEventJS.class, KEY_DISPATCH, api -> api.versioned());
 
     /** {@code KeyBindEvents.register(id, key[, category])}: registers a binding and returns the
      * KeyMapping handle. */
     public static final RegisterBus REGISTER =
-            GROUP.add("register", ScriptType.CLIENT, new RegisterBus());
+            GROUP.add("register", ScriptType.CLIENT, new RegisterBus(), api -> api.versioned());
 
     private static final class Binding {
         final Identifier id;

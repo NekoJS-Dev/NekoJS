@@ -13,6 +13,8 @@ New items, blocks, entities and other content go in `startup_scripts/` and are r
 Create `nekojs/startup_scripts/content.js`:
 
 ```javascript
+import { RegistryEvents } from "nekojs:event/versioned";
+
 RegistryEvents.register(event => {
   event.item('mymod:cool_gem', item => {
     item.maxStackSize = 16
@@ -41,6 +43,8 @@ At this point both show up as purple-and-black squares named `item.mymod.cool_ge
 The methods on `event` are named after registries, such as `event.item`, `event.block` and `event.entityType`. Each takes two arguments: an ID and a function that configures the content.
 
 ```javascript
+import { RegistryEvents } from "nekojs:event/versioned";
+
 RegistryEvents.register(event => {
   event.item('mymod:ruby', item => {
     item.maxStackSize = 16   // a plain setting: assign it
@@ -94,6 +98,8 @@ Other mods or plugins can add more methods. If you misspell a method name, the e
 ### Food
 
 ```javascript
+import { RegistryEvents } from "nekojs:event/versioned";
+
 RegistryEvents.register(event => {
   event.item('mymod:cheese', item => {
     item.food(food => {
@@ -119,6 +125,8 @@ RegistryEvents.register(event => {
 For properties not listed above, set item components directly. Values use the same format as component JSON in vanilla data packs:
 
 ```javascript
+import { RegistryEvents } from "nekojs:event/versioned";
+
 RegistryEvents.register(event => {
   event.item('mymod:gem', item => {
     item.component('minecraft:rarity', 'epic')
@@ -148,6 +156,8 @@ Item tooltips are not set here. Use the client event `ItemEvents.tooltip`; see [
 | `tag(...)` | — | Adds the **block** to tags |
 
 ```javascript
+import { RegistryEvents } from "nekojs:event/versioned";
+
 RegistryEvents.register(event => {
   event.block('mymod:ruby_ore', block => {
     block.hardness = 3.0
@@ -173,6 +183,8 @@ About `renderType`: on 1.21.1 it works directly. On 26.x, transparency comes fro
 One `event.fluid` call registers a complete fluid that can be placed, flows and fits in a bucket:
 
 ```javascript
+import { RegistryEvents } from "nekojs:event/versioned";
+
 RegistryEvents.register(event => {
   event.fluid('mymod:molten_iron', fluid => {
     fluid.density = 3000
@@ -205,6 +217,8 @@ You provide the fluid's textures and models in a resource pack.
 ## Entities
 
 ```javascript
+import { RegistryEvents } from "nekojs:event/versioned";
+
 RegistryEvents.register(event => {
   event.entityType('mymod:test_mob', mob => {
     mob.category = 'monster'
@@ -242,6 +256,8 @@ Spawn egg colors only apply on NeoForge 1.21.1. On 26.x, change the egg's look b
 To reuse the behavior and look of an existing mob, set its Java class and renderer:
 
 ```javascript
+import { RegistryEvents } from "nekojs:event/versioned";
+
 const Zombie = Java.type('net.minecraft.world.entity.monster.zombie.Zombie')
 
 RegistryEvents.register(event => {
@@ -283,6 +299,8 @@ Write full entity IDs, such as `'minecraft:player'`. A custom Goal class needs a
 `GoalEvents.register` does not create entities. It adds behavior to existing ones, including vanilla mobs. It also goes in `startup_scripts`:
 
 ```javascript
+import { GoalEvents } from "nekojs:event/versioned";
+
 GoalEvents.register(event => {
   event.forType('minecraft:pig', goals => {
     goals.panic(0, 2.0).randomStroll(6, 0.8)
@@ -294,6 +312,8 @@ GoalEvents.register(event => {
 ## Creative tabs
 
 ```javascript
+import { RegistryEvents } from "nekojs:event/versioned";
+
 RegistryEvents.register(event => {
   event.creativeModeTab('mymod:main', tab => {
     tab.title = 'My Mod'
@@ -310,6 +330,8 @@ RegistryEvents.register(event => {
 ## Other content
 
 ```javascript
+import { RegistryEvents } from "nekojs:event/versioned";
+
 RegistryEvents.register(event => {
   // Status effect: category is 'beneficial', 'harmful' or 'neutral' (default)
   event.mobEffect('mymod:shock', effect => {
@@ -344,6 +366,8 @@ Potions can only use effects that already exist in the game. A misspelled effect
 ### Enchantments (NeoForge 1.21.1 only)
 
 ```javascript
+import { RegistryEvents } from "nekojs:event/versioned";
+
 RegistryEvents.register(event => {
   event.enchantment('mymod:ice_bane', ench => {
     ench.supportedItems = 'minecraft:enchantable/weapon'
@@ -368,6 +392,8 @@ An enchantment registered this way shows up in enchanting tables and on books, b
 Items, blocks, fluids, entities and enchantments can join tags right where you register them, with no separate data pack JSON:
 
 ```javascript
+import { RegistryEvents } from "nekojs:event/versioned";
+
 RegistryEvents.register(event => {
   event.item('mymod:ruby_pickaxe', item => {
     item.maxDamage = 500
@@ -423,6 +449,8 @@ Press F3+T after changing resources.
 If you have an item texture and do not want to write a model by hand, NekoJS can generate it:
 
 ```javascript
+import { RegistryEvents } from "nekojs:event/versioned";
+
 RegistryEvents.register(event => {
   event.item('mymod:cool_gem', item => {
     item.texture('mymod:item/cool_gem')
@@ -450,6 +478,8 @@ enabled = true
 Then write this in `server_scripts`:
 
 ```javascript
+import { DynamicRegistryEvents } from "nekojs:event/versioned";
+
 DynamicRegistryEvents.dynamicRegistry(event => {
   event.item('mymod:ruby', item => {
     item.maxStackSize = 64

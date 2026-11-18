@@ -75,6 +75,8 @@ MyEvents.PLAYER_GREET.post(new PlayerGreetEvent(player, "你好"));
 
 ```javascript
 // server_scripts/greet.js
+import { MyEvents } from "nekojs:event/versioned/myaddon";
+
 MyEvents.playerGreet(event => {
   console.info(`${event.player.getName().getString()} 收到问候：${event.greeting}`)
 })
@@ -96,12 +98,14 @@ MyEvents.playerGreet(event => {
 | `GROUP.server(name, eventClass, dispatchKey)` | 服务端 | 按 key 分发，`client`/`startup` 同理 |
 | `GROUP.add(name, scriptType, bus)` | 自己指定 | 传入自己创建的总线，比如强制可取消 |
 
+上表不带回调的 `server`/`client`/`startup` 工厂默认发布 versioned，包括带 key 的重载。末尾配置回调会替代此默认值，只发布回调选中的目标；空回调会报错（`NEKO-4057`）。相反，`add(name, scriptType, bus)` 不带回调时保持私有，带配置回调的重载也必须选择发布目标。带 key 的工厂把回调放在 dispatch key 后，`add` 把回调放在 bus 后。
+
 工厂方法都是 `add` 的简写。`add` 会做两项检查：
 
 - 同一个组里事件名重复，抛 `IllegalArgumentException`。
 - 启动完成后事件组会被冻结，之后再 `add` 抛 `IllegalStateException`。
 
-**组名重复不是错误。** `EventGroupRegistry` 按组名合并，两个插件用同一个组名，事件会并进同一个组。这也是给别人的事件组追加事件的正规做法，只有事件名相同才会报错。
+**名字按所有者隔离。** 同一所有者、同名组的注册会合并不重叠的源事件，重复源事件名会失败。不同插件可以使用相同的组名和事件名，发布内容不会互相合并；脚本明确导入对应所有者的模块。
 
 <a id="wiki-section-5"></a>
 ### 按 key 分发
@@ -117,6 +121,8 @@ MyEvents.CUSTOM.post(new PlayerGreetEvent(player, "Hello"), someIdentifier);
 ```
 
 ```javascript
+import { MyEvents } from "nekojs:event/versioned/myaddon";
+
 MyEvents.custom('mymod:some_key', event => {
   // 只在 key 为 mymod:some_key 时触发
 })
@@ -142,7 +148,8 @@ key 的类型确定后不要轻易改。改了之后，所有已有脚本的第�
 
 ```java
 EventBusJS<PlayerGreetEvent, Void> PLAYER_GREET =
-    MyEvents.GROUP.add("playerGreet", ScriptType.SERVER, EventBusJS.of(PlayerGreetEvent.class, true));
+    MyEvents.GROUP.add("playerGreet", ScriptType.SERVER, EventBusJS.of(PlayerGreetEvent.class, true),
+        api -> api.versioned());
 
 boolean cancelled = PLAYER_GREET.post(new PlayerGreetEvent(player, "你好"));
 ```
@@ -217,20 +224,55 @@ FabricEventBusBridge.create().bind(
 <a id="wiki-section-11"></a>
 ## 发布到 API 模块
 
-事件组默认作为全局名字提供。你也可以把同一个事件发布到 `nekojs/api/version/<模组ID>` 或 `nekojs/api/stable/<模组ID>` 模块，脚本用 `import` 引入（见 [模块系统](module-system_cn#wiki-api-modules)）：
+Java 插件和原生事件只通过模块发布。使用默认 versioned 工厂，或在源事件旁配置发布目标，再在事件钩子里调用一次 `registry.register(GROUP)`。不带配置回调的 `add` 添加的源事件留在内部。插件加载器提供所有者模组 ID。见 [模块系统](module-system_cn#wiki-api-modules)。
 
 ```java
 EventBusJS<PlayerGreetEvent, Void> PLAYER_GREET = GROUP.server(
-        "playerGreet", PlayerGreetEvent.class,
-        publication -> publication.versioned().scriptTypes(ScriptType.SERVER));
+        "playerGreet", PlayerGreetEvent.class, api -> {
+            api.versioned().scriptTypes(ScriptType.SERVER);
+            api.stable().view(GreetingView.class, event -> new GreetingView(event.getGreeting()))
+                    .scriptTypes(ScriptType.SERVER);
+        });
+
+public record GreetingView(String greeting) {}
 ```
 
-仍然用 `registerEvents` 注册 `GROUP`。如果模组 ID 是 `myaddon`，服务端脚本可以从 `nekojs/api/version/myaddon` 导入 `MyEvents`。
+所有者为 `myaddon` 时，原始载荷从 `nekojs:event/versioned/myaddon` 导入 `MyEvents`；`GreetingView` 则从 `nekojs:event/stable/myaddon` 导入。分类是作者对接口的承诺，不会自动适配原生语义。
 
-- 发布复用原来的事件，不会多一个总线或多一份原生监听。原来的全局写法仍然可用。脚本同时用两种写法订阅，会注册两个监听器。
-- `publication.stable()` 只能发布通过稳定公开类型校验的载荷。需要转换时用 `stable(View.class, converter)`，但可取消事件不能用这种转换。
-- 也可以对整个组调用 `GROUP.expose(...)`。stable 组必须用 `events(...)` 明确列出要发布的事件。
-- 事件名不存在、重复发布、视图不合法时，报 `NEKO-4057`。
+- 两个发布共用源总线、优先级/顺序和脚本代的监听生命周期；同时订阅两个目标会注册两个监听器。候选代失败保留活动监听器；普通 reload 不重建插件运行时。
+- `stable()` 和 `versioned()` 都返回同一种 `EventPublication<E>.Scope`，支持 `.view(Class, Function)` 和 `.scriptTypes(...)`，顺序任意。各转换器接收原始源载荷，而不是另一目标转换后的视图。视图不转换 dispatch key。
+- `scriptTypes(...)` 是与源可见范围取交集的精确集合。SERVER 源通常匹配 SERVER、STARTUP 和 TEST；`.scriptTypes(ScriptType.SERVER)` 只选 SERVER。不指定 scope 时保留源范围。路径没有 server/player 子模块。
+- `api.stable()` 以声明的载荷类型作为公开视图，该类型必须可移植；实际子类的额外成员不会暴露。转换器只能收窄载荷，不能让原生 dispatch key 自动变得可移植。没有控制映射时，两种类别都仍拒绝对可取消源使用转换视图。投影回调同步执行，原始回调保留源策略；不可调用的回调在订阅时同步拒绝。
+- 所有者不合法、重复发布、不可移植类型或无效视图会报 `NEKO-4057`。
+
+Stable 也可以是独立的可移植源，不需要 versioned 兄弟目标或转换器：
+
+```java
+EventBusJS<GreetingView, Void> GREETING = GROUP.server(
+        "greeting", GreetingView.class, api -> api.stable());
+GREETING.post(new GreetingView("Hello"));
+```
+
+Versioned 目标同样可用 `api.versioned().view(GreetingView.class, converter)`。投递仍使用原始源总线及其源载荷类型。
+
+### 事件接口迁移
+
+| 旧写法 | 现在的写法 |
+|---|---|
+| 自动全局 `ServerEvents` 等 Java 事件组 | 明确从 `nekojs:event/versioned` 导入，保留原生载荷语义 |
+| 官方事件模块 `nekojs/api/stable/events` | `nekojs:event/stable` |
+| 官方事件模块 `nekojs/api/versioned/events` | `nekojs:event/versioned` |
+| 插件事件 `nekojs/plugins/<owner>/api/stable/events` | `nekojs:event/stable/<owner>`（例如 `nekojs:event/stable/myaddon`） |
+| 插件事件 `nekojs/plugins/<owner>/api/versioned/events` | `nekojs:event/versioned/<owner>`（例如 `nekojs:event/versioned/myaddon`） |
+| `nekojs/api/stable/<owner>` / `nekojs/api/version/<owner>` 中的插件 Binding | `nekojs/plugins/<owner>/api/stable` / `nekojs/plugins/<owner>/api/version` |
+| `GROUP.expose(...)` | 默认 versioned 简写，或在逐事件回调中选 `api.versioned()`、`api.stable()` 或两者 |
+| `registry.register(group, configure)` | 把选择移到源定义，只调用 `registry.register(group)` |
+| 不带回调的 `server` / `client` / `startup`，包括带 key 重载 | 默认发布 versioned |
+| 带配置回调的工厂或 `add` | 只发布选中的目标；拒绝空回调 |
+| 不带配置的 `add(name, scriptType, bus)` | 私有源总线 |
+| `api.stable(Class, Function)` | `api.stable().view(Class, Function)`；versioned 支持相同的 view 操作 |
+
+自定义引擎事件虚拟模块命名空间恰有 `stable` 和 `versioned` 两个类别，并可在末尾带所有者；表中列出了官方与插件路径。旧事件路径没有别名。Java 事件组不自动成为全局变量，也不从 Binding 聚合模块导出。此事件路径调整不改变普通 Binding 的全局或模块路径；脚本创建的动态事件组仍保留全局。下文的 `ScriptEvents` 注册器从 `nekojs:event/versioned` 导入，其声明和投递行为不变。旧原生处理器不能直接改用 stable：可移植视图可能不含原生成员和控制操作。
 
 <a id="wiki-section-12"></a>
 ## ScriptEvents：在脚本里定义事件
@@ -238,6 +280,8 @@ EventBusJS<PlayerGreetEvent, Void> PLAYER_GREET = GROUP.server(
 脚本作者不写 Java，也能声明自己的事件组。在启动脚本里声明，然后在服务端或客户端脚本里监听和触发：
 
 ```javascript
+import { ScriptEvents } from "nekojs:event/versioned";
+
 // startup_scripts/register_events.js
 ScriptEvents.server(event => event.register('MyEvents', 'bossKilled'))
 ScriptEvents.client(event => event.register('MyClientEvents', 'hudRefresh'))

@@ -1,7 +1,5 @@
 package com.tkisor.nekojs.core;
 
-import com.tkisor.nekojs.NekoJS;
-import com.tkisor.nekojs.api.event.EventGroupJS;
 import com.tkisor.nekojs.api.event.ScriptEventGroupJS;
 import com.tkisor.nekojs.api.event.ScriptEventRegistrar;
 import com.tkisor.nekojs.api.event.ScriptEventRegistry;
@@ -50,11 +48,6 @@ public class DefaultScriptEventBridge implements ScriptEventBridge {
 
     @Override
     public void bindEvents(Value bindings, ScriptType type) {
-        var values = pluginRuntime().eventGroups().values();
-        NekoJS.LOGGER.info("正在为 {} 注册 {} 个事件组... — registering event groups", type.name(), values.size());
-        for (var group : values) {
-            bindings.putMember(group.name(), new EventGroupJS(group, type));
-        }
         ScriptEventRegistry.groupsFor(type).forEach((name, definitions) -> bindings.putMember(name, new ScriptEventGroupJS(name, definitions)));
     }
 

@@ -25,41 +25,41 @@ public final class BlockEvents {
 
     public static final EventBusJS<BlockBrokenEventJS, Block> BROKEN =
             GROUP.add("broken", ScriptType.SERVER, EventBusJS.of(
-                    BlockBrokenEventJS.class, true, dispatchByBlock(BlockBrokenEventJS::getBlock)));
+                    BlockBrokenEventJS.class, true, dispatchByBlock(BlockBrokenEventJS::getBlock)), api -> api.versioned());
 
     public static final EventBusJS<BlockEvent.EntityPlaceEvent, Block> ENTITY_PLACED =
-            GROUP.server("entityPlaced", BlockEvent.EntityPlaceEvent.class, dispatchByBlock());
+            GROUP.server("entityPlaced", BlockEvent.EntityPlaceEvent.class, dispatchByBlock(), api -> api.versioned());
     public static final EventBusJS<BlockEvent.EntityMultiPlaceEvent, Block> ENTITY_MULTI_PLACED =
-            GROUP.server("entityMultiPlaced", BlockEvent.EntityMultiPlaceEvent.class, dispatchByBlock());
+            GROUP.server("entityMultiPlaced", BlockEvent.EntityMultiPlaceEvent.class, dispatchByBlock(), api -> api.versioned());
     public static final EventBusJS<BlockEvent.NeighborNotifyEvent, Block> NEIGHBOR_NOTIFY =
-            GROUP.server("neighborNotify", BlockEvent.NeighborNotifyEvent.class, dispatchByBlock());
+            GROUP.server("neighborNotify", BlockEvent.NeighborNotifyEvent.class, dispatchByBlock(), api -> api.versioned());
     public static final EventBusJS<BlockEvent.FluidPlaceBlockEvent, Block> FLUID_PLACED =
-            GROUP.server("fluidPlaced", BlockEvent.FluidPlaceBlockEvent.class, dispatchByBlock());
+            GROUP.server("fluidPlaced", BlockEvent.FluidPlaceBlockEvent.class, dispatchByBlock(), api -> api.versioned());
     public static final EventBusJS<BlockEvent.FarmlandTrampleEvent, Block> FARMLAND_TRAMPLE =
-            GROUP.server("farmlandTrample", BlockEvent.FarmlandTrampleEvent.class, dispatchByBlock());
+            GROUP.server("farmlandTrample", BlockEvent.FarmlandTrampleEvent.class, dispatchByBlock(), api -> api.versioned());
     public static final EventBusJS<BlockEvent.PortalSpawnEvent, Block> PORTAL_SPAWN =
-            GROUP.server("portalSpawn", BlockEvent.PortalSpawnEvent.class, dispatchByBlock());
+            GROUP.server("portalSpawn", BlockEvent.PortalSpawnEvent.class, dispatchByBlock(), api -> api.versioned());
     public static final EventBusJS<BlockEvent.BlockToolModificationEvent, Block> TOOL_MODIFICATION =
-            GROUP.server("toolModification", BlockEvent.BlockToolModificationEvent.class, dispatchByBlock());
+            GROUP.server("toolModification", BlockEvent.BlockToolModificationEvent.class, dispatchByBlock(), api -> api.versioned());
 
     public static final EventBusJS<PlayerInteractEvent.RightClickBlock, Block> RIGHT_CLICKED =
             GROUP.server("rightClicked", PlayerInteractEvent.RightClickBlock.class,
-                    dispatchByBlock(e -> e.getLevel().getBlockState(e.getPos()).getBlock()));
+                    dispatchByBlock(e -> e.getLevel().getBlockState(e.getPos()).getBlock()), api -> api.versioned());
     public static final EventBusJS<BlockEvent.EntityPlaceEvent, Block> PLACED =
-            GROUP.server("placed", BlockEvent.EntityPlaceEvent.class, dispatchByBlock());
+            GROUP.server("placed", BlockEvent.EntityPlaceEvent.class, dispatchByBlock(), api -> api.versioned());
     public static final EventBusJS<PlayerInteractEvent.LeftClickBlock, Block> LEFT_CLICKED =
             GROUP.server("leftClicked", PlayerInteractEvent.LeftClickBlock.class,
-                    dispatchByBlock(e -> e.getLevel().getBlockState(e.getPos()).getBlock()));
+                    dispatchByBlock(e -> e.getLevel().getBlockState(e.getPos()).getBlock()), api -> api.versioned());
 
     /** Receives the mixin-posted native random tick event. */
     public static final EventBusJS<RandomTickEvent, Block> RANDOM_TICK =
             GROUP.server("randomTick", RandomTickEvent.class,
-                    dispatchByBlock(RandomTickEvent::getBlock));
+                    dispatchByBlock(RandomTickEvent::getBlock), api -> api.versioned());
 
     /** Receives the mixin-posted native block entity tick event. */
     public static final EventBusJS<BlockEntityTickEvent, BlockEntityType<?>> BLOCK_ENTITY_TICK =
             GROUP.server("blockEntityTick", BlockEntityTickEvent.class,
-                    DispatchKey.of(BlockEntityType.class, BlockEntityTickEvent::getType));
+                    DispatchKey.of(BlockEntityType.class, BlockEntityTickEvent::getType), api -> api.versioned());
 
     static <T> DispatchKey<T, Block> dispatchByBlock(Function<T, Block> toKey) {
         return DispatchKey.of(Block.class, toKey);

@@ -102,7 +102,7 @@ final class LegacyProbeFixture {
                 "SampleEvents.cancellable(event => {\n  $0\n})",
                 "Sample cancellable event snippet");
 
-        return new NekoScriptCatalogSnapshot(
+        return ProbeEventFixtures.publishVersioned(new NekoScriptCatalogSnapshot(
                 ScriptType.all(),
                 List.of(staticBinding, instanceBinding),
                 List.of(cancellableEvent, dispatchEvent),
@@ -118,6 +118,6 @@ final class LegacyProbeFixture {
                 new TypeOutputLayout(Path.of("probe-types"), Path.of("snippets")),
                 java.util.Map.of(),
                 java.util.List.of()
-        );
+        ));
     }
 }

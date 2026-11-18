@@ -7,16 +7,25 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
 
+/**
+ * Collects event sources and their explicit per-event module publications during plugin bootstrap.
+ * Defining an {@link EventGroup} does not register it; registration binds publication declarations
+ * to the contributing plugin's owner. Published targets retain their source buses and listener lifecycle.
+ */
 public interface EventGroupRegistry {
+    /**
+     * Registers a group's event sources and declarations under the contributing plugin owner.
+     * Same-owner groups merge disjoint event names; duplicate events/publications fail. Different owners
+     * may reuse group and event names. Only explicit publications are exposed, through event modules.
+     */
     void register(EventGroup group);
 
+    /** Returns the internal source index, keyed by owner and group; keys are not script globals. */
     Map<String, EventGroup> view();
 
-    default void register(EventGroup group, java.util.function.Consumer<EventExposure> configure) {
-        throw new UnsupportedOperationException("[NEKO-4057] Module event registration is not supported by this registry");
-    }
-
+    /** Returns the explicit stable/versioned event module publications. */
     default java.util.List<ModuleEventGroup> moduleGroups() { return java.util.List.of(); }
+    /** Returns the original source groups retained for lifecycle cleanup and freezing. */
     default java.util.List<EventGroup> sources() { return java.util.List.copyOf(view().values()); }
 
     @ApiStatus.Internal
@@ -38,24 +47,12 @@ public interface EventGroupRegistry {
         private void addSource(EventGroup group) {
             if (sources.stream().noneMatch(source -> source == group)) sources.add(group);
         }
-        @Override
-        public void register(EventGroup group, java.util.function.Consumer<EventExposure> configure) {
-            Objects.requireNonNull(group, "group");
-            EventExposure exposure = new EventExposure();
-            Objects.requireNonNull(configure, "configure").accept(exposure);
-            ModuleEventGroup module = exposure.freeze(owner, group);
-            String key = module.moduleId() + ":" + group.name();
-            if (modules.putIfAbsent(key, module) != null) {
-                throw new IllegalArgumentException("[NEKO-4057] Duplicate module event group: " + key);
-            }
-            addSource(group);
-        }
         @Override public java.util.List<ModuleEventGroup> moduleGroups() { return java.util.List.copyOf(modules.values()); }
         @Override public java.util.List<EventGroup> sources() { return java.util.List.copyOf(sources); }
 
         public void inherit(EventGroupRegistry registry) {
             registry.view().forEach((name, group) -> {
-                EventGroup copy = EventGroup.of(name);
+                EventGroup copy = EventGroup.of(group.name());
                 copy.merge(group);
                 groups.put(name, copy);
             });
@@ -66,18 +63,18 @@ public interface EventGroupRegistry {
         @Override
         public void register(EventGroup group) {
             Objects.requireNonNull(group, "group == null");
-            // Resolve every declaration and conflict before changing the legacy namespace or source ledger.
+            // Validate publications before changing the owner-qualified source index or lifecycle ledger.
             Map<String, ModuleEventGroup> updated = new LinkedHashMap<>(modules);
             for (ModuleEventGroup publication : group.modulePublications(owner)) {
                 String key = publication.moduleId() + ":" + group.name();
                 updated.merge(key, publication, ModuleEventGroup::merge);
             }
-            EventGroup legacy = groups.computeIfAbsent(group.name(), EventGroup::of);
-            legacy.merge(group);
+            String sourceKey = owner == null ? group.name() : owner + ":" + group.name();
+            EventGroup source = groups.computeIfAbsent(sourceKey, ignored -> EventGroup.of(group.name()));
+            source.merge(group);
             modules.clear();
             modules.putAll(updated);
             addSource(group);
-            EventSchemaRegistry.registerGroup(group);
         }
 
         @Override

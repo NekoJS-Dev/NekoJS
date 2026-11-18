@@ -7,7 +7,7 @@
 
 NekoJS 本体内置了 Python 支持。把 `.py` 文件放进脚本目录，它就会和 `.js` 一样被加载。
 
-不需要安装 Python，也不需要 `pip install` 任何东西。NekoJS 会先把 Python 代码转成 JavaScript，再交给 Graal 执行。所以 `ServerEvents`、`Item` 这些绑定在 Python 里用法完全一样。
+不需要安装 Python，也不需要 `pip install` 任何东西。NekoJS 会先把 Python 代码转成 JavaScript，再交给 Graal 执行。普通 Binding（例如 `Item`）仍可直接使用。Java 插件/原生事件组只通过模块提供；Python 的导入语法不能直接表示这些模块路径，下文配方示例使用本地 JavaScript 桥接文件。
 
 要注意，这不是完整的 Python。它只支持一部分语法和内置函数，也没有 Python 标准库。本页会讲清楚哪些能用、哪些不能用。
 
@@ -41,10 +41,10 @@ print('Hello from Python!')
 from nekojs import *
 
 # 或者只导入用到的名字
-from nekojs import Item, ServerEvents
+from nekojs import Item
 ```
 
-这一行只是给编辑器看的。NekoJS 转换代码时会把它直接去掉，运行时的绑定本来就存在。所以不写它脚本也能跑，只是编辑器不认识 `ServerEvents` 这些名字。
+这一行只是给编辑器看的。NekoJS 转换代码时会把它直接去掉，运行时的绑定本来就存在。所以不写它脚本也能跑，只是编辑器不认识 `Item` 等普通 Binding。这个编辑器专用导入不会加载事件模块，也不会创建事件组全局。
 
 不要写成 `import nekojs`，也不要用 `as` 起别名（比如 `from nekojs import Item as I`）。NekoJS 只会去掉 `from nekojs import ...` 这种写法。`import nekojs` 会被当成导入一个叫 `nekojs` 的文件而报错；别名会在运行时变成未定义的名字。
 
@@ -60,10 +60,17 @@ from nekojs import Item, ServerEvents
 <a id="wiki-section-4"></a>
 ## 一个实际的例子
 
-用 Python 改配方，写在 `server_scripts/recipes.py`：
+先创建 `server_scripts/event_bridge.js`。Python 点分导入只解析本地文件，不能表示 NekoJS 裸模块 ID；`from nekojs import ...` 会被删除，也不能加载它们。本地 JavaScript 模块可以通过真实模块导入重新导出事件组：
+
+```javascript
+// server_scripts/event_bridge.js
+export { ServerEvents } from "nekojs:event/versioned";
+```
+
+再在 `server_scripts/recipes.py` 中改配方：
 
 ```python
-from nekojs import ServerEvents
+from event_bridge import ServerEvents
 
 STICK_SOURCES = {
     'minecraft:cobblestone': 4,
@@ -273,7 +280,7 @@ kit = make_kit('starter', ['minecraft:bread'])
 - 从别的文件导入的类，不能直接用 `Box(1)` 创建实例。请在那个文件里提供一个创建函数（比如上面的 `make_kit`），再导入这个函数。
 - 没有 Python 标准库。`import math`、`from typing import List` 会被当成导入同目录的文件而报错。数学函数可以直接用 JavaScript 的 `Math`，比如 `Math.floor(x)`。
 
-`ServerEvents`、`Item` 等 NekoJS 绑定不需要导入，直接用。
+`Item` 等普通全局 Binding 不需要运行时导入。Java 插件/原生事件组必须从模块导入，可使用上面的本地 JavaScript 桥接。Python 没有直接对应 `nekojs:event/versioned` 或带所有者的插件事件模块的点分导入写法。
 
 <a id="wiki-section-14"></a>
 ## 支持情况一览

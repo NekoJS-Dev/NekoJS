@@ -56,7 +56,7 @@ class DynamicRegistryDefaultDeclarationsTest {
     }
 
     @Test
-    void eventBuilderDependenciesExcludeUnassociatedLegacyGlobalsAndSameNameSpoofs() throws IOException {
+    void eventBuilderDependenciesExcludeUnassociatedLegacyGlobalsAndSameNameSpoofs() throws Exception {
         RegistryBuilderSurfaceEntry legacy = new RegistryBuilderSurfaceEntry("SoundEventBuilder", "minecraft:sound_event",
                 "basic", "soundEvent", List.of(new RegistryBuilderSurfaceEntry.Member("fixedRange", RegistryBuilderSurfaceEntry.MemberKind.WRITABLE_PROPERTY, "number", "float")), "");
         RegistryBuilderSurfaceEntry spoof = new RegistryBuilderSurfaceEntry("DynamicItemBuilder", "test:spoof",
@@ -65,11 +65,10 @@ class DynamicRegistryDefaultDeclarationsTest {
         builders.add(legacy);
         builders.add(spoof);
         String manual = "interface SoundEventBuilder { fixedRange: number | null; }";
-        var snapshot = NekoScriptCatalog.snapshot(NekoPluginBootstrap.bootstrap(List.of(new DeclarationPlugin(builders,
-                List.of(ManualDeclarationCatalogEntry.of("test:legacy", manual, "", List.of())))),
-                new ScriptPropertyRegistry.Impl()));
+        var snapshot = catalog(new DeclarationPlugin(builders,
+                List.of(ManualDeclarationCatalogEntry.of("test:legacy", manual, "", List.of()))));
         Map<String, String> outputs = render(snapshot).typescript();
-        String events = outputs.get("@side-only/server/events/index.d.ts");
+        String events = outputs.get("@side-only/server/bindings/api-modules.d.ts");
         assertTrue(events.contains("/// <reference path=\"../../../@event-builders/index.d.ts\" />"), events);
         assertFalse(events.contains("../../../@registry-builders/"), events);
         String dependencies = outputs.get("@event-builders/index.d.ts");
@@ -88,7 +87,7 @@ class DynamicRegistryDefaultDeclarationsTest {
     }
 
     @Test
-    void emptyAssociatedPayloadHasAnExplicitPythonProtocolBody() throws IOException {
+    void emptyAssociatedPayloadHasAnExplicitPythonProtocolBody() throws Exception {
         RegistryBuilderSurfaceEntry builder = DynamicBuilderSurfaces.derive().getFirst();
         RegistryBuilderSurfaceEntry emptyPayload = new RegistryBuilderSurfaceEntry(
                 builder.builderName(), builder.registryKey(), builder.typeName(), builder.sugarName(),
@@ -97,18 +96,18 @@ class DynamicRegistryDefaultDeclarationsTest {
         BackendOutputs outputs = render(catalog(List.of(emptyPayload)));
         assertTrue(outputs.python().get("nekojs/_events/server/__init__.pyi")
                 .contains("class EmptyPayload(Protocol):\n    ...\n"));
-        assertTrue(outputs.typescript().get("@side-only/server/events/index.d.ts")
+        assertTrue(outputs.typescript().get("@side-only/server/bindings/api-modules.d.ts")
                 .contains("event: EmptyPayload"));
     }
 
     @Test
-    void defaultCatalogResolvesDynamicProxyPayloadInBothCompleteBackendsWithoutScanningCore() throws IOException {
+    void defaultCatalogResolvesDynamicProxyPayloadInBothCompleteBackendsWithoutScanningCore() throws Exception {
         NekoScriptCatalogSnapshot snapshot = catalog(DynamicBuilderSurfaces.derive());
         assertEquals(DynamicBuilderSurfaces.derive(), snapshot.registryBuilderSurfaces());
         BackendOutputs outputs = render(snapshot);
         Map<String, String> typescript = outputs.typescript();
         Map<String, String> python = outputs.python();
-        String tsEvents = typescript.get("@side-only/server/events/index.d.ts");
+        String tsEvents = typescript.get("@side-only/server/bindings/api-modules.d.ts");
         String pyEvents = python.get("nekojs/_events/server/__init__.pyi");
         assertTrue(tsEvents.contains("event: DynamicRegistryEvent"),
                 "Default SERVER callback must reference a declared script-only payload instead of the excluded host class");
@@ -138,7 +137,13 @@ class DynamicRegistryDefaultDeclarationsTest {
         assertEquals(Set.of("item", "soundEvent", "mobEffect"), runtimeNames);
         assertEquals(runtimeNames, Arrays.stream(DynamicDefinitionType.values())
                 .map(DynamicDefinitionType::apiName).collect(Collectors.toSet()));
-        String tsPayload = tsEvents.substring(tsEvents.indexOf("interface DynamicRegistryEvent {"), tsEvents.indexOf("}\n"));
+        int tsModuleStart = tsEvents.indexOf("declare module \"nekojs:event/versioned\" {");
+        assertTrue(tsModuleStart >= 0, tsEvents);
+        int tsPayloadStart = tsEvents.indexOf("interface DynamicRegistryEvent {", tsModuleStart);
+        assertTrue(tsPayloadStart > tsModuleStart, tsEvents);
+        int tsPayloadEnd = tsEvents.indexOf("\n}", tsPayloadStart);
+        assertTrue(tsPayloadEnd > tsPayloadStart, tsEvents);
+        String tsPayload = tsEvents.substring(tsPayloadStart, tsPayloadEnd);
         String pyPayload = pyEvents.substring(pyEvents.indexOf("class DynamicRegistryEvent(Protocol):"),
                 pyEvents.indexOf("\nclass DynamicRegistryEventsType:"));
         assertEquals(runtimeNames, Pattern.compile("(?m)^    (\\w+)\\(").matcher(tsPayload)
@@ -149,7 +154,7 @@ class DynamicRegistryDefaultDeclarationsTest {
         assertTrue(python.get("nekojs/_registry_builders/__init__.pyi").contains("fixedRange: float | None"));
         assertTrue(typescript.get("@registry-builders/index.d.ts").contains("setMode(mode: string): DynamicSoundEventBuilder;"));
         assertTrue(python.get("nekojs/_registry_builders/__init__.pyi").contains("def setMode(self, mode: str) -> DynamicSoundEventBuilder: ..."));
-        assertFalse(typescript.getOrDefault("@side-only/client/events/index.d.ts", "").contains("DynamicRegistryEvent"));
+        assertFalse(typescript.getOrDefault("@side-only/client/bindings/api-modules.d.ts", "").contains("DynamicRegistryEvent"));
         assertFalse(python.getOrDefault("nekojs/_events/client/__init__.pyi", "").contains("DynamicRegistryEvent"));
         String captureDirectory = System.getenv("NEKO_PROXY_DECLARATION_CAPTURE");
         if (captureDirectory != null) {
@@ -159,13 +164,13 @@ class DynamicRegistryDefaultDeclarationsTest {
     }
 
     @Test
-    void matchingBuilderNamesAndDynamicTypeAloneDoNotInventAnEventPayloadAssociation() {
+    void matchingBuilderNamesAndDynamicTypeAloneDoNotInventAnEventPayloadAssociation() throws Exception {
         List<RegistryBuilderSurfaceEntry> unassociated = DynamicBuilderSurfaces.derive().stream()
                 .map(entry -> new RegistryBuilderSurfaceEntry(entry.builderName(), entry.registryKey(),
                         entry.typeName(), entry.sugarName(), entry.members(), entry.description())).toList();
         unassociated.forEach(entry -> assertNull(entry.eventPayload()));
         BackendOutputs outputs = render(catalog(unassociated));
-        String tsEvents = outputs.typescript().get("@side-only/server/events/index.d.ts");
+        String tsEvents = outputs.typescript().get("@side-only/server/bindings/api-modules.d.ts");
         String pyEvents = outputs.python().get("nekojs/_events/server/__init__.pyi");
         assertFalse(tsEvents.contains("../../../@event-builders/"));
         assertFalse(outputs.typescript().containsKey("@event-builders/index.d.ts"));
@@ -222,9 +227,16 @@ class DynamicRegistryDefaultDeclarationsTest {
                 snapshot, collected, config, paths, "python", temporaryDirectory.resolve("python"), declarations)));
     }
 
-    private static NekoScriptCatalogSnapshot catalog(List<RegistryBuilderSurfaceEntry> builders) {
-        return NekoScriptCatalog.snapshot(NekoPluginBootstrap.bootstrap(List.of(new DeclarationPlugin(builders)),
-                new ScriptPropertyRegistry.Impl()));
+    private static NekoScriptCatalogSnapshot catalog(List<RegistryBuilderSurfaceEntry> builders) throws Exception {
+        return catalog(new DeclarationPlugin(builders));
+    }
+
+    private static NekoScriptCatalogSnapshot catalog(DeclarationPlugin plugin) throws Exception {
+        var identity = new com.tkisor.nekojs.api.plugin.PluginIdentity("nekojs", plugin.getClass().getName(),
+                java.net.URI.create("test:///dynamic-declaration-plugin.jar"));
+        return NekoScriptCatalog.snapshot(NekoPluginBootstrap.bootstrapOwned(
+                List.of(new com.tkisor.nekojs.api.plugin.OwnedPlugin(identity, plugin)),
+                new ScriptPropertyRegistry.Impl(), com.tkisor.nekojs.testfixture.CoreContractPreviews.emptyPortablePreview()));
     }
 
     private record DeclarationPlugin(List<RegistryBuilderSurfaceEntry> builders,

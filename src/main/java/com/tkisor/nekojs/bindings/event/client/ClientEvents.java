@@ -32,13 +32,13 @@ public interface ClientEvents {
     EventGroup GROUP = EventGroup.of("ClientEvents");
 
     EventBusJS<ClientTickEvent.Pre, Void> TICK_PRE =
-            GROUP.client("tickPre", ClientTickEvent.Pre.class);
+            GROUP.client("tickPre", ClientTickEvent.Pre.class, api -> api.versioned());
     EventBusJS<ClientTickEvent.Post, Void> TICK_POST =
-            GROUP.client("tickPost", ClientTickEvent.Post.class);
+            GROUP.client("tickPost", ClientTickEvent.Post.class, api -> api.versioned());
     // tick: the bare-name alias of tickPost. Scripts should move to tickPre/tickPost.
     @Deprecated
     EventBusJS<ClientTickEvent.Post, Void> TICK =
-            GROUP.client("tick", ClientTickEvent.Post.class);
+            GROUP.client("tick", ClientTickEvent.Post.class, api -> api.versioned());
     /**
      * Player tick (pre), observed on the client: posts the raw NeoForge
      * {@link PlayerTickEvent.Pre} whose entity is the local player (typed as the common
@@ -48,7 +48,7 @@ public interface ClientEvents {
      * this bus is bound through a side filter and only dispatches client instances.
      */
     EventBusJS<PlayerTickEvent.Pre, Void> PLAYER_TICK_PRE =
-            GROUP.client("playerTickPre", PlayerTickEvent.Pre.class);
+            GROUP.client("playerTickPre", PlayerTickEvent.Pre.class, api -> api.versioned());
     /**
      * Player tick (post), observed on the client: posts the raw NeoForge
      * {@link PlayerTickEvent.Post}. Fires on the client thread, only in client_scripts;
@@ -56,7 +56,7 @@ public interface ClientEvents {
      * {@link #PLAYER_TICK_PRE}: logical-server instances are never dispatched here.
      */
     EventBusJS<PlayerTickEvent.Post, Void> PLAYER_TICK_POST =
-            GROUP.client("playerTickPost", PlayerTickEvent.Post.class);
+            GROUP.client("playerTickPost", PlayerTickEvent.Post.class, api -> api.versioned());
     /**
      * Interaction key input (attack / use item / pick block), client-side only: posts
      * the raw NeoForge {@link InputEvent.InteractionKeyMappingTriggered}. Fires on the
@@ -66,31 +66,31 @@ public interface ClientEvents {
      * {@code isPickBlock()} to tell them apart; use-item inputs fire once per hand.
      */
     EventBusJS<InputEvent.InteractionKeyMappingTriggered, Void> INTERACTION_KEY =
-            GROUP.client("interactionKey", InputEvent.InteractionKeyMappingTriggered.class);
+            GROUP.client("interactionKey", InputEvent.InteractionKeyMappingTriggered.class, api -> api.versioned());
     EventBusJS<ClientPlayerNetworkEvent.LoggingIn, Void> LOGGED_IN =
-            GROUP.client("loggedIn", ClientPlayerNetworkEvent.LoggingIn.class);
+            GROUP.client("loggedIn", ClientPlayerNetworkEvent.LoggingIn.class, api -> api.versioned());
     EventBusJS<ClientPlayerNetworkEvent.LoggingOut, Void> LOGGED_OUT =
-            GROUP.client("loggedOut", ClientPlayerNetworkEvent.LoggingOut.class);
+            GROUP.client("loggedOut", ClientPlayerNetworkEvent.LoggingOut.class, api -> api.versioned());
     EventBusJS<ClientPlayerNetworkEvent.Clone, Void> CLONED =
-            GROUP.client("cloned", ClientPlayerNetworkEvent.Clone.class);
+            GROUP.client("cloned", ClientPlayerNetworkEvent.Clone.class, api -> api.versioned());
     EventBusJS<RegisterClientCommandsEvent, Void> COMMAND_REGISTRY =
-            GROUP.client("commandRegistry", RegisterClientCommandsEvent.class);
+            GROUP.client("commandRegistry", RegisterClientCommandsEvent.class, api -> api.versioned());
     EventBusJS<RegisterKeyMappingsEvent, Void> REGISTER_KEY_MAPPINGS =
-            GROUP.client("registerKeyMappings", RegisterKeyMappingsEvent.class);
+            GROUP.client("registerKeyMappings", RegisterKeyMappingsEvent.class, api -> api.versioned());
     EventBusJS<RegisterMenuScreensEvent, Void> REGISTER_MENU_SCREENS =
-            GROUP.client("registerMenuScreens", RegisterMenuScreensEvent.class);
+            GROUP.client("registerMenuScreens", RegisterMenuScreensEvent.class, api -> api.versioned());
     EventBusJS<EntityRenderersEvent.RegisterRenderers, Void> REGISTER_RENDERERS =
-            GROUP.client("registerRenderers", EntityRenderersEvent.RegisterRenderers.class);
+            GROUP.client("registerRenderers", EntityRenderersEvent.RegisterRenderers.class, api -> api.versioned());
     // Entities and block entities share one renderer registration bus; the two names below are
     // legacy aliases. Scripts should move to registerRenderers.
     @Deprecated
     EventBusJS<EntityRenderersEvent.RegisterRenderers, Void> REGISTER_ENTITY_RENDERERS =
-            GROUP.client("registerEntityRenderers", EntityRenderersEvent.RegisterRenderers.class);
+            GROUP.client("registerEntityRenderers", EntityRenderersEvent.RegisterRenderers.class, api -> api.versioned());
     @Deprecated
     EventBusJS<EntityRenderersEvent.RegisterRenderers, Void> REGISTER_BLOCK_ENTITY_RENDERERS =
-            GROUP.client("registerBlockEntityRenderers", EntityRenderersEvent.RegisterRenderers.class);
+            GROUP.client("registerBlockEntityRenderers", EntityRenderersEvent.RegisterRenderers.class, api -> api.versioned());
     EventBusJS<RegisterParticleProvidersEvent, Void> REGISTER_PARTICLE_PROVIDERS =
-            GROUP.client("registerParticleProviders", RegisterParticleProvidersEvent.class);
+            GROUP.client("registerParticleProviders", RegisterParticleProvidersEvent.class, api -> api.versioned());
 
     DispatchKey<DataGeneratorJS, String> ASSET_STAGE_KEY = new DispatchKey<>() {
         @Override
@@ -118,12 +118,12 @@ public interface ClientEvents {
 
     /** Asset generation event: scripts write resource pack JSON (models, blockstates and so on). */
     EventBusJS<DataGeneratorJS, String> GENERATE_ASSETS =
-            GROUP.client("generateAssets", DataGeneratorJS.class, ASSET_STAGE_KEY);
+            GROUP.client("generateAssets", DataGeneratorJS.class, ASSET_STAGE_KEY, api -> api.versioned());
 
     /** Language generation event: scripts collect translation entries per language code
      * ({@code en_us} and so on). */
     EventBusJS<LangGeneratorJS, String> LANG =
-            GROUP.client("lang", LangGeneratorJS.class, LANG_KEY);
+            GROUP.client("lang", LangGeneratorJS.class, LANG_KEY, api -> api.versioned());
 
     /**
      * Post-processing declaration event: scripts declare the post-processing chain for the next
@@ -135,13 +135,13 @@ public interface ClientEvents {
      * second PostEffects event.
      */
     EventBusJS<PostEffectEventJS, Void> POST_EFFECTS =
-            GROUP.client("postEffects", PostEffectEventJS.class);
+            GROUP.client("postEffects", PostEffectEventJS.class, api -> api.versioned());
 
     /** HUD drawing event (after the GUI render each frame); the argument is a {@link PainterJS}. */
-    EventBusJS<PainterJS, Void> HUD = GROUP.client("hud", PainterJS.class);
+    EventBusJS<PainterJS, Void> HUD = GROUP.client("hud", PainterJS.class, api -> api.versioned());
 
     /** Screen drawing event (after a Screen renders); the argument is a {@link ScreenRenderEventJS}. */
-    EventBusJS<ScreenRenderEventJS, Void> SCREEN_RENDER = GROUP.client("screenRender", ScreenRenderEventJS.class);
+    EventBusJS<ScreenRenderEventJS, Void> SCREEN_RENDER = GROUP.client("screenRender", ScreenRenderEventJS.class, api -> api.versioned());
 
     /**
      * Script HUD renderer registration entry (not a regular bus: calling it registers a resident
@@ -155,7 +155,7 @@ public interface ClientEvents {
      * retire), and when the candidate fails the previous generation's renderers keep serving.
      */
     EventBusJS<Object, Void> HUD_RENDER =
-            GROUP.add("hudRender", ScriptType.CLIENT, RenderRegistrationBusJS.hud());
+            GROUP.add("hudRender", ScriptType.CLIENT, RenderRegistrationBusJS.hud(), api -> api.versioned());
 
     /**
      * Script world renderer registration entry (not a regular bus, same as {@link #HUD_RENDER}).
@@ -165,7 +165,7 @@ public interface ClientEvents {
      * and so on, in world coordinates).
      */
     EventBusJS<Object, Void> WORLD_RENDER =
-            GROUP.add("worldRender", ScriptType.CLIENT, RenderRegistrationBusJS.world());
+            GROUP.add("worldRender", ScriptType.CLIENT, RenderRegistrationBusJS.world(), api -> api.versioned());
 
     EventBusForgeBridge MAIN_BRIDGE = EventBusForgeBridge.create(NeoForge.EVENT_BUS)
             .bind(TICK_PRE)

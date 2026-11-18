@@ -22,17 +22,17 @@ import com.tkisor.nekojs.wrapper.event.server.RecipeEventJS;
 /** Recipe script events (SERVER side): the bus names match {@code ServerEvents} on NeoForge, so
  * scripts look the same on both loaders. */
 public interface ServerEvents {
-    EventGroup GROUP = EventGroup.of("ServerEvents").expose(api -> api.versioned());
+    EventGroup GROUP = EventGroup.of("ServerEvents");
 
-    EventBusJS<RecipeEventJS, Void> RECIPES = GROUP.server("recipes", RecipeEventJS.class);
-    EventBusJS<RecipeEventJS, Void> AFTER_RECIPES = GROUP.server("afterRecipes", RecipeEventJS.class);
+    EventBusJS<RecipeEventJS, Void> RECIPES = GROUP.server("recipes", RecipeEventJS.class, api -> api.versioned());
+    EventBusJS<RecipeEventJS, Void> AFTER_RECIPES = GROUP.server("afterRecipes", RecipeEventJS.class, api -> api.versioned());
 
     /** Villager trade declarations: see the file header; on Fabric the whole batch is explicitly
      * unavailable. */
     EventBusJS<VillagerTradeDeclarationEventJS, Void> TRADE_DECLARATION =
-            GROUP.server("tradeDeclaration", VillagerTradeDeclarationEventJS.class);
+            GROUP.server("tradeDeclaration", VillagerTradeDeclarationEventJS.class, api -> api.versioned());
 
     /** Villager trade reload sub-event: same as above. */
     EventBusJS<VillagerTradeReloadEventJS, Void> TRADE_RELOAD =
-            GROUP.server("tradeReload", VillagerTradeReloadEventJS.class);
+            GROUP.server("tradeReload", VillagerTradeReloadEventJS.class, api -> api.versioned());
 }

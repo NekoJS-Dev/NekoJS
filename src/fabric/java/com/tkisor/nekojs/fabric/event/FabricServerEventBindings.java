@@ -48,28 +48,32 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 public final class FabricServerEventBindings {
 
     /** Share the name with the NeoForge bindings/event/ServerEvents (Fabric subset). */
-    public static final EventGroup SERVER_EVENTS = EventGroup.of("ServerEvents").expose(api -> api.versioned());
+    public static final EventGroup SERVER_EVENTS = EventGroup.of("ServerEvents");
 
     public static final EventBusJS<ServerLifecycleEventJS, Void> ABOUT_TO_START =
-            SERVER_EVENTS.server("aboutToStart", ServerLifecycleEventJS.class);
+            SERVER_EVENTS.server("aboutToStart", ServerLifecycleEventJS.class, api -> api.versioned());
     public static final EventBusJS<ServerLifecycleEventJS, Void> STARTING =
-            SERVER_EVENTS.server("starting", ServerLifecycleEventJS.class);
+            SERVER_EVENTS.server("starting", ServerLifecycleEventJS.class, api -> api.versioned());
     public static final EventBusJS<ServerLifecycleEventJS, Void> STARTED =
-            SERVER_EVENTS.server("started", ServerLifecycleEventJS.class);
+            SERVER_EVENTS.server("started", ServerLifecycleEventJS.class, api -> api.versioned());
     public static final EventBusJS<ServerLifecycleEventJS, Void> STOPPING =
-            SERVER_EVENTS.server("stopping", ServerLifecycleEventJS.class);
+            SERVER_EVENTS.server("stopping", ServerLifecycleEventJS.class, api -> api.versioned());
     public static final EventBusJS<ServerLifecycleEventJS, Void> STOPPED =
-            SERVER_EVENTS.server("stopped", ServerLifecycleEventJS.class);
+            SERVER_EVENTS.server("stopped", ServerLifecycleEventJS.class, api -> api.versioned());
     public static final EventBusJS<ServerTickEventJS, Void> TICK_PRE =
-            SERVER_EVENTS.server("tickPre", ServerTickEventJS.class, api ->
-                    api.stable(StableServerTickEvent.class,
-                            event -> new StableServerTickEvent(event.getServer().getTickCount()))
-                            .scriptTypes(ScriptType.SERVER));
+            SERVER_EVENTS.server("tickPre", ServerTickEventJS.class, api -> {
+                api.versioned();
+                api.stable().view(StableServerTickEvent.class,
+                        event -> new StableServerTickEvent(event.getServer().getTickCount()))
+                        .scriptTypes(ScriptType.SERVER);
+            });
     public static final EventBusJS<ServerTickEventJS, Void> TICK_POST =
-            SERVER_EVENTS.server("tickPost", ServerTickEventJS.class, api ->
-                    api.stable(StableServerTickEvent.class,
-                            event -> new StableServerTickEvent(event.getServer().getTickCount()))
-                            .scriptTypes(ScriptType.SERVER));
+            SERVER_EVENTS.server("tickPost", ServerTickEventJS.class, api -> {
+                api.versioned();
+                api.stable().view(StableServerTickEvent.class,
+                        event -> new StableServerTickEvent(event.getServer().getTickCount()))
+                        .scriptTypes(ScriptType.SERVER);
+            });
 
     // ---- Resource/Lifecycle (Batch 15; NeoForge passes native events, Fabric uses callbacks + neutral payload) ----
 
@@ -78,7 +82,7 @@ public final class FabricServerEventBindings {
      * in server scripts. A null player represents all players after a reload (consistent with the NF OnDatapackSyncEvent).
      */
     public static final EventBusJS<DatapackSyncEventJS, Void> DATAPACK_SYNC =
-            SERVER_EVENTS.server("datapackSync", DatapackSyncEventJS.class);
+            SERVER_EVENTS.server("datapackSync", DatapackSyncEventJS.class, api -> api.versioned());
 
     /**
      * Map to {@code CommonLifecycleEvents.TAGS_LOADED} for tag updates in server scripts.
@@ -86,7 +90,7 @@ public final class FabricServerEventBindings {
      * are loaded, aligning with the NF TagsUpdatedEvent; native NF {@code UpdateCause} has no Fabric equivalent).
      */
     public static final EventBusJS<TagUpdatedEventJS, Void> TAGS_UPDATED =
-            SERVER_EVENTS.server("tagsUpdated", TagUpdatedEventJS.class);
+            SERVER_EVENTS.server("tagsUpdated", TagUpdatedEventJS.class, api -> api.versioned());
 
     /**
      * Map to {@code LootTableEvents.MODIFY} for loot table loading in server scripts.
@@ -95,27 +99,27 @@ public final class FabricServerEventBindings {
      * Javadoc and the migration ledger.
      */
     public static final EventBusJS<LootTableLoadEventJS, Void> LOOT_TABLE_LOAD =
-            SERVER_EVENTS.server("lootTableLoad", LootTableLoadEventJS.class);
+            SERVER_EVENTS.server("lootTableLoad", LootTableLoadEventJS.class, api -> api.versioned());
 
     /** Share the name with the NeoForge bindings/event/PlayerEvents (Fabric subset). */
     public static final EventGroup PLAYER_EVENTS = EventGroup.of("PlayerEvents");
 
     public static final EventBusJS<PlayerLifecycleEventJS, Void> LOGGED_IN =
-            PLAYER_EVENTS.server("loggedIn", PlayerLifecycleEventJS.class);
+            PLAYER_EVENTS.server("loggedIn", PlayerLifecycleEventJS.class, api -> api.versioned());
     public static final EventBusJS<PlayerLifecycleEventJS, Void> LOGGED_OUT =
-            PLAYER_EVENTS.server("loggedOut", PlayerLifecycleEventJS.class);
+            PLAYER_EVENTS.server("loggedOut", PlayerLifecycleEventJS.class, api -> api.versioned());
     public static final EventBusJS<PlayerTickEventJS, Void> PLAYER_TICK_PRE =
-            PLAYER_EVENTS.server("tickPre", PlayerTickEventJS.class);
+            PLAYER_EVENTS.server("tickPre", PlayerTickEventJS.class, api -> api.versioned());
     public static final EventBusJS<PlayerTickEventJS, Void> PLAYER_TICK_POST =
-            PLAYER_EVENTS.server("tickPost", PlayerTickEventJS.class);
+            PLAYER_EVENTS.server("tickPost", PlayerTickEventJS.class, api -> api.versioned());
     public static final EventBusJS<PlayerCloneEventJS, Void> CLONED =
-            PLAYER_EVENTS.server("cloned", PlayerCloneEventJS.class);
+            PLAYER_EVENTS.server("cloned", PlayerCloneEventJS.class, api -> api.versioned());
     public static final EventBusJS<PlayerRespawnEventJS, Void> RESPAWNED =
-            PLAYER_EVENTS.server("respawned", PlayerRespawnEventJS.class);
+            PLAYER_EVENTS.server("respawned", PlayerRespawnEventJS.class, api -> api.versioned());
 
     /** Chat: Neutral payload (player, username, message string; contract-compatible members). */
     public static final EventBusJS<com.tkisor.nekojs.wrapper.event.player.ServerChatEventJS, Void> CHAT =
-            PLAYER_EVENTS.server("chat", com.tkisor.nekojs.wrapper.event.player.ServerChatEventJS.class);
+            PLAYER_EVENTS.server("chat", com.tkisor.nekojs.wrapper.event.player.ServerChatEventJS.class, api -> api.versioned());
 
     /** Wait for the player to post loggedIn at the end of the next tick (see timing notes in {@link #register}). */
     private static final Queue<ServerPlayer> PENDING_LOGINS = new ConcurrentLinkedQueue<>();

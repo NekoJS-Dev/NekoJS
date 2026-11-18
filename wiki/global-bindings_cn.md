@@ -100,6 +100,8 @@ if (Item.id('mymod:ruby') === null) console.warn('mymod 没装')
 物品栈、实体和玩家都可以用 `pdata()` 存自己的数据：
 
 ```javascript
+import { PlayerEvents } from "nekojs:event/versioned";
+
 // server_scripts/pdata.js
 PlayerEvents.loggedIn(event => {
   const data = event.entity.pdata()
@@ -236,6 +238,8 @@ Fabric 上没有本节的任何绑定。
 16 种颜色简写是：`black`、`darkBlue`、`darkGreen`、`darkAqua`、`darkRed`、`darkPurple`、`gold`、`gray`、`darkGray`、`blue`、`green`、`aqua`、`red`、`lightPurple`、`yellow`、`white`。
 
 ```javascript
+import { PlayerEvents } from "nekojs:event/versioned";
+
 // server_scripts/welcome.js（NeoForge 上用 event.entity，Fabric 上用 event.player）
 PlayerEvents.loggedIn(event => {
   const msg = Text.of('点我领钻石')
@@ -396,6 +400,8 @@ key 是全局的，不同脚本用同一个 key 会互相影响。建议加上�
 服务端脚本把数据推给客户端，客户端脚本读取。常用来给 HUD 提供数据。
 
 ```javascript
+import { PlayerEvents } from "nekojs:event/versioned";
+
 // server_scripts/boss.js
 PlayerEvents.loggedIn(event => {
   ClientData.sync('boss_hp', { name: 'Example Golem', hp: 0.42 })
@@ -476,6 +482,8 @@ NeoForge 上，没列出的成员会交给 NeoForge 原版的 `Capabilities` 类
 在服务端脚本里，用代码构造实体选择器（相当于命令里的 `@e[...]`）并查询实体。下面的例子在玩家登录时，查找附近最多 5 头牛：
 
 ```javascript
+import { PlayerEvents } from "nekojs:event/versioned";
+
 // server_scripts/cows.js（NeoForge 上用 event.entity，Fabric 上用 event.player）
 PlayerEvents.loggedIn(event => {
   const player = event.entity
@@ -508,6 +516,8 @@ PlayerEvents.loggedIn(event => {
 添加村民交易要用 `ServerEvents.tradeDeclaration` 事件。`VillagerTrades` 只用来查询当前的交易。
 
 ```javascript
+import { ServerEvents } from "nekojs:event/versioned";
+
 // server_scripts/trades.js
 ServerEvents.tradeDeclaration(event => {
   event.add('minecraft:farmer/level_1', {
@@ -572,6 +582,8 @@ if (PostEffects.isAvailable('minecraft:invert')) PostEffects.set('minecraft:inve
 `ScriptEvents` 是事件组，不是绑定，但常和绑定一起用：在启动脚本里声明自己的事件，服务端或客户端脚本再触发和监听它。
 
 ```javascript
+import { ScriptEvents } from "nekojs:event/versioned";
+
 // startup_scripts/events.js
 ScriptEvents.server(event => event.register('MyEvents', 'bossKilled'))
 
@@ -594,6 +606,8 @@ MyEvents.bossKilled.post({ boss: 'ender_dragon' })
 | `RecipeSchema.describe(namespace, type)` | 某种配方的字段和写法 |
 
 ```javascript
+import { ServerEvents } from "nekojs:event/versioned";
+
 ServerEvents.started(event => {
   console.info(RecipeSchema.types('minecraft'))
   console.info(RecipeSchema.describe('minecraft', 'smelting'))

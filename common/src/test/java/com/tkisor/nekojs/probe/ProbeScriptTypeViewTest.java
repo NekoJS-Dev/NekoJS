@@ -179,12 +179,16 @@ class ProbeScriptTypeViewTest {
                 mode = "SMART"
                 """);
         var coordinator = new ProbeCoordinator(paths, ProbeExternalArtifacts.NONE);
-        var results = coordinator.runProbe(snapshot(VillageBinding.class, nativeEvents()),
+        var results = coordinator.runProbe(ProbeEventFixtures.publishVersioned(snapshot(VillageBinding.class, nativeEvents())),
                 List.of(new TypeScriptProbeBackend(), new PythonProbeBackend()));
         assertEquals(2, results.size());
         for (var result : results) assertTrue(result.success(), result::message);
         String ts = generatedText(directory.resolve(".neko_probe/typescript"), ".d.ts");
         String python = generatedText(directory.resolve(".neko_probe/python"), ".pyi");
+        String eventModules = Files.readString(directory.resolve(
+                ".neko_probe/typescript/@side-only/server/bindings/api-modules.d.ts"));
+        assertTrue(eventModules.contains("declare module \"nekojs:event/versioned\""), eventModules);
+        assertFalse(Files.exists(directory.resolve(".neko_probe/typescript/@side-only/server/events/index.d.ts")));
         for (Class<?> nativeType : NATIVE_TYPES) {
             assertFalse(ts.contains(nativeType.getName()), nativeType::getName);
             assertFalse(python.contains(nativeType.getName()), nativeType::getName);
@@ -202,7 +206,8 @@ class ProbeScriptTypeViewTest {
         for (Class<?> publicType : PUBLIC_TYPES) {
             assertTrue(ts.contains("export interface $" + publicType.getSimpleName()), ts);
             assertTrue(python.contains("class " + publicType.getSimpleName()), python);
-            assertTrue(ts.contains("event: $" + publicType.getSimpleName() + ") => void"), ts);
+            assertTrue(eventModules.contains("event: import(\"java:com/tkisor/nekojs/api/villager\").$"
+                    + publicType.getSimpleName() + ") => void"), eventModules);
             assertTrue(python.contains("Callable[[" + publicType.getSimpleName() + "], None]"), python);
         }
         for (String getter : List.of("addedCount", "tradeSets", "total", "status", "statusReason", "generation",

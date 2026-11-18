@@ -1,6 +1,8 @@
 package com.tkisor.nekojs.core.plugin;
 
 import com.tkisor.nekojs.api.NekoJSPlugin;
+import com.tkisor.nekojs.api.ScriptType;
+import com.tkisor.nekojs.api.event.EventBusJS;
 import com.tkisor.nekojs.api.event.EventGroup;
 import com.tkisor.nekojs.api.event.EventGroupRegistry;
 import com.tkisor.nekojs.core.module.NodeModuleRegister;
@@ -207,14 +209,14 @@ class NekoPluginExtensionPointTest {
         @Override
         public void registerEvents(EventGroupRegistry registry) {
             EventGroup group = EventGroup.of("SharedEvents");
-            group.server("serverBus", Object.class);
+            group.add("serverBus", ScriptType.SERVER, EventBusJS.of(Object.class));
             registry.register(group);
         }
 
         @Override
         public void registerClientEvents(EventGroupRegistry registry) {
             EventGroup group = EventGroup.of("SharedEvents");
-            group.client("clientBus", Object.class);
+            group.add("clientBus", ScriptType.CLIENT, EventBusJS.of(Object.class));
             registry.register(group);
         }
     }
@@ -231,7 +233,7 @@ class NekoPluginExtensionPointTest {
         NekoPluginRuntime serverRuntime = NekoPluginBootstrap.bootstrap(
                 List.of(new MixedEventsPlugin()), new ScriptPropertyRegistry.Impl());
         assertEquals(Set.of("serverBus"),
-                serverRuntime.eventGroups().get("SharedEvents").viewBuses().keySet(),
+                serverRuntime.eventGroups().values().stream().filter(group -> group.name().equals("SharedEvents")).findFirst().orElseThrow().viewBuses().keySet(),
                 "on a dedicated server the client_events point must be skipped entirely");
 
         // Switch the platform to the client: the client_events initializer reads the events product and
@@ -254,12 +256,12 @@ class NekoPluginExtensionPointTest {
             NekoPluginRuntime clientRuntime = NekoPluginBootstrap.bootstrap(
                     List.of(new MixedEventsPlugin()), new ScriptPropertyRegistry.Impl());
 
-            EventGroup merged = clientRuntime.eventGroups().get("SharedEvents");
+            EventGroup merged = clientRuntime.eventGroups().values().stream().filter(group -> group.name().equals("SharedEvents")).findFirst().orElseThrow();
             assertNotNull(merged, "client bootstrap must expose the merged group");
             assertEquals(Set.of("serverBus", "clientBus"), merged.viewBuses().keySet(),
                     "client_events must merge its buses into the earlier events product's group");
             assertThrows(IllegalStateException.class,
-                    () -> merged.server("lateBus", Object.class),
+                    () -> merged.add("lateBus", ScriptType.SERVER, EventBusJS.of(Object.class)),
                     "merged event groups must be frozen by the client_events finisher");
         } finally {
             instance.set(null, original);

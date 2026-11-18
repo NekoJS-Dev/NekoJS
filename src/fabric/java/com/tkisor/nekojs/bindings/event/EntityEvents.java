@@ -30,29 +30,29 @@ public interface EntityEvents {
     EventBusJS<LivingDropsEventJS, EntityType<?>> DROPS =
             GROUP.add("drops", ScriptType.SERVER, EventBusJS.of(
                     LivingDropsEventJS.class, true,
-                    DispatchKey.of(EntityType.class, event -> event.getEntity().getType())));
+                    DispatchKey.of(EntityType.class, event -> event.getEntity().getType())), api -> api.versioned());
 
     /** Spawn initialization finished (server scripts): dispatched by entity type. Notification only;
      * Fabric cannot cancel it or change the mob. */
     EventBusJS<MobFinalizeSpawnEventJS, EntityType<?>> FINALIZE_SPAWN =
             GROUP.server("finalizeSpawn", MobFinalizeSpawnEventJS.class,
-                    DispatchKey.of(EntityType.class, event -> event.getMob().getType()));
+                    DispatchKey.of(EntityType.class, event -> event.getMob().getType()), api -> api.versioned());
 
     /** Before each entity tick (server scripts): dispatched by entity type. High frequency, so keep
      * listeners light. */
     EventBusJS<EntityTickEventJS, EntityType<?>> TICK_PRE =
             GROUP.server("tickPre", EntityTickEventJS.class,
-                    DispatchKey.of(EntityType.class, event -> event.getEntity().getType()));
+                    DispatchKey.of(EntityType.class, event -> event.getEntity().getType()), api -> api.versioned());
 
     /** After each entity tick (server scripts): dispatched by entity type. High frequency, so keep
      * listeners light. */
     EventBusJS<EntityTickEventJS, EntityType<?>> TICK_POST =
             GROUP.server("tickPost", EntityTickEventJS.class,
-                    DispatchKey.of(EntityType.class, event -> event.getEntity().getType()));
+                    DispatchKey.of(EntityType.class, event -> event.getEntity().getType()), api -> api.versioned());
 
     /** Entity leaves the dimension/world (server scripts): dispatched by entity type (fabric-api
      * ENTITY_UNLOAD). */
     EventBusJS<EntityLeaveLevelEventJS, EntityType<?>> LEAVE_LEVEL =
             GROUP.server("leaveLevel", EntityLeaveLevelEventJS.class,
-                    DispatchKey.of(EntityType.class, event -> event.getEntity().getType()));
+                    DispatchKey.of(EntityType.class, event -> event.getEntity().getType()), api -> api.versioned());
 }

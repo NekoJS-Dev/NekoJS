@@ -11,6 +11,7 @@ import com.tkisor.nekojs.api.event.EventGroup;
  * first registry pass.
  *
  * <pre>
+ * import { RegistryEvents } from "nekojs:event/versioned";
  * RegistryEvents.register(event =&gt; {
  *     event.item('mymod:ruby', b =&gt; { b.maxStackSize = 16 })
  * })
@@ -22,7 +23,7 @@ public final class RegistryEvents {
     public static final EventGroup GROUP = EventGroup.of("RegistryEvents");
 
     /** The single collection entry point; STARTUP scripts listen to it, and it is posted once per game start. */
-    public static final EventBusJS<RegistryEventJS, Void> REGISTER = GROUP.startup("register", RegistryEventJS.class);
+    public static final EventBusJS<RegistryEventJS, Void> REGISTER = GROUP.startup("register", RegistryEventJS.class, api -> api.versioned());
 
     private RegistryEvents() {}
 }

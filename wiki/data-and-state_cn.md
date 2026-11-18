@@ -65,6 +65,8 @@ JsonIO.write('example_store/visits.json', { visits: visits + 1 })
 ### 玩家与生物实体（`entity.pdata()`）
 
 ```javascript
+import { PlayerEvents } from "nekojs:event/versioned";
+
 // server_scripts/visits.js
 PlayerEvents.loggedIn(event => {
   // NeoForge 用 event.entity，Fabric 用 event.player
@@ -107,6 +109,8 @@ stack.pdata().putString('example:owner', 'Steve')
 最适合“服务端算好数值（如自定义法力值、副本倒计时、全局阶段），推给客户端画 HUD 或 JSX 界面”：
 
 ```javascript
+import { PlayerEvents } from "nekojs:event/versioned";
+
 // 服务端：server_scripts/status.js
 PlayerEvents.loggedIn(event => {
   const player = event.entity ?? event.player
@@ -136,6 +140,8 @@ Network.sendToServer('example:refresh', { page: 1 })
 ```
 
 ```javascript
+import { NetworkEvents } from "nekojs:event/versioned";
+
 // 服务端接收并处理：server_scripts/refresh.js
 NetworkEvents.server('example:refresh', event => {
   // event.player 为真实发包玩家，event.data 为自动转好的 NBT 数据

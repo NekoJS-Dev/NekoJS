@@ -38,22 +38,22 @@ public final class FabricClientEventBindings {
     public static final EventGroup CLIENT_EVENTS = EventGroup.of("ClientEvents");
 
     public static final EventBusJS<ClientTickEventJS, Void> TICK_PRE =
-            CLIENT_EVENTS.client("tickPre", ClientTickEventJS.class);
+            CLIENT_EVENTS.client("tickPre", ClientTickEventJS.class, api -> api.versioned());
 
     public static final EventBusJS<ClientTickEventJS, Void> TICK_POST =
-            CLIENT_EVENTS.client("tickPost", ClientTickEventJS.class);
+            CLIENT_EVENTS.client("tickPost", ClientTickEventJS.class, api -> api.versioned());
 
     @Deprecated
     public static final EventBusJS<ClientTickEventJS, Void> TICK =
-            CLIENT_EVENTS.client("tick", ClientTickEventJS.class);
+            CLIENT_EVENTS.client("tick", ClientTickEventJS.class, api -> api.versioned());
 
     /** Per-frame HUD Painter payload, backed by Fabric's identified HUD layer API. */
     public static final EventBusJS<PainterJS, Void> HUD =
-            CLIENT_EVENTS.client("hud", PainterJS.class);
+            CLIENT_EVENTS.client("hud", PainterJS.class, api -> api.versioned());
 
     /** Per-screen Painter payload, backed by Fabric ScreenEvents.afterExtract. */
     public static final EventBusJS<ScreenRenderEventJS, Void> SCREEN_RENDER =
-            CLIENT_EVENTS.client("screenRender", ScreenRenderEventJS.class);
+            CLIENT_EVENTS.client("screenRender", ScreenRenderEventJS.class, api -> api.versioned());
 
     private static final Set<Event<ScreenEvents.AfterExtract>> SCREEN_HOOKS =
             Collections.newSetFromMap(new WeakHashMap<>());

@@ -1,6 +1,8 @@
 # Events
 
-Subscribe through an Event Group: `ServerEvents.tickPost(event => { ... })`. The callback receives an Event Object; the group is a subscription namespace.
+Import a Java plugin/native Event Group before subscribing. For example, `import { ServerEvents } from "nekojs:event/stable"` selects the portable server tick view, then `ServerEvents.tickPost(event => { ... })` subscribes. Use `nekojs:event/versioned` for the native payload instead; plugin event paths include their owner. See [API modules](api-modules.md). These groups are not globals or Binding aggregate exports. The callback receives an Event Object; the group is a subscription namespace.
+
+Script-created dynamic groups remain global; import their `ScriptEvents` registrar from `nekojs:event/versioned`.
 
 Before subscribing, resolve the group and event in the current Script Type. Read the final declaration for callback parameters, selectors and event payloads. A same-name event from another mod or scripting engine is not evidence of availability.
 

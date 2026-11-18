@@ -186,6 +186,8 @@ NekoJS is not a full Node.js. See [Node.js compatibility](nodejs-compatibility_u
 Events such as `ServerEvents.tickPost` fire 20 times per second, so keep their code light. Cache results, or use a counter to run only every few ticks:
 
 ```javascript
+import { ServerEvents } from "nekojs:event/versioned";
+
 let ticks = 0
 ServerEvents.tickPost(event => {
   if (++ticks % 20 !== 0) return // run once per second

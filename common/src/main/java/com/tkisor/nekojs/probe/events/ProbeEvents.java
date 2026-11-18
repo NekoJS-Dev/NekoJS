@@ -24,6 +24,7 @@ public interface ProbeEvents {
      *
      * <p>Typical use (in server_scripts; the bus is a callable proxy, so a direct call registers the listener):
      * <pre>{@code
+     * import { ProbeEvents } from "nekojs:event/versioned";
      * ProbeEvents.modifyType(event => {
      *     event.forClass("net.minecraft.world.entity.player.Player")
      *          .renameMethod("getXxx", "getCustom")

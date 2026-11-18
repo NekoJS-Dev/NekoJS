@@ -143,7 +143,7 @@ NekoJS does not stop a script for running too long. An infinite loop or an `awai
 | `NEKO-4054` | Item component string conversion failed | — |
 | `NEKO-4055` | Authoring query or transport request rejected | The response code and JSON path give the exact reason |
 | `NEKO-4056` | Resource ID conversion rejected | Strict resource syntax or a real native ID is required; legacy `ID.of` parsing is unchanged |
-| `NEKO-4057` | API module publication or access rejected | Check the mod owner, exposure target, export name, public type, event allowlist and script type |
+| `NEKO-4057` | API publication, access or event callback rejected | Check the mod owner, exposure target, export name, public types (including portable payload/dispatch-key types), nonempty configured per-event publication targets, exact script scope and callable listener; projected callbacks must not return a Promise |
 | `NEKO-4060` | Script options rejected | Unknown fields, wrong types or out-of-range values reject the registration |
 | `NEKO-4061` | Post-effect builder rejected | The builder was used after its callback ended, or its settings are invalid; the declaration does not apply |
 | `NEKO-4062` | Render registration rejected | Invalid arguments, callback or metadata |

@@ -28,6 +28,7 @@
       "language": "javascript",
       "verification": "isolated-contract",
       "requires": [
+        "nekojs:event/versioned",
         "ServerEvents.recipes",
         "console.info"
       ],
@@ -49,6 +50,7 @@
       "language": "javascript",
       "verification": "real-engine-with-platform-fixture",
       "requires": [
+        "nekojs:event/versioned",
         "NeoForge 1.21.1/26.x for the unchanged source; Fabric requires the documented entity-to-player property adaptation",
         "PlayerEvents.loggedIn",
         "event.entity (NeoForge) or event.player (adapted Fabric variant)",
@@ -72,6 +74,7 @@
       "language": "javascript",
       "verification": "isolated-contract",
       "requires": [
+        "nekojs:event/versioned",
         "ServerEvents.recipes",
         "Item.of",
         "Ingredient.of",
@@ -99,6 +102,7 @@
       "language": "javascript",
       "verification": "isolated-contract",
       "requires": [
+        "nekojs:event/versioned",
         "NeoForge tag-reload path",
         "ServerEvents.tags",
         "minecraft:item",
@@ -123,6 +127,7 @@
       "language": "javascript",
       "verification": "isolated-contract",
       "requires": [
+        "nekojs:event/versioned",
         "NeoForge tag-reload path",
         "ServerEvents.tags",
         "minecraft:block",
@@ -146,6 +151,7 @@
       "language": "javascript",
       "verification": "isolated-contract",
       "requires": [
+        "nekojs:event/versioned",
         "RegistryEvents.register",
         "event.item",
         "event.block",

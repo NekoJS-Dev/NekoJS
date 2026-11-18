@@ -2,7 +2,6 @@ package com.tkisor.nekojs.network;
 
 import com.tkisor.nekojs.api.ScriptType;
 import com.tkisor.nekojs.api.data.Binding;
-import com.tkisor.nekojs.api.event.EventGroupJS;
 import com.tkisor.nekojs.api.plugin.IPluginRuntime;
 import com.tkisor.nekojs.bindings.event.NetworkEvents;
 import com.tkisor.nekojs.core.NekoCoreContext;
@@ -114,15 +113,14 @@ class NetworkGenerationRoutingTest {
     }
 
     /**
-     * Bridge that binds the real {@link NetworkEvents} group, so scripts can register server and
-     * client network listeners.
+     * Bridge that records lifecycle cleanup of the real {@link NetworkEvents} source group.
      */
     static final class NetworkEventBridge implements ScriptEventBridge {
         final List<ScriptType> clearListenerCalls = new CopyOnWriteArrayList<>();
 
         @Override
         public void bindEvents(Value bindings, ScriptType type) {
-            bindings.putMember("NetworkEvents", new EventGroupJS(NetworkEvents.GROUP, type));
+            // Native event groups are available only through their explicit module.
         }
 
         @Override
@@ -150,8 +148,15 @@ class NetworkGenerationRoutingTest {
 
         @Override
         public Map<String, com.tkisor.nekojs.api.event.EventGroup> eventGroups() {
-            // Same group instance the bridge holds: schema harvesting and bindEvents point at one bus.
-            return Map.of("NetworkEvents", NetworkEvents.GROUP);
+            // Module subscriptions and lifecycle cleanup share the same source group.
+            return Map.of("nekojs:NetworkEvents", NetworkEvents.GROUP);
+        }
+
+        @Override
+        public List<com.tkisor.nekojs.api.event.ModuleEventGroup> moduleEventGroups() {
+            var registry = new com.tkisor.nekojs.api.event.EventGroupRegistry.Impl().scopedTo("nekojs");
+            registry.register(NetworkEvents.GROUP);
+            return registry.moduleGroups();
         }
 
         @Override public List<com.tkisor.nekojs.api.JSTypeAdapter<?>> adapters() { return List.of(); }
@@ -324,6 +329,7 @@ class NetworkGenerationRoutingTest {
     void serverPacketRoutesToActiveListenerByChannel() throws Exception {
         try (ManagerHarness harness = new ManagerHarness(defaultSandboxConfig())) {
             harness.writeScript("entry.js", """
+                    const { NetworkEvents } = require('nekojs:event/versioned');
                     Recorder.hit('v1-entry');
                     NetworkEvents.server('ch', function (event) { Recorder.hit('v1-l:' + event.channel); });
                     NetworkEvents.server('other', function (event) { Recorder.hit('v1-other'); });
@@ -351,12 +357,14 @@ class NetworkGenerationRoutingTest {
     void clientPacketRoutesOnlyToClientBus() throws Exception {
         try (ManagerHarness serverHarness = new ManagerHarness(defaultSandboxConfig())) {
             serverHarness.writeScript("entry.js", """
+                    const { NetworkEvents } = require('nekojs:event/versioned');
                     NetworkEvents.server('ch', function (event) { Recorder.hit('server-l'); });
                     """);
             serverHarness.loadAndRun();
 
             try (ManagerHarness clientHarness = new ManagerHarness(defaultSandboxConfig(), ScriptType.CLIENT)) {
                 clientHarness.writeScript("entry.js", """
+                        const { NetworkEvents } = require('nekojs:event/versioned');
                         NetworkEvents.client('ch', function (event) { Recorder.hit('client-l:' + event.channel); });
                         """);
                 clientHarness.loadAndRun();
@@ -380,6 +388,7 @@ class NetworkGenerationRoutingTest {
     void candidatePhasePacketIsServedByActiveAndNeverEntersCandidate() throws Exception {
         try (ManagerHarness harness = new ManagerHarness(defaultSandboxConfig())) {
             harness.writeScript("entry.js", """
+                    const { NetworkEvents } = require('nekojs:event/versioned');
                     NetworkEvents.server('ch', function (event) { Recorder.hit('v1-l'); });
                     """);
             harness.loadAndRun();
@@ -390,6 +399,7 @@ class NetworkGenerationRoutingTest {
             // then the packet "arrives": the packet must still be served by active v1, and the
             // candidate listeners must stay invisible.
             harness.writeScript("entry.js", """
+                    const { NetworkEvents } = require('nekojs:event/versioned');
                     NetworkEvents.server('ch', function (event) { Recorder.hit('v2-l'); });
                     Recorder.hit('v2-entry');
                     Trigger.now();
@@ -425,18 +435,21 @@ class NetworkGenerationRoutingTest {
     void consecutiveReloadsKeepOnlyLatestGenerationReceiving() throws Exception {
         try (ManagerHarness harness = new ManagerHarness(defaultSandboxConfig())) {
             harness.writeScript("entry.js", """
+                    const { NetworkEvents } = require('nekojs:event/versioned');
                     NetworkEvents.server('ch', function (event) { Recorder.hit('v1'); });
                     """);
             harness.loadAndRun();
             long base = harness.manager.generationId();
 
             harness.writeScript("entry.js", """
+                    const { NetworkEvents } = require('nekojs:event/versioned');
                     NetworkEvents.server('ch', function (event) { Recorder.hit('v2'); });
                     """);
             harness.reload();
             long afterFirst = harness.manager.generationId();
 
             harness.writeScript("entry.js", """
+                    const { NetworkEvents } = require('nekojs:event/versioned');
                     NetworkEvents.server('ch', function (event) { Recorder.hit('v3'); });
                     """);
             harness.reload();
@@ -461,6 +474,7 @@ class NetworkGenerationRoutingTest {
     void closeDropsInFlightPacketsAndNeverTouchesClosedContext() throws Exception {
         try (ManagerHarness harness = new ManagerHarness(defaultSandboxConfig())) {
             harness.writeScript("entry.js", """
+                    const { NetworkEvents } = require('nekojs:event/versioned');
                     NetworkEvents.server('ch', function (event) { Recorder.hit('v1-l'); });
                     """);
             harness.loadAndRun();
@@ -489,6 +503,7 @@ class NetworkGenerationRoutingTest {
         try (ManagerHarness harness = new ManagerHarness(defaultSandboxConfig())) {
             // Register first, then cancel explicitly; the listener remains installed until reload/close.
             harness.writeScript("entry.js", """
+                    const { NetworkEvents } = require('nekojs:event/versioned');
                     NetworkEvents.server('ch', function (event) { Recorder.hit('v1-l'); });
                     Recorder.cancelContext();
                     """);
@@ -508,6 +523,7 @@ class NetworkGenerationRoutingTest {
             assertEquals(generationAtFailure, harness.manager.generationId());
 
             harness.writeScript("entry.js", """
+                    const { NetworkEvents } = require('nekojs:event/versioned');
                     NetworkEvents.server('ch', function (event) { Recorder.hit('v2-l'); });
                     """);
             harness.reload();
@@ -527,6 +543,7 @@ class NetworkGenerationRoutingTest {
     void listenerExceptionIsContainedAndDoesNotAbortDispatch() throws Exception {
         try (ManagerHarness harness = new ManagerHarness(defaultSandboxConfig())) {
             harness.writeScript("entry.js", """
+                    const { NetworkEvents } = require('nekojs:event/versioned');
                     NetworkEvents.server('ch', function (event) { throw new Error('listener boom'); });
                     NetworkEvents.server('ch', function (event) { Recorder.hit('healthy-l'); });
                     """);
@@ -544,6 +561,7 @@ class NetworkGenerationRoutingTest {
     void repeatedCloseAndLatePacketsAreSafe() throws Exception {
         try (ManagerHarness harness = new ManagerHarness(defaultSandboxConfig())) {
             harness.writeScript("entry.js", """
+                    const { NetworkEvents } = require('nekojs:event/versioned');
                     NetworkEvents.server('ch', function (event) { Recorder.hit('v1-l'); });
                     """);
             harness.loadAndRun();

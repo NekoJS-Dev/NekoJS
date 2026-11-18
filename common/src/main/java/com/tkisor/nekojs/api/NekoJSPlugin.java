@@ -42,7 +42,7 @@ import java.util.Set;
  * <p>Hooks are divided into two categories:
  * <ul>
  *   <li><b>Registration side (collection-based)</b>—contributions are collected into the corresponding channel registry during bootstrap; conflicts with the same name are resolved by the point's
- *       MergePolicy (e.g., fail-fast for event groups).</li>
+ *       collection rules (e.g., event groups merge disjoint event names and reject duplicate events).</li>
  *   <li><b>Callback side (direct-call)</b>—triggered directly by the platform when an event occurs (similar to {@code registerApiSurface},
  *       not a collection-based extension point); overrides take effect immediately without registration.</li>
  * </ul>
@@ -67,11 +67,19 @@ public interface NekoJSPlugin {
 
     // ---- Event Groups ----
 
-    /** Registers server event groups (e.g., {@code ServerEvents.*}/{@code PlayerEvents.*}). Groups with the same name fail fast. */
+    /**
+     * Collects server event groups (e.g., {@code ServerEvents.*}/{@code PlayerEvents.*}).
+     * Each event declares its stable/versioned publications; the registry only collects and validates them.
+     * Source groups are not injected as globals, and defining a group alone does not register it.
+     * See {@link EventGroupRegistry} for merge and duplicate rules.
+     */
     default void registerEvents(EventGroupRegistry registry) {
     }
 
-    /** Registers client event groups (visible only in client runtime, e.g., {@code ClientEvents.*}). Fail-fast on same-name groups. */
+    /**
+     * Collects client event groups (visible only in client runtime, e.g., {@code ClientEvents.*}).
+     * Uses the same publication and merge rules as {@link #registerEvents(EventGroupRegistry)}.
+     */
     default void registerClientEvents(EventGroupRegistry registry) {
     }
 

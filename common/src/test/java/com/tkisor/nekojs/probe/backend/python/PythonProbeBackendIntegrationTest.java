@@ -541,7 +541,7 @@ class PythonProbeBackendIntegrationTest {
     // -------------------- Event declaration .pyi and event group bindings --------------------
 
     @Test
-    void generate_events_produceEventStubsAndGroupBindings(@TempDir Path temp) throws Exception {
+    void generate_events_keepSourceStubsButOnlyDynamicGroupsAreGlobal(@TempDir Path temp) throws Exception {
         TypeDecl event = new TypeDecl(TypeDecl.Kind.CLASS, FakeProbeEvent.class, FakeProbeEvent.class.getName());
         List<TypeDecl> ir = List.of(event);
 
@@ -554,16 +554,12 @@ class PythonProbeBackendIntegrationTest {
                 "ClientEvents", "tick", ScriptType.CLIENT, FakeProbeEvent.class, null,
                 false, false, "ClientEvents.tick(event => {\n  $0\n})");
 
-        BindingCatalogEntry serverEvents = new BindingCatalogEntry(
-                "ServerEvents", ScriptType.SERVER, null, false, false, true,
-                null, null, List.of(), List.of());
-
         AdapterCatalogEntry adapter = new AdapterCatalogEntry(
                 FakeProbeEvent.class, List.of(AdapterInputShape.string(), AdapterInputShape.self()),
                 ConversionPrecedence.HIGH, Optional.empty());
 
         NekoScriptCatalogSnapshot snapshot = snapshotWith(
-                List.of(serverEvents), List.of(recipes, tick), List.of(adapter));
+                List.of(), List.of(recipes, tick, EventCatalogEntry.ofScriptEvent("CustomEvents", "changed", ScriptType.SERVER)), List.of(adapter));
 
         ProbeBackend.GenerateResult res = runGenerate(temp, snapshot, ir, List.of());
         assertTrue(res.success(), "generate failed: " + res.message());
@@ -594,17 +590,11 @@ class PythonProbeBackendIntegrationTest {
         // Marker file for the {@code _events} namespace
         assertTrue(Files.exists(out.resolve("nekojs/_events/__init__.pyi")), "_events marker missing");
 
-        // Binding entry points: the ServerEvents binding points at the Type class, and ClientEvents gets
-        // an entry even with no binding. A group name with no coverage takes the first side in
-        // {@code ScriptType.all()} that matches; client events also match startup, and the startup
-        // version is a superset.
         String init = Files.readString(out.resolve("nekojs/__init__.pyi"));
-        assertTrue(init.contains("from nekojs._events.server import ServerEventsType"), init);
-        assertTrue(init.contains("from nekojs._events.startup import ClientEventsType"), init);
-        assertTrue(init.contains("ServerEvents: ServerEventsType"), init);
-        assertTrue(init.contains("ClientEvents: ClientEventsType"), init);
-        assertTrue(init.contains("\"ServerEvents\""), "event groups should be in __all__: " + init);
-        assertTrue(init.contains("\"ClientEvents\""), "event groups should be in __all__: " + init);
+        assertFalse(init.contains("ServerEvents"), init);
+        assertFalse(init.contains("ClientEvents"), init);
+        assertTrue(init.contains("CustomEvents: CustomEventsType"), init);
+        assertTrue(init.contains("\"CustomEvents\""), init);
     }
 
     // -------------------- Adapter input aliases --------------------

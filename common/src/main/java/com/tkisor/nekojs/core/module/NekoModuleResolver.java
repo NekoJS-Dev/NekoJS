@@ -1,5 +1,7 @@
 package com.tkisor.nekojs.core.module;
 
+import com.tkisor.nekojs.core.api.ApiModuleNamespace;
+
 import com.tkisor.nekojs.core.ScriptFilePolicy;
 
 import java.io.IOException;
@@ -242,7 +244,7 @@ public final class NekoModuleResolver {
 
     private boolean isBuiltinSpecifier(String specifier) {
         // Keep reserved engine modules ahead of user packages, matching modules.list.
-        if (specifier.startsWith("nekojs/api/") || specifier.equals("nekojs/jsx-runtime") || specifier.equals("nekojs/jsx-workspace")) {
+        if (ApiModuleNamespace.isReserved(specifier) || specifier.equals("nekojs/jsx-runtime") || specifier.equals("nekojs/jsx-workspace")) {
             return true;
         }
         return specifier.equals("fs")

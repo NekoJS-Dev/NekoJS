@@ -108,7 +108,7 @@ class LegacySurfaceAdapterTest {
 
         List<ApiSymbol> symbols = LegacySurfaceAdapter.convert(snapshot);
         assertFalse(symbols.isEmpty());
-        // Should contain at least the binding, event, adapter, and host extension
-        assertTrue(symbols.size() >= 4);
+        assertEquals(3, symbols.size());
+        assertTrue(symbols.stream().noneMatch(symbol -> symbol.id().kind().equals("event")));
     }
 }

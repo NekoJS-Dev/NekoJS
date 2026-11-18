@@ -41,20 +41,20 @@ public final class FabricEntityEventBindings {
 
     public static final EventBusJS<EntityJoinLevelEventJS, EntityType<?>> JOIN_LEVEL =
             ENTITY_EVENTS.server("joinLevel", EntityJoinLevelEventJS.class,
-                    DispatchKey.of(EntityType.class, event -> event.getEntity().getType()));
+                    DispatchKey.of(EntityType.class, event -> event.getEntity().getType()), api -> api.versioned());
 
     public static final EventBusJS<LivingDeathEventJS, EntityType<?>> DEATH =
             ENTITY_EVENTS.server("death", LivingDeathEventJS.class,
-                    DispatchKey.of(EntityType.class, event -> event.getEntity().getType()));
+                    DispatchKey.of(EntityType.class, event -> event.getEntity().getType()), api -> api.versioned());
 
     private static final EventBusJS<LivingDamageEventJS, EntityType<?>> DAMAGE_PRE =
             ENTITY_EVENTS.add("damagePre", ScriptType.SERVER, EventBusJS.of(
                     LivingDamageEventJS.class, true,
-                    DispatchKey.of(EntityType.class, event -> event.getEntity().getType())));
+                    DispatchKey.of(EntityType.class, event -> event.getEntity().getType())), api -> api.versioned());
 
     private static final EventBusJS<LivingDamageEventJS, EntityType<?>> DAMAGE_POST =
             ENTITY_EVENTS.server("damagePost", LivingDamageEventJS.class,
-                    DispatchKey.of(EntityType.class, event -> event.getEntity().getType()));
+                    DispatchKey.of(EntityType.class, event -> event.getEntity().getType()), api -> api.versioned());
 
     private FabricEntityEventBindings() {}
 

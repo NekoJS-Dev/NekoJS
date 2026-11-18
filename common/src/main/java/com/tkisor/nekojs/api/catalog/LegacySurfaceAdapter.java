@@ -24,7 +24,7 @@ public final class LegacySurfaceAdapter {
     public static List<ApiSymbol> convert(NekoScriptCatalogSnapshot snapshot) {
         List<ApiSymbol> result = new ArrayList<>();
         result.addAll(fromBindings(snapshot.bindings()));
-        result.addAll(fromEvents(snapshot.events()));
+        result.addAll(fromEvents(snapshot.events().stream().filter(EventCatalogEntry::scriptDefined).toList()));
         for (var publication : snapshot.moduleBindings()) {
             result.add(new ApiSymbol(new ApiSymbolId("module", publication.moduleId() + ":" + publication.binding().name()),
                     List.of(ApiSignature.function(List.of(), ApiTypeRef.voidType()))));

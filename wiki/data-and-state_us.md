@@ -87,6 +87,8 @@ PData is a small piece of NBT attached to an entity or item and saved with the w
 ### Entities and players
 
 ```javascript
+import { PlayerEvents } from "nekojs:event/versioned";
+
 // server_scripts/visits.js (NeoForge; on Fabric, replace event.entity with event.player)
 PlayerEvents.loggedIn(event => {
   const data = event.entity.pdata()
@@ -133,6 +135,8 @@ Change item data on the server. Changing an item on the client does not change t
 The server can push values to clients, and client scripts can use them for a HUD or screen.
 
 ```javascript
+import { PlayerEvents } from "nekojs:event/versioned";
+
 // server_scripts/status.js (NeoForge; on Fabric, replace event.entity with event.player)
 PlayerEvents.loggedIn(event => {
   ClientData.syncTo(event.entity, 'example:status', { ready: true, score: 10 })
@@ -165,6 +169,8 @@ Network.sendToServer('example:refresh', { page: 1 })
 ```
 
 ```javascript
+import { NetworkEvents } from "nekojs:event/versioned";
+
 // server_scripts/refresh.js
 NetworkEvents.server('example:refresh', event => {
   ClientData.syncTo(event.player, 'example:status', { ready: true })

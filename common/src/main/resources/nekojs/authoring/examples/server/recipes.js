@@ -1,3 +1,5 @@
+import { ServerEvents } from "nekojs:event/versioned";
+
 // Use a disposable world: this replaces the vanilla stick recipe.
 ServerEvents.recipes(event => {
     event.remove({ id: "minecraft:stick" });

@@ -30,6 +30,8 @@ Check [Platforms and compatibility](platform-compatibility_us) before copying an
 Create `nekojs/client_scripts/painter.js`:
 
 ```javascript
+import { ClientEvents } from "nekojs:event/versioned";
+
 // Every frame, draw a translucent box and a line of text in the top-left of the HUD
 ClientEvents.hud(painter => {
   painter.rect(8, 8, 120, 18, 0xB020252B)
@@ -70,6 +72,8 @@ You can also read `painter.width` and `painter.height` (the screen size) and `pa
 `ClientEvents.hudRender` gives a piece of HUD an id and lets you choose whether it draws before or after the vanilla HUD:
 
 ```javascript
+import { ClientEvents } from "nekojs:event/versioned";
+
 // nekojs/client_scripts/named-hud.js
 ClientEvents.hudRender('nekojs:status', {
   layer: 'foreground',
@@ -94,6 +98,8 @@ Unknown fields in `options`, an unknown layer name, or a non-integer priority ma
 ## Outlines in the world (NeoForge)
 
 ```javascript
+import { ClientEvents } from "nekojs:event/versioned";
+
 // nekojs/client_scripts/world-lines.js
 // Draw a green one-block box at world position (0, 64, 0)
 ClientEvents.worldRender('nekojs:origin-box', {
@@ -127,6 +133,8 @@ Post effects change the whole picture, for example invert, blur or the creeper v
 The simplest use is toggling an effect that ships with vanilla. This example toggles invert with the G key (`KeyBindEvents` needs 26.x; NeoForge 1.21.1 does not have it):
 
 ```javascript
+import { KeyBindEvents } from "nekojs:event/versioned";
+
 // nekojs/client_scripts/effect-key.js
 KeyBindEvents.register('nekojs:toggle_invert', 'key.keyboard.g')
 
@@ -162,6 +170,8 @@ A `true` result from `set` or `toggle` only means the request was accepted; the 
 To use your own shader settings, declare them in `ClientEvents.postEffects`. This example works **on 26.x only**:
 
 ```javascript
+import { ClientEvents } from "nekojs:event/versioned";
+
 // nekojs/client_scripts/effect-declarations.js
 ClientEvents.postEffects(event => {
   event.register('nekojs:sample_blur', build => {

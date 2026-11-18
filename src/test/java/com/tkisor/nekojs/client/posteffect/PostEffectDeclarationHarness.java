@@ -4,12 +4,10 @@ package com.tkisor.nekojs.client.posteffect;
 import com.tkisor.nekojs.api.ScriptType;
 import com.tkisor.nekojs.api.data.Binding;
 import com.tkisor.nekojs.api.event.EventGroup;
-import com.tkisor.nekojs.api.event.EventGroupJS;
 import com.tkisor.nekojs.api.plugin.IPluginRuntime;
 import com.tkisor.nekojs.bindings.event.client.ClientEvents;
 import com.tkisor.nekojs.core.NekoCoreContext;
 import com.tkisor.nekojs.core.NekoSandboxFactory;
-import com.tkisor.nekojs.core.ScriptEventBridge;
 import com.tkisor.nekojs.core.compiler.ScriptCompilerRegistry;
 import com.tkisor.nekojs.core.config.SandboxConfig;
 import com.tkisor.nekojs.core.error.DefaultErrorTracker;
@@ -42,7 +40,8 @@ final class PostEffectDeclarationHarness implements AutoCloseable {
 
     /** Extra event groups. By default only ClientEvents is wired. */
     private final Map<String, EventGroup> groups = new LinkedHashMap<>();
-    private final Bridge bridge = new Bridge(groups);
+    private final com.tkisor.nekojs.core.DefaultScriptEventBridge bridge =
+            new com.tkisor.nekojs.core.DefaultScriptEventBridge(null);
     private final StubPluginRuntime pluginRuntime = new StubPluginRuntime(groups);
 
     final Engine engine = Engine.newBuilder().build();
@@ -51,6 +50,7 @@ final class PostEffectDeclarationHarness implements AutoCloseable {
 
     PostEffectDeclarationHarness() {
         groups.put("ClientEvents", ClientEvents.GROUP);
+        bridge.setPluginRuntime(pluginRuntime);
         NekoJSPaths paths = NekoJSPaths.get();
         SandboxConfig config = new SandboxConfig(false, false, false, false, true, true, false, true);
         DefaultErrorTracker tracker = new DefaultErrorTracker(paths, config);
@@ -152,25 +152,6 @@ final class PostEffectDeclarationHarness implements AutoCloseable {
         }
     }
 
-    /** Binds the script-facing event groups the way production does, wrapping each group in
-     * {@code EventGroupJS}. */
-    private static final class Bridge implements ScriptEventBridge {
-        private final Map<String, EventGroup> groups;
-
-        Bridge(Map<String, EventGroup> groups) {
-            this.groups = groups;
-        }
-
-        @Override
-        public void bindEvents(graal.graalvm.polyglot.Value bindings, ScriptType type) {
-            groups.forEach((name, group) -> bindings.putMember(name, new EventGroupJS(group, type)));
-        }
-
-        @Override
-        public void clearListeners(ScriptType type) {
-            groups.values().forEach(group -> group.clearListeners(type));
-        }
-    }
 
     /** Plugin runtime stub that advertises event groups and an empty binding set. */
     private static final class StubPluginRuntime implements IPluginRuntime {
@@ -188,6 +169,13 @@ final class PostEffectDeclarationHarness implements AutoCloseable {
         @Override
         public Map<String, EventGroup> eventGroups() {
             return groups;
+        }
+
+        @Override
+        public List<com.tkisor.nekojs.api.event.ModuleEventGroup> moduleEventGroups() {
+            var registry = new com.tkisor.nekojs.api.event.EventGroupRegistry.Impl().scopedTo("nekojs");
+            groups.values().forEach(registry::register);
+            return registry.moduleGroups();
         }
 
         @Override public List<com.tkisor.nekojs.api.JSTypeAdapter<?>> adapters() { return List.of(); }

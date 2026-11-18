@@ -33,6 +33,8 @@ export function smeltOre(event, ore, output) {
 ```
 
 ```javascript
+import { ServerEvents } from "nekojs:event/versioned";
+
 // main.js
 import { ORES } from './lib/constants.js'
 import { smeltOre } from './lib/recipe_helpers.js'
@@ -132,16 +134,19 @@ NekoJS 按这个顺序查找 `greeting`：
 <a id="wiki-section-7"></a>
 ## 内置 API 模块
 
-NekoJS 的大部分功能是全局变量，直接用就行，例如 `Item`、`ServerEvents`。其中一部分也可以从内置模块导入：
+普通 Binding（例如 `Item`）保留原有的全局访问和官方模块路径。Java 插件/原生事件组使用自定义引擎虚拟模块，并单独放在 `nekojs:event/` 命名空间中。该命名空间恰有两个类别：`stable` 和 `versioned`；可选的所有者位于路径末尾。它不改变 Binding 路径或全局 Binding 行为。
 
 | 模块 | 内容 |
 |---|---|
 | `nekojs/api/stable` | 稳定接口，例如 `ID`、`Native`；客户端脚本里还有 `I18n` |
-| `nekojs/api/version` | 跟 Minecraft 版本相关的接口，例如 `Item` 和大部分事件组 |
+| `nekojs/api/version` | 当前节点的 Binding，例如 `Item`；不含事件组 |
+| `nekojs:event/stable` | 可移植事件视图；仅 SERVER 的 `ServerEvents.tickPre` / `tickPost` |
+| `nekojs:event/versioned` | 明确发布的官方原生/当前节点事件组 |
 
 ```typescript
 import { ID } from 'nekojs/api/stable'
 import { Item } from 'nekojs/api/version'
+import { ServerEvents } from 'nekojs:event/versioned'
 
 const id = ID.resource('minecraft:stone')
 const stack = Item.of('minecraft:stone')
@@ -149,11 +154,12 @@ const stack = Item.of('minecraft:stone')
 
 ```javascript
 const { ID } = require('nekojs/api/stable')
+const { ServerEvents } = require('nekojs:event/versioned')
 ```
 
-这些模块不用安装。某个名字在当前脚本类型里没有时，导入会直接报错。例如 `nekojs/api/stable` 里的 `ServerEvents` 只在服务端脚本里有，而且只有 `tickPre` 和 `tickPost` 两个事件。
+这些模块不用安装。某个名字在当前脚本类型里没有时，导入会直接报错。例如 `nekojs:event/stable` 里的 `ServerEvents` 只在服务端脚本里有，而且只有 `tickPre` 和 `tickPost` 两个事件。
 
-插件可以发布自己的模块，路径是 `nekojs/api/stable/<modid>` 或 `nekojs/api/version/<modid>`。只通过模块发布的接口不会变成全局变量。
+插件 Binding 模块仍使用 `nekojs/plugins/<owner>/api/stable` 和 `nekojs/plugins/<owner>/api/version`（`versioned()` 仍对应 `version`）。事件组使用自定义引擎虚拟模块 `nekojs:event/stable` 和 `nekojs:event/versioned`；插件事件在末尾追加所有者，例如 `nekojs:event/stable/myaddon` 或 `nekojs:event/versioned/myaddon`。事件模块恰有这两个类别，没有 server/player 子模块。旧事件路径没有别名。事件组不自动成为全局变量，也不从 Binding 聚合模块导出。需要保留原生载荷语义时迁到 versioned，不能自动改成 stable。见 [事件接口迁移表](event-extensions_cn#wiki-section-11)。脚本创建的动态事件组保留全局；其 `ScriptEvents` 注册器从 `nekojs:event/versioned` 导入。
 
 当前能导入哪些名字，以 `/nekojs probe` 生成的代码补全为准。全局变量的完整列表见 [全局绑定](global-bindings_cn)。
 

@@ -85,7 +85,7 @@ class ProbeEventsSurfaceGoldenTest {
 
     @Test
     void probeEventsEnterTheCatalogExactlyOnceEach() {
-        EventGroupRegistry registry = new EventGroupRegistry.Impl();
+        EventGroupRegistry registry = new EventGroupRegistry.Impl().scopedTo("nekojs");
         registry.register(ProbeEvents.GROUP);
 
         List<EventCatalogEntry> events = NekoScriptCatalog.events(new StubRuntime(registry.view()));
@@ -104,15 +104,20 @@ class ProbeEventsSurfaceGoldenTest {
 
     @Test
     void probeEventsTypeScriptDeclarationMatchesGolden() throws Exception {
-        EventGroupRegistry registry = new EventGroupRegistry.Impl();
+        EventGroupRegistry registry = new EventGroupRegistry.Impl().scopedTo("nekojs");
         registry.register(ProbeEvents.GROUP);
         List<EventCatalogEntry> serverEntries = NekoScriptCatalog.events(
                 new StubRuntime(registry.view()), ScriptType.SERVER);
         assertEquals(4, serverEntries.size(), "side-filtered server view keeps all probe events");
 
         TypeAliasRegistry aliases = new TypeAliasRegistry();
-        String actual = new EventDeclarationGenerator(aliases, new AdapterAliasGenerator(aliases))
-                .generate(serverEntries, ScriptType.SERVER);
+        String moduleId = "nekojs:event/versioned";
+        assertEquals(PROBE_ONLY_MEMBERS, registry.moduleGroups().getFirst().events());
+        String actual = new com.tkisor.nekojs.probe.backend.typescript.BindingDeclarationGenerator().generateModules(
+                Map.of(moduleId, List.of()), Map.of(moduleId,
+                        new EventDeclarationGenerator(aliases, new AdapterAliasGenerator(aliases))
+                                .generateModuleNamespaces(serverEntries)));
+        assertFalse(actual.contains("declare global"), actual);
 
         maybeRegenerate("probe-events.expected.d.ts", actual);
         assertEquals(resource("probe-events.expected.d.ts"), normalize(actual),
@@ -129,7 +134,7 @@ class ProbeEventsSurfaceGoldenTest {
 
     @Test
     void clientSideFilterExcludesProbeEventsEntirely() {
-        EventGroupRegistry registry = new EventGroupRegistry.Impl();
+        EventGroupRegistry registry = new EventGroupRegistry.Impl().scopedTo("nekojs");
         registry.register(ProbeEvents.GROUP);
 
         List<EventCatalogEntry> clientEntries = NekoScriptCatalog.events(
@@ -146,7 +151,7 @@ class ProbeEventsSurfaceGoldenTest {
 
     @Test
     void probeEventsPythonDeclarationRendersEachMemberOnce() {
-        EventGroupRegistry registry = new EventGroupRegistry.Impl();
+        EventGroupRegistry registry = new EventGroupRegistry.Impl().scopedTo("nekojs");
         registry.register(ProbeEvents.GROUP);
         List<EventCatalogEntry> serverEntries = NekoScriptCatalog.events(
                 new StubRuntime(registry.view()), ScriptType.SERVER);

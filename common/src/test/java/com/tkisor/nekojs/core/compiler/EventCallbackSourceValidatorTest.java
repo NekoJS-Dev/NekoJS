@@ -2,6 +2,7 @@ package com.tkisor.nekojs.core.compiler;
 
 import com.tkisor.nekojs.api.ScriptType;
 import com.tkisor.nekojs.api.contract.NormativeApiContract;
+import com.tkisor.nekojs.api.event.EventBusJS;
 import com.tkisor.nekojs.api.event.EventGroup;
 import com.tkisor.nekojs.api.event.EventSchemaRegistry;
 import com.tkisor.nekojs.api.event.ManagedCallbackSchemaRegistry;
@@ -135,7 +136,7 @@ class EventCallbackSourceValidatorTest {
                 reported.add(throwable.getMessage() == null ? kind : throwable.getMessage()));
 
         EventGroup group = EventGroup.of("TestEvents");
-        group.server("started", TestStartedEvent.class);
+        group.add("started", ScriptType.SERVER, EventBusJS.of(TestStartedEvent.class));
         EventSchemaRegistry.registerGroup(group);
     }
 
@@ -223,7 +224,7 @@ class EventCallbackSourceValidatorTest {
         ManagedCallbackSchemaRegistry.installContractEvents(List.of(
                 contractEvent("ContractEvents", "started", "server")));
         EventGroup group = EventGroup.of("ContractEvents");
-        group.server("started", TestStartedEvent.class);
+        group.add("started", ScriptType.SERVER, EventBusJS.of(TestStartedEvent.class));
         EventSchemaRegistry.registerGroup(group);
         registerBindingGroup("ContractEvents");
 
@@ -438,7 +439,7 @@ class EventCallbackSourceValidatorTest {
 
     private void registerChainedGroup() {
         EventGroup group = EventGroup.of("ChainedEvents");
-        group.server("started", ChainedEvent.class);
+        group.add("started", ScriptType.SERVER, EventBusJS.of(ChainedEvent.class));
         EventSchemaRegistry.registerGroup(group);
         view = new ScriptBindingSchema.View(Map.of(
                 "ChainedEvents", new ScriptBindingSchema.BindingMembers(Set.of("started"))), Set.of());

@@ -1,5 +1,7 @@
 package com.tkisor.nekojs.core.node;
 
+import com.tkisor.nekojs.core.api.ApiModuleNamespace;
+
 import com.tkisor.nekojs.core.compiler.NekoTypeScriptCompiler;
 import com.tkisor.nekojs.core.config.SandboxConfig;
 import com.tkisor.nekojs.core.error.ErrorTracker;
@@ -107,7 +109,7 @@ public final class NekoNodeModuleInstaller {
         if (modules.isEmpty()) return;
         for (Map.Entry<String, String> entry : modules.entrySet()) {
             String id = entry.getKey();
-            if (id.startsWith("nekojs/api/")) {
+            if (ApiModuleNamespace.isReserved(id)) {
                 throw new IllegalArgumentException("[NEKO-4057] Plugin Node module uses a reserved API route: " + id);
             }
             String source = entry.getValue();

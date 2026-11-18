@@ -130,7 +130,8 @@ class LegacySurfaceShadowCharacterizationTest {
                 ScriptType.all(),
                 List.of(BindingCatalogEntry.of("Item", ScriptType.SERVER, LegacyApiStub.class, true)),
                 List.of(EventCatalogEntry.of("LegacyEvents", "tick", ScriptType.SERVER,
-                        LegacyApiStub.class, null, false, false)),
+                        LegacyApiStub.class, null, false, false),
+                        EventCatalogEntry.ofScriptEvent("CustomEvents", "tick", ScriptType.SERVER)),
                 List.of(new AdapterCatalogEntry(LegacyApiStub.class,
                         List.of(com.tkisor.nekojs.api.AdapterInputShape.self()),
                         com.tkisor.nekojs.api.data.ConversionPrecedence.LOWEST, null)),
@@ -138,6 +139,13 @@ class LegacySurfaceShadowCharacterizationTest {
                 new TypeOutputLayout(Path.of("probe-types"), Path.of("snippets")),
                 Map.of(), List.of());
         List<ApiSymbol> legacy = LegacySurfaceAdapter.convert(legacyOnly);
+
+        assertEquals(2, legacyOnly.events().size(), "native and dynamic sources remain available for introspection");
+        assertEquals(LegacyApiStub.class, legacyOnly.events().getFirst().eventType());
+        assertEquals(List.of("event:CustomEvents.tick"), legacy.stream()
+                .filter(symbol -> symbol.id().kind().equals("event")).map(symbol -> symbol.id().value()).toList());
+        assertTrue(legacy.stream().noneMatch(symbol -> symbol.id().qualifiedName().startsWith("LegacyEvents")),
+                "native event sources do not create legacy event or global Binding observations");
 
         Set<String> kinds = legacy.stream().map(s -> s.id().kind()).collect(Collectors.toSet());
         assertEquals(Set.of("global", "event", "adapter"), kinds,
@@ -147,6 +155,7 @@ class LegacySurfaceShadowCharacterizationTest {
             // Observation placeholder signature: no parameters, void return; it makes no managed contract promise
             assertEquals(1, symbol.signatures().size());
             assertEquals(List.of(), symbol.signatures().getFirst().parameters());
+            assertEquals(com.tkisor.nekojs.api.surface.ApiTypeRef.voidType(), symbol.signatures().getFirst().returnType());
         }
         // LEGACY_PREVIEW is still part of the tier vocabulary (reserved for the contribution layer);
         // the managed surface does not consume it

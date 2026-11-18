@@ -82,6 +82,7 @@ class Ticket39BlockModificationScriptE2ETest {
     void scriptDeclarationAppliesToLiveBlockAndItsStates() throws Exception {
         float original = stoneHardness();
         harness.writeServerScript("mod.js", """
+                const { BlockEvents } = require('nekojs:event/versioned');
                 BlockEvents.modification(event => {
                   event.modify('minecraft:stone', block => {
                     block.hardness = 2.0
@@ -103,6 +104,7 @@ class Ticket39BlockModificationScriptE2ETest {
     @Test
     void candidateStaysInertForBlocksAndEmptyPlanRestoresBaseline() throws Exception {
         harness.writeServerScript("mod.js", """
+                const { BlockEvents } = require('nekojs:event/versioned');
                 BlockEvents.modification(event => event.modify('minecraft:redstone_lamp', block => block.setLightLevel(7)))
                 """);
         loadServerScripts();
@@ -118,6 +120,7 @@ class Ticket39BlockModificationScriptE2ETest {
             }
         });
         harness.writeServerScript("mod.js", """
+                const { BlockEvents } = require('nekojs:event/versioned');
                 BlockEvents.modification(event => event.modify('minecraft:redstone_lamp', block => block.setLightLevel(12)))
                 """);
 
@@ -140,6 +143,7 @@ class Ticket39BlockModificationScriptE2ETest {
     @Test
     void rejectedBlockBatchKeepsOldActivePlan() throws Exception {
         harness.writeServerScript("mod.js", """
+                const { BlockEvents } = require('nekojs:event/versioned');
                 BlockEvents.modification(event => event.modify('minecraft:stone', block => block.setHardness(3.0)))
                 """);
         loadServerScripts();
@@ -148,6 +152,7 @@ class Ticket39BlockModificationScriptE2ETest {
 
         ModificationDomainOwner.Diagnostics before = harness.owner.lastDiagnostics();
         harness.writeServerScript("mod.js", """
+                const { BlockEvents } = require('nekojs:event/versioned');
                 BlockEvents.modification(event => event.modify('minecraft:stone', block => block.setLightLevel(16)))
                 """);
         NekoReloadException failure = assertThrows(NekoReloadException.class,
@@ -161,6 +166,7 @@ class Ticket39BlockModificationScriptE2ETest {
     @Test
     void multipleBlocksInOneScriptCommitTogetherOrNotAtAll() throws Exception {
         harness.writeServerScript("mod.js", """
+                const { BlockEvents } = require('nekojs:event/versioned');
                 BlockEvents.modification(event => {
                   event.modify('minecraft:stone', block => block.setHardness(4.0))
                   event.modify('minecraft:oak_fence', block => block.setRequiresTool(true))
@@ -174,6 +180,7 @@ class Ticket39BlockModificationScriptE2ETest {
         // The second declaration is invalid (friction out of range), so the whole batch, including the
         // first declaration, is not committed and the old active values stay
         harness.writeServerScript("mod.js", """
+                const { BlockEvents } = require('nekojs:event/versioned');
                 BlockEvents.modification(event => {
                   event.modify('minecraft:stone', block => block.setHardness(9.0))
                   event.modify('minecraft:oak_fence', block => block.setFriction(1.5))

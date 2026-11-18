@@ -25,6 +25,6 @@ public record ModuleBinding(String owner, BindingExposure.Category category, Scr
             "void", "while", "with", "yield", "namespace", "__neko_module");
 
     public String moduleId() {
-        return "nekojs/api/" + category.path() + (owner.equals("nekojs") ? "" : "/" + owner);
+        return (owner.equals("nekojs") ? "nekojs/api/" : "nekojs/plugins/" + owner + "/api/") + category.path();
     }
 }
