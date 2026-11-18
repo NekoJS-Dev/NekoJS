@@ -1,22 +1,37 @@
 package com.tkisor.nekojs.core.compiler;
 
+import com.tkisor.nekojs.api.compiler.FrontendSemantics;
+
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
+import java.util.LinkedHashMap;
 import java.util.Set;
+import java.util.regex.Pattern;
 
 public final class ScriptCompilerRegistry {
     private static final List<String> NATIVE_EXTENSIONS_IN_ORDER = List.of(".js", ".mjs", ".cjs");
     private static final Set<String> NATIVE_EXTENSIONS = Set.copyOf(NATIVE_EXTENSIONS_IN_ORDER);
+
+    private static final Pattern FRONTEND_ID = Pattern.compile("[a-z0-9_.-]+:[a-z0-9_./-]+");
+    private static final String NATIVE_FRONTEND_ID = "nekojs:javascript";
+    private static final Candidate NATIVE_FALLBACK = new Candidate(
+            new NekoScriptLanguage("javascript", NATIVE_EXTENSIONS, NekoJavaScriptLanguagePlugin.INSTANCE),
+            new FrontendDescriptor(NATIVE_FRONTEND_ID, "javascript", NATIVE_EXTENSIONS, "1",
+                    new FrontendSemantics(FrontendSemantics.JAVASCRIPT_SOURCE, FrontendSemantics.JAVASCRIPT_OUTPUT,
+                            Set.of(FrontendSemantics.TYPESCRIPT_AUTHORING))));
 
     public static final ScriptCompilerRegistry INSTANCE = createRuntimeRegistry();
 
     private static volatile ScriptCompilerRegistry current = INSTANCE;
 
     private final List<IScriptCompiler> compilers = new ArrayList<>();
-    private final List<NekoScriptLanguage> languages = new ArrayList<>();
+    private final List<Candidate> languages = new ArrayList<>();
+    // The native fallback remains outside the automatic registration order.
+    private final Map<String, Candidate> frontends = new LinkedHashMap<>(Map.of(NATIVE_FRONTEND_ID, NATIVE_FALLBACK));
     private final Set<String> extraExtensions = new LinkedHashSet<>();
     private boolean frozen;
     private long revision;
@@ -52,11 +67,46 @@ public final class ScriptCompilerRegistry {
     public synchronized void register(NekoScriptLanguage language) {
         requireMutable();
         if (language == null) return;
-        NekoScriptLanguage normalized = normalizedLanguage(language);
-        languages.add(normalized);
-        if (normalized.compiler() != null) {
-            compilers.add(normalized.compiler());
+        append(new Candidate(normalizedLanguage(language), null));
+    }
+
+    /** Registers a named frontend once in both the selectable catalog and automatic lookup. */
+    public synchronized void registerFrontend(String id, String implementationRevision,
+                                              NekoScriptLanguage language, FrontendSemantics semantics) {
+        if (frozen) {
+            throw new IllegalStateException("[NEKO-1026] Frontend registration rejected after freeze: " + id);
         }
+        if (id == null || !FRONTEND_ID.matcher(id).matches()) {
+            throw new IllegalArgumentException("[NEKO-1026] Invalid frontend identifier: " + id);
+        }
+        if (frontends.containsKey(id)) {
+            throw new IllegalArgumentException("[NEKO-1026] Duplicate frontend identifier: " + id);
+        }
+        if (language == null || (language.compiler() == null && language.plugin() == null)
+                || semantics == null || implementationRevision == null || implementationRevision.isBlank()) {
+            throw new IllegalArgumentException("[NEKO-1026] Frontend registration requires an implementation, revision and semantics: " + id);
+        }
+        NekoScriptLanguage normalized = normalizedLanguage(language);
+        if (normalized.extensions().isEmpty() || normalized.extensions().contains(".")) {
+            throw new IllegalArgumentException("[NEKO-1026] Frontend registration requires supported extensions: " + id);
+        }
+        Candidate candidate = new Candidate(normalized,
+                new FrontendDescriptor(id, normalized.id(), normalized.extensions(), implementationRevision, semantics));
+        frontends.put(id, candidate);
+        append(candidate);
+    }
+
+    /** Registers a complete language plugin with its own language ID and extensions. */
+    public void registerFrontend(String id, String implementationRevision,
+                                 NekoLanguagePlugin plugin, FrontendSemantics semantics) {
+        NekoScriptLanguage language = plugin == null ? null : new NekoScriptLanguage(plugin.id(), plugin.extensions(), plugin);
+        registerFrontend(id, implementationRevision, language, semantics);
+    }
+
+    private void append(Candidate candidate) {
+        languages.add(candidate);
+        IScriptCompiler compiler = candidate.language().compiler();
+        if (compiler != null) compilers.add(compiler);
         revision++;
     }
 
@@ -85,7 +135,8 @@ public final class ScriptCompilerRegistry {
         requireMutable();
         NekoScriptLanguage normalizedReplacement = normalizedLanguage(replacement);
         List<NekoScriptLanguage> removed = new ArrayList<>();
-        languages.removeIf(language -> {
+        languages.removeIf(candidate -> {
+            NekoScriptLanguage language = candidate.language();
             boolean matches = language.id().equals(normalizedReplacement.id());
             if (matches) {
                 removed.add(language);
@@ -137,14 +188,32 @@ public final class ScriptCompilerRegistry {
      * from a later replacement of that compiler.
      */
     public synchronized Capture capture(String extension) {
+        return capture(extension, null);
+    }
+
+    /** Captures an exact named frontend when requested; a rejected selection never falls back. */
+    public synchronized Capture capture(String extension, String frontendId) {
         String dotted = normalizeExtension(extension);
+        if (frontendId != null) {
+            Candidate selected = frontends.get(frontendId);
+            if (selected == null || !selected.frontend().extensions().contains(dotted)) {
+                List<String> available = frontends.values().stream().map(Candidate::frontend)
+                        .filter(frontend -> frontend.extensions().contains(dotted))
+                        .map(FrontendDescriptor::id).sorted().toList();
+                String reason = selected == null ? "is not registered" : "does not support the extension";
+                throw new IllegalArgumentException("[NEKO-1027] Frontend selection rejected for " + dotted
+                        + ": " + frontendId + " " + reason + "; available frontends: " + available);
+            }
+            return captureCandidate(selected);
+        }
         String bare = dotted.substring(1);
         for (int i = languages.size() - 1; i >= 0; i--) {
-            NekoScriptLanguage language = languages.get(i);
+            Candidate candidate = languages.get(i);
+            NekoScriptLanguage language = candidate.language();
             IScriptCompiler compiler = language.compiler();
             if (language.extensions().contains(dotted)
                     || compiler != null && (compiler.canCompile(dotted) || compiler.canCompile(bare))) {
-                return new Capture(language, language.plugin(), compiler, revision);
+                return captureCandidate(candidate);
             }
         }
         for (int i = compilers.size() - 1; i >= 0; i--) {
@@ -153,7 +222,18 @@ public final class ScriptCompilerRegistry {
                 return new Capture(null, null, compiler, revision);
             }
         }
-        return new Capture(null, null, null, revision);
+        return new Capture(null, null, null, revision, NATIVE_EXTENSIONS.contains(dotted)
+                ? NATIVE_FALLBACK.frontend() : null);
+    }
+
+    private Capture captureCandidate(Candidate candidate) {
+        NekoScriptLanguage language = candidate.language();
+        return new Capture(language, language.plugin(), language.compiler(), revision, candidate.frontend());
+    }
+
+    /** Returns an immutable snapshot of the named frontend catalog. */
+    public synchronized List<FrontendDescriptor> frontends() {
+        return frontends.values().stream().map(Candidate::frontend).toList();
     }
 
     /** Uses the same last-wins rule as {@link #getCompiler(String)} and returns the whole language plugin entry. */
@@ -161,7 +241,7 @@ public final class ScriptCompilerRegistry {
         String dotted = normalizeExtension(extension);
         String bare = dotted.substring(1);
         for (int i = languages.size() - 1; i >= 0; i--) {
-            NekoScriptLanguage language = languages.get(i);
+            NekoScriptLanguage language = languages.get(i).language();
             if (language.extensions().contains(dotted)) {
                 return language;
             }
@@ -187,7 +267,7 @@ public final class ScriptCompilerRegistry {
     }
 
     public List<NekoScriptLanguage> languages() {
-        return List.copyOf(languages);
+        return languages.stream().map(Candidate::language).toList();
     }
 
     public boolean isSupportedScriptExtension(String extension) {
@@ -204,16 +284,16 @@ public final class ScriptCompilerRegistry {
         return dotIndex >= 0 && isSupportedScriptExtension(fileName.substring(dotIndex));
     }
 
-    public void freeze() {
+    public synchronized void freeze() {
         frozen = true;
     }
 
-    public boolean frozen() {
+    public synchronized boolean frozen() {
         return frozen;
     }
 
     /** Monotonic registration identity used to validate captured preparation bindings. */
-    public long revision() {
+    public synchronized long revision() {
         return revision;
     }
 
@@ -240,8 +320,8 @@ public final class ScriptCompilerRegistry {
     private List<String> registeredExtensionsInOrder() {
         LinkedHashSet<String> extensions = new LinkedHashSet<>(NATIVE_EXTENSIONS_IN_ORDER);
         extensions.addAll(extraExtensions);
-        for (NekoScriptLanguage language : languages) {
-            for (String extension : language.extensions()) {
+        for (Candidate candidate : languages) {
+            for (String extension : candidate.language().extensions()) {
                 extensions.add(normalizeExtension(extension));
             }
         }
@@ -254,7 +334,21 @@ public final class ScriptCompilerRegistry {
         }
     }
 
-    /** Immutable result of an atomic compiler/plugin lookup. */
+    private record Candidate(NekoScriptLanguage language, FrontendDescriptor frontend) {}
+
+    /** Stable identity and semantic capabilities independent of automatic registration order. */
+    public record FrontendDescriptor(String id, String languageId, Set<String> extensions,
+                                     String implementationRevision, FrontendSemantics semantics) {
+        public FrontendDescriptor {
+            extensions = Set.copyOf(extensions);
+        }
+    }
+
+    /** Atomic compiler binding and revision; the descriptor is absent for unnamed implementations. */
     public record Capture(NekoScriptLanguage language, NekoLanguagePlugin plugin,
-                          IScriptCompiler compiler, long revision) {}
+                          IScriptCompiler compiler, long revision, FrontendDescriptor frontend) {
+        public Capture(NekoScriptLanguage language, NekoLanguagePlugin plugin, IScriptCompiler compiler, long revision) {
+            this(language, plugin, compiler, revision, null);
+        }
+    }
 }

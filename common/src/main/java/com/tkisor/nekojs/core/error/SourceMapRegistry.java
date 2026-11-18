@@ -63,7 +63,7 @@ public final class SourceMapRegistry implements NekoSourceMapView {
     public void register(String scriptPath, String sourceMapJson, int prependedLineCount, String cacheKey) {
         if (scriptPath == null) return;
         String generatedPath = normalizeLookupPath(scriptPath);
-        NormalizedSourceMap sourceMap = parse(generatedPath, sourceMapJson, prependedLineCount);
+        NormalizedSourceMap sourceMap = parse(generatedPath, sourceMapJson, prependedLineCount, false);
         // Hard cap to guard against unbounded growth in long-running sessions with heavy
         // script churn. Reload clears the map (CONC-2), so this is a backstop for edge cases
         // where many distinct scripts are compiled without a full reload.
@@ -159,7 +159,19 @@ public final class SourceMapRegistry implements NekoSourceMapView {
         return revisions.get(normalizeLookupPath(scriptPath));
     }
 
-    private NormalizedSourceMap parse(String generatedPath, String sourceMapJson, int prependedLineCount) {
+    /** Maps a prepared artifact without publishing it or assigning an authored position to generated-only text. */
+    public ArtifactPositions artifactPositions(Path path, String sourceMapJson) {
+        NormalizedSourceMap map = parse(normalizeLookupPath(path.toString()), sourceMapJson, 0, true);
+        return (line, column) -> map.map(line, column, true);
+    }
+
+    @FunctionalInterface
+    public interface ArtifactPositions {
+        OriginalPosition map(int generatedLine, int generatedColumn);
+    }
+
+    private NormalizedSourceMap parse(String generatedPath, String sourceMapJson, int prependedLineCount,
+                                      boolean preserveUnmapped) {
         if (sourceMapJson == null || sourceMapJson.isBlank()) {
             return NormalizedSourceMap.empty(generatedPath, prependedLineCount);
         }
@@ -186,14 +198,14 @@ public final class SourceMapRegistry implements NekoSourceMapView {
             if (mappings == null || mappings.isEmpty()) {
                 return new NormalizedSourceMap(generatedPath, file, prependedLineCount, List.of(), sources, sourcesContent, names);
             }
-            return new NormalizedSourceMap(generatedPath, file, prependedLineCount, parseMappings(mappings, sources.size(), names.size()), sources, sourcesContent, names);
+            return new NormalizedSourceMap(generatedPath, file, prependedLineCount, parseMappings(mappings, sources.size(), names.size(), preserveUnmapped), sources, sourcesContent, names);
         } catch (Exception e) {
             LOGGER.warning("Failed to parse source map for " + generatedPath + ": " + e.getMessage() + "; stack traces will point at generated code");
             return NormalizedSourceMap.empty(generatedPath, prependedLineCount);
         }
     }
 
-    private static List<int[]> parseMappings(String mappings, int sourceCount, int nameCount) {
+    private static List<int[]> parseMappings(String mappings, int sourceCount, int nameCount, boolean preserveUnmapped) {
         List<int[]> lineMappings = new ArrayList<>();
         // Pack each segment's five fields into one line array instead of allocating a record.
         // Copy completed lines so reusing the scratch buffer cannot change published mappings.
@@ -216,25 +228,30 @@ public final class SourceMapRegistry implements NekoSourceMapView {
             int count = decodeVlq(mappings, start, end, values);
             if (count > 0) {
                 generatedColumn += values[0];
+                int entrySourceIndex = -1;
+                int entryNameIndex = -1;
                 if (count >= 4) {
                     sourceIndex += values[1];
                     originalLine += values[2];
                     originalColumn += values[3];
-                    int entryNameIndex = -1;
                     if (count >= 5) {
                         nameIndex += values[4];
                         if (nameIndex >= 0 && nameIndex < nameCount) entryNameIndex = nameIndex;
                     }
                     if (sourceIndex >= 0 && sourceIndex < sourceCount && originalLine >= 0 && originalColumn >= 0) {
-                        if (entries.length - entrySize < MAPPING_ENTRY_WIDTH) {
-                            entries = Arrays.copyOf(entries, entries.length * 2);
-                        }
-                        entries[entrySize++] = generatedColumn;
-                        entries[entrySize++] = sourceIndex;
-                        entries[entrySize++] = originalLine;
-                        entries[entrySize++] = originalColumn;
-                        entries[entrySize++] = entryNameIndex;
+                        entrySourceIndex = sourceIndex;
                     }
+                }
+                // A one-field segment ends the previous mapping without changing the authored deltas.
+                if (entrySourceIndex >= 0 || (preserveUnmapped && count == 1)) {
+                    if (entries.length - entrySize < MAPPING_ENTRY_WIDTH) {
+                        entries = Arrays.copyOf(entries, entries.length * 2);
+                    }
+                    entries[entrySize++] = generatedColumn;
+                    entries[entrySize++] = entrySourceIndex;
+                    entries[entrySize++] = originalLine;
+                    entries[entrySize++] = originalColumn;
+                    entries[entrySize++] = entryNameIndex;
                 }
             }
             if (end == mappings.length()) {
@@ -448,6 +465,10 @@ public final class SourceMapRegistry implements NekoSourceMapView {
         }
 
         OriginalPosition map(int jsLine, int jsColumn) {
+            return map(jsLine, jsColumn, false);
+        }
+
+        OriginalPosition map(int jsLine, int jsColumn, boolean strict) {
             int adjustedLine = jsLine - Math.max(0, prependedLineCount);
             int lineIndex = adjustedLine - 1;
             if (lineIndex < 0 || lineIndex >= lineMappings.size()) {
@@ -461,7 +482,7 @@ public final class SourceMapRegistry implements NekoSourceMapView {
             }
 
             int targetColumn = Math.max(0, jsColumn - 1);
-            int bestMatch = 0;
+            int bestMatch = strict ? -1 : 0;
             for (int index = 0; index < entries.length; index += MAPPING_ENTRY_WIDTH) {
                 if (entries[index] <= targetColumn) {
                     bestMatch = index;
@@ -470,6 +491,9 @@ public final class SourceMapRegistry implements NekoSourceMapView {
                 }
             }
 
+            if (bestMatch < 0 || entries[bestMatch + 1] < 0) {
+                return new OriginalPosition(adjustedLine > 0 ? adjustedLine : jsLine, jsColumn, null);
+            }
             int sourceIndex = entries[bestMatch + 1];
             int nameIndex = entries[bestMatch + 4];
             String path = sourceIndex >= 0 && sourceIndex < sources.size() ? sources.get(sourceIndex) : null;

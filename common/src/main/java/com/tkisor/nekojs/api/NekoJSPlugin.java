@@ -4,6 +4,7 @@ import com.tkisor.nekojs.api.data.AttachedData;
 import com.tkisor.nekojs.api.data.BindingRegistry;
 import com.tkisor.nekojs.api.data.JSTypeAdapterRegistry;
 import com.tkisor.nekojs.api.event.EventGroupRegistry;
+import com.tkisor.nekojs.api.preflight.ScriptPreflightRegistry;
 import com.tkisor.nekojs.api.recipe.RecipeLifecycleContext;
 import com.tkisor.nekojs.api.surface.ApiContributionRegistry;
 import com.tkisor.nekojs.core.compiler.ScriptCompilerRegistry;
@@ -97,6 +98,10 @@ public interface NekoJSPlugin {
      * Built-in languages are registered via the common plugin and follow the same path as third-party ones.
      */
     default void registerScriptCompilers(ScriptCompilerRegistry registry) {
+    }
+
+    /** Collects preflight providers independently of the language frontend. */
+    default void registerScriptPreflights(ScriptPreflightRegistry registry) {
     }
 
     /** Registers script attributes (e.g., {@code AFTER}, {@code MODLOADED}, {@code DISABLE}, {@code PRIORITY} file header attributes). */

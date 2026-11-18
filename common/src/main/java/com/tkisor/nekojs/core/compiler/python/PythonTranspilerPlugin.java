@@ -2,6 +2,8 @@ package com.tkisor.nekojs.core.compiler.python;
 
 import com.tkisor.nekojs.api.NekoJSPlugin;
 import com.tkisor.nekojs.api.annotation.RegisterNekoJSPlugin;
+import com.tkisor.nekojs.api.compiler.FrontendSemantics;
+import com.tkisor.nekojs.core.compiler.NekoScriptLanguage;
 import com.tkisor.nekojs.core.compiler.ScriptCompilerRegistry;
 
 import java.util.Set;
@@ -21,6 +23,9 @@ public final class PythonTranspilerPlugin implements NekoJSPlugin, com.tkisor.ne
 
     @Override
     public void registerScriptCompilers(ScriptCompilerRegistry registry) {
-        registry.registerLanguage("python", Set.of(".py"), new PythonToJsCompiler());
+        registry.registerFrontend("nekojs:python", "1",
+                new NekoScriptLanguage("python", Set.of(".py"), new PythonToJsCompiler()),
+                new FrontendSemantics(new FrontendSemantics.Input(FrontendSemantics.SOURCE_TEXT, "nekojs:python"),
+                        FrontendSemantics.JAVASCRIPT_OUTPUT, Set.of(FrontendSemantics.PYTHON_AUTHORING)));
     }
 }

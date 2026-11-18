@@ -75,8 +75,8 @@
       "us": "Configuration",
       "translationStatus": "draft",
       "humanReview": "pending",
-      "sourceDigest": "44da4401ebdd94e204932c5132023566a5d1aa6635abf9e066aa0aba412c5362",
-      "translationDigest": "362ff51e708d21d5a2b5461d91b5abeaf6d036616516466319f97175b6494e06"
+      "sourceDigest": "9a2153394cd0a11d80868b58137874503a069c67d5cc08601bcf956f724ea0d6",
+      "translationDigest": "19c074b9770d6cdec55351c1d5ae9e01e3e4508d6eb67cdedf2a2a0e0e0e9c5f"
     },
     {
       "id": "faq",
@@ -212,8 +212,8 @@
       "legacy": "en_us/Error-Reference.md",
       "sourceLocale": "us",
       "legacyDigest": "d655593a3910daa974f0cc8410ad608cb0fb8c8850922ee4fc61314b1ee57e3c",
-      "sourceDigest": "4b74aef0c34e05cdf78ca1926e0e006cd42afa4e039bd9c0fd036e96173be3d9",
-      "translationDigest": "ef2ec8bb2e58fb87d444076ce2736d4d99619aec49eec2f7f8739fe34fd2a257",
+      "sourceDigest": "373762cc11935afb88428dd1fac4e16e05d9a21bf64371e55dd47fa97dca31b4",
+      "translationDigest": "4f5f750672b5360a857df319801d4dc02882d9733401e64eb7ca565474b8c54f",
       "translationStatus": "draft",
       "humanReview": "pending"
     },
@@ -327,8 +327,8 @@
       "us": "Plugin development",
       "legacy": "插件开发.md",
       "legacyDigest": "3b1e293cebb15b3e967150bc4897f4c866cf663a09cdcaef77b8bd20e0795fd7",
-      "sourceDigest": "a28655237d1f084126672667452fd2b18cc39ce7a7268b8545988de3b31ba97c",
-      "translationDigest": "9db2c51157400fabd30e7501ac7023cdb566310facf375f5d3c9548ca88bb4cf",
+      "sourceDigest": "a30fe00c8dd6afbb8b672dee398f7c6749aa76e940d68f2322491bab26dcce55",
+      "translationDigest": "6e7bb0420cf03a1db8d54234042f1f9382c67ccc94d2e0aa3cabc601f309ebc1",
       "translationStatus": "draft",
       "humanReview": "pending"
     },
@@ -387,8 +387,8 @@
       "us": "Probe type generation",
       "legacy": "Probe-类型生成.md",
       "legacyDigest": "e04220b9b877582ad6ba0a05d95573c1ed3945c00cbccf36bc79e899bd1a3cab",
-      "sourceDigest": "9b99d002dbcaefcdf0482381c8e24f0521bf8065ef2880ebaf6ea0740986d71e",
-      "translationDigest": "8ac5dbb97811cb4c11889ac59bf1ad87d3c856d7b7cb7c60b683f614308c921b",
+      "sourceDigest": "e270fe379f5143f9093311306abbffef8bbaf887a9e6fec80c7bb82fc9fc37a9",
+      "translationDigest": "3e62d50829095f8984edab45df29f91e3cec40c73f8a317ef0e19d59279d2c3b",
       "translationStatus": "draft",
       "humanReview": "pending"
     },

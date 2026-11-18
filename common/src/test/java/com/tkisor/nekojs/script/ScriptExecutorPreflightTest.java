@@ -164,8 +164,32 @@ class ScriptExecutorPreflightTest {
         assertEquals(11, context.getBindings("js").getMember("__entryResult").asInt());
         assertEquals(1, compilations.get(), "Entry validation and loading must reuse preparation");
         assertEquals(1, tracker.getErrorCount());
-        assertTrue(tracker.getAllErrors().iterator().next().getErrorMessage().contains("missing"));
+        var diagnostic = tracker.getAllErrors().iterator().next();
+        assertEquals(1, diagnostic.getOccurrenceCount(), "FULL and BINDINGS_ONLY must not report the same finding twice");
+        assertTrue(diagnostic.getErrorMessage().contains("missing"));
         assertTrue(tracker.getAllErrors().stream().noneMatch(error -> error.getErrorMessage().contains("authoredOnly")));
+    }
+
+    @Test
+    void dependencyPromotedToEntryKeepsOneOccurrenceUnderCurrentSchema() throws Exception {
+        context.eval("js", "PreflightFixture.missing = () => {};");
+        String source = "PreflightFixture.missing(); PreflightFixture.capture(17);";
+        Files.writeString(paths.serverScripts().resolve("shared-entry.js"), source);
+        var importer = execute("importer.mjs", "import './shared-entry.js';", nodeRuntime);
+        assertFalse(importer.disabled, () -> String.valueOf(importer.lastError));
+        assertOneSharedEntryFinding();
+
+        var entry = execute("shared-entry.js", source, nodeRuntime);
+        assertFalse(entry.disabled, () -> String.valueOf(entry.lastError));
+        assertOneSharedEntryFinding();
+    }
+
+    private void assertOneSharedEntryFinding() {
+        var findings = tracker.getAllErrors().stream()
+                .filter(error -> "server_scripts/shared-entry.js".equals(error.getDisplayPath())).toList();
+        assertEquals(1, findings.size());
+        assertTrue(findings.getFirst().getErrorMessage().contains("missing"));
+        assertEquals(1, findings.getFirst().getOccurrenceCount());
     }
 
     @Test

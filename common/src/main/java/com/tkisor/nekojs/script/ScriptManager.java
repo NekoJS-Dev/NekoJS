@@ -11,7 +11,6 @@ import com.tkisor.nekojs.api.event.ScriptEvents;
 import com.tkisor.nekojs.api.event.ScriptBindingSchema;
 import com.tkisor.nekojs.core.JavaClassLoadTelemetry;
 import com.tkisor.nekojs.core.ScriptEventBridge;
-import com.tkisor.nekojs.core.ScriptFilePolicy;
 import com.tkisor.nekojs.core.ScriptLocator;
 import com.tkisor.nekojs.core.config.SandboxConfig;
 import com.tkisor.nekojs.core.error.ErrorTracker;
@@ -208,7 +207,7 @@ public final class ScriptManager implements AutoCloseable {
     /** Builds a read-only file plan; preload diagnostics do not replace active errors or outcomes. */
     public synchronized com.tkisor.nekojs.core.pack.PackExecutionPlan packExecutionPlan() {
         com.tkisor.nekojs.core.pack.ScriptPackRegistry.get().refreshLocalPacks();
-        List<ScriptContainer> planned = com.tkisor.nekojs.core.ScriptLocator.discover(scriptType, scriptProperties);
+        List<ScriptContainer> planned = com.tkisor.nekojs.core.ScriptLocator.discover(scriptType, scriptProperties, preparationCache.filePolicy());
         for (ScriptContainer script : planned) script.preload();
         var order = ScriptLoadOrderSorter.applyAfterOrder(planned, ScriptContainer::shouldRun);
         return new com.tkisor.nekojs.core.pack.PackExecutionPlan(scriptType,
@@ -749,7 +748,7 @@ public final class ScriptManager implements AutoCloseable {
                 // creates an empty environment); recovery needs another reload.
                 resetEnvironment();
             }
-            NekoModulePipelineCache moduleSession = preparationCache.openSession(
+            NekoModulePipelineCache moduleSession = preparationCache.openSession(scriptType,
                     preparationCache.activeBindingSchemaView(scriptType));
             ScriptEnvironmentFactory.Environment env;
             RuntimeEnvironment created = null;
@@ -809,7 +808,7 @@ public final class ScriptManager implements AutoCloseable {
     private List<ScriptContainer> discoverWithPacks() {
         if (packDiscovery != null) return new ArrayList<>(packDiscovery.get());
         com.tkisor.nekojs.core.pack.ScriptPackRegistry.get().refreshLocalPacks();
-        return ScriptLocator.discover(scriptType, scriptProperties);
+        return ScriptLocator.discover(scriptType, scriptProperties, preparationCache.filePolicy());
     }
 
     /**
@@ -1220,7 +1219,7 @@ public final class ScriptManager implements AutoCloseable {
             com.tkisor.nekojs.core.state.GenerationGlobals candidateGlobals =
                     packInstance == null ? environmentFactory.newGeneration(scriptType, true)
                             : environmentFactory.globalStores().newPackGeneration(scriptType, packInstance, true);
-            NekoModulePipelineCache moduleSession = preparationCache.openSession(ScriptBindingSchema.emptyView());
+            NekoModulePipelineCache moduleSession = preparationCache.openSession(scriptType, ScriptBindingSchema.emptyView());
             if (packModuleRoot != null) moduleSession.restrictToPackRoot(packModuleRoot);
             ScriptEnvironmentFactory.Environment candidate;
             try {
@@ -1736,7 +1735,7 @@ public final class ScriptManager implements AutoCloseable {
             if (!target.startsWith(root)) {
                 throw new IOException("Script file is outside " + scriptType.name() + " scripts: " + filePath);
             }
-            if (!Files.isRegularFile(target) || !ScriptFilePolicy.legacyRuntime().isSupportedScriptFile(target)) {
+            if (!Files.isRegularFile(target) || !preparationCache.filePolicy().isSupportedScriptFile(target)) {
                 throw new IOException("Unsupported or missing script file: " + filePath);
             }
             return target;

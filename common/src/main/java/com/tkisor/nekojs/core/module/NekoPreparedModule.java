@@ -18,10 +18,10 @@ import com.tkisor.nekojs.core.module.esm.NekoEsmModuleAst;
  * path/language/mode/code/sourceMap. Changing the old instance is impossible at compile time
  * (final components have no setter); reflection on a final field throws.
  *
- * <p>The stable cache key ({@link #stableCacheKey}) is {@code SHA-256("nekojs-prepared/v2" +
+ * <p>The base artifact key ({@link #stableCacheKey}) is {@code SHA-256("nekojs-prepared/v2" +
  * sourcePath + languageId + mode + code + sourceMap)}. The path is part of the module identity,
  * so two modules with the same content at different paths do not collide in later key-based
- * caches.
+ * caches. The preparation pipeline also includes the captured frontend and ordered checks.
  */
 public record NekoPreparedModule(
         /** Language id, such as {@code javascript}, {@code typescript}, {@code python} or {@code legacy:<ext>}. */
@@ -35,8 +35,20 @@ public record NekoPreparedModule(
         CjsModuleRecord cjsRecord,
         int prependedLineCount,
         /** Stable cache key (see the class javadoc); the constructor computes it when left empty. */
-        String cacheKey
+        String cacheKey,
+        String diagnosticSourceMap
 ) {
+    public NekoPreparedModule(String languageId, String sourcePath, String code, String sourceMap,
+                              NekoModuleMode mode, NekoEsmModuleAst esmAst, CjsModuleRecord cjsRecord,
+                              int prependedLineCount, String cacheKey) {
+        this(languageId, sourcePath, code, sourceMap, mode, esmAst, cjsRecord, prependedLineCount, cacheKey, sourceMap);
+    }
+
+    NekoPreparedModule withPreparationIdentity(String bindKey, String diagnosticMap) {
+        return new NekoPreparedModule(languageId, sourcePath, code, sourceMap, mode, esmAst, cjsRecord,
+                prependedLineCount, NekoModuleHash.sha256(cacheKey + "\0" + bindKey), diagnosticMap);
+    }
+
     public NekoPreparedModule {
         languageId = languageId == null || languageId.isBlank() ? "unknown" : languageId;
         if (code == null) {

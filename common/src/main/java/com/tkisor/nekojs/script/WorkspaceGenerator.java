@@ -33,10 +33,7 @@ public final class WorkspaceGenerator {
 
     public static void setupWorkspace() {
         createReadme();
-        ClassFilter.loadEngineConfig();
-        // Like engine.toml, probe.toml is written with default values at startup when it is missing.
-        // Otherwise a user opening nekojs/config/ for the first time would find only engine.toml,
-        // and probe.toml would appear only after the probe command has run.
+        // Seed probe.toml so it is available before the first probe command.
         ProbeCoordinator.ensureConfigFile();
     }
 

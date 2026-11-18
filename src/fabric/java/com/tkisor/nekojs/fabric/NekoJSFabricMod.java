@@ -130,7 +130,12 @@ public final class NekoJSFabricMod extends NekoJS implements ModInitializer {
         // behavior as the NeoForge version in the shared tree.
         FabricNekoJSCommands.registerCallback(NekoJSFabricMod::runtimeRootOrNull);
         initializeWorkspace();
-        initializeScripts();
+        try {
+            initializeScripts();
+        } catch (com.tkisor.nekojs.core.config.EngineConfigException failure) {
+            LOGGER.error("NekoJS script initialization stopped; correct the engine configuration and restart: {}", failure.getMessage());
+            return;
+        }
         FabricRegistryAdapter.onInitialize();
         com.tkisor.nekojs.bindings.event.CapabilityEvents.postAndApply();
         // The final step once every registration and load is done. NeoForge fires this after

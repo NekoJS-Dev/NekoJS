@@ -59,6 +59,13 @@ AI 查询服务返回的 `CONTROL_DISABLED`、`INDEX_UNAVAILABLE` 等返回码�
 | `NEKO-1023` | authoring live control requires server owner thread | 实时 AI 操作没有在正确的线程上执行，被拒绝 |
 | `NEKO-1024` | authoring live server runtime is no longer current | 服务器或客户端已停止或更换，旧操作不会在新世界里继续执行 |
 | `NEKO-1025` | script property rejected; previous value or default retained | 脚本开头的属性注释无效；沿用之前的有效值或默认值。警告里有文件、行号和原因 |
+| `NEKO-1026` | named frontend registration or metadata rejected | 检查前端 ID、修订、实现和语义声明；在插件引导冻结注册表之前注册 |
+| `NEKO-1027` | explicit frontend selection rejected | 对照该扩展名的可用候选检查请求的 ID；不会回退到自动选择 |
+| `NEKO-1028` | script preflight contract rejected | 检查提供者 ID、支持的阶段、输入方言、范围与所需能力 |
+| `NEKO-1029` | script preflight provider failed | 提供者的初始化、执行或清理失败；检查报告中的提供者、阶段与原始原因 |
+| `NEKO-1030` | engine configuration or pipeline selection rejected | 停止脚本初始化；检查引擎配置路径、扩展名、请求的 ID 或兼容性细节，也要检查 Probe 输出及托管的 `.old`、`.staging` 目录树是否重叠；修正后重启 |
+| `NEKO-1031` | finding from a third-party script preflight check | 报告提供者、阶段、范围与规则；普通发现不阻止脚本执行 |
+| `NEKO-1032` | engine-selected Probe generation rejected | 检查 `probe.toml` 是否设置了无效路径，或输出与其他输出或托管的 `.old`、`.staging` 目录树重叠；本次生成不会写入声明 |
 
 <a id="wiki-section-5"></a>
 ## 日志输出上限

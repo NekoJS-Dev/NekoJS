@@ -8,6 +8,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 
 /**
  * Generates probe output for one language. Each backend renders the shared catalog plus the
@@ -30,13 +31,20 @@ import java.util.Optional;
  */
 public interface ProbeBackend {
 
-    /** Target language id, such as {@code "typescript"} / {@code "python"}. Should match the
-     * language id registered with {@code ScriptCompilerRegistry}. */
+    /** Declaration target ID, independent of the frontend's execution language. */
     String languageId();
 
     /** Backend name, unique within its language, such as {@code "builtin"}; used to select a
      * backend from commands and in conflict reports. */
     String name();
+
+    /**
+     * Versioned frontend authoring capabilities this backend can serve. An empty set keeps the
+     * backend eligible for legacy command selection but not for an explicit engine pipeline.
+     */
+    default Set<String> authoringCapabilities() {
+        return Set.of();
+    }
 
     /** Default priority when several backends serve the same language (higher wins; default 0). */
     default int priority() {

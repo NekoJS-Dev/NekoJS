@@ -22,6 +22,7 @@ NekoJS produces one mod jar per Minecraft/loader node for both client and server
 | Work in a script pack | [Script packs](script-packs.md) |
 | Draw a HUD, world lines, or declare post effects | [Client rendering](client-rendering.md) |
 | Create CLIENT Screens, cooperative regions, one-root workspaces with retained window management, controlled forms, dialogs or read-only item icons | [JSX UI](jsx-ui.md) |
+| Configure frontends, preflight checks, or a Probe backend | [Script language pipelines](language-pipelines.md) |
 | Investigate an error | [Diagnostics](diagnostics.md) |
 | Find classes and members | [Query API](query-api.md) |
 | Connect to the running game | [In-mod MCP setup](connections.md) |

@@ -15,6 +15,10 @@ public final class NekoModuleReadService {
     private NekoModuleReadService() {}
 
     public static Path resolveReadableScript(Path originalPath, NekoVirtualModuleView virtualModules) {
+        return resolveReadableScript(originalPath, virtualModules, ScriptFilePolicy.legacyRuntime());
+    }
+
+    static Path resolveReadableScript(Path originalPath, NekoVirtualModuleView virtualModules, ScriptFilePolicy filePolicy) {
         if (virtualModules.isVirtualModule(originalPath)) {
             return originalPath;
         }
@@ -35,7 +39,7 @@ public final class NekoModuleReadService {
         }
 
         String baseName = fileName.substring(0, fileName.length() - 3);
-        for (String extension : ScriptFilePolicy.legacyRuntime().supportedExtensionsInOrder()) {
+        for (String extension : filePolicy.supportedExtensionsInOrder()) {
             if (".js".equals(extension)) {
                 continue;
             }
@@ -57,7 +61,7 @@ public final class NekoModuleReadService {
         if (virtualSource != null) {
             return Optional.of(virtualSource.getBytes(StandardCharsets.UTF_8));
         }
-        if (path.getFileName() != null && ScriptFilePolicy.legacyRuntime().isSupportedScriptFile(path)) {
+        if (path.getFileName() != null && preparationCache.filePolicy().isSupportedScriptFile(path)) {
             return Optional.of(readTransformedModule(path, preparationCache));
         }
         return Optional.empty();

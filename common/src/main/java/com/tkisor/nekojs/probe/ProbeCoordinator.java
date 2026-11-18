@@ -195,6 +195,37 @@ public final class ProbeCoordinator {
         return ProbeClassCollector.collect(snapshot, cfg);
     }
 
+    /** Captures the selection, scan settings and validated explicit paths for one generation. */
+    public record Request(List<ProbeBackend> backends, ProbeConfig config, Map<String, Path> configuredOutputs,
+                          String problem) {
+        public Request {
+            backends = List.copyOf(backends);
+            Objects.requireNonNull(config, "config");
+            configuredOutputs = Map.copyOf(configuredOutputs);
+        }
+    }
+
+    public static Request select(ProbeBackendSelector selector, String language, String name) {
+        var coordinator = defaultCoordinator();
+        return coordinator.selectRequest(selector, language, name, coordinator.readConfig());
+    }
+
+    Request selectRequest(ProbeBackendSelector selector, String language, String name, ProbeConfig cfg) {
+        var backends = selector.select(language, name, cfg);
+        if (selector.selectsEngineReference(language, name)) {
+            try {
+                return new Request(backends, cfg, selector.configuredOutputs(paths, cfg), null);
+            } catch (RuntimeException failure) {
+                return new Request(backends, cfg, Map.of(), "[NEKO-1032] Probe generation was rejected: " + failure.getMessage());
+            }
+        }
+        return new Request(backends, cfg, Map.of(), null);
+    }
+
+    public static Request selectAll(ProbeBackendSelector selector) {
+        return new Request(selector.selectAll(), config(), Map.of(), null);
+    }
+
     /**
      * Runs one probe over the selected backends: shared collection, rendering for each backend,
      * then one external side effect. This is the instance form of {@code run(...)}: all paths come
@@ -214,6 +245,12 @@ public final class ProbeCoordinator {
      * @return generation result per backend, in input order
      */
     public List<ProbeBackend.GenerateResult> runProbe(NekoScriptCatalogSnapshot snapshot, List<ProbeBackend> backends) {
+        return runProbe(snapshot, new Request(backends, readConfig(), Map.of(), null));
+    }
+
+    List<ProbeBackend.GenerateResult> runProbe(NekoScriptCatalogSnapshot snapshot, Request request) {
+        if (request.problem() != null) return List.of(ProbeBackend.GenerateResult.failure(request.problem()));
+        var backends = request.backends();
         if (backends.isEmpty()) {
             return List.of(ProbeBackend.GenerateResult.failure("no probe backend selected"));
         }
@@ -223,14 +260,15 @@ public final class ProbeCoordinator {
                     .toList();
         }
         try {
-            return runProbeLocked(snapshot, backends);
+            return runProbeLocked(snapshot, request);
         } finally {
             running.set(false);
         }
     }
 
-    private List<ProbeBackend.GenerateResult> runProbeLocked(NekoScriptCatalogSnapshot snapshot, List<ProbeBackend> backends) {
-        ProbeConfig cfg = readConfig();
+    private List<ProbeBackend.GenerateResult> runProbeLocked(NekoScriptCatalogSnapshot snapshot, Request request) {
+        ProbeConfig cfg = request.config();
+        var backends = request.backends();
         if (!cfg.enabled()) {
             return backends.stream()
                     .map(b -> ProbeBackend.GenerateResult.failure("probe disabled in probe.toml"))
@@ -292,7 +330,8 @@ public final class ProbeCoordinator {
             // Coexistence of multiple backends for the same language is valid, but sharing an output directory is not (use outputDir configuration to change directories).
             Set<Path> seenOutputDirs = new HashSet<>();
             for (ProbeBackend backend : backends) {
-                Path langDir = backend.outputDir(paths, cfg).normalize();
+                Path langDir = request.configuredOutputs().get(backend.languageId());
+                if (langDir == null) langDir = backend.outputDir(paths, cfg).normalize();
                 if (!seenOutputDirs.add(langDir)) {
                     NekoJS.LOGGER.warn("Probe backend {}:{} skipped: output directory {} is also targeted by another selected backend in this run",
                             backend.languageId(), backend.name(), langDir);
@@ -353,26 +392,39 @@ public final class ProbeCoordinator {
         return defaultCoordinator().runProbe(snapshot, backends);
     }
 
+    public static List<ProbeBackend.GenerateResult> run(NekoScriptCatalogSnapshot snapshot, Request request) {
+        return defaultCoordinator().runProbe(snapshot, request);
+    }
+
     /**
      * Startup probe, enabled when {@code probe.toml runAtStartup = true} (default false, opt-in).
-     * Each platform calls it once on ServerStarted: it runs the default TS backend and writes a
+     * NeoForge calls it on ServerStarted: it runs the effective TypeScript selection and writes a
      * summary of the result to the log. Any failure is only logged and never affects server
      * startup. Skipped when {@code enabled = false} or {@code scan.mode = NONE}.
      *
      * @return whether a probe actually ran (config enabled and a backend available)
      */
     public static boolean runStartupProbeIfConfigured() {
+        return runStartupProbeIfConfigured(null);
+    }
+
+    public static boolean runStartupProbeIfConfigured(ProbeBackendSelector selector) {
         ProbeConfig cfg = config();
         if (!cfg.enabled() || !cfg.runAtStartup()) return false;
         if (cfg.scan().mode() == ProbeConfig.ScanConfig.ScanMode.NONE) return false;
-        List<ProbeBackend> backends = ProbeBackendSelector.defaultTypescript();
-        if (backends.isEmpty()) {
-            NekoJS.LOGGER.warn("Startup probe skipped: no typescript backend registered");
-            return false;
-        }
         try {
+            var coordinator = defaultCoordinator();
+            var request = coordinator.selectRequest(selector == null ? ProbeBackendSelector.legacy() : selector, null, null, cfg);
+            if (request.problem() != null) {
+                NekoJS.LOGGER.warn("{}", request.problem());
+                return false;
+            }
+            if (request.backends().isEmpty()) {
+                NekoJS.LOGGER.warn("Startup probe skipped: no typescript backend registered");
+                return false;
+            }
             var snapshot = NekoScriptCatalog.snapshot(NekoRuntimeAccess.get());
-            for (ProbeBackend.GenerateResult r : defaultCoordinator().runProbe(snapshot, backends)) {
+            for (ProbeBackend.GenerateResult r : coordinator.runProbe(snapshot, request)) {
                 if (r.success()) {
                     NekoJS.LOGGER.info("Startup probe: {} files in {}ms{}",
                             r.filesGenerated(), r.durationMs(), r.outputDir() == null ? "" : " -> " + r.outputDir());

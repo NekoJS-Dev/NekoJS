@@ -103,7 +103,7 @@ public final class NekoJSCommands {
                                 .then(Commands.argument("address", AddressArgument.address())
                                         .executes(context -> trustServer(context.getSource(), AddressArgument.getAddress(context, "address")))))
 
-                        .then(probeCommand()),
+                        .then(probeCommand(root)),
                 NeoForgeInformationCommands::containedFluid
         ));
     }
@@ -605,11 +605,12 @@ public final class NekoJSCommands {
     //  Probe (multiple backends)
     // ------------------------------------------------------------------
 
-    private static LiteralArgumentBuilder<CommandSourceStack> probeCommand() {
+    private static LiteralArgumentBuilder<CommandSourceStack> probeCommand(NekoRuntimeRoot root) {
         LiteralArgumentBuilder<CommandSourceStack> probe = Commands.literal("probe")
-                .executes(context -> runProbe(context.getSource(), ProbeBackendSelector.defaultTypescript()));
+                .executes(context -> runProbe(context.getSource(),
+                        ProbeCoordinator.select(root.probeBackends(), null, null)));
         probe.then(Commands.literal("all")
-                .executes(context -> runProbe(context.getSource(), ProbeBackendSelector.all())));
+                .executes(context -> runProbe(context.getSource(), ProbeCoordinator.selectAll(root.probeBackends()))));
         probe.then(Commands.literal("list")
                 .executes(context -> listProbeBackends(context.getSource())));
         probe.then(Commands.literal("reload")
@@ -621,10 +622,14 @@ public final class NekoJSCommands {
         probe.then(Commands.literal("reset_config")
                 .executes(context -> {
                     CommandSourceStack source = context.getSource();
+                    ProbeCoordinator.Request request = ProbeCoordinator.select(root.probeBackends(), null, null);
+                    if (request.problem() != null) {
+                        return runProbe(source, request);
+                    }
                     int backends = ProbeCoordinator.resetEditorConfigs();
                     source.sendSystemMessage(Component.literal(
                             "Editor configs reset (" + backends + " backend(s)); regenerating probe..."));
-                    return runProbe(source, ProbeBackendSelector.defaultTypescript());
+                    return runProbe(source, request);
                 }));
         probe.then(Commands.literal("enable")
                 .executes(context -> enableProbe(context.getSource())));
@@ -633,18 +638,25 @@ public final class NekoJSCommands {
         probe.then(Commands.argument("language", StringArgumentType.word())
                 .suggests((context, builder) -> suggestProbeLanguages(builder))
                 .executes(context -> runProbe(context.getSource(),
-                        ProbeBackendSelector.forLanguage(StringArgumentType.getString(context, "language"))))
+                        ProbeCoordinator.select(root.probeBackends(),
+                                StringArgumentType.getString(context, "language"), null)))
                 .then(Commands.argument("name", StringArgumentType.word())
                         .suggests((context, builder) -> suggestProbeBackendNames(
                                 StringArgumentType.getString(context, "language"), builder))
                         .executes(context -> runProbe(context.getSource(),
-                                ProbeBackendSelector.named(
+                                ProbeCoordinator.select(root.probeBackends(),
                                         StringArgumentType.getString(context, "language"),
                                         StringArgumentType.getString(context, "name"))))));
         return probe;
     }
 
-    private static int runProbe(CommandSourceStack source, List<ProbeBackend> backends) {
+    private static int runProbe(CommandSourceStack source, ProbeCoordinator.Request request) {
+        String problem = request.problem();
+        if (problem != null) {
+            source.sendFailure(Component.literal(problem));
+            return 0;
+        }
+        List<ProbeBackend> backends = request.backends();
         if (backends.isEmpty()) {
             source.sendFailure(Component.literal("No probe backend matched. Use /nekojs probe list."));
             return 0;
@@ -657,7 +669,7 @@ public final class NekoJSCommands {
 
         try {
             var snapshot = NekoScriptCatalog.snapshot(NekoRuntimeAccess.get());
-            List<ProbeBackend.GenerateResult> results = ProbeCoordinator.run(snapshot, backends);
+            List<ProbeBackend.GenerateResult> results = ProbeCoordinator.run(snapshot, request);
 
             int totalFiles = 0;
             long maxMs = 0;

@@ -2,6 +2,10 @@ package com.tkisor.nekojs.core.module;
 
 import com.tkisor.nekojs.api.ScriptType;
 import com.tkisor.nekojs.api.event.ScriptBindingSchema;
+import com.tkisor.nekojs.api.preflight.ScriptPreflight.Scope;
+import com.tkisor.nekojs.api.preflight.ScriptPreflight.Stage;
+import com.tkisor.nekojs.core.ScriptFilePolicy;
+import com.tkisor.nekojs.core.preflight.ScriptPreflightRunner;
 import com.tkisor.nekojs.core.compiler.NekoCompilationPipeline;
 import com.tkisor.nekojs.core.compiler.NekoModuleMode;
 import com.tkisor.nekojs.core.compiler.NekoSourceMapBuilder;
@@ -40,8 +44,8 @@ import java.util.function.Supplier;
  * ScriptManager, module host, ESM linker, and reload coordinator. Production code no longer uses
  * static caches.
  *
- * <p>Invalidation: A cache entry is invalidated if any attribute in the {@link FileStamp}
- * sextuplet changes (mtime, size, content hash, language ID, requested mode, or compiler registry revision).
+ * <p>Invalidation: the {@link FileStamp} covers file metadata and content, captured frontend
+ * identity and revision, and ordered checks.
  * Overwrites with the same stamp and length but different content are detected; path or mode
  * changes produce different keys.
  */
@@ -50,6 +54,8 @@ public final class NekoModulePipelineCache implements AutoCloseable {
     private final Map<Path, PreparedEntry> preparedCache = new ConcurrentHashMap<>();
     private final Map<String, Source> builtinSources;
     private final BuiltinModuleTransformCache builtinTransforms;
+    private final PipelinePreflight preflight;
+    private ScriptType sessionType;
     private final SourceMapRegistry sourceMaps;
     private final NekoEsmVirtualModuleRegistry virtualModules;
     private final NekoTrustContext trustContext;
@@ -99,6 +105,7 @@ public final class NekoModulePipelineCache implements AutoCloseable {
         this.owner = owner;
         this.builtinSources = owner == null ? new ConcurrentHashMap<>() : owner.builtinSources;
         this.builtinTransforms = owner == null ? new BuiltinModuleTransformCache() : owner.builtinTransforms;
+        this.preflight = owner == null ? new PipelinePreflight(pipeline.selection(), sourceMaps) : owner.preflight;
     }
 
     /**
@@ -117,6 +124,10 @@ public final class NekoModulePipelineCache implements AutoCloseable {
 
     /** Open a session with the schema snapshot chosen by its generation owner. */
     public NekoModulePipelineCache openSession(ScriptBindingSchema.View bindingSchemaView) {
+        return openSession(null, bindingSchemaView);
+    }
+
+    public NekoModulePipelineCache openSession(ScriptType type, ScriptBindingSchema.View bindingSchemaView) {
         if (owner != null) {
             throw new IllegalStateException("Only the root NekoModulePipelineCache can open sessions");
         }
@@ -132,6 +143,7 @@ public final class NekoModulePipelineCache implements AutoCloseable {
                 Objects.requireNonNull(bindingSchemaView, "bindingSchemaView"),
                 root,
                 root.bindingSchema);
+        session.sessionType = type;
         root.sessions.add(session);
         return session;
     }
@@ -162,6 +174,11 @@ public final class NekoModulePipelineCache implements AutoCloseable {
         }
         clearLocal();
         bindingSchema.close();
+        try {
+            preflight.close();
+        } catch (ScriptPreflightRunner.ProviderFailure failure) {
+            throw new IllegalStateException(failure.getMessage(), failure);
+        }
     }
 
     @Override
@@ -201,41 +218,64 @@ public final class NekoModulePipelineCache implements AutoCloseable {
     }
 
     public NekoPreparedModule prepare(Path path) throws IOException {
-        ensureOpen();
-        Path key = key(path);
-        NekoTrustApprovedSource approval = approvedSource(key);
-        return prepare(key, readSource(key), approval);
+        return prepare(path, false, false);
     }
 
-    private NekoPreparedModule prepare(Path key, SourceSnapshot source,
-                                       NekoTrustApprovedSource approval) throws IOException {
+    NekoPreparedModule prepareEntry(Path path) throws IOException {
+        return prepare(path, true, true);
+    }
+
+    private NekoPreparedModule prepare(Path path, boolean entry, boolean replacePathDiagnostics) throws IOException {
+        ensureOpen();
+        rootOwner().ensureOpen();
+        Path key = key(path);
+        NekoTrustApprovedSource approval = approvedSource(key);
+        SourceSnapshot source = readSource(key);
+        var schema = bindingSchemaView;
+        var type = PipelinePreflight.scriptType(key, sessionType);
         try {
             pipeline.ensureBindingCurrent(key, source.binding());
-            // Atomic check-then-act: previously get→miss→compute→put could let two threads
-            // loading the same path both run the full pipeline. compute guarantees
-            // a single pipeline run per (key, stamp); the inner stamp check avoids recomputing
-            // when the cached entry is still valid for this source stamp.
-            PreparedEntry entry = preparedCache.compute(key, (k, existing) -> {
-                if (existing != null && existing.stamp().equals(source.stamp())) {
-                    return existing;
-                }
+            // Cache only successful preparation. On a hit, entry checks still use the live view.
+            PreparedEntry cached = preparedCache.compute(key, (k, existing) -> {
+                var findings = new ArrayList<ScriptPreflightRunner.Report>();
                 try {
-                    NekoPreparedModule prepared = prepareSource(k, source, approval, bindingSchemaViewFor(k));
-                    return new PreparedEntry(source.stamp(), prepared, scriptTypeOf(k));
-                } catch (IOException | RuntimeException ex) {
-                    throw new PipelineException(ex);
-                } catch (Exception ex) {
-                    // prepareSource declares 'throws Exception'; tunnel other checked
-                    // exceptions out of the compute lambda the same way.
-                    throw new PipelineException(ex);
+                    NekoPreparedModule prepared;
+                    if (existing != null && existing.stamp().equals(source.stamp())) {
+                        prepared = existing.prepared();
+                        if (!entry) return existing;
+                        if (replacePathDiagnostics && !existing.entry()) {
+                            // An entry replaces prior path diagnostics. Rebuild dependency-only findings
+                            // from the artifact and current schema rather than retain past findings.
+                            findings.addAll(preflight.check(k, type, source.binding(), Stage.SOURCE, Scope.FULL,
+                                    source.source(), null, schema));
+                            findings.addAll(preflight.check(k, type, source.binding(), Stage.OUTPUT, Scope.FULL,
+                                    prepared.code(), prepared.diagnosticSourceMap(), schema));
+                        }
+                    } else {
+                        var result = pipeline.prepareCaptured(k, source.source(), approval, source.binding(),
+                                schema, builtinTransforms, preflight, type);
+                        prepared = result.module();
+                        findings.addAll(result.findings());
+                    }
+                    if (entry) {
+                        findings.addAll(preflight.check(k, type, source.binding(), Stage.SOURCE, Scope.BINDINGS_ONLY,
+                                source.source(), null, schema));
+                        findings.addAll(preflight.check(k, type, source.binding(), Stage.OUTPUT, Scope.BINDINGS_ONLY,
+                                prepared.code(), prepared.diagnosticSourceMap(), schema));
+                    }
+                    pipeline.ensureBindingCurrent(k, source.binding());
+                    preflight.publish(k, type, schema, findings);
+                    return new PreparedEntry(source.stamp(), prepared, scriptTypeOf(k), entry);
+                } catch (Exception failure) {
+                    throw new PipelineException(failure);
                 }
             });
             pipeline.ensureBindingCurrent(key, source.binding());
-            publishSourceMap(key, entry.prepared());
+            publishSourceMap(key, cached.prepared());
             for (BiConsumer<Path, String> observer : preparationObservers) {
-                observer.accept(key, entry.prepared().cacheKey());
+                observer.accept(key, cached.prepared().cacheKey());
             }
-            return entry.prepared();
+            return cached.prepared();
         } catch (PipelineException wrapper) {
             Throwable cause = wrapper.getCause();
             if (cause instanceof NekoModuleError staged) {
@@ -259,22 +299,19 @@ public final class NekoModulePipelineCache implements AutoCloseable {
         }
     }
 
-    /** Recheck authored native JS or prepared frontend output against this generation's schema. */
+    /** Checks entries for the fallback guest loader, which cannot accept a prepared module. */
     public void validateEntryBindings(Path path) throws IOException {
         ensureOpen();
         rootOwner().ensureOpen();
-        if (!pipeline.memberValidationEnabled()) return;
+        if (pipeline.memberValidationEnabled()) prepare(path, true, false);
+    }
 
-        Path key = key(path);
-        NekoTrustApprovedSource approval = approvedSource(key);
-        SourceSnapshot source = readSource(key);
-        // Classification and preparation share one captured frontend and source stamp.
-        String javascript = NekoModulePipeline.rawPreflightApplies(source.binding())
-                ? source.source() : prepare(key, source, approval).code();
-        pipeline.ensureBindingCurrent(key, source.binding());
-        // Prepared cache hits must still use the current generation's schema and reporter.
-        builtinTransforms.validateBindings(key, javascript, bindingSchemaView);
-        pipeline.ensureBindingCurrent(key, source.binding());
+    public ScriptFilePolicy filePolicy() {
+        return pipeline.filePolicy();
+    }
+
+    public LanguagePipelineSelection languagePipelines() {
+        return pipeline.selection();
     }
 
     /**
@@ -744,21 +781,11 @@ public final class NekoModulePipelineCache implements AutoCloseable {
         }
         FileStamp stamp;
         try {
-            stamp = FileStamp.read(path, source, binding.identity(), binding.registryRevision());
+            stamp = FileStamp.read(path, source, binding);
         } catch (IOException failure) {
             throw NekoModuleError.cache(NekoModuleError.displayPath(path), "Cannot stamp module source: " + failure.getMessage(), failure);
         }
         return new SourceSnapshot(stamp, source, binding);
-    }
-
-    private NekoPreparedModule prepareSource(Path path, SourceSnapshot source,
-                                              NekoTrustApprovedSource approval,
-                                              ScriptBindingSchema.View schemaView) throws Exception {
-        return pipeline.prepareCaptured(path, source.source(), approval, source.binding(), schemaView, builtinTransforms);
-    }
-
-    private ScriptBindingSchema.View bindingSchemaViewFor(Path path) {
-        return bindingSchemaView;
     }
 
     private void publishSourceMap(Path path, NekoPreparedModule prepared) {
@@ -820,31 +847,19 @@ public final class NekoModulePipelineCache implements AutoCloseable {
     private record SourceSnapshot(FileStamp stamp, String source,
                                   NekoModulePipeline.LanguageBinding binding) {}
 
-    private record PreparedEntry(FileStamp stamp, NekoPreparedModule prepared, ScriptType type) {}
+    private record PreparedEntry(FileStamp stamp, NekoPreparedModule prepared, ScriptType type, boolean entry) {}
 
-    /**
-     * Content fingerprint of the module file (mtime/size/contentHash + ModuleIdentity(languageId/requestedMode)
-     * + compiler registry revision).
-     *
-     * <p>Historical limitation: Using only (modifiedMillis, size) could not distinguish "overwrite
-     * operations of equal-length files within the same timestamp granularity." Coarse-grained timestamp
-     * filesystems (e.g., some Windows/FAT/container mounts) could mistakenly determine that no change
-     * occurred, continuing to return old compiled modules. The contentHash (SHA-256) fixes this defect;
-     * languageId/requestedMode are comprised of {@link NekoModuleIdentity}, and registryRevision captures
-     * the language plugin registry version: the cache must also be invalidated if the same compiler ID is
-     * replaced at the same path.
-     */
-    private record FileStamp(long modifiedMillis, long size, String contentHash,
-                             NekoModuleIdentity identity, long registryRevision) {
-        private static FileStamp read(Path path, String source, NekoModuleIdentity identity,
-                                     long registryRevision) throws IOException {
+    /** Content fingerprints detect same-size rewrites even on coarse-grained filesystems. */
+    private record FileStamp(long modifiedMillis, long size, String contentHash, NekoModuleIdentity identity,
+                             long registryRevision, String frontendId, String frontendRevision,
+                             LanguagePipelineSelection.Checks checks) {
+        private static FileStamp read(Path path, String source, NekoModulePipeline.LanguageBinding binding) throws IOException {
             BasicFileAttributes attributes = Files.readAttributes(path, BasicFileAttributes.class);
+            var frontend = binding.frontend();
             return new FileStamp(attributes.lastModifiedTime().toMillis(), attributes.size(),
-                    contentHash(source), identity, registryRevision);
-        }
-
-        private static String contentHash(String source) {
-            return NekoModuleHash.sha256(source);
+                    NekoModuleHash.sha256(source), binding.identity(), binding.registryRevision(),
+                    frontend == null ? null : frontend.id(), frontend == null ? null : frontend.implementationRevision(),
+                    binding.checks());
         }
     }
 }

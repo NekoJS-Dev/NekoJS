@@ -157,6 +157,10 @@ Recipe schema priority, highest first: `event.registerSchema` in scripts > data-
 | `modifyWorkspaceConfig(JSConfigModel, String)` | Edit each script folder's `jsconfig.json` before it is written |
 | `registerApiSurface(ApiContributionRegistry)` | Provide API surface metadata |
 
+To register a frontend with a stable identity, call `registry.registerFrontend(id, implementationRevision, implementation, semantics)` from `registerScriptCompilers`. Pass a `NekoLanguagePlugin` or a `NekoScriptLanguage` wrapping an `IScriptCompiler`. Choose a unique lowercase namespaced ID and a nonempty implementation revision, and describe the source, output and additional capabilities with `FrontendSemantics`. The call registers one named and automatic candidate; do not additionally call a legacy registration method for it. Existing unnamed registrations remain automatic only. `replaceLanguage` can change automatic lookup without removing an explicitly registered name. See the installed authoring handbook's Script language pipelines guide for an example and built-in IDs.
+
+To contribute a check independently, override `registerScriptPreflights(ScriptPreflightRegistry)` and register a `ScriptPreflight`. Its immutable `Descriptor` specifies a unique check ID, revision, supported representations and dialects per `SOURCE` or `OUTPUT` stage, supported scopes, and required capabilities. The runtime-root worker can be called concurrently by Script Type owners: keep only thread-safe, pure analysis data and do not retain requests or schema state. Return findings normally; exceptions are provider failures. Registering a check does not schedule it.
+
 <a id="wiki-section-11"></a>
 ### Lifecycle callbacks
 

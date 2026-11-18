@@ -69,6 +69,7 @@ class PluginHookPairingTest {
             new Channel(NodeTypeDocsPoint.ID, "registerNodeTypeDocs", "NodeTypeDocsPoint", List.of("TypeDocsRegister")),
             new Channel(NodeModulesPoint.ID, "registerNodeModules", "NodeModulesPoint", List.of("NodeModuleRegister")),
             new Channel(ScriptCompilersPoint.ID, "registerScriptCompilers", "ScriptCompilersPoint", List.of("ScriptCompilerRegistry")),
+            new Channel(ScriptPreflightsPoint.ID, "registerScriptPreflights", "ScriptPreflightsPoint", List.of("ScriptPreflightRegistry")),
             new Channel(ScriptPropertiesPoint.ID, "registerScriptProperty", "ScriptPropertiesPoint", List.of("ScriptPropertyRegistry")),
             new Channel(RecipeNamespacesPoint.ID, "registerRecipeNamespaces", "RecipeNamespacesPoint", List.of("RecipeNamespaceRegister")),
             new Channel(RecipeSchemasPoint.ID, "registerRecipeSchemas", "RecipeSchemasPoint", List.of("RecipeSchemaRegister")),

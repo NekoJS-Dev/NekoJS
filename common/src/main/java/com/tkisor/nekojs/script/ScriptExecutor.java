@@ -11,7 +11,6 @@ import com.tkisor.nekojs.script.ScriptContextRegistry;
 import graal.graalvm.polyglot.Context;
 import graal.graalvm.polyglot.PolyglotException;
 
-import java.io.IOException;
 import java.nio.file.Path;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
@@ -55,7 +54,9 @@ public final class ScriptExecutor {
                 errorTracker.clear(ctx, script.id);
                 errorTracker.clearByScriptPath(ctx, script.type, relativePath.toString().replace("\\", "/"));
 
-                validateGlobalBindings(ctx, script, moduleSession);
+                if (nodeRuntime == null || nodeRuntime.moduleLoaderHost() == null) {
+                    moduleSession.validateEntryBindings(script.path);
+                }
 
                 JavaClassLoadTelemetry.enter(script.type, script.id.toString());
                 ScriptContextRegistry.switchCurrentScriptId(ctx, script.id.toString());
@@ -95,30 +96,6 @@ public final class ScriptExecutor {
             }
         }
         return false;
-    }
-
-    /**
-     * Validates the entry script's member access on global bindings (Utils/Platform/Items and so on) at
-     * load time.
-     *
-     * <p>It runs on every execution and reload rather than only at compile time, so the in-game error
-     * panel still reflects the current script state after a full reload whose sources did not change and
-     * whose prepared module cache was hit. The session selects authored native JS or prepared
-     * frontend output and applies the current generation's schema.
-     */
-    private void validateGlobalBindings(Context context, ScriptContainer script,
-                                        NekoModulePipelineCache moduleSession) throws IOException {
-        try {
-            moduleSession.validateEntryBindings(script.path);
-        } catch (IOException | Error failure) {
-            // Preparation failures, including frontend Errors, must not be recovered as validator callbacks.
-            throw failure;
-        } catch (Throwable t) {
-            // Validation only reports errors and never blocks script execution, but a crash in the validator
-            // itself must not be swallowed: report it to the error panel (recordCallbackError applies
-            // milestone throttling), otherwise member validation for this type disappears silently.
-            errorTracker.recordCallbackError(context, script.type, "preflight-validator", t);
-        }
     }
 
     private void waitForEntryModule(Context ctx, ScriptContainer script, String requirePath, NekoNodeRuntime nodeRuntime) throws Exception {

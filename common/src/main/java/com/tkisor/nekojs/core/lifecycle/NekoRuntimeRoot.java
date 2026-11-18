@@ -44,6 +44,7 @@ public final class NekoRuntimeRoot implements AutoCloseable {
 
     private final NekoCoreContext core;
     private final IPluginRuntime pluginRuntime;
+    private final com.tkisor.nekojs.probe.ProbeBackendSelector probeBackends;
     private final ScriptEventBridge eventBridge;
     private final ScriptPropertyRegistry scriptProperties;
     private final ScriptEnvironmentFactory environmentFactory;
@@ -113,6 +114,19 @@ public final class NekoRuntimeRoot implements AutoCloseable {
             com.tkisor.nekojs.core.module.NekoModulePipelineCache preparationCache,
             NekoTrustContext trustContext
     ) {
+        this(core, pluginRuntime, eventBridge, scriptProperties, sandboxFactory, preparationCache, trustContext, null);
+    }
+
+    NekoRuntimeRoot(
+            NekoCoreContext core,
+            IPluginRuntime pluginRuntime,
+            ScriptEventBridge eventBridge,
+            ScriptPropertyRegistry scriptProperties,
+            NekoSandboxFactory sandboxFactory,
+            com.tkisor.nekojs.core.module.NekoModulePipelineCache preparationCache,
+            NekoTrustContext trustContext,
+            com.tkisor.nekojs.probe.ProbeBackendSelector probeBackends
+    ) {
         Objects.requireNonNull(sandboxFactory, "sandboxFactory");
         Objects.requireNonNull(preparationCache, "preparationCache");
         if (!preparationCache.isRootOwner()) {
@@ -123,6 +137,7 @@ public final class NekoRuntimeRoot implements AutoCloseable {
         }
         this.core = core;
         this.pluginRuntime = pluginRuntime;
+        this.probeBackends = probeBackends;
         this.mixins = new com.tkisor.nekojs.core.mixin.MixinRuntime(trustContext, getClass().getClassLoader());
         this.eventBridge = mixins.wrap(eventBridge);
         this.scriptProperties = scriptProperties;
@@ -132,13 +147,17 @@ public final class NekoRuntimeRoot implements AutoCloseable {
         this.preparationCache = preparationCache;
         this.trustContext = trustContext;
         this.packs = new com.tkisor.nekojs.core.pack.PackActivationCoordinator(this::createPackManager,
-                this::scriptManagerOf, type -> com.tkisor.nekojs.core.ScriptLocator.discover(type, scriptProperties),
+                this::scriptManagerOf, type -> com.tkisor.nekojs.core.ScriptLocator.discover(type, scriptProperties, preparationCache.filePolicy()),
                 this.eventBridge, pluginRuntime, domainCollectors);
     }
 
     private final com.tkisor.nekojs.core.mixin.MixinRuntime mixins;
 
     public com.tkisor.nekojs.core.mixin.MixinRuntime mixins() { return mixins; }
+
+    public com.tkisor.nekojs.probe.ProbeBackendSelector probeBackends() {
+        return probeBackends != null ? probeBackends : com.tkisor.nekojs.probe.ProbeBackendSelector.legacy();
+    }
 
     /** Starts optional authoring access once; ordinary script reloads retain the same root-owned service. */
     public synchronized void initializeAuthoring() {
@@ -299,7 +318,7 @@ public final class NekoRuntimeRoot implements AutoCloseable {
         owner[0] = manager;
         manager.configurePackPartition(null, () -> {
             com.tkisor.nekojs.core.pack.ScriptPackRegistry.get().refreshLocalPacks();
-            return com.tkisor.nekojs.core.ScriptLocator.discover(type, scriptProperties).stream()
+            return com.tkisor.nekojs.core.ScriptLocator.discover(type, scriptProperties, preparationCache.filePolicy()).stream()
                     .filter(script -> script.pack == null || script.pack.manifest().descriptor() == null).toList();
         });
         scriptManagers.put(type, manager);
@@ -325,7 +344,7 @@ public final class NekoRuntimeRoot implements AutoCloseable {
         owner[0] = manager;
         manager.restrictPackModules(pack.root());
         manager.configurePackPartition(com.tkisor.nekojs.core.pack.ScriptPackRegistry.get().instanceKey(pack),
-                () -> com.tkisor.nekojs.core.ScriptLocator.discover(type, scriptProperties).stream()
+                () -> com.tkisor.nekojs.core.ScriptLocator.discover(type, scriptProperties, preparationCache.filePolicy()).stream()
                         .filter(script -> script.pack != null && script.pack.selector().equals(pack.selector())).toList());
         return manager;
     }

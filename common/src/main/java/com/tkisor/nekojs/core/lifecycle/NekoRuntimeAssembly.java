@@ -9,7 +9,6 @@ import com.tkisor.nekojs.core.NekoSharedEngine;
 import com.tkisor.nekojs.core.NekoSandboxFactory;
 import com.tkisor.nekojs.core.ScriptEventBridge;
 import com.tkisor.nekojs.core.compiler.NekoCompilationPipeline;
-import com.tkisor.nekojs.core.compiler.ScriptCompilerRegistry;
 import com.tkisor.nekojs.core.config.SandboxConfig;
 import com.tkisor.nekojs.core.error.DefaultErrorTracker;
 import com.tkisor.nekojs.core.error.SourceMapRegistry;
@@ -17,12 +16,19 @@ import com.tkisor.nekojs.core.log.NekoJSLoggers;
 import com.tkisor.nekojs.core.error.ErrorTrackerReporter;
 import com.tkisor.nekojs.core.fs.ClassFilter;
 import com.tkisor.nekojs.core.fs.NekoJSPaths;
+import com.tkisor.nekojs.core.module.LanguagePipelineSelection;
+import com.tkisor.nekojs.core.plugin.ProbeBackendsPoint;
+import com.tkisor.nekojs.probe.ProbeBackendRegistry;
+import com.tkisor.nekojs.probe.ProbeBackendSelector;
+import com.tkisor.nekojs.probe.ProbeCoordinator;
 import com.tkisor.nekojs.core.module.NekoModulePipeline;
 import com.tkisor.nekojs.core.module.NekoModulePipelineCache;
 import com.tkisor.nekojs.core.module.NekoTrustContext;
 import com.tkisor.nekojs.core.module.NekoRuntimeTrustContext;
 import com.tkisor.nekojs.core.module.NekoEsmVirtualModuleRegistry;
 import com.tkisor.nekojs.core.plugin.NekoPluginRuntime;
+import com.tkisor.nekojs.core.plugin.ScriptPreflightsPoint;
+import com.tkisor.nekojs.core.preflight.ScriptPreflightCatalog;
 import com.tkisor.nekojs.script.prop.ScriptPropertyRegistry;
 
 import java.util.List;
@@ -35,14 +41,12 @@ import java.util.List;
  *
  * <p>Assembly order:
  * <ol>
- *   <li>{@link NekoPluginRuntime#bootstrapOwned} (the loader finishes plugin discovery before
- *       this)</li>
+ *   <li>Read engine settings, collect plugin products, and validate the pipeline against the frozen catalogs</li>
  *   <li>{@link NekoRuntimeAccess#get()}.fireInit() (the init hook that runs before
  *       initStartup)</li>
  *   <li>loader-specific event wiring ({@link PluginWiring}: registrar bind / bridge set, in the
  *       order each platform keeps)</li>
- *   <li>engine context: compilers -> SandboxConfig -> ClassFilter.INSTANCE -> ErrorTracker ->
- *       ScriptErrorReporter -> NekoCoreContext (NekoSharedEngine) -> NekoSandboxFactory</li>
+ *   <li>Build the engine context and diagnostic route from the loaded settings</li>
  *   <li>explicit language pipeline: one NekoModulePipeline and one NekoModulePipelineCache
  *       instance, shared by the sandbox factory and the root (no static binding, no legacy
  *       instance)</li>
@@ -104,7 +108,17 @@ public final class NekoRuntimeAssembly {
         if (trustContext == null) {
             throw new NullPointerException("trustContext");
         }
+        var settings = ClassFilter.loadEngineSettings(NekoJSPaths.get());
         NekoPluginRuntime pluginRuntime = NekoPluginRuntime.bootstrapOwned(ownedPlugins, scriptProperties);
+        var compilers = pluginRuntime.scriptCompilers();
+        SandboxConfig sandboxConfig = settings.config();
+        var checks = pluginRuntime.extensionProduct(ScriptPreflightsPoint.ID, ScriptPreflightCatalog.class);
+        var pipelines = LanguagePipelineSelection.resolve(settings.path(), sandboxConfig, compilers, checks);
+        var probeRegistry = pluginRuntime.extensionProduct(ProbeBackendsPoint.ID, ProbeBackendRegistry.class);
+        var probeBackends = ProbeBackendSelector.resolve(settings.path(), sandboxConfig, pipelines.configuredFrontends(), probeRegistry);
+        if (probeBackends.hasEngineReferences()) {
+            probeBackends.validateConfiguredOutputs(settings.path(), NekoJSPaths.get(), ProbeCoordinator.config());
+        }
         // This line must appear exactly once per process (repeated bootstrapOwned calls are
         // rejected by publish). The smoke test greps for it before and after a reload to confirm
         // the count stays the same; the Fabric side has its own entrypoint/bootstrap-done marker.
@@ -112,8 +126,6 @@ public final class NekoRuntimeAssembly {
         NekoRuntimeAccess.get().fireInit();
         pluginWiring.wire(pluginRuntime);
 
-        var compilers = ScriptCompilerRegistry.current();
-        SandboxConfig sandboxConfig = ClassFilter.loadEngineConfig();
         // Reuse the global singleton: NekoSecurityWarningHandler and others read
         // ClassFilter.INSTANCE, so a second instance would split the state.
         ClassFilter classFilter = ClassFilter.INSTANCE;
@@ -131,7 +143,7 @@ public final class NekoRuntimeAssembly {
         // execution environment and the root. The root owns the module cache and session lifetime
         // and clears everything on close; there is no static state.
         NekoModulePipelineCache modulePreparationCache = new NekoModulePipelineCache(
-                new NekoModulePipeline(new NekoCompilationPipeline(), compilers, sandboxConfig),
+                new NekoModulePipeline(new NekoCompilationPipeline(), compilers, sandboxConfig, pipelines),
                 sourceMaps, virtualModules, trustContext);
         NekoSandboxFactory sandboxFactory = new NekoSandboxFactory(core, NekoJSPaths.get(), compilers, pluginRuntime, modulePreparationCache);
         NekoRuntimeRoot root = new NekoRuntimeRoot(
@@ -141,17 +153,28 @@ public final class NekoRuntimeAssembly {
                 scriptProperties,
                 sandboxFactory,
                 modulePreparationCache,
-                trustContext
+                trustContext,
+                probeBackends
         );
 
-        com.tkisor.nekojs.core.pack.ScriptPackRegistry.get().discoverLoadedModPacks();
-        for (ScriptType type : ScriptType.autoLoadTypes()) {
-            root.createScriptManager(type).discoverScripts();
-        }
+        try {
+            com.tkisor.nekojs.core.pack.ScriptPackRegistry.get().discoverLoadedModPacks();
+            for (ScriptType type : ScriptType.autoLoadTypes()) {
+                root.createScriptManager(type).discoverScripts();
+            }
 
-        root.load(ScriptType.STARTUP);
-        NekoRuntimeAccess.get().fireInitStartup();
-        root.initializeAuthoring();
-        return new Assembled(root);
+            root.load(ScriptType.STARTUP);
+            NekoRuntimeAccess.get().fireInitStartup();
+            root.initializeAuthoring();
+            return new Assembled(root);
+        } catch (RuntimeException | Error startupFailure) {
+            // The loader does not own the root until assembly returns.
+            try {
+                root.close();
+            } catch (RuntimeException | Error cleanupFailure) {
+                if (cleanupFailure != startupFailure) startupFailure.addSuppressed(cleanupFailure);
+            }
+            throw startupFailure;
+        }
     }
 }

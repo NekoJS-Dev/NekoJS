@@ -147,9 +147,7 @@ public final class ProbeOutputCommitter {
      */
     public static List<String> cleanupLegacyDirs(Path outputDir) {
         List<String> warnings = new ArrayList<>();
-        String name = outputDir.getFileName() == null ? "" : outputDir.getFileName().toString();
-        for (String suffix : List.of(".staging", ".old")) {
-            Path legacy = outputDir.resolveSibling(name + suffix);
+        for (Path legacy : legacyCleanupDirs(outputDir)) {
             if (!Files.exists(legacy)) continue;
             try {
                 deleteRecursive(legacy);
@@ -159,6 +157,11 @@ public final class ProbeOutputCommitter {
             }
         }
         return warnings;
+    }
+
+    static List<Path> legacyCleanupDirs(Path outputDir) {
+        String name = outputDir.getFileName() == null ? "" : outputDir.getFileName().toString();
+        return List.of(outputDir.resolveSibling(name + ".staging"), outputDir.resolveSibling(name + ".old"));
     }
 
     /** Absolute normalized paths of all regular files under the directory; empty when it does not exist. */

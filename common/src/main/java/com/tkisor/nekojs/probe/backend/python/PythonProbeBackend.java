@@ -86,6 +86,11 @@ public final class PythonProbeBackend implements ProbeBackend {
     }
 
     @Override
+    public Set<String> authoringCapabilities() {
+        return Set.of(com.tkisor.nekojs.api.compiler.FrontendSemantics.PYTHON_AUTHORING);
+    }
+
+    @Override
     public boolean requiresIr() {
         return true;
     }

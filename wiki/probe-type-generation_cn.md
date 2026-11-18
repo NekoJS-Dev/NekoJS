@@ -32,14 +32,16 @@ Probe 是 NekoJS 内置的类型声明生成器，作用相当于 ProbeJS。它�
 | `/nekojs probe` | 生成 TypeScript 声明。日常只需要这一条 |
 | `/nekojs probe python` | 生成 Python 声明 |
 | `/nekojs probe all` | 运行所有已注册的 backend，包括插件提供的 |
-| `/nekojs probe <语言>` | 运行该语言的默认 backend |
-| `/nekojs probe <语言> <名字>` | 运行指定 backend，例如 `/nekojs probe typescript builtin` |
+| `/nekojs probe <语言>` | 依次尝试引擎选择、`probe.toml` 中已注册的首选项和优先级最高的 backend |
+| `/nekojs probe <语言> <名字>` | 精确运行指定 backend，例如 `/nekojs probe typescript builtin`；找不到时不回退 |
 | `/nekojs probe list` | 列出已注册的 backend |
 | `/nekojs probe reload` | 重新读取 `probe.toml`，改完配置不用重启 |
 | `/nekojs probe enable` / `disable` | 打开或关闭 probe，会写回 `probe.toml` |
-| `/nekojs probe reset_config` | 编辑器配置被改乱时，恢复默认配置并重新生成 |
+| `/nekojs probe reset_config` | 重置托管的编辑器配置，按无参 `/nekojs probe` 的规则重新生成 |
 
-想每次开服都自动生成，在 `probe.toml` 里设置 `runAtStartup = true`。生成失败只写日志，不影响开服。
+无参命令和重置后的生成使用引擎为 TypeScript 指定的 backend；没有指定时只选 `typescript builtin`。`all` 仍按原有顺序运行所有已注册的 backend。引擎配置见[脚本语言流水线](configuration_cn#language-pipelines)。
+
+NeoForge 在 Probe 已启用、`runAtStartup = true` 且扫描模式不是 `NONE` 时，开服后生成相同的 TypeScript 目标。生成失败会记日志，但不会阻止开服。Fabric 不自动生成，请手动执行命令。引擎配置被拒绝时 NekoJS 不会初始化，Probe 命令也不能绕过。每次生成使用同一份 Probe 配置快照，只有生成成功的 backend 才贡献编辑器配置。
 
 <a id="wiki-section-4"></a>
 ## 编辑器设置
@@ -109,7 +111,7 @@ const id: RegistryTypes.Item = 'minecraft:diamond'
 | 键 | 默认值 | 作用 |
 |---|---|---|
 | `enabled` | `true` | 总开关。关闭后执行 probe 会直接失败 |
-| `runAtStartup` | `false` | 开服后自动生成一次 TypeScript 声明 |
+| `runAtStartup` | `false` | 在 NeoForge 中，Probe 已启用且扫描模式不是 `NONE` 时，开服后自动生成 TypeScript 声明 |
 | `baseDir` | `".neko_probe"` | 输出目录，相对于游戏目录 |
 | `scan.mode` | `"SMART"` | `SMART`：只扫描白名单里的包；`FULL`：不限白名单，只看排除列表和深度；`NONE`：不扫描，probe 会失败 |
 | `scan.extraIncludePackages` | `[]` | 在默认白名单之外**追加**要扫描的包 |
@@ -118,7 +120,7 @@ const id: RegistryTypes.Item = 'minecraft:diamond'
 | `scan.forceScanMods` | `["minecraft"]` | 强制扫描的模组 ID 或包名 |
 | `scan.maxDepth` | `5` | 从事件和绑定出发，最多沿类型引用走几层 |
 | `languages.<语言>.outputDir` | 语言名 | 该语言在 `baseDir` 下的子目录 |
-| `languages.<语言>.backend` | 不设置 | `/nekojs probe <语言>` 默认使用的 backend |
+| `languages.<语言>.backend` | 不设置 | 未在引擎中为该语言指定 backend 时，`/nekojs probe <语言>` 的首选项 |
 
 例如，想补全某个模组的类：
 
@@ -546,7 +548,7 @@ public void registerProbeBackends(ProbeBackendRegistry registry) {
 - `render` 返回非法路径（空、绝对路径、包含 `..`）：这个 backend 失败，不写任何文件。
 - 一次运行中两个 backend 的输出目录相同：只运行第一个，其余跳过并警告。否则后一个会把前一个的文件当旧文件删掉。
 
-同一语言的多个 backend 可以共存。`/nekojs probe <语言>` 先用 `probe.toml` 里的 `languages.<语言>.backend`，没有设置就用 priority 最高的那个；其他的用 `/nekojs probe <语言> <名字>` 运行。
+同一语言的多个 backend 可以共存，注册表以 `(languageId, name)` 区分。要让引擎流水线选择此 backend，可覆盖 `ProbeBackend.authoringCapabilities()`，返回它实际支持的能力 ID，例如 `nekojs:typescript-authoring/v1` 或 `nekojs:python-authoring/v1`。至少一项须与所选前端完全匹配。默认返回空集合，仍可按旧命令规则选择，但不能被引擎流水线引用。
 
 <a id="wiki-section-37"></a>
 ### 替换 TypeScript backend

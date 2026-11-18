@@ -58,7 +58,8 @@ public class ServerEventListener {
      */
     @SubscribeEvent
     public static void onServerStarted(ServerStartedEvent event) {
-        ProbeCoordinator.runStartupProbeIfConfigured();
+        var root = runtimeRoot;
+        if (root != null) ProbeCoordinator.runStartupProbeIfConfigured(root.probeBackends());
     }
 
     @SubscribeEvent

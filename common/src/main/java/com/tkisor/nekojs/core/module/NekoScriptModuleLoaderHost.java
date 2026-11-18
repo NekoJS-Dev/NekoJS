@@ -192,14 +192,16 @@ public final class NekoScriptModuleLoaderHost {
         NekoResolvedModule resolved = resolveEntryPath(entryPath);
         dependencyGraph.markEntry(resolved.id());
         refreshPreparedExecutionTree(resolved.id());
-        return loadResolved(resolved);
+        if (resolved.special() || resolved.json()) return loadResolved(resolved);
+        return loadPreparedSync(resolved, prepareEntry(resolved), true);
     }
 
     public CompletableFuture<?> loadEntryAsync(String entryPath) throws IOException {
         NekoResolvedModule resolved = resolveEntryPath(entryPath);
         dependencyGraph.markEntry(resolved.id());
         refreshPreparedExecutionTree(resolved.id());
-        return loadResolvedAsync(resolved);
+        if (resolved.special() || resolved.json()) return loadResolvedAsync(resolved);
+        return loadPreparedAsync(resolved, prepareEntry(resolved));
     }
 
     public NekoSourceMapView sourceMaps() {
@@ -388,7 +390,10 @@ public final class NekoScriptModuleLoaderHost {
             return CompletableFuture.completedFuture(loadJsonResolved(resolved));
         }
 
-        NekoPreparedModule prepared = prepare(resolved);
+        return loadPreparedAsync(resolved, prepare(resolved));
+    }
+
+    private CompletableFuture<?> loadPreparedAsync(NekoResolvedModule resolved, NekoPreparedModule prepared) throws IOException {
         if (prepared.mode() == NekoModuleMode.ESM) {
             return loadEsmModuleAsync(resolved, prepared);
         }
@@ -403,7 +408,10 @@ public final class NekoScriptModuleLoaderHost {
             return loadJsonResolved(resolved);
         }
 
-        NekoPreparedModule prepared = prepare(resolved);
+        return loadPreparedSync(resolved, prepare(resolved), rejectAsyncEsm);
+    }
+
+    private Object loadPreparedSync(NekoResolvedModule resolved, NekoPreparedModule prepared, boolean rejectAsyncEsm) throws IOException {
         if (prepared.mode() == NekoModuleMode.ESM) {
             if (rejectAsyncEsm && prepared.esmAst() != null && prepared.esmAst().topLevelAwait()) {
                 throw asyncEsmRequireError(resolved);
@@ -973,6 +981,12 @@ public final class NekoScriptModuleLoaderHost {
         }
     }
 
+    private NekoPreparedModule prepareEntry(NekoResolvedModule resolved) throws IOException {
+        NekoPreparedModule prepared = preparationCache.prepareEntry(resolved.path());
+        observePrepared(resolved.id(), resolved.path(), prepared);
+        return prepared;
+    }
+
     private NekoPreparedModule prepare(NekoResolvedModule resolved) throws IOException {
         NekoPreparedModule prepared = preparationCache.prepare(resolved.path());
         observePrepared(resolved.id(), resolved.path(), prepared);
@@ -1009,6 +1023,7 @@ public final class NekoScriptModuleLoaderHost {
     /** Refresh known dependencies before an entry cache hit can hide a changed child module. */
     private void refreshPreparedExecutionTree(String entryId) throws IOException {
         for (String moduleId : dependencyGraph.dependencyModules(entryId)) {
+            if (moduleId.equals(entryId)) continue;
             java.nio.file.Path path = modulePaths.get(moduleId);
             if (path != null) {
                 String fileName = path.getFileName() == null ? "" : path.getFileName().toString();

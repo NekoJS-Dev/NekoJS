@@ -141,13 +141,13 @@ public final class NekoSandboxFactory {
             ctx.eval("js", "Java.loadClass = Java.type;");
             nodeRuntime = NekoNodeModuleInstaller.install(ctx, type,
                     new NekoModuleResolver(paths.gameDir(), paths.root(), paths.nodeModules(),
-                            new ScriptFilePolicy(compilers)),
+                            moduleSession.filePolicy()),
                     paths,
                     core.errorTracker(),
                     config,
                     moduleSession);
 
-            Set<String> registeredExtensions = new LinkedHashSet<>(compilers.supportedExtensions());
+            Set<String> registeredExtensions = new LinkedHashSet<>(moduleSession.filePolicy().supportedExtensionsInOrder());
             registeredExtensions.remove(".js");
             registeredExtensions.remove(".mjs");
             registeredExtensions.remove(".cjs");

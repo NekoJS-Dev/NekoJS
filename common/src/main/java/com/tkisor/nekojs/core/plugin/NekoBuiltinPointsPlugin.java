@@ -38,6 +38,7 @@ public final class NekoBuiltinPointsPlugin implements NekoJSPlugin, NekoPluginEx
     @Override
     public void registerPluginExtensionPoints(NekoPluginExtensionRegistry registry) {
         registry.register(ScriptCompilersPoint.POINT);
+        registry.register(ScriptPreflightsPoint.POINT);
         registry.register(ScriptPropertiesPoint.point(scriptProperties));
         registry.register(BindingsPoint.point(client, owners));
         registry.register(AdaptersPoint.POINT);

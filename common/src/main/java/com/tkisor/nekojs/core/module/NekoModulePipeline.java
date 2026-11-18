@@ -1,6 +1,9 @@
 package com.tkisor.nekojs.core.module;
 
-import com.tkisor.nekojs.core.compiler.IScriptCompiler;
+import com.tkisor.nekojs.api.ScriptType;
+import com.tkisor.nekojs.core.ScriptFilePolicy;
+import com.tkisor.nekojs.api.preflight.ScriptPreflight.Scope;
+import com.tkisor.nekojs.api.preflight.ScriptPreflight.Stage;
 import com.tkisor.nekojs.core.compiler.NekoCompileOutput;
 import com.tkisor.nekojs.core.compiler.NekoIRProgram;
 import com.tkisor.nekojs.core.compiler.NekoLanguagePlugin;
@@ -8,19 +11,22 @@ import com.tkisor.nekojs.core.compiler.NekoModuleMode;
 import com.tkisor.nekojs.core.compiler.NekoScriptLanguage;
 import com.tkisor.nekojs.core.compiler.ScriptCompileResult;
 import com.tkisor.nekojs.core.compiler.ScriptCompilerRegistry;
-import com.tkisor.nekojs.core.compiler.ScriptSourcePreflight;
 import com.tkisor.nekojs.core.compiler.NekoCompileException;
 import com.tkisor.nekojs.core.compiler.NekoCompilationPipeline;
 import com.tkisor.nekojs.core.compiler.NekoJavaScriptLanguagePlugin;
 import com.tkisor.nekojs.core.compiler.NekoLegacyLanguagePlugin;
 import com.tkisor.nekojs.core.compiler.NekoSourceMapBuilder;
 import com.tkisor.nekojs.core.config.SandboxConfig;
+import com.tkisor.nekojs.core.error.SourceMapRegistry;
+import com.tkisor.nekojs.core.preflight.ScriptPreflightRunner.Report;
 import com.tkisor.nekojs.api.event.ScriptBindingSchema;
 import com.tkisor.nekojs.core.module.cjs.CjsStaticAnalyzer;
 import com.tkisor.nekojs.core.module.esm.NekoEsmModuleAst;
 import com.tkisor.nekojs.core.module.esm.NekoEsmParser;
 
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
 import java.util.Set;
@@ -48,11 +54,20 @@ public final class NekoModulePipeline {
     private final NekoCompilationPipeline compilationPipeline;
     private final ScriptCompilerRegistry compilers;
     private final SandboxConfig config;
+    private final LanguagePipelineSelection selection;
+    private final ScriptFilePolicy filePolicy;
 
     public NekoModulePipeline(NekoCompilationPipeline compilationPipeline, ScriptCompilerRegistry compilers, SandboxConfig config) {
+        this(compilationPipeline, compilers, config, LanguagePipelineSelection.defaultsOnly());
+    }
+
+    public NekoModulePipeline(NekoCompilationPipeline compilationPipeline, ScriptCompilerRegistry compilers,
+                              SandboxConfig config, LanguagePipelineSelection selection) {
+        this.selection = Objects.requireNonNull(selection, "selection");
         this.compilationPipeline = Objects.requireNonNull(compilationPipeline, "compilationPipeline");
         this.compilers = Objects.requireNonNull(compilers, "compilers");
         this.config = Objects.requireNonNull(config, "config");
+        this.filePolicy = new ScriptFilePolicy(compilers, selection.configuredExtensions());
     }
 
     /**
@@ -65,41 +80,63 @@ public final class NekoModulePipeline {
 
     NekoPreparedModule prepare(Path file, String rawSource) throws Exception {
         LanguageBinding binding = captureBindingChecked(file);
-        return prepareWithBinding(file, rawSource == null ? "" : rawSource, binding,
-                ScriptBindingSchema.emptyView(), null);
-    }
-
-    /**
-     * Cache-owned preparation seam: the binding captured for the source stamp drives the preparation,
-     * and the registry revision is checked before and after compilation.
-     */
-    NekoPreparedModule prepareCaptured(Path file, String rawSource, NekoTrustApprovedSource approval,
-                                       LanguageBinding binding) throws Exception {
-        return prepareCaptured(file, rawSource, approval, binding, ScriptBindingSchema.emptyView());
+        return prepareDirect(file, rawSource, binding, ScriptBindingSchema.emptyView());
     }
 
     NekoPreparedModule prepareCaptured(Path file, String rawSource, NekoTrustApprovedSource approval,
                                        LanguageBinding binding, ScriptBindingSchema.View schemaView) throws Exception {
-        return prepareCaptured(file, rawSource, approval, binding, schemaView, null);
+        requireApproval(file, approval, binding);
+        return prepareDirect(file, rawSource, binding, schemaView);
     }
 
-    NekoPreparedModule prepareCaptured(Path file, String rawSource, NekoTrustApprovedSource approval,
-                                       LanguageBinding binding, ScriptBindingSchema.View schemaView,
-                                       BuiltinModuleTransformCache transforms) throws Exception {
-        NekoModuleIdentity identity = binding.identity();
-        if (approval == null || !approval.covers(file)) {
-            throw NekoModuleError.denied(NekoModuleError.displayPath(file), identity.languageId(),
-                    identity.requestedMode(), approval, "preparation requires a trust-approved source");
+    private NekoPreparedModule prepareDirect(Path file, String rawSource, LanguageBinding binding,
+                                             ScriptBindingSchema.View view) throws Exception {
+        var preflight = new PipelinePreflight(selection, new SourceMapRegistry(file.toAbsolutePath().getParent()));
+        try {
+            var type = PipelinePreflight.scriptType(file, null);
+            var result = prepareSource(file, rawSource == null ? "" : rawSource, binding, view, null, preflight, type);
+            preflight.publish(file, type, view, result.findings());
+            return result.module();
+        } finally {
+            preflight.close();
         }
-        return prepareWithBinding(file, rawSource == null ? "" : rawSource, binding, schemaView, transforms);
     }
 
-    private NekoPreparedModule prepareWithBinding(Path file, String rawSource, LanguageBinding binding,
-                                                  ScriptBindingSchema.View schemaView,
-                                                  BuiltinModuleTransformCache transforms) throws Exception {
+    /** Preparation always uses the same frontend capture as its trust-approved snapshot. */
+    NekoPreparedModule prepare(Path file, String rawSource, NekoTrustApprovedSource approval) throws Exception {
+        return prepareCaptured(file, rawSource, approval, captureBindingChecked(file), ScriptBindingSchema.emptyView());
+    }
+
+    PreparationResult prepareCaptured(Path file, String source, NekoTrustApprovedSource approval, LanguageBinding binding,
+                                      ScriptBindingSchema.View schema, BuiltinModuleTransformCache transforms,
+                                      PipelinePreflight preflight, ScriptType type) throws Exception {
+        requireApproval(file, approval, binding);
+        return prepareSource(file, source, binding, schema, transforms, preflight, type);
+    }
+
+    private static void requireApproval(Path file, NekoTrustApprovedSource approval, LanguageBinding binding) throws NekoModuleError {
+        if (approval == null || !approval.covers(file)) {
+            throw NekoModuleError.denied(NekoModuleError.displayPath(file), binding.identity().languageId(),
+                    binding.identity().requestedMode(), approval, "preparation requires a trust-approved source");
+        }
+    }
+
+    private PreparationResult prepareSource(Path file, String source, LanguageBinding binding,
+                                             ScriptBindingSchema.View schema, BuiltinModuleTransformCache transforms,
+                                             PipelinePreflight preflight, ScriptType type) throws Exception {
         NekoModuleIdentity identity = binding.identity();
         try {
-            return prepareStages(file, rawSource, binding, schemaView, transforms);
+            ensureBindingCurrent(file, binding);
+            var findings = new ArrayList<>(preflight.check(file, type, binding, Stage.SOURCE, Scope.FULL, source, null, schema));
+            // Authorization and schema-dependent checks run even when the pure transform is reused.
+            String extension = extension(file);
+            NekoPreparedModule prepared = transforms == null
+                    ? prepareModule(file, source, extension, binding)
+                    : transforms.prepare(file, source, binding, () -> prepareModule(file, source, extension, binding));
+            findings.addAll(preflight.check(file, type, binding, Stage.OUTPUT, Scope.FULL,
+                    prepared.code(), prepared.diagnosticSourceMap(), schema));
+            ensureBindingCurrent(file, binding);
+            return new PreparationResult(prepared, findings);
         } catch (NekoModuleError staged) {
             throw staged;
         } catch (Exception failure) {
@@ -114,46 +151,7 @@ public final class NekoModulePipeline {
         }
     }
 
-    /**
-     * Preparation gate with trust credentials: local and remote-authorized sources follow the same
-     * preparation phase; trust only determines the authorization result.
-     * Rejects missing or non-matching credentials with an authorization error (stage remains
-     * PREPARE, owner is Pack Trust).
-     */
-    NekoPreparedModule prepare(Path file, String rawSource, NekoTrustApprovedSource approval) throws Exception {
-        LanguageBinding binding = captureBindingChecked(file);
-        return prepareCaptured(file, rawSource, approval, binding);
-    }
-
-    private NekoPreparedModule prepareStages(Path file, String rawSource, LanguageBinding binding,
-                                             ScriptBindingSchema.View schemaView,
-                                             BuiltinModuleTransformCache transforms) throws Exception {
-        ensureBindingCurrent(file, binding);
-        String extension = extension(file);
-        // Run static checks at load time: scans for member access on global bindings (e.g., Utils, Platform, Items)
-        // and reports errors to the in-game dashboard if members are missing. Does not abort compilation or execution.
-        // Only the native JS frontend guarantees authored JS. Other frontends, including JS extension
-        // overrides, are checked after compilation so foreign syntax cannot become bogus global calls.
-        if (config.scriptMemberValidation() && rawPreflightApplies(binding)) {
-            validateSource(file, rawSource, schemaView, transforms);
-        }
-        // Only transformation is reusable. Authorization and current-schema checks remain live.
-        NekoPreparedModule prepared = transforms == null
-                ? prepareModule(file, rawSource, extension, binding)
-                : transforms.prepare(file, rawSource, binding,
-                        () -> prepareModule(file, rawSource, extension, binding));
-        if (config.scriptMemberValidation() && !rawPreflightApplies(binding)) {
-            validateSource(file, prepared.code(), schemaView, transforms);
-        }
-        ensureBindingCurrent(file, binding);
-        return prepared;
-    }
-
-    private static void validateSource(Path file, String source, ScriptBindingSchema.View view,
-                                       BuiltinModuleTransformCache transforms) {
-        if (transforms == null) ScriptSourcePreflight.validate(file, source, view);
-        else transforms.validate(file, source, view);
-    }
+    record PreparationResult(NekoPreparedModule module, List<Report> findings) {}
 
     /** Language-frontend diagnostics that carry their authored position. */
     private static NekoCompileException findCompileFailure(Throwable failure) {
@@ -169,9 +167,12 @@ public final class NekoModulePipeline {
         return config.scriptMemberValidation();
     }
 
-    /** Only this captured frontend guarantees that the authored source is JavaScript. */
-    static boolean rawPreflightApplies(LanguageBinding binding) {
-        return binding.plugin() == NekoJavaScriptLanguagePlugin.INSTANCE;
+    ScriptFilePolicy filePolicy() {
+        return filePolicy;
+    }
+
+    public LanguagePipelineSelection selection() {
+        return selection;
     }
 
     private NekoPreparedModule prepareModule(Path file, String rawSource, String extension,
@@ -187,23 +188,28 @@ public final class NekoModulePipeline {
                 // CJS static analysis must run on compiled output: require and module.exports are generated by transpilation, not present in raw source.
                 return NekoPreparedModule.commonJs(languageId, sourcePath, compiled.code(),
                         usableMap(file, rawSource, compiled.code(), compiled.sourceMap()),
-                        CjsStaticAnalyzer.analyze(compiled.code()));
+                        CjsStaticAnalyzer.analyze(compiled.code())).withPreparationIdentity(binding.cacheIdentity(),
+                        diagnosticMap(rawSource, compiled.code(), compiled.sourceMap(), file));
             }
             if (language == NekoJavaScriptLanguagePlugin.INSTANCE) {
                 return NekoPreparedModule.commonJs(languageId, sourcePath, rawSource,
                         NekoSourceMapBuilder.identity(file, rawSource, rawSource),
-                        CjsStaticAnalyzer.analyze(rawSource));
+                        CjsStaticAnalyzer.analyze(rawSource)).withPreparationIdentity(binding.cacheIdentity(),
+                        NekoSourceMapBuilder.identity(file, rawSource, rawSource));
             }
             NekoCompileOutput compiled = compilationPipeline.compile(
                 file, rawSource, extension, language, config.jsxAutomaticRuntime());
             return NekoPreparedModule.commonJs(languageId, sourcePath, compiled.code(),
                     usableMap(file, rawSource, compiled.code(), compiled.program().sourceMap()),
-                    CjsStaticAnalyzer.analyze(compiled.code()));
+                    CjsStaticAnalyzer.analyze(compiled.code())).withPreparationIdentity(binding.cacheIdentity(),
+                    diagnosticMap(rawSource, compiled.code(), compiled.program().sourceMap(), file));
         }
 
         NekoCompileOutput compiled = compilationPipeline.compile(
             file, rawSource, extension, language, config.jsxAutomaticRuntime());
-        return prepareModule(file, rawSource, compiled, languageId, sourcePath);
+        return prepareModule(file, rawSource, compiled, languageId, sourcePath)
+                .withPreparationIdentity(binding.cacheIdentity(),
+                        diagnosticMap(rawSource, compiled.code(), compiled.program().sourceMap(), file));
     }
 
     private NekoPreparedModule prepareModule(Path file, String rawSource, NekoCompileOutput compiled,
@@ -229,10 +235,16 @@ public final class NekoModulePipeline {
         return NekoSourceMapBuilder.identity(file, authoredSource, generatedSource);
     }
 
+    private static String diagnosticMap(String rawSource, String code, String map, Path file) {
+        if (map != null && !map.isBlank()) return map;
+        return rawSource.equals(code) ? NekoSourceMapBuilder.identity(file, rawSource, code) : null;
+    }
+
     LanguageBinding captureBinding(Path file) {
         String extension = extension(file);
         NekoModuleMode requestedMode = NekoModuleMode.fromExtension(extension);
-        ScriptCompilerRegistry.Capture capture = compilers.capture(extension);
+        var effective = selection.capture(extension, compilers);
+        var capture = effective.capture();
         NekoLanguagePlugin plugin = capture.plugin();
         if (plugin == null && capture.compiler() != null) {
             if (capture.language() != null) {
@@ -247,7 +259,8 @@ public final class NekoModulePipeline {
             throw new IllegalArgumentException("No script compiler registered for " + extension + " module: " + file);
         }
         if (plugin == null) plugin = NekoJavaScriptLanguagePlugin.INSTANCE;
-        return new LanguageBinding(new NekoModuleIdentity(plugin.id(), requestedMode), plugin, capture.revision());
+        return new LanguageBinding(new NekoModuleIdentity(plugin.id(), requestedMode), plugin, capture.revision(),
+                capture.frontend(), memberValidationEnabled() ? effective.checks() : LanguagePipelineSelection.Checks.NONE);
     }
 
     private LanguageBinding captureBindingChecked(Path file) throws NekoModuleError {
@@ -260,7 +273,7 @@ public final class NekoModulePipeline {
     }
 
     void ensureBindingCurrent(Path file, LanguageBinding binding) throws NekoModuleError {
-        if (compilers.capture(extension(file)).revision() != binding.registryRevision()) {
+        if (compilers.revision() != binding.registryRevision()) {
             throw NekoModuleError.prepare(NekoModuleError.displayPath(file), binding.identity().languageId(),
                     binding.identity().requestedMode(), "compiler registry changed during preparation", null);
         }
@@ -275,6 +288,31 @@ public final class NekoModulePipeline {
         return dot < 0 ? "" : fileName.substring(dot).toLowerCase(Locale.ROOT);
     }
 
-    record LanguageBinding(NekoModuleIdentity identity, NekoLanguagePlugin plugin, long registryRevision) {}
+    record LanguageBinding(NekoModuleIdentity identity, NekoLanguagePlugin plugin, long registryRevision,
+                           ScriptCompilerRegistry.FrontendDescriptor frontend, LanguagePipelineSelection.Checks checks) {
+        String cacheIdentity() {
+            var material = new StringBuilder();
+            append(material, frontend == null ? "" : frontend.id());
+            append(material, frontend == null ? "" : frontend.implementationRevision());
+            append(material, Long.toString(registryRevision));
+            append(material, identity.requestedMode().name());
+            for (var stage : Stage.values()) {
+                append(material, stage.name());
+                for (var check : stage == Stage.SOURCE ? checks.source() : checks.output()) {
+                    append(material, check.id());
+                    append(material, check.revision());
+                }
+            }
+            return material.toString();
+        }
+
+        private static void append(StringBuilder target, String text) {
+            target.append(text.length()).append(':').append(text);
+        }
+
+        LanguageBinding(NekoModuleIdentity identity, NekoLanguagePlugin plugin, long registryRevision) {
+            this(identity, plugin, registryRevision, null, LanguagePipelineSelection.Checks.NONE);
+        }
+    }
 
 }

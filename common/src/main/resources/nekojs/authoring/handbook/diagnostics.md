@@ -4,6 +4,8 @@ Start with the actual failure, script path, line, Script Type, environment and s
 
 Distinguish parse/transpile failures, declaration errors, runtime exceptions, conversion failures and world-specific validation. An empty authoring query with incomplete coverage does not prove that a member is missing.
 
+For [language pipelines](language-pipelines.md), `NEKO-1030` rejects startup configuration; inspect the path and selection, then restart after correcting it. `NEKO-1029` is a provider failure. `NEKO-1031` is a reported third-party finding, not a compilation failure; use its provider, rule and mapped position to resolve it. `NEKO-1032` rejects generation through an engine-selected Probe backend when its output paths no longer pass validation. Check `probe.toml` for overlapping or invalid output directories.
+
 A startup failure naming a missing ICU class is a host-runtime dependency problem, not a script or declaration error. Verify the installed GraalMC build against the [runtime requirements](index.md). Both pinned 25.5.0 builds include relocated ICU for GraalJS; they do not expose unshaded `com.ibm.icu` classes to unrelated libraries. Identify the failing library before suggesting another dependency; NekoJS does not bundle ICU or produce a separate server jar.
 
 Normal script execution has no module-evaluation deadline, statement budget or runaway watchdog. The engine settings `scriptEvaluationTimeoutSeconds`, `scriptStatementLimit` and `scriptRunawayTimeoutSeconds` were removed, not replaced by a default timeout. An unresolved top-level await can remain pending; infinite guest/host loops may block the owner thread or process. Investigate the actual promise, code path and host call rather than recommending retired budget settings.

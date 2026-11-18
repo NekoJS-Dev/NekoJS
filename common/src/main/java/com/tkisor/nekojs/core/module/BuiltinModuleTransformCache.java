@@ -2,22 +2,18 @@ package com.tkisor.nekojs.core.module;
 
 import com.tkisor.nekojs.core.compiler.NekoJavaScriptLanguagePlugin;
 import com.tkisor.nekojs.core.compiler.NekoTypeScriptLanguagePlugin;
-import com.tkisor.nekojs.core.compiler.ScriptSourcePreflight;
-import com.tkisor.nekojs.api.event.ScriptBindingSchema;
 
 import java.nio.file.Path;
 import java.util.LinkedHashMap;
 import java.util.function.Predicate;
 
 /**
- * Root-owned, bounded cache for pure built-in transformations and source analysis.
- * Source analysis is independent of frontend transformation and retains no guest or schema state.
+ * Root-owned, bounded cache for pure built-in transformations.
  * One owner maintains one pipeline with immutable code-generation configuration; entries cannot
  * cross this policy boundary. The character budget includes both authored code and generated maps.
  */
 final class BuiltinModuleTransformCache {
     private final LinkedHashMap<Path, Entry> entries = new LinkedHashMap<>(16, 0.75f, true);
-    private final ScriptSourcePreflight.Cache preflight = new ScriptSourcePreflight.Cache();
     private final int maxEntries;
     private final long maxCharacters;
     private long characters;
@@ -31,14 +27,6 @@ final class BuiltinModuleTransformCache {
     BuiltinModuleTransformCache(int maxEntries, long maxCharacters) {
         this.maxEntries = maxEntries;
         this.maxCharacters = maxCharacters;
-    }
-
-    void validate(Path file, String source, ScriptBindingSchema.View view) {
-        preflight.validate(file, source, view);
-    }
-
-    void validateBindings(Path file, String source, ScriptBindingSchema.View view) {
-        preflight.validateBindings(file, source, view);
     }
 
     NekoPreparedModule prepare(Path file, String source, NekoModulePipeline.LanguageBinding binding,
@@ -77,7 +65,6 @@ final class BuiltinModuleTransformCache {
     }
 
     synchronized void invalidate(Predicate<Path> matches) {
-        preflight.invalidate(matches);
         epoch++;
         var iterator = entries.entrySet().iterator();
         while (iterator.hasNext()) {
@@ -90,14 +77,12 @@ final class BuiltinModuleTransformCache {
     }
 
     synchronized void clear() {
-        preflight.clear();
         epoch++;
         entries.clear();
         characters = 0;
     }
 
     synchronized void close() {
-        preflight.close();
         closed = true;
         clear();
     }

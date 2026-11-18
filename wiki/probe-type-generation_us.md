@@ -32,14 +32,16 @@ All probe commands need operator permission (in single player, enable cheats). L
 | `/nekojs probe` | Generates TypeScript declarations. This is the one you normally need |
 | `/nekojs probe python` | Generates Python declarations |
 | `/nekojs probe all` | Runs every registered backend, including ones from plugins |
-| `/nekojs probe <language>` | Runs the default backend for that language |
-| `/nekojs probe <language> <name>` | Runs one backend, for example `/nekojs probe typescript builtin` |
+| `/nekojs probe <language>` | Uses the engine selection, then the `probe.toml` preference if registered, then the highest-priority backend |
+| `/nekojs probe <language> <name>` | Runs exactly the named backend, for example `/nekojs probe typescript builtin`; an unknown name does not fall back |
 | `/nekojs probe list` | Lists registered backends |
 | `/nekojs probe reload` | Rereads `probe.toml`; no restart needed |
 | `/nekojs probe enable` / `disable` | Turns probe on or off and saves it to `probe.toml` |
-| `/nekojs probe reset_config` | Restores the default editor configuration and regenerates |
+| `/nekojs probe reset_config` | Resets managed editor configuration and regenerates using the same selection as `/nekojs probe` |
 
-To generate every time the server starts, set `runAtStartup = true` in `probe.toml`. A failure is only logged; the server still starts.
+The bare command and reset regeneration use the engine-selected TypeScript backend, or exactly `typescript builtin`. `all` still runs every registered backend in the original order. See [language pipelines](configuration_us#language-pipelines) for the engine setting.
+
+NeoForge can generate the same TypeScript target on startup when Probe is enabled, `runAtStartup = true`, and the scan mode is not `NONE`. Generation failures are logged rather than stopping the server. Fabric does not run Probe on startup; use a manual command. A rejected engine configuration prevents NekoJS initialization and is not bypassed by Probe commands. Each generation uses a single Probe config snapshot and only successful backends contribute editor settings.
 
 <a id="wiki-section-4"></a>
 ## Editor setup
@@ -109,7 +111,7 @@ The configuration file is `nekojs/config/probe.toml`. It is created with comment
 | Key | Default | What it does |
 |---|---|---|
 | `enabled` | `true` | Master switch. When off, probe fails immediately |
-| `runAtStartup` | `false` | Generates TypeScript declarations once after the server starts |
+| `runAtStartup` | `false` | Enables startup TypeScript generation on NeoForge when Probe is enabled and the scan mode is not `NONE` |
 | `baseDir` | `".neko_probe"` | Output folder, relative to the game directory |
 | `scan.mode` | `"SMART"` | `SMART`: scan only allowlisted packages. `FULL`: ignore the allowlist; only exclusions and depth apply. `NONE`: no scanning; probe fails |
 | `scan.extraIncludePackages` | `[]` | **Adds** packages to the default allowlist |
@@ -118,7 +120,7 @@ The configuration file is `nekojs/config/probe.toml`. It is created with comment
 | `scan.forceScanMods` | `["minecraft"]` | Mod IDs or packages always scanned |
 | `scan.maxDepth` | `5` | How many type references to follow from events and bindings |
 | `languages.<language>.outputDir` | The language name | Subfolder of `baseDir` for that language |
-| `languages.<language>.backend` | Not set | Default backend for `/nekojs probe <language>` |
+| `languages.<language>.backend` | Not set | Preference for `/nekojs probe <language>` when the engine has no reference for that language |
 
 For example, to get completion for a mod's classes:
 
@@ -546,7 +548,7 @@ The framework stops these cases:
 - `render` returns an illegal path (empty, absolute, or containing `..`): the backend fails and writes nothing.
 - Two backends in one run share an output folder: only the first runs; the rest are skipped with a warning. Otherwise the second would delete the first one's files as stale.
 
-Several backends for one language can coexist. `/nekojs probe <language>` uses `languages.<language>.backend` from `probe.toml` first, and otherwise the highest priority. Run the others with `/nekojs probe <language> <name>`.
+Several backends for one language can coexist; the registry identifies them by `(languageId, name)`. Override `ProbeBackend.authoringCapabilities()` to return the exact capability IDs this backend supports for pipeline selection, such as `nekojs:typescript-authoring/v1` or `nekojs:python-authoring/v1`. At least one must match the selected frontend. The default empty set keeps the backend available through legacy selection but not through an engine pipeline reference.
 
 <a id="wiki-section-37"></a>
 ### Replacing the TypeScript backend

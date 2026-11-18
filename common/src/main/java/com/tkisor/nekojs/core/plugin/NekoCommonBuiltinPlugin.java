@@ -2,6 +2,8 @@ package com.tkisor.nekojs.core.plugin;
 
 import com.tkisor.nekojs.api.NekoJSPlugin;
 import com.tkisor.nekojs.api.annotation.RegisterNekoJSPlugin;
+import com.tkisor.nekojs.api.compiler.FrontendSemantics;
+import com.tkisor.nekojs.api.preflight.ScriptPreflightRegistry;
 import com.tkisor.nekojs.bindings.static_access.ClientDataJS;
 import com.tkisor.nekojs.bindings.static_access.OnceJS;
 import com.tkisor.nekojs.core.compiler.NekoJsxLanguagePlugin;
@@ -9,6 +11,7 @@ import com.tkisor.nekojs.core.compiler.NekoTsxLanguagePlugin;
 import com.tkisor.nekojs.core.compiler.NekoTypeScriptLanguagePlugin;
 import com.tkisor.nekojs.core.compiler.NodeModuleTypeDocs;
 import com.tkisor.nekojs.core.compiler.ScriptCompilerRegistry;
+import com.tkisor.nekojs.core.preflight.BuiltinJavaScriptPreflight;
 import com.tkisor.nekojs.core.plugin.TypeDocsRegister;
 import com.tkisor.nekojs.api.data.BindingRegistry;
 import com.tkisor.nekojs.script.prop.ScriptProperty;
@@ -31,7 +34,7 @@ import com.tkisor.nekojs.script.prop.ScriptPropertyRegistry;
  * type docs are consumed after bootstrap as well.
  */
 @RegisterNekoJSPlugin
-public final class NekoCommonBuiltinPlugin implements NekoJSPlugin, com.tkisor.nekojs.core.plugin.BindingsPoint.Contributor, com.tkisor.nekojs.core.plugin.ScriptCompilersPoint.Contributor, com.tkisor.nekojs.core.plugin.ScriptPropertiesPoint.Contributor, TypeDocsPoint.Contributor, NodeTypeDocsPoint.Contributor {
+public final class NekoCommonBuiltinPlugin implements NekoJSPlugin, com.tkisor.nekojs.core.plugin.BindingsPoint.Contributor, com.tkisor.nekojs.core.plugin.ScriptCompilersPoint.Contributor, com.tkisor.nekojs.core.plugin.ScriptPropertiesPoint.Contributor, TypeDocsPoint.Contributor, NodeTypeDocsPoint.Contributor, ScriptPreflightsPoint.Contributor {
 
     /**
      * Platform-independent global bindings. The run-once guard ({@code once}/{@code clearOnce})
@@ -52,9 +55,20 @@ public final class NekoCommonBuiltinPlugin implements NekoJSPlugin, com.tkisor.n
 
     @Override
     public void registerScriptCompilers(ScriptCompilerRegistry registry) {
-        registry.register(NekoTypeScriptLanguagePlugin.INSTANCE);
-        registry.register(NekoJsxLanguagePlugin.INSTANCE);
-        registry.register(NekoTsxLanguagePlugin.INSTANCE);
+        registry.registerFrontend("nekojs:typescript", "1", NekoTypeScriptLanguagePlugin.INSTANCE,
+                typedFrontend("nekojs:typescript"));
+        registry.registerFrontend("nekojs:jsx", "1", NekoJsxLanguagePlugin.INSTANCE, typedFrontend("nekojs:jsx"));
+        registry.registerFrontend("nekojs:tsx", "1", NekoTsxLanguagePlugin.INSTANCE, typedFrontend("nekojs:tsx"));
+    }
+
+    private static FrontendSemantics typedFrontend(String dialect) {
+        return new FrontendSemantics(new FrontendSemantics.Input(FrontendSemantics.SOURCE_TEXT, dialect),
+                FrontendSemantics.JAVASCRIPT_OUTPUT, java.util.Set.of(FrontendSemantics.TYPESCRIPT_AUTHORING));
+    }
+
+    @Override
+    public void registerScriptPreflights(ScriptPreflightRegistry registry) {
+        registry.register(BuiltinJavaScriptPreflight.INSTANCE);
     }
 
     @Override

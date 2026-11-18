@@ -23,7 +23,7 @@ public final class ScriptSourcePreflight {
      * budget bounds retained source; parser products are linear in that source size.
      */
     public static final class Cache implements AutoCloseable {
-        private final LinkedHashMap<Path, ParsedSource> sources = new LinkedHashMap<>(16, 0.75f, true);
+        private final LinkedHashMap<InputKey, ParsedSource> sources = new LinkedHashMap<>(16, 0.75f, true);
         private final int maxEntries;
         private final long maxCharacters;
         private long characters;
@@ -39,36 +39,49 @@ public final class ScriptSourcePreflight {
         }
 
         public void validate(Path file, String source, ScriptBindingSchema.View view) {
-            validate(file, source, view, false);
+            validateLegacy(file, source, view, false);
         }
 
         public void validateBindings(Path file, String source, ScriptBindingSchema.View view) {
-            validate(file, source, view, true);
+            validateLegacy(file, source, view, true);
         }
 
-        private void validate(Path file, String source, ScriptBindingSchema.View view, boolean bindingsOnly) {
-            ParsedSource parsed = source(file, source);
+        public void check(Path file, String source, ScriptBindingSchema.View view,
+                          String stage, boolean bindingsOnly) {
+            if (source.isEmpty() || view.lookup().isEmpty()) return;
+            validate(new InputKey(file, stage), source, view, bindingsOnly, true);
+        }
+
+        private void validateLegacy(Path file, String source, ScriptBindingSchema.View view, boolean bindingsOnly) {
+            validate(new InputKey(file, "legacy"), source, view, bindingsOnly, false);
+        }
+
+        private void validate(InputKey key, String source, ScriptBindingSchema.View view,
+                              boolean bindingsOnly, boolean propagateParseFailure) {
+            Path file = key.file();
+            ParsedSource parsed = source(key, source);
             try {
+                if (propagateParseFailure) parsed.ast();
                 GlobalBindingMemberValidator.validate(file, source, view, parsed);
                 if (!bindingsOnly) EventCallbackSourceValidator.validate(file, source, view, parsed);
             } finally {
                 // A parser failure belongs to this call, never a retained exception graph.
                 if (parsed.failed()) {
                     synchronized (this) {
-                        if (sources.remove(file, parsed)) characters -= source.length();
+                        if (sources.remove(key, parsed)) characters -= source.length();
                     }
                 }
             }
         }
 
-        private synchronized ParsedSource source(Path file, String source) {
-            if (closed || file == null || source == null || source.isEmpty()
+        private synchronized ParsedSource source(InputKey key, String source) {
+            if (closed || key.file() == null || source == null || source.isEmpty()
                     || source.length() > maxCharacters) return new ParsedSource(source);
-            ParsedSource current = sources.get(file);
+            ParsedSource current = sources.get(key);
             if (current != null && current.source.equals(source)) return current;
             if (current != null) characters -= current.source.length();
             ParsedSource parsed = new ParsedSource(source);
-            sources.put(file, parsed);
+            sources.put(key, parsed);
             characters += source.length();
             var oldest = sources.entrySet().iterator();
             while (sources.size() > maxEntries || characters > maxCharacters) {
@@ -82,7 +95,7 @@ public final class ScriptSourcePreflight {
             var iterator = sources.entrySet().iterator();
             while (iterator.hasNext()) {
                 var entry = iterator.next();
-                if (matches.test(entry.getKey())) {
+                if (matches.test(entry.getKey().file())) {
                     characters -= entry.getValue().source.length();
                     iterator.remove();
                 }
@@ -101,25 +114,27 @@ public final class ScriptSourcePreflight {
         }
     }
 
+    private record InputKey(Path file, String stage) {}
+
     /** Lazy parsing preserves each validator's empty-input gate and parse-failure reporting. */
     static final class ParsedSource {
         private final String source;
         private boolean parsed;
         private ValNode.Block ast;
-        private Throwable failure;
+        private RuntimeException failure;
         private GlobalBindingMemberValidator.SourceFacts bindingFacts;
 
         ParsedSource(String source) {
             this.source = source;
         }
 
-        synchronized ValNode.Block ast() throws Throwable {
+        synchronized ValNode.Block ast() {
             if (!parsed) {
                 try {
                     ast = ValParser.parse(source);
-                } catch (Throwable error) {
+                    parsed = true;
+                } catch (RuntimeException error) {
                     failure = error;
-                } finally {
                     parsed = true;
                 }
             }

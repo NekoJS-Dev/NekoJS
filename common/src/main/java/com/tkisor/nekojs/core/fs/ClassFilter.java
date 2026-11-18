@@ -5,8 +5,10 @@ import com.tkisor.nekojs.core.JavaClassLoadTelemetry;
 import com.tkisor.nekojs.core.config.SandboxConfig;
 import com.tkisor.nekojs.core.config.SandboxConfigLoader;
 
-import java.util.Set;
 import java.nio.file.Files;
+import java.nio.file.LinkOption;
+import java.nio.file.Path;
+import java.util.Set;
 import java.util.function.Predicate;
 
 /**
@@ -142,41 +144,38 @@ public class ClassFilter implements Predicate<String> {
         return false;
     }
 
-    /**
-     * Loads the engine config from the canonical location
-     * {@code <gamedir>/nekojs/config/engine.toml} (the same directory as probe.toml). If that file
-     * is absent and the old location {@code <gamedir>/config/nekojs-engine.toml} exists, the old
-     * file is read read-only and a warning asks the user to migrate. It does <b>not</b> move the
-     * file or write a new one; migration is manual.
-     */
-    public static SandboxConfig loadEngineConfig() {
-        NekoJSPaths paths = NekoJSPaths.get();
-        java.nio.file.Path engineConfig = paths.engineConfig();
-        java.nio.file.Path legacy = paths.legacyEngineConfig();
-        if (!Files.exists(engineConfig) && Files.exists(legacy)) {
+    /** Loads the canonical engine settings, using the legacy path read-only only when canonical is absent. */
+    public static SandboxConfigLoader.Loaded loadEngineSettings(NekoJSPaths paths) {
+        Path canonical = paths.engineConfig();
+        Path legacy = paths.legacyEngineConfig();
+        if (Files.notExists(canonical, LinkOption.NOFOLLOW_LINKS)
+                && !Files.notExists(legacy, LinkOption.NOFOLLOW_LINKS)) {
+            var loaded = loadEngineSettings(legacy, false);
             NekoJS.LOGGER.warn(
                     "[NekoJS] Legacy engine config found at {}. Please migrate it to {} "
                             + "(the canonical location is nekojs/config/ alongside probe.toml). "
                             + "The legacy file is still honored read-only and will NOT be moved automatically.",
-                    legacy, engineConfig);
-            SandboxConfig config = new SandboxConfigLoader().load(legacy, false);
-            INSTANCE.updateConfig(config);
-            NekoJS.LOGGER.info(
-                    "Engine config loaded (legacy read-only). Unsafe features enabled: {}",
-                    config.anyUnsafeFeatureEnabled()
-            );
-            return config;
+                    legacy, canonical);
+            return loaded;
         }
-        return loadEngineConfig(engineConfig);
+        return loadEngineSettings(canonical, true);
     }
 
-    public static SandboxConfig loadEngineConfig(java.nio.file.Path engineConfig) {
-        SandboxConfig config = new SandboxConfigLoader().load(engineConfig);
+    public static SandboxConfig loadEngineConfig() {
+        return loadEngineSettings(NekoJSPaths.get()).config();
+    }
+
+    public static SandboxConfig loadEngineConfig(Path engineConfig) {
+        return loadEngineSettings(engineConfig, true).config();
+    }
+
+    private static SandboxConfigLoader.Loaded loadEngineSettings(Path path, boolean writable) {
+        SandboxConfig config = new SandboxConfigLoader().load(path, writable);
         INSTANCE.updateConfig(config);
         NekoJS.LOGGER.info(
-                "Engine config loaded. Unsafe features enabled: {}",
-                config.anyUnsafeFeatureEnabled()
+                "Engine config loaded from {} ({}). Unsafe features enabled: {}",
+                path, writable ? "canonical" : "legacy read-only", config.anyUnsafeFeatureEnabled()
         );
-        return config;
+        return new SandboxConfigLoader.Loaded(path, config);
     }
 }

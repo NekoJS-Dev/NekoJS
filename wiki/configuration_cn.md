@@ -53,7 +53,7 @@ enabled = false
 | `enableEsmAuthoring` | `true` | 支持 `import` / `export` 写法。只有需要纯 CommonJS `require` 行为时才关掉。见 [模块系统](module-system_cn)。 |
 | `conciseScriptErrorLogs` | `true` | 错误日志只显示和脚本源码有关的简短信息。改成 `false` 会输出完整堆栈，适合排查疑难问题。 |
 | `jsxAutomaticRuntime` | `false` | JSX 改用 automatic 方式编译，从内置模块 `nekojs/jsx-runtime` 导入。默认是 classic 方式。见 [TypeScript 与 JSX](typescript-and-jsx_cn)。 |
-| `scriptMemberValidation` | `true` | 加载脚本前检查绑定和事件回调上的成员名，把拼写错误报到错误面板。这不是完整的类型检查。关掉可以省下这部分解析时间。 |
+| `scriptMemberValidation` | `true` | 执行预检查，但不是完整的类型检查。关闭不会绕过流水线配置校验、编译、授权或沙箱检查。 |
 | `packSync.mode` | `"off"` | 多人游戏中服务器是否把脚本包发给客户端。`off`：不发；`hashOnly`：只发哈希，客户端不运行服务器的包；`all`：发送并在客户端运行。见 [脚本包](script-packs_cn)。 |
 | `packSync.allowUnsigned` | `false` | 是否接受没有签名的服务器脚本包。默认拒绝，并断开连接提示玩家。 |
 | `dynamicRegistry.enabled` | `false` | 实验功能：允许服务器启动之后再注册新内容。不是所有平台和注册表都支持。见 [注册新内容](registering-new-content_cn)。 |
@@ -75,9 +75,32 @@ enabled = false
 - 布尔值不加引号：写 `allowThreads = true`，不要写 `"true"`。
 - 没有表头的键（比如 `allowThreads`）必须放在第一个 `[...]` 表头之前。写在 `[mixinjs]` 下面就变成了 `mixinjs.allowThreads`，不会生效。
 - 同一个表头不要写两次。
-- 文件格式错误，或者顶部的键类型写错时，日志会警告 `Failed to load nekojs/config/engine.toml, using default sandbox config`，这时**所有设置都按默认值处理**。
+- 引擎配置无法读取、格式错误、流水线字段无效或所选组合不兼容时，NekoJS 会以 `NEKO-1030` 停止脚本初始化，不再静默使用默认值。这本身不会退出游戏进程。
 
 改了 `jsxAutomaticRuntime` 之后，再执行一次 `/nekojs probe`，让编辑器的 `jsconfig.json` 跟着更新。
+
+<a id="language-pipelines"></a>
+## 脚本语言流水线
+
+可在 `engine.toml` 中按扩展名单独配置。带点的键加引号；`.js`、`.mjs` 和 `.cjs` 是不同的键。以下仅使用内置前端和检查器：
+
+```toml
+[languagePipelines.".py"]
+frontend = "nekojs:python"
+sourceChecks = []
+outputChecks = ["nekojs:javascript"]
+```
+
+省略 `frontend` 即沿用自动选择。省略某个检查列表即保留该阶段的默认行为：原生 JavaScript 检查源码，其他前端检查生成的 JavaScript。显式空列表只跳过该阶段。显式列出的检查按顺序执行，且必须支持前端的表示、方言、能力与两种检查范围。普通发现会上报，但不阻止脚本执行。提供者抛出异常属于失败；重载候选失败不会替换当前脚本。
+
+流水线也可以按目标语言选择 Probe backend。以下沿用 JavaScript 的自动前端选择，同时明确指定内置的 TypeScript 声明 backend：
+
+```toml
+[languagePipelines.".js"]
+probe = { language = "typescript", backend = "builtin" }
+```
+
+前端与 backend 必须有一项相同的编写能力。多个扩展名可以指向同一对语言和 backend，但不能为同一目标语言指定不同的 backend。引擎所选 backend 的输出目录不能重叠。选择优先级和重启要求见 [Probe 命令](probe-type-generation_cn#wiki-section-3)。
 
 <a id="wiki-section-5"></a>
 ## 安全建议

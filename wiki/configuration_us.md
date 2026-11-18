@@ -53,7 +53,7 @@ enabled = false
 | `enableEsmAuthoring` | `true` | Enables `import` / `export`. Turn it off only if you need pure CommonJS `require` behavior. See [Module system](module-system_us). |
 | `conciseScriptErrorLogs` | `true` | Error logs show only the short, source-focused message. Set `false` to log full stack traces when chasing a hard problem. |
 | `jsxAutomaticRuntime` | `false` | Compiles JSX with the automatic runtime, importing from the built-in `nekojs/jsx-runtime` module. The default is the classic runtime. See [TypeScript and JSX](typescript-and-jsx_us). |
-| `scriptMemberValidation` | `true` | Checks member names on Bindings and event callbacks before scripts load and reports typos to the error panel. It is not full type checking. Turn it off to skip the extra parsing. |
+| `scriptMemberValidation` | `true` | Runs preflight checks. It is not full type checking. Turning it off does not bypass pipeline configuration validation, compilation, authorization or sandbox checks. |
 | `packSync.mode` | `"off"` | Whether a multiplayer server sends script packs to clients. `off`: never; `hashOnly`: send hashes only, clients never run server packs; `all`: send packs and run them on the client. See [Script packs](script-packs_us). |
 | `packSync.allowUnsigned` | `false` | Whether to accept server script packs without a signature. By default they are rejected and the player is disconnected with a message. |
 | `dynamicRegistry.enabled` | `false` | Experimental: lets scripts register new content after the server has started. Not every platform or registry supports it. See [Registering new content](registering-new-content_us). |
@@ -75,9 +75,32 @@ When editing TOML:
 - Write booleans without quotes: `allowThreads = true`, not `"true"`.
 - Keys without a table (such as `allowThreads`) must come before the first `[...]` header. Under `[mixinjs]` the key becomes `mixinjs.allowThreads` and has no effect.
 - Do not write the same table header twice.
-- If the file is malformed, or a top-level key has the wrong type, the log warns `Failed to load nekojs/config/engine.toml, using default sandbox config` and **every setting uses its default**.
+- An unreadable or malformed engine file, an invalid pipeline field or an incompatible selection stops NekoJS script initialization with `NEKO-1030`. The engine does not silently replace it with defaults. This does not itself stop the game process.
 
 After changing `jsxAutomaticRuntime`, run `/nekojs probe` once so the editor's `jsconfig.json` matches.
+
+<a id="language-pipelines"></a>
+## Language pipelines
+
+Use an optional table per extension in `engine.toml`. Quote dotted keys; `.js`, `.mjs` and `.cjs` are separate. This example uses only built-ins:
+
+```toml
+[languagePipelines.".py"]
+frontend = "nekojs:python"
+sourceChecks = []
+outputChecks = ["nekojs:javascript"]
+```
+
+Omit `frontend` to use automatic selection. A missing check list keeps the stage's default: check native JavaScript source, or check generated JavaScript for other frontends. An explicit empty list skips only that stage. Explicit checks run in listed order and must support the frontend's representation, dialect, capabilities and both check scopes. Findings are reported without stopping scripts. A provider exception is a failure; a failed reload candidate does not replace the active scripts.
+
+A pipeline can also select a Probe backend by target language. This example uses the automatic JavaScript frontend and explicitly selects the built-in TypeScript declaration backend:
+
+```toml
+[languagePipelines.".js"]
+probe = { language = "typescript", backend = "builtin" }
+```
+
+The frontend and backend must share an authoring capability. Multiple extensions may select the same pair, but they cannot select different backends for the same target language. Output directories for engine-selected backends cannot overlap. See [Probe commands](probe-type-generation_us#wiki-section-3) for selection order and when a restart is required.
 
 <a id="wiki-section-5"></a>
 ## Safety advice

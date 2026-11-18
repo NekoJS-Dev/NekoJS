@@ -72,6 +72,11 @@ public final class TypeScriptProbeBackend implements ProbeBackend {
         return "builtin";
     }
 
+    @Override
+    public Set<String> authoringCapabilities() {
+        return Set.of(com.tkisor.nekojs.api.compiler.FrontendSemantics.TYPESCRIPT_AUTHORING);
+    }
+
     /**
      * TS backend always needs shared IR: IR is the only rendering source (since Phase 2.7); collected classes are
      * uniformly reflected into IR by {@link ProbeCoordinator}, this backend only complements TS-specific adapter target classes/host types.

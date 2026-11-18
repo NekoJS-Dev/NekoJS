@@ -76,6 +76,10 @@ public class MyAddonPlugin implements NekoPluginExtensionProvider {
 - **ID 全局唯一**：建议命名为 `<模组ID>:<名称>`。
 - **冲突策略**：注册时必须指定合并策略（如 `append()` 或 `failFast()`）。
 
+如需给前端提供稳定身份，在 `registerScriptCompilers` 钩子中调用 `registry.registerFrontend(id, implementationRevision, implementation, semantics)`。实现可以是 `NekoLanguagePlugin`，也可以是封装 `IScriptCompiler` 的 `NekoScriptLanguage`。使用唯一的小写命名空间 ID 和非空的实现修订，并通过 `FrontendSemantics` 声明源、产物和额外能力。这一次注册同时加入具名和自动候选，不必再用旧接口注册同一实现。已有未具名实现仍只参与自动选择；`replaceLanguage` 可以更换自动候选，但不会删除已注册的具名候选。示例和内置 ID 见已安装的编写手册中 Script language pipelines 一章。
+
+如需独立提供检查，在 `registerScriptPreflights(ScriptPreflightRegistry)` 中注册 `ScriptPreflight`。不可变的 `Descriptor` 声明唯一检查 ID、修订、`SOURCE` 或 `OUTPUT` 各阶段支持的表示和方言、支持的范围以及所需能力。运行时根拥有的 worker 可能由不同脚本类型的所有者线程并发调用；只保留线程安全的纯分析数据，不要保留请求或其 schema。普通发现通过返回值报告；抛出的异常属于提供者故障。注册本身不会调度检查。
+
 <a id="wiki-section-5"></a>
 ## 🛠 开发进阶
 

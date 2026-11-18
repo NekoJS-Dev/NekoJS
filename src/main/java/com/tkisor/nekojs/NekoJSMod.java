@@ -69,7 +69,14 @@ public class NekoJSMod extends NekoJS {
         // Root is held only by this entry's constructor (a final local) and no static fields are set.
         // Lifecycle handles are injected into other code through bind/register; there is no public
         // static root.
-        NekoRuntimeRoot root = initializeScripts();
+        NekoRuntimeRoot root;
+        try {
+            root = initializeScripts();
+        } catch (com.tkisor.nekojs.core.config.EngineConfigException failure) {
+            LOGGER.error("NekoJS script initialization stopped; correct the engine configuration and restart: {}", failure.getMessage());
+            return;
+        }
+        modEventBus.addListener(NekoJSMod::onLoadComplete);
         com.tkisor.nekojs.mixinjs.MixinPlatform.install(root);
         NeoForge.EVENT_BUS.addListener((RegisterCommandsEvent event) -> NekoJSCommands.register(event, root));
         PDataSyncListener.bind(root);
@@ -136,7 +143,6 @@ public class NekoJSMod extends NekoJS {
                 }
             }
         });
-        modEventBus.addListener(NekoJSMod::onLoadComplete);
     }
 
     /** Capability registration: run the scripts first (startup scripts have already loaded their

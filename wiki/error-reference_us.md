@@ -59,6 +59,13 @@ Codes such as `CONTROL_DISABLED` and `INDEX_UNAVAILABLE` returned by the AI quer
 | `NEKO-1023` | authoring live control requires server owner thread | The live AI action did not run on the right thread |
 | `NEKO-1024` | authoring live server runtime is no longer current | The server or client stopped or changed; the old action does not continue in the new world |
 | `NEKO-1025` | script property rejected; previous value or default retained | The warning gives the file, line and reason |
+| `NEKO-1026` | named frontend registration or metadata rejected | Check the ID, revision, implementation and semantics; register before plugin bootstrap freezes the registry |
+| `NEKO-1027` | explicit frontend selection rejected | Check the requested ID against the candidates for that extension; there is no automatic fallback |
+| `NEKO-1028` | script preflight contract rejected | Check the provider ID, supported stage, input dialect, scope and required capabilities |
+| `NEKO-1029` | script preflight provider failed | Provider setup, execution or cleanup failed; inspect the named provider, phase and original cause |
+| `NEKO-1030` | engine configuration or pipeline selection rejected | Script initialization stops; check the engine config path, extension, requested ID or compatibility detail; also check for overlapping Probe outputs or managed `.old` and `.staging` trees, then restart |
+| `NEKO-1031` | finding from a third-party script preflight check | Reports the provider, phase, scope and rule; ordinary findings do not stop scripts |
+| `NEKO-1032` | engine-selected Probe generation rejected | Check `probe.toml` for invalid paths or overlap between outputs or managed `.old` and `.staging` trees; the run does not write declarations |
 
 <a id="wiki-section-5"></a>
 ## Log output limit
