@@ -456,7 +456,7 @@ public final class JsxHostAdapter implements GenerationGlobals.UiRoot, UiInspect
                 "layout", layoutCount,
                 "reconcile", reconcileCount,
                 "resize", resizeCount,
-                "paint", (long) screen.paintCount(),
+                "paint", screen == null ? 0L : (long) screen.paintCount(),
                 "diagnostics", diagnosticCount,
                 "cleanup", cleanupCount);
     }
@@ -1810,6 +1810,7 @@ public final class JsxHostAdapter implements GenerationGlobals.UiRoot, UiInspect
         return value;
     }
 
+    /** Buffered UI mutation transaction applied atomically to the JSX host tree. */
     public final class JsxHostTransaction {
         private final JsxHostTree.Transaction transaction;
 

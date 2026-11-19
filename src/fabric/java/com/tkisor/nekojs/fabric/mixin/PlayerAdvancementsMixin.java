@@ -43,4 +43,10 @@ public abstract class PlayerAdvancementsMixin {
     private void nekojs$onAdvancementEarned(AdvancementHolder holder, DisplayInfo display, CallbackInfo ci) {
         FabricPlayerEventBindings.postAdvancement(player, holder);
     }
+
+    @Inject(method = "lambda$award$0(Lnet/minecraft/advancements/AdvancementHolder;Lnet/minecraft/advancements/DisplayInfo;)V",
+            at = @At("TAIL"), require = 1, allow = 1)
+    private void nekojs$afterAdvancementAnnouncement(AdvancementHolder holder, DisplayInfo display, CallbackInfo ci) {
+        FabricPlayerEventBindings.postStableAdvancement(player, holder);
+    }
 }

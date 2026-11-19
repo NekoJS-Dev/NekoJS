@@ -66,7 +66,7 @@ public final class PackSyncClientConnections {
         NekoJS.LOGGER.debug("Reloading CLIENT scripts after server pack sync change");
         try {
             return root.reload(ScriptType.CLIENT).success();
-        } catch (Throwable failure) {
+        } catch (Exception failure) {
             NekoJS.LOGGER.error("CLIENT script reload after server pack sync failed", failure);
             return false;
         }

@@ -17,6 +17,7 @@ import com.tkisor.nekojs.core.fs.NekoJSPaths;
 import com.tkisor.nekojs.core.lifecycle.NekoRuntimeRoot;
 import com.tkisor.nekojs.core.plugin.PluginGenerationHooks;
 import com.tkisor.nekojs.resource.ScriptPackDataManager;
+import com.tkisor.nekojs.stage.StageDomainOwner;
 import com.tkisor.nekojs.wrapper.event.server.LootTableEventJS;
 import com.tkisor.nekojs.probe.ProbeCoordinator;
 import net.minecraft.resources.Identifier;
@@ -29,9 +30,13 @@ import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.AddServerReloadListenersEvent;
 import net.neoforged.neoforge.event.server.ServerAboutToStartEvent;
 import net.neoforged.neoforge.event.server.ServerStartedEvent;
+import net.neoforged.neoforge.event.server.ServerStoppedEvent;
+import net.neoforged.neoforge.event.server.ServerStoppingEvent;
+import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import java.io.Reader;
 import java.util.Map;
 
+/** NeoForge event subscriber forwarding server lifecycle, tick, datapack, and tag events to NekoJS. */
 @EventBusSubscriber(modid = NekoJS.MODID)
 public class ServerEventListener {
     private static volatile boolean schemaAutoDiscovered;
@@ -40,9 +45,32 @@ public class ServerEventListener {
      * ready by the time a server event fires. */
     private static volatile NekoRuntimeRoot runtimeRoot;
 
+    /** Root-owned stage domain collector bound during mod initialization. */
+    private static volatile StageDomainOwner boundStageDomainOwner;
+
     /** Called by {@code NekoJSMod} after the root is assembled; it runs before any server or world event. */
     public static void bind(NekoRuntimeRoot root) {
         runtimeRoot = root;
+    }
+
+    /** Injects the root-owned {@link StageDomainOwner} created during mod initialization. */
+    public static void bindStageDomain(StageDomainOwner stageDomainOwner) {
+        boundStageDomainOwner = stageDomainOwner;
+    }
+
+    private static StageDomainOwner stageDomain() {
+        StageDomainOwner owner = boundStageDomainOwner;
+        if (owner != null) {
+            return owner;
+        }
+        var root = runtimeRoot;
+        if (root != null) {
+            var collector = root.domainCollector(StageDomainOwner.DOMAIN);
+            if (collector instanceof StageDomainOwner rootOwner) {
+                return rootOwner;
+            }
+        }
+        return StageDomainOwner.current();
     }
 
     static {
@@ -74,7 +102,10 @@ public class ServerEventListener {
     @SubscribeEvent
     public static void onServerAboutToStart(ServerAboutToStartEvent event) {
         var server = event.getServer();
+        StageDomainOwner stageDomainOwner = stageDomain();
+        if (stageDomainOwner != null) stageDomainOwner.bindServer(server);
         activateWorldPacks(server);
+        com.tkisor.nekojs.bindings.event.NeoForgeCommandRegistration.postInstalled(server);
         mountScriptPackData(server);
         // Item and Block property changes, collection point for the initial generation: the event goes to
         // the active bus listeners, and once the domain owner's preflight passes, the baseline is
@@ -92,11 +123,30 @@ public class ServerEventListener {
         if (villagerTradeDomain != null) {
             villagerTradeDomain.applyInitialPlan(server);
         }
+        if (stageDomainOwner != null) {
+            stageDomainOwner.onServerAboutToStart(event.getServer());
+        }
         // Collect the first inert dynamic batch after server registries become available.
         // The guard preserves the 1.21.1 node's deliberate absence when re-extracting its source.
 //? if >=26 {
         com.tkisor.nekojs.dynamic.DynamicRegistryFacade.fireInitialCollection();
 //?}
+    }
+
+    @SubscribeEvent
+    public static void onServerStopping(ServerStoppingEvent event) {
+        StageDomainOwner stageDomainOwner = stageDomain();
+        if (stageDomainOwner != null) {
+            stageDomainOwner.onServerStopping(event.getServer());
+        }
+    }
+
+    @SubscribeEvent
+    public static void onServerTickPost(ServerTickEvent.Post event) {
+        StageDomainOwner stageDomainOwner = stageDomain();
+        if (stageDomainOwner != null) {
+            stageDomainOwner.onServerTickPost(event.getServer());
+        }
     }
 
     /** The modification domain owner. The root grants the domain collector; returns null when none is
@@ -150,9 +200,10 @@ public class ServerEventListener {
         var worldPacks = com.tkisor.nekojs.core.pack.ScriptPackRegistry.get()
                 .activateWorldPacks(server.getWorldPath(net.minecraft.world.level.storage.LevelResource.ROOT));
         if (worldPacks.isEmpty()) return;
+        var root = runtimeRoot;
+        if (root == null) return;
         try {
-
-            runtimeRoot.reload(ScriptType.SERVER);
+            root.reload(ScriptType.SERVER);
         } catch (Exception e) {
             com.tkisor.nekojs.script.ScriptTypeEnv.logger(ScriptType.SERVER).error("SERVER reload after world pack activation failed: ", e);
         }
@@ -165,7 +216,7 @@ public class ServerEventListener {
      * callbacks stop firing on the menu tick after the player returns to the title screen.
      */
     @SubscribeEvent
-    public static void onServerStopped(net.neoforged.neoforge.event.server.ServerStoppedEvent event) {
+    public static void onServerStopped(ServerStoppedEvent event) {
         var removed = com.tkisor.nekojs.core.pack.ScriptPackRegistry.get().deactivateWorldPacks();
         // The script pack datapack mount and the villager trade snapshot die with the server instance; reset
         // them so the next mount starts clean.
@@ -181,11 +232,16 @@ public class ServerEventListener {
         if (villagerTradeDomain != null) {
             villagerTradeDomain.clearServer();
         }
-        if (runtimeRoot != null) runtimeRoot.mixins().clearCallbacks();
-        if (removed.isEmpty()) return;
-        runtimeRoot.clearWorldPackListeners(ScriptType.SERVER, removed);
+        StageDomainOwner stageDomainOwner = stageDomain();
+        if (stageDomainOwner != null) {
+            stageDomainOwner.onServerStopped();
+        }
+        var root = runtimeRoot;
+        if (root != null) root.mixins().clearCallbacks();
+        if (removed.isEmpty() || root == null) return;
+        root.clearWorldPackListeners(ScriptType.SERVER, removed);
         if (com.tkisor.nekojs.platform.Platform.isClient()) {
-            runtimeRoot.clearWorldPackListeners(ScriptType.CLIENT, removed);
+            root.clearWorldPackListeners(ScriptType.CLIENT, removed);
         }
     }
 
@@ -210,15 +266,20 @@ public class ServerEventListener {
             schemaAutoDiscovered = true;
         }
         event.addListener(Identifier.fromNamespaceAndPath(NekoJS.MODID, "recipe_type_definitions"), (ResourceManagerReloadListener) ServerEventListener::loadRecipeTypeDefinitions);
-        try {
-
-            runtimeRoot.reload(ScriptType.SERVER);
-        } catch (Exception e) {
-            com.tkisor.nekojs.script.ScriptTypeEnv.logger(ScriptType.SERVER).error("Script overload failed: ", e);
-        }
         // Loot table JSON handling; the reload flow runs before loot parsing, so changes apply to this reload.
-        ServerEvents.LOOT_TABLES.post(new LootTableEventJS());
-        postGenerateData();
+        var owner = stageDomain();
+        if (owner != null) {
+            owner.dispatchResourceScripts(event.getServerResources(), ServerEventListener::dispatchResourceScripts);
+        } else {
+            dispatchResourceScripts(null);
+        }
+    }
+
+    private static void dispatchResourceScripts(
+            com.tkisor.nekojs.core.pack.PackActivationCoordinator.PreparedReload pending) {
+        if (pending == null) ServerEvents.LOOT_TABLES.post(new LootTableEventJS());
+        else pending.dispatch(ServerEvents.LOOT_TABLES, new LootTableEventJS(), null);
+        postGenerateData(pending);
     }
 
     /**
@@ -231,11 +292,14 @@ public class ServerEventListener {
      * validates them and publishes them atomically, instead of each writing to the active root
      * directly. A failed publish keeps the previous data; see {@code DataGenerationBatch}.
      */
-    private static void postGenerateData() {
+    private static void postGenerateData(com.tkisor.nekojs.core.pack.PackActivationCoordinator.PreparedReload pending) {
         try {
             com.tkisor.nekojs.wrapper.DataGenerationBatch.PublishResult result =
                     PluginGenerationHooks.runGenerateData(NekoJSPaths.get().data(), "after_mods",
-                            generator -> ServerEvents.GENERATE_DATA.post(generator, "after_mods"));
+                            generator -> {
+                                if (pending == null) ServerEvents.GENERATE_DATA.post(generator, "after_mods");
+                                else pending.dispatch(ServerEvents.GENERATE_DATA, generator, "after_mods");
+                            });
             int skippedCount = result.skippedUserFiles().size();
             com.tkisor.nekojs.script.ScriptTypeEnv.logger(ScriptType.SERVER).info(
                     "generateData stage 'after_mods' published {} file(s); skipped {} user-owned file(s)",
@@ -249,6 +313,7 @@ public class ServerEventListener {
                         skippedSummary);
             }
         } catch (Exception e) {
+            if (pending != null) throw new IllegalStateException("[NEKO-4071] Data generation rejected the resource script candidate", e);
             com.tkisor.nekojs.script.ScriptTypeEnv.logger(ScriptType.SERVER)
                     .error("generateData batch failed; nothing was published and the previous active data is retained: ", e);
         }

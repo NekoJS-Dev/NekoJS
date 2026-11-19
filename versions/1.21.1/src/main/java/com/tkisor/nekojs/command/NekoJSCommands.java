@@ -23,6 +23,7 @@ import com.tkisor.nekojs.probe.ProbeBackend;
 import com.tkisor.nekojs.probe.ProbeBackendRegistry;
 import com.tkisor.nekojs.probe.ProbeBackendSelector;
 import com.tkisor.nekojs.probe.ProbeCoordinator;
+import com.tkisor.nekojs.stage.StageCommandsHelper;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.network.chat.ClickEvent;
@@ -31,7 +32,6 @@ import net.minecraft.network.chat.HoverEvent;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.item.crafting.RecipeManager;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
 import net.neoforged.neoforge.network.PacketDistributor;
 
@@ -40,10 +40,12 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
+/** Registers the {@code /nekojs} server command tree on 1.21.1. */
 public final class NekoJSCommands {
 
     private NekoJSCommands() {}
 
+    /** Registers {@code /nekojs} subcommands with the server command dispatcher. */
     public static void register(RegisterCommandsEvent event, NekoRuntimeRoot root) {
         CommandDispatcher<CommandSourceStack> dispatcher = event.getDispatcher();
 
@@ -98,6 +100,8 @@ public final class NekoJSCommands {
                         .then(Commands.literal("trust")
                                 .then(Commands.argument("address", AddressArgument.address())
                                         .executes(context -> trustServer(context.getSource(), AddressArgument.getAddress(context, "address")))))
+
+                        .then(StageCommandsHelper.buildStagesLiteral())
 
                         .then(probeCommand(root)),
                 NeoForgeInformationCommands::containedFluid
@@ -207,11 +211,13 @@ public final class NekoJSCommands {
             });
             return 1;
         }
+        IRecipeManagerExtension.ReplayObservation replay = type == ScriptType.SERVER
+                ? observeRecipeReplay(source) : () -> false;
         var result = root.reloadPack(type, selector);
         int outcome = reportPackReload(source, result);
-        if (result.success() && type == ScriptType.SERVER) {
-            try { applyRecipeScripts(source); }
-            catch (Exception failure) { source.sendFailure(Component.translatable("nekojs.command.packs.post_reload_failed", failure.getMessage())); return 0; }
+        if (result.success() && type == ScriptType.SERVER && !result.affected().isEmpty() && !replay.succeeded()) {
+            source.sendFailure(Component.translatable("nekojs.command.packs.post_reload_failed", "Recipe replay did not complete."));
+            return 0;
         }
         return outcome;
     }
@@ -353,12 +359,14 @@ public final class NekoJSCommands {
             if (type == ScriptType.CLIENT && com.tkisor.nekojs.client.ClientReloadExecutor.isClientDist()) {
                 return scheduleClientReload(source, type, root, null);
             }
-            reloadResult = root.reload(type);
+            IRecipeManagerExtension.ReplayObservation replay = type == ScriptType.SERVER
+                    ? observeRecipeReplay(source) : () -> false;
             // Re-apply recipe scripts after a SERVER script reload (NeoForge recipe hot reload).
+            reloadResult = root.reload(type);
             boolean recipeBroadcast = false;
-            if (type == ScriptType.SERVER) {
+            if (type == ScriptType.SERVER && reloadResult.success()) {
                 try {
-                    recipeBroadcast = applyRecipeScripts(source);
+                    recipeBroadcast = replay.succeeded();
                     // The SERVER generation is committed before platform-owned follow-up runs.
                     MinecraftServer server = source.getServer();
                     var packs = com.tkisor.nekojs.core.pack.ScriptPackRegistry.get().enabledPacks();
@@ -369,6 +377,9 @@ public final class NekoJSCommands {
                 } catch (Exception postReloadFailure) {
                     return reportPostReloadFailure(source, root, reloadResult,
                             "recipe/pack processing", postReloadFailure);
+                }
+                if (!recipeBroadcast) {
+                    return reportPostReloadFailure(source, root, reloadResult, "recipe replay", null);
                 }
             }
             // Recipe reload has its own broadcast; report the committed generation as well.
@@ -472,15 +483,12 @@ public final class NekoJSCommands {
      * cached baseJsons and runs the recipe scripts again, so recipe JSON that scripts added, changed or
      * removed is parsed again and replaces the recipes in the RecipeManager.
      */
-    private static boolean applyRecipeScripts(CommandSourceStack source) {
-        MinecraftServer server = source.getServer();
-        if (server == null) return false;
-        RecipeManager recipeManager = server.getRecipeManager();
-        if (recipeManager instanceof IRecipeManagerExtension ext) {
-            ext.nekojs$applyScripts();
-            return true;
+    private static IRecipeManagerExtension.ReplayObservation observeRecipeReplay(CommandSourceStack source) {
+        var server = source.getServer();
+        if (server != null && server.getRecipeManager() instanceof IRecipeManagerExtension extension) {
+            return extension.nekojs$observeScriptReplays();
         }
-        return false;
+        return () -> false;
     }
 
     private static int reloadFile(CommandSourceStack source, ScriptType type, String filePath, NekoRuntimeRoot root) {

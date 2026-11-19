@@ -22,17 +22,20 @@ public interface RegExpKJS {
         if (literal.length() < 3 || literal.charAt(0) != '/') return null;
         StringBuilder expression = new StringBuilder();
         int position = 1;
+        boolean closed = false;
         while (position < literal.length()) {
             char current = literal.charAt(position++);
             if (current == '\\' && position < literal.length() && literal.charAt(position) == '/') {
                 position++;
                 expression.append('/');
             } else if (current == '/') {
+                closed = true;
                 break;
             } else {
                 expression.append(current);
             }
         }
+        if (!closed) return null;
         int flags = 0;
         while (position < literal.length()) {
             int flag = switch (literal.charAt(position++)) {
@@ -45,7 +48,7 @@ public interface RegExpKJS {
                 case 'U' -> Pattern.UNICODE_CHARACTER_CLASS;
                 default -> 0;
             };
-            if (flag == 0) break;
+            if (flag == 0) return null;
             flags |= flag;
         }
         return Pattern.compile(expression.toString(), flags);

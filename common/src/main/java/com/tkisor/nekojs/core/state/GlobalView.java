@@ -44,10 +44,10 @@ public final class GlobalView implements Map<String, Object> {
 
     @Override
     public Object put(String key, Object value) {
-        if (writes != null && generation.isTransactional()) {
-            return writes.set(key, value);
-        }
         synchronized (store.ownerLock()) {
+            if (writes != null && generation.isTransactional()) {
+                return writes.set(key, value);
+            }
             return store.rawPut(key, value, generation, GuestValues.isGuest(value));
         }
     }
@@ -55,21 +55,21 @@ public final class GlobalView implements Map<String, Object> {
     @Override
     public Object remove(Object key) {
         if (!(key instanceof String stringKey)) return null;
-        if (writes != null && generation.isTransactional()) {
-            return writes.delete(stringKey);
-        }
         synchronized (store.ownerLock()) {
+            if (writes != null && generation.isTransactional()) {
+                return writes.delete(stringKey);
+            }
             return store.rawRemove(stringKey);
         }
     }
 
     @Override
     public void clear() {
-        if (writes != null && generation.isTransactional()) {
-            writes.markClear();
-            return;
-        }
         synchronized (store.ownerLock()) {
+            if (writes != null && generation.isTransactional()) {
+                writes.markClear();
+                return;
+            }
             store.rawClear();
         }
     }
@@ -79,19 +79,23 @@ public final class GlobalView implements Map<String, Object> {
     @Override
     public Object get(Object key) {
         if (!(key instanceof String stringKey)) return null;
-        if (writes != null && generation.isTransactional()) {
-            return writes.effectiveGet(stringKey);
+        synchronized (store.ownerLock()) {
+            if (writes != null && generation.isTransactional()) {
+                return writes.effectiveGet(stringKey);
+            }
+            return store.rawGet(stringKey);
         }
-        return store.get(stringKey);
     }
 
     @Override
     public boolean containsKey(Object key) {
         if (!(key instanceof String stringKey)) return false;
-        if (writes != null && generation.isTransactional()) {
-            return writes.effectiveContainsKey(stringKey);
+        synchronized (store.ownerLock()) {
+            if (writes != null && generation.isTransactional()) {
+                return writes.effectiveContainsKey(stringKey);
+            }
+            return store.containsKey(stringKey);
         }
-        return store.containsKey(stringKey);
     }
 
     @Override
@@ -140,10 +144,10 @@ public final class GlobalView implements Map<String, Object> {
      * copied out under the lock so no internal structure leaks.
      */
     private Map<String, Object> effectiveContents() {
-        if (writes != null && generation.isTransactional()) {
-            return writes.effectiveSnapshot();
-        }
         synchronized (store.ownerLock()) {
+            if (writes != null && generation.isTransactional()) {
+                return writes.effectiveSnapshot();
+            }
             Map<String, Object> out = new HashMap<>();
             for (String key : store.keysUnlocked()) {
                 out.put(key, store.rawGet(key));

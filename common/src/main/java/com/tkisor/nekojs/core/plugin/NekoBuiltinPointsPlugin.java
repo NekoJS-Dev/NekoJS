@@ -25,11 +25,11 @@ public final class NekoBuiltinPointsPlugin implements NekoJSPlugin, NekoPluginEx
     private final java.util.function.Function<NekoJSPlugin, String> owners;
 
     public NekoBuiltinPointsPlugin(ScriptPropertyRegistry scriptProperties, boolean client) {
-        this(scriptProperties, client, plugin -> null);
+        this(scriptProperties, client, plugin -> PluginOwnerIds.resolve(null, plugin));
     }
 
     NekoBuiltinPointsPlugin(ScriptPropertyRegistry scriptProperties, boolean client,
-                           java.util.function.Function<NekoJSPlugin, String> owners) {
+                            java.util.function.Function<NekoJSPlugin, String> owners) {
         this.scriptProperties = scriptProperties;
         this.client = client;
         this.owners = owners;

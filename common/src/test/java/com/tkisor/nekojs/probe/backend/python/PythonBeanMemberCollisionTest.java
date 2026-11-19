@@ -17,6 +17,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class PythonBeanMemberCollisionTest {
+
+    private static final TypeReflector REFLECTOR = new TypeReflector();
     public interface Matches {
         default int matches(String input) { return input.length(); }
     }
@@ -107,10 +109,9 @@ class PythonBeanMemberCollisionTest {
 
     @Test
     void covariantGetterOverridesNearestInheritedFieldProjection() throws Exception {
-        var reflector = new TypeReflector();
-        var declarations = List.of(reflector.reflect(BaseValue.class), reflector.reflect(PreciseValue.class),
-                reflector.reflect(PreciseFieldParent.class), reflector.reflect(BroaderGetterMiddle.class),
-                reflector.reflect(PreciseGetterChild.class));
+        var declarations = List.of(REFLECTOR.reflect(BaseValue.class), REFLECTOR.reflect(PreciseValue.class),
+                REFLECTOR.reflect(PreciseFieldParent.class), REFLECTOR.reflect(BroaderGetterMiddle.class),
+                REFLECTOR.reflect(PreciseGetterChild.class));
         var available = declarations.stream().map(declaration -> declaration.fqn)
                 .collect(java.util.stream.Collectors.toSet());
         var renderer = new PythonClassRenderer(new ApiTypeRefPyRenderer(available), declarations);
@@ -142,9 +143,8 @@ class PythonBeanMemberCollisionTest {
 
     @Test
     void ancestorStaticFieldDoesNotSuppressInstanceBeanRead() {
-        var reflector = new TypeReflector();
-        var parent = reflector.reflect(StaticBooleanFieldParent.class);
-        var child = reflector.reflect(InstanceStringGetterChild.class);
+        var parent = REFLECTOR.reflect(StaticBooleanFieldParent.class);
+        var child = REFLECTOR.reflect(InstanceStringGetterChild.class);
         var renderer = new PythonClassRenderer(new ApiTypeRefPyRenderer(Set.of(parent.fqn, child.fqn)),
                 List.of(parent, child));
         try (Context context = Context.newBuilder("js")
@@ -170,9 +170,8 @@ class PythonBeanMemberCollisionTest {
 
     @Test
     void inheritedFieldRetainsDifferentBeanReadAndFieldWriteTypes() throws Exception {
-        var reflector = new TypeReflector();
-        var declarations = List.of(reflector.reflect(BooleanFieldParent.class),
-                reflector.reflect(StringGetterChild.class));
+        var declarations = List.of(REFLECTOR.reflect(BooleanFieldParent.class),
+                REFLECTOR.reflect(StringGetterChild.class));
         var available = declarations.stream().map(declaration -> declaration.fqn)
                 .collect(java.util.stream.Collectors.toSet());
         var renderer = new PythonClassRenderer(new ApiTypeRefPyRenderer(available), declarations);
@@ -202,9 +201,8 @@ class PythonBeanMemberCollisionTest {
 
     @Test
     void inheritedBeanFieldProjectionUsesEditedDeclarations() {
-        var reflector = new TypeReflector();
-        var parent = reflector.reflect(BooleanFieldParent.class);
-        var child = reflector.reflect(StringGetterChild.class);
+        var parent = REFLECTOR.reflect(BooleanFieldParent.class);
+        var child = REFLECTOR.reflect(StringGetterChild.class);
         var field = parent.fields.getFirst();
         var renderer = new PythonClassRenderer(new ApiTypeRefPyRenderer(Set.of(parent.fqn, child.fqn)),
                 List.of(parent, child));
@@ -226,10 +224,9 @@ class PythonBeanMemberCollisionTest {
 
     @Test
     void nestedAccessorAliasDoesNotReplaceDeclaredOrInheritedFields() throws Exception {
-        var reflector = new TypeReflector();
-        var parent = reflector.reflect(GetterNamedField.class);
-        var combined = reflector.reflect(FieldAndNestedGetter.class);
-        var inherited = reflector.reflect(InheritedFieldAndNestedGetter.class);
+        var parent = REFLECTOR.reflect(GetterNamedField.class);
+        var combined = REFLECTOR.reflect(FieldAndNestedGetter.class);
+        var inherited = REFLECTOR.reflect(InheritedFieldAndNestedGetter.class);
         var declarations = List.of(parent, combined, inherited);
         var available = declarations.stream().map(declaration -> declaration.fqn)
                 .collect(java.util.stream.Collectors.toSet());
@@ -260,7 +257,7 @@ class PythonBeanMemberCollisionTest {
 
     @Test
     void getterNamedFieldDoesNotBecomeAnAccessorAliasCallConflict() {
-        var declaration = new TypeReflector().reflect(GetterNamedField.class);
+        var declaration = REFLECTOR.reflect(GetterNamedField.class);
         var renderer = new PythonClassRenderer(new ApiTypeRefPyRenderer(Set.of(declaration.fqn)),
                 List.of(declaration));
         String output = renderer.render(declaration);
@@ -283,10 +280,9 @@ class PythonBeanMemberCollisionTest {
 
     @Test
     void nestedGetterAliasesYieldToRealAccessorCallTargets() throws Exception {
-        var reflector = new TypeReflector();
-        var declarations = List.of(reflector.reflect(NestedGetterParent.class),
-                reflector.reflect(NestedGetterChild.class), reflector.reflect(GetterNamedField.class),
-                reflector.reflect(FieldAndNestedGetter.class), reflector.reflect(InheritedFieldAndNestedGetter.class));
+        var declarations = List.of(REFLECTOR.reflect(NestedGetterParent.class),
+                REFLECTOR.reflect(NestedGetterChild.class), REFLECTOR.reflect(GetterNamedField.class),
+                REFLECTOR.reflect(FieldAndNestedGetter.class), REFLECTOR.reflect(InheritedFieldAndNestedGetter.class));
         var available = declarations.stream().map(declaration -> declaration.fqn)
                 .collect(java.util.stream.Collectors.toSet());
         var renderer = new PythonClassRenderer(new ApiTypeRefPyRenderer(available), declarations);
@@ -319,9 +315,8 @@ class PythonBeanMemberCollisionTest {
 
     @Test
     void overriddenGetterKeepsInheritedSetterInPython() throws Exception {
-        var reflector = new TypeReflector();
-        var declarations = List.of(reflector.reflect(ReadWrite.class), reflector.reflect(GenericBean.class),
-                reflector.reflect(GetterChild.class));
+        var declarations = List.of(REFLECTOR.reflect(ReadWrite.class), REFLECTOR.reflect(GenericBean.class),
+                REFLECTOR.reflect(GetterChild.class));
         var available = declarations.stream().map(declaration -> declaration.fqn)
                 .collect(java.util.stream.Collectors.toSet());
         var renderer = new PythonClassRenderer(new ApiTypeRefPyRenderer(available), declarations);
@@ -337,7 +332,7 @@ class PythonBeanMemberCollisionTest {
 
     @Test
     void staticMethodsAndInstanceFieldsRetainDifferentBindings() {
-        var declaration = new TypeReflector().reflect(StaticFieldName.class);
+        var declaration = REFLECTOR.reflect(StaticFieldName.class);
         String output = new PythonClassRenderer(new ApiTypeRefPyRenderer(Set.of(declaration.fqn))).render(declaration);
         assertTrue(output.contains("class _NekoMeta_"), output);
         assertTrue(output.contains("def tag(self) -> _NekoStatic_"), output);
@@ -345,7 +340,7 @@ class PythonBeanMemberCollisionTest {
 
     @Test
     void subclassClassBindingsRetainActualSuperclassOverloads() {
-        var declaration = new TypeReflector().reflect(SameNameChild.class);
+        var declaration = REFLECTOR.reflect(SameNameChild.class);
         String output = new PythonClassRenderer(new ApiTypeRefPyRenderer(Set.of(declaration.fqn)))
                 .render(declaration);
         assertTrue(output.contains("def __call__(self, left: str, right: str) -> bool"), output);
@@ -353,14 +348,13 @@ class PythonBeanMemberCollisionTest {
 
     @Test
     void mixedStaticAndInstanceCallsRetainTheirRealBinding() throws Exception {
-        var reflector = new TypeReflector();
-        var parent = reflector.reflect(Matches.class);
-        var mixed = reflector.reflect(MixedMatches.class);
-        var child = reflector.reflect(MixedChild.class);
-        var same = reflector.reflect(SameNameChild.class);
-        var fieldParent = reflector.reflect(FieldParent.class);
-        var fieldChild = reflector.reflect(FieldChild.class);
-        var fieldStatic = reflector.reflect(StaticFieldName.class);
+        var parent = REFLECTOR.reflect(Matches.class);
+        var mixed = REFLECTOR.reflect(MixedMatches.class);
+        var child = REFLECTOR.reflect(MixedChild.class);
+        var same = REFLECTOR.reflect(SameNameChild.class);
+        var fieldParent = REFLECTOR.reflect(FieldParent.class);
+        var fieldChild = REFLECTOR.reflect(FieldChild.class);
+        var fieldStatic = REFLECTOR.reflect(StaticFieldName.class);
         var renderer = new PythonClassRenderer(new ApiTypeRefPyRenderer(Set.of(parent.fqn, mixed.fqn, child.fqn,
                 same.fqn, fieldParent.fqn, fieldChild.fqn, fieldStatic.fqn)),
                 List.of(parent, mixed, child, same, fieldParent, fieldChild, fieldStatic));
@@ -425,7 +419,7 @@ class PythonBeanMemberCollisionTest {
 
     @Test
     void collisionsKeepOriginalAccessorsWithoutShadowingMethodsOrFields() {
-        var declaration = new TypeReflector().reflect(CollisionFixture.class);
+        var declaration = REFLECTOR.reflect(CollisionFixture.class);
         var renderer = new PythonClassRenderer(new ApiTypeRefPyRenderer(Set.of(declaration.fqn)));
         String output = renderer.render(declaration);
         assertTrue(output.contains("def getRead(self) -> str"), output);
@@ -446,7 +440,7 @@ class PythonBeanMemberCollisionTest {
 
     @Test
     void hiddenOrRenamedMembersDoNotSuppressUnambiguousBeanProperties() {
-        var declaration = new TypeReflector().reflect(CollisionFixture.class);
+        var declaration = REFLECTOR.reflect(CollisionFixture.class);
         declaration.methods.stream().filter(m -> m.name.equals("read")).forEach(m -> m.hidden = true);
         declaration.methods.stream().filter(m -> m.name.equals("name")).forEach(m -> m.renameTo = "factory");
         declaration.fields.forEach(f -> f.hidden = true);

@@ -162,7 +162,7 @@ class DynamicRegistrationBookkeepingTest {
         IllegalArgumentException error = assertThrows(
                 IllegalArgumentException.class, () -> DynamicRegisterMode.parse("global"));
 
-        assertTrue(error.getMessage().contains("RegistryEvents"), "must point at the STARTUP alternative");
+        assertTrue(error.getMessage().contains("StartupEvents.registry"), "must point at the STARTUP alternative");
     }
 
     @Test

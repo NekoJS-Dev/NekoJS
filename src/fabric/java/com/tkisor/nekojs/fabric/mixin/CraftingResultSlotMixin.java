@@ -46,4 +46,11 @@ public abstract class CraftingResultSlotMixin {
             FabricPlayerEventBindings.postCrafted(player, carried, craftSlots);
         }
     }
+
+    @Inject(method = "checkTakeAchievements(Lnet/minecraft/world/item/ItemStack;)V",
+            at = @At(value = "INVOKE", target = "Lnet/minecraft/world/item/ItemStack;onCraftedBy(Lnet/minecraft/world/entity/player/Player;I)V",
+                    shift = At.Shift.AFTER), require = 1, allow = 1)
+    private void nekojs$afterCraftedItem(ItemStack carried, CallbackInfo ci) {
+        FabricPlayerEventBindings.postStableResultTake(player, carried, craftSlots);
+    }
 }

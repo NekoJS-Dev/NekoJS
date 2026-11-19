@@ -15,6 +15,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+/** Static ESM module linker that validates import/export bindings across the dependency graph. */
 public final class NekoEsmLinker {
     private final NekoModuleResolver resolver;
     /**
@@ -63,6 +64,9 @@ public final class NekoEsmLinker {
             Map<String, NekoEsmLocalBinding> seen = lexicalScopes.computeIfAbsent(scopeId, ignored -> new LinkedHashMap<>());
             NekoEsmLocalBinding previous = seen.putIfAbsent(binding.name(), binding);
             if (previous != null) {
+                if ("var".equals(previous.kind()) && "var".equals(binding.kind())) {
+                    continue;
+                }
                 throw diagnostic(path, source, binding.span(), "Duplicate local ESM binding '" + binding.name() + "'");
             }
         }

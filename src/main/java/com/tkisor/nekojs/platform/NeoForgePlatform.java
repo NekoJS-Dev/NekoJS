@@ -13,11 +13,12 @@ import net.neoforged.fml.loading.FMLLoader;
 import net.neoforged.fml.loading.FMLPaths;
 import net.neoforged.neoforge.common.NeoForge;
 import java.nio.file.Path;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
+/** NeoForge implementation of {@link IPlatform} providing loader, registry, and environment services. */
 public class NeoForgePlatform implements IPlatform {
     @Override
     public void visitLoadedPackRoots(java.util.function.BiConsumer<String, Path> visitor) {
@@ -81,23 +82,30 @@ public class NeoForgePlatform implements IPlatform {
         return FMLPaths.GAMEDIR.get().normalize().toAbsolutePath();
     }
 
-    private Map<String, IModInfo> modCache;
+    private volatile Map<String, IModInfo> modCache;
     @Override
     public Map<String, IModInfo> getMods() {
-        if (modCache == null) {
-            modCache = new LinkedHashMap<>();
-            for (var mod : ModList.get().getMods()) {
-                String id = mod.getModId();
-                // Build our own ModInfo implementation
-                IModInfo info = new ModInfo(
-                        id,
-                        mod.getDisplayName(),
-                        mod.getVersion().toString()
-                );
-                modCache.put(id, info);
+        Map<String, IModInfo> cache = modCache;
+        if (cache == null) {
+            synchronized (this) {
+                cache = modCache;
+                if (cache == null) {
+                    cache = new ConcurrentHashMap<>();
+                    for (var mod : ModList.get().getMods()) {
+                        String id = mod.getModId();
+                        // Build our own ModInfo implementation
+                        IModInfo info = new ModInfo(
+                                id,
+                                mod.getDisplayName(),
+                                mod.getVersion().toString()
+                        );
+                        cache.put(id, info);
+                    }
+                    modCache = cache;
+                }
             }
         }
-        return modCache;
+        return cache;
     }
 
     @Override

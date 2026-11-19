@@ -9,6 +9,7 @@ import com.tkisor.nekojs.core.fs.ScriptPathProvider;
 
 import java.io.IOException;
 import java.net.URI;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -17,6 +18,9 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+/**
+ * Stores VLQ source maps for compiled scripts and maps generated positions back to original source locations.
+ */
 public final class SourceMapRegistry implements NekoSourceMapView {
     private static final String VLQ_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
     private static final int MAPPING_ENTRY_WIDTH = 5;
@@ -32,13 +36,7 @@ public final class SourceMapRegistry implements NekoSourceMapView {
     private static final int CACHE_HARD_CAP = 4096;
 
     public SourceMapRegistry(Path root) {
-        Path canonicalRoot = root.normalize().toAbsolutePath();
-        try {
-            canonicalRoot = canonicalRoot.toRealPath();
-        } catch (IOException ignored) {
-            // A not-yet-created root still has a stable lexical identity.
-        }
-        this.root = canonicalRoot;
+        this.root = canonicalSplicedForm(root);
         this.caseInsensitive = this.root.getFileSystem().getPath("A")
                 .equals(this.root.getFileSystem().getPath("a"));
     }
@@ -165,6 +163,7 @@ public final class SourceMapRegistry implements NekoSourceMapView {
         return (line, column) -> map.map(line, column, true);
     }
 
+    /** Lookup function mapping generated line and column numbers back to original positions. */
     @FunctionalInterface
     public interface ArtifactPositions {
         OriginalPosition map(int generatedLine, int generatedColumn);
@@ -186,7 +185,7 @@ public final class SourceMapRegistry implements NekoSourceMapView {
                 return NormalizedSourceMap.empty(generatedPath, prependedLineCount);
             }
 
-            String file = normalizeSourcePath(generatedPath, null, stringMember(root, "file"));
+            String file = normalizeLookupCase(normalizeSourcePath(generatedPath, null, stringMember(root, "file")));
             String sourceRoot = stringMember(root, "sourceRoot");
             List<String> sources = stringArray(root, "sources").stream()
                     .map(source -> normalizeSourcePath(generatedPath, sourceRoot, source))
@@ -325,7 +324,7 @@ public final class SourceMapRegistry implements NekoSourceMapView {
             Path parsed = normalized.startsWith("file:")
                     ? Path.of(URI.create(normalized)) : Path.of(normalized);
             if (parsed.isAbsolute()) {
-                Path absolute = parsed.normalize().toAbsolutePath();
+                Path absolute = canonicalSplicedForm(parsed);
                 if (absolute.startsWith(root)) {
                     normalized = root.relativize(absolute).toString().replace('\\', '/');
                 }
@@ -334,7 +333,12 @@ public final class SourceMapRegistry implements NekoSourceMapView {
             // Keep non-file source names (including virtual module display names) textual.
         }
         normalized = trimLeadingSlash(normalized);
-        return caseInsensitive ? normalized.toLowerCase(Locale.ROOT) : normalized;
+        return normalizeLookupCase(normalized);
+    }
+
+    private String normalizeLookupCase(String path) {
+        if (path == null) return null;
+        return caseInsensitive ? path.toLowerCase(Locale.ROOT) : path;
     }
 
     private String normalizeSourcePath(String generatedPath, String sourceRoot, String source) {
@@ -392,13 +396,32 @@ public final class SourceMapRegistry implements NekoSourceMapView {
 
     private String normalizeAbsolutePath(String sourceText) {
         try {
-            Path path = Path.of(sourceText).normalize().toAbsolutePath();
+            Path path = canonicalSplicedForm(Path.of(sourceText));
             if (path.startsWith(root)) {
                 return root.relativize(path).toString().replace('\\', '/');
             }
             return path.toString().replace('\\', '/');
         } catch (Exception ignored) { // Path.of may fail for non-path strings; fallback to simple replace
             return sourceText.replace('\\', '/');
+        }
+    }
+
+    private static Path canonicalSplicedForm(Path path) {
+        Path abs = path.normalize().toAbsolutePath();
+        Path current = abs;
+        while (current != null && !Files.exists(current)) {
+            current = current.getParent();
+        }
+        if (current == null) {
+            return abs;
+        }
+        try {
+            Path anchorReal = current.toRealPath();
+            return current.getNameCount() == abs.getNameCount()
+                    ? anchorReal
+                    : anchorReal.resolve(abs.subpath(current.getNameCount(), abs.getNameCount()));
+        } catch (IOException ignored) {
+            return abs;
         }
     }
 

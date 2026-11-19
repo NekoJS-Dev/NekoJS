@@ -180,24 +180,29 @@ class AuthoringScriptExamplesTest {
         try (AuthoringExampleModuleHarness harness = new AuthoringExampleModuleHarness(gameDir, ScriptType.STARTUP, false)) {
             Context context = harness.context;
             fixtures(context, """
-                globalThis.callbacks = [];
+                globalThis.subscriptions = [];
                 globalThis.created = [];
-                globalThis.registry = {
-                    item: (id, configure) => {
-                        const properties = Object.seal({maxStackSize: 64, rarity: "common"});
-                        configure(properties); created.push({kind: "item", id, properties});
-                    },
-                    block: (id, configure) => {
-                        const properties = Object.seal({hardness: 0, resistance: 0, lightLevel: 0});
-                        configure(properties); created.push({kind: "block", id, properties});
+                globalThis.registryEvent = (kind, defaults) => ({
+                    create: (id, configure) => {
+                        const properties = Object.seal({...defaults});
+                        configure(properties);
+                        created.push({kind, id, properties});
                     }
-                };
+                });
                 """);
-            harness.defineVersionedEvents("({RegistryEvents: {register: callback => callbacks.push(callback)}})");
+            harness.defineVersionedEvents("({StartupEvents: {registry: (registry, callback) => subscriptions.push({registry, callback})}})");
             harness.runExample("startup/registry.js");
-            assertEquals(1, context.eval("js", "callbacks.length").asInt());
+            assertEquals(2, context.eval("js", "subscriptions.length").asInt());
+            assertEquals("item", context.eval("js", "subscriptions[0].registry").asString());
+            assertEquals("block", context.eval("js", "subscriptions[1].registry").asString());
             assertEquals(0, context.eval("js", "created.length").asInt());
-            context.eval("js", "callbacks[0](registry)");
+            context.eval("js", """
+                subscriptions[0].callback(registryEvent("item", {maxStackSize: 64, rarity: "common"}));
+                """);
+            assertEquals(1, context.eval("js", "created.length").asInt());
+            context.eval("js", """
+                subscriptions[1].callback(registryEvent("block", {hardness: 0, resistance: 0, lightLevel: 0}));
+                """);
             var created = AuthoringJson.parseElement(context.eval("js", "JSON.stringify(created)").asString()).getAsJsonArray();
             assertEquals(2, created.size());
             JsonObject item = created.get(0).getAsJsonObject();

@@ -93,16 +93,20 @@ For the full tutorial, see [Quick Start](wiki/quick-start_us.md). If you run int
 
 ```javascript
 // nekojs/startup_scripts/items.js
-RegistryEvents.register(event => {
-  event.item('mymod:cool_gem', item => {
-    item.maxStackSize = 16
-    item.rarity = 'rare'
-  })
+import { StartupEvents } from 'nekojs:event/versioned'
 
-  event.creativeModeTab('mymod:main', tab => {
-    tab.title = 'My Modpack'
-    tab.icon = 'mymod:cool_gem'
-    tab.add('mymod:cool_gem')
+StartupEvents.registry('item', event => {
+  event.create('mymod:cool_gem', build => {
+    build.maxStackSize = 16
+    build.rarity = 'rare'
+  })
+})
+
+StartupEvents.registry('creative_mode_tab', event => {
+  event.create('mymod:main', build => {
+    build.title = 'My Modpack'
+    build.icon = 'mymod:cool_gem'
+    build.add('mymod:cool_gem')
   })
 })
 ```

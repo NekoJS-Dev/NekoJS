@@ -38,7 +38,7 @@ import java.util.function.LongSupplier;
  * <p>This class only implements local inert plan behavior. A published plan only updates the
  * claim/stale/exposed ledger and produces an inert {@code DynamicAdapterRequest}. It does not
  * activate multiplayer sync, does not perform a registry mutation and does not claim dynamic hot
- * reload; public activation is decided by the transaction/sync gate. The production instance is
+ * reload; public activation is decided by transaction and sync validation. The production instance is
  * held by the platform adapter (NeoForge dynamic package); tests and harnesses may construct
  * isolated instances freely.
  *
@@ -56,7 +56,7 @@ import java.util.function.LongSupplier;
  * batch-transaction engine, and {@link #pumpActivation()} then hands every ledger-committed batch
  * to it through a pull-based pending queue; the plan itself carries no hook. Unbound, this runtime
  * is exactly the inert local plan runtime. Production binding is not wired yet, because activation
- * stays gated by the transaction/sync gates.
+ * requires transaction and sync validation.
  */
 public final class DynamicRegistryFacadeRuntime implements CandidateDomainCollector, AutoCloseable {
 
@@ -137,7 +137,7 @@ public final class DynamicRegistryFacadeRuntime implements CandidateDomainCollec
      * staged for the batch transaction: preflight, server prepare, client prepare/ack, then a
      * controlled commit through the adapter and transport. Without one the runtime stays exactly
      * the inert local plan runtime. The platform assembly binds the production engine only when
-     * the dynamic registry configuration gate is enabled.
+     * the dynamic registry configuration option is enabled.
      */
     public synchronized void bindActivationEngine(
             DynamicRegistryAdapter adapter, DynamicSyncTransport transport,
@@ -178,8 +178,14 @@ public final class DynamicRegistryFacadeRuntime implements CandidateDomainCollec
         if (engine == null) {
             return;
         }
-        while (!pendingCandidates.isEmpty()) {
-            DynamicCandidateRegistryPlan candidate = pendingCandidates.poll();
+        while (true) {
+            DynamicCandidateRegistryPlan candidate;
+            synchronized (pendingCandidates) {
+                candidate = pendingCandidates.poll();
+            }
+            if (candidate == null) {
+                break;
+            }
             if (!candidate.isPublished()) {
                 continue; // failed/discarded candidate: its declarations never committed
             }
@@ -226,7 +232,9 @@ public final class DynamicRegistryFacadeRuntime implements CandidateDomainCollec
      */
     public CollectionOutcome collectInitial(String trigger) {
         DynamicCandidateRegistryPlan plan = store.beginBatch();
-        pendingCandidates.add(plan);
+        synchronized (pendingCandidates) {
+            pendingCandidates.add(plan);
+        }
         DynamicRegistryEventJS payload = new DynamicRegistryEventJS(plan);
         DynamicRegistryEvents.DYNAMIC_REGISTRY.post(payload);
         try {
@@ -296,7 +304,9 @@ public final class DynamicRegistryFacadeRuntime implements CandidateDomainCollec
             return; // This domain has never been used and the candidate declares nothing: attach no empty plan
         }
         DynamicCandidateRegistryPlan plan = store.beginBatch();
-        pendingCandidates.add(plan);
+        synchronized (pendingCandidates) {
+            pendingCandidates.add(plan);
+        }
         DynamicRegistryEventJS payload = new DynamicRegistryEventJS(plan);
         for (com.tkisor.nekojs.api.event.EventBusJS.PendingListener pending : ofBus) {
             try {

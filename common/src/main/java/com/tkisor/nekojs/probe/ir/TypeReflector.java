@@ -1,6 +1,8 @@
 package com.tkisor.nekojs.probe.ir;
 
+import com.tkisor.nekojs.api.AdapterInputShape;
 import com.tkisor.nekojs.api.JavaMemberIndex;
+import com.tkisor.nekojs.api.ScriptInputShapeProvider;
 import com.tkisor.nekojs.api.annotation.ScriptInput;
 import com.tkisor.nekojs.api.annotation.ScriptInternalConstructor;
 import com.tkisor.nekojs.api.annotation.ScriptOutput;
@@ -8,6 +10,7 @@ import com.tkisor.nekojs.api.surface.ApiTypeRef;
 import com.tkisor.nekojs.core.reflect.FunctionalInterfaceResolver;
 import com.tkisor.nekojs.core.reflect.JavaGenericTypes;
 
+import java.lang.reflect.Field;
 import java.lang.reflect.GenericArrayType;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
@@ -24,6 +27,7 @@ import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Reflects script-visible Java members into {@link TypeDecl}, retaining remapping and Bean accessor pairing.
@@ -34,6 +38,65 @@ import java.util.Set;
  */
 public final class TypeReflector {
 
+    private static final String HIDDEN_JS_NAME = new String("");
+    private static final ClassValue<List<Method>> INTERFACE_METHODS_CACHE = new ClassValue<>() {
+        @Override
+        protected List<Method> computeValue(Class<?> type) {
+            return computeInterfaceMethods(type);
+        }
+    };
+    private static final ClassValue<ConcurrentHashMap<Method, String>> JS_NAME_CACHE = new ClassValue<>() {
+        @Override
+        protected ConcurrentHashMap<Method, String> computeValue(Class<?> type) {
+            return new ConcurrentHashMap<>();
+        }
+    };
+    private static final ClassValue<List<TypeParamTemplate>> TYPE_PARAMS_CACHE = new ClassValue<>() {
+        @Override
+        protected List<TypeParamTemplate> computeValue(Class<?> type) {
+            return computeTypeParamTemplates(type);
+        }
+    };
+    private static final ClassValue<AdapterInputShape> INPUT_SHAPE_CACHE = new ClassValue<>() {
+        @Override
+        protected AdapterInputShape computeValue(Class<?> type) {
+            try {
+                @SuppressWarnings("unchecked")
+                Class<? extends ScriptInputShapeProvider> providerClass =
+                        (Class<? extends ScriptInputShapeProvider>) type;
+                return java.util.Objects.requireNonNull(
+                        providerClass.getConstructor().newInstance().inputShape(), "inputShape");
+            } catch (ReflectiveOperationException exception) {
+                throw new InputShapeResolutionException(exception);
+            }
+        }
+    };
+
+    private static final class InputShapeResolutionException extends RuntimeException {
+        InputShapeResolutionException(Throwable cause) {
+            super(cause);
+        }
+    }
+
+    private record BoundTemplate(Type sourceType, ApiTypeRef ref) {
+        TypeSlot toSlot() {
+            return TypeSlot.of(sourceType, ref);
+        }
+    }
+
+    private record TypeParamTemplate(String name, BoundTemplate first, List<BoundTemplate> additional) {
+        TypeDecl.TypeParam toTypeParam() {
+            if (first == null) return new TypeDecl.TypeParam(name, null);
+            if (additional.isEmpty()) return new TypeDecl.TypeParam(name, first.toSlot(), List.of());
+            List<TypeSlot> extra = new ArrayList<>(additional.size());
+            for (BoundTemplate b : additional) extra.add(b.toSlot());
+            return new TypeDecl.TypeParam(name, first.toSlot(), extra);
+        }
+    }
+
+    private record DeclarationScan(List<Method> methods, String omission, Field[] declaredFields) {}
+
+    /** Reflects a Java class into a language-neutral {@link TypeDecl} IR representation. */
     public TypeDecl reflect(Class<?> cls) {
         TypeDecl.Kind kind = cls.isEnum() ? TypeDecl.Kind.ENUM
                 : (cls.isInterface() ? TypeDecl.Kind.INTERFACE : TypeDecl.Kind.CLASS);
@@ -45,10 +108,10 @@ public final class TypeReflector {
 
         // A missing public signature poisons the JVM's entire method enumeration. Retain only
         // independently reflected members; heritage could otherwise restore unknown hidden overrides.
-        MethodScan scan = scanDeclarationMethods(cls);
+        DeclarationScan scan = scanDeclarations(cls);
         if (scan.omission() != null) {
             decl.memberOmissions.add(scan.omission());
-            reflectIndependentMembers(cls, decl);
+            reflectIndependentMembers(cls, decl, null);
             decl.constructors.sort(Comparator.comparing(TypeReflector::constructorKey));
             decl.fields.sort(Comparator.comparing(field -> field.name));
             return decl;
@@ -71,7 +134,7 @@ public final class TypeReflector {
         }
 
         switch (kind) {
-            case CLASS -> reflectClassMembers(cls, decl, scan.methods());
+            case CLASS -> reflectClassMembers(cls, decl, scan.methods(), scan.declaredFields());
             case INTERFACE -> reflectInterfaceMembers(cls, decl, scan.methods());
             case ENUM -> reflectEnumMembers(cls, decl, scan.methods());
         }
@@ -130,18 +193,19 @@ public final class TypeReflector {
         return slot.sourceType.getTypeName();
     }
 
-    private void reflectClassMembers(Class<?> cls, TypeDecl decl, List<Method> methods) {
-        reflectIndependentMembers(cls, decl);
+    private void reflectClassMembers(Class<?> cls, TypeDecl decl, List<Method> methods, Field[] declaredFields) {
+        reflectIndependentMembers(cls, decl, declaredFields);
         reflectMethodsLikeClassDecl(cls, decl, methods);
     }
 
-    private void reflectIndependentMembers(Class<?> cls, TypeDecl decl) {
+    private void reflectIndependentMembers(Class<?> cls, TypeDecl decl, Field[] declaredFields) {
         // Constructors
         for (var ctor : declarationConstructors(cls)) {
             decl.constructors.add(reflectConstructor(ctor));
         }
         // Fields
-        for (var field : cls.getDeclaredFields()) {
+        Field[] fields = declaredFields != null ? declaredFields : cls.getDeclaredFields();
+        for (var field : fields) {
             if (!Modifier.isPublic(field.getModifiers())) continue;
             boolean isStatic = Modifier.isStatic(field.getModifiers());
             FieldDecl f = new FieldDecl(field.getName(), TypeSlot.of(field.getGenericType(), toRef(field.getGenericType())));
@@ -237,8 +301,7 @@ public final class TypeReflector {
     private static boolean implementsInterfaceMethod(Class<?> cls, Method method) {
         if (cls.isInterface() || cls.isEnum() || method.getDeclaringClass() != cls
                 || Modifier.isStatic(method.getModifiers())) return false;
-        List<Method> contracts = new ArrayList<>();
-        collectInterfaceMethods(cls, new HashSet<>(), contracts);
+        List<Method> contracts = collectInterfaceMethods(cls);
         return contracts.stream().anyMatch(candidate -> Modifier.isPublic(candidate.getModifiers())
                 && !Modifier.isStatic(candidate.getModifiers()) && !candidate.isSynthetic() && !candidate.isBridge()
                 && candidate.getName().equals(method.getName()) && candidate.getReturnType() == method.getReturnType()
@@ -256,6 +319,7 @@ public final class TypeReflector {
     /** Enumerates native methods; a missing signature hides the owner's whole method set and records why. */
     public record MethodScan(List<Method> methods, String omission) {}
 
+    /** Scans {@code cls} for script-visible methods and remapped/overloaded declarations. */
     public static MethodScan scanDeclarationMethods(Class<?> cls) {
         try {
             return new MethodScan(declarationMethods(cls), null);
@@ -266,8 +330,23 @@ public final class TypeReflector {
         }
     }
 
+    private static DeclarationScan scanDeclarations(Class<?> cls) {
+        Field[][] fieldsOut = new Field[1][];
+        try {
+            return new DeclarationScan(declarationMethods(cls, fieldsOut), null, fieldsOut[0]);
+        } catch (NoClassDefFoundError unavailable) {
+            // Enum renderers publish a fixed method skeleton, so partial enum recovery would overpromise.
+            if (cls.isEnum()) throw unavailable;
+            return new DeclarationScan(List.of(), "Public method set and method-bearing heritage unavailable: " + unavailable, null);
+        }
+    }
+
     /** Returns public candidates without linking private implementation signatures. */
     public static List<Method> declarationMethods(Class<?> cls) {
+        return declarationMethods(cls, null);
+    }
+
+    private static List<Method> declarationMethods(Class<?> cls, Field[][] fieldsOut) {
         // Public-only VM enumeration filters private signatures before resolving their optional types.
         Method[] visible = cls.getMethods();
         List<Method> methods = new ArrayList<>(Arrays.stream(visible)
@@ -290,7 +369,7 @@ public final class TypeReflector {
                     if (!inheritedNames.add(name)) names.add(name);
                 }
             }
-            List<Method> inherited = Arrays.stream(cls.getMethods())
+            List<Method> inherited = Arrays.stream(visible)
                     .filter(method -> method.getDeclaringClass() != cls && !Modifier.isStatic(method.getModifiers())
                             && !method.isSynthetic() && !method.isBridge() && names.contains(jsName(method)))
                     .sorted(TypeReflector::compareCandidates).toList();
@@ -315,9 +394,11 @@ public final class TypeReflector {
             Arrays.stream(Object.class.getMethods()).map(TypeReflector::jsName)
                     .filter(name -> name != null && interfaceNames.contains(name)).forEach(names::add);
             Set<String> staticNames = new HashSet<>();
-            Set<String> fieldNames = Arrays.stream(cls.getDeclaredFields())
+            Field[] declaredFields = cls.getDeclaredFields();
+            if (fieldsOut != null) fieldsOut[0] = declaredFields;
+            Set<String> fieldNames = Arrays.stream(declaredFields)
                     .filter(field -> Modifier.isPublic(field.getModifiers()) && !Modifier.isStatic(field.getModifiers()))
-                    .map(java.lang.reflect.Field::getName).collect(java.util.stream.Collectors.toSet());
+                    .map(Field::getName).collect(java.util.stream.Collectors.toSet());
             methods.stream().filter(method -> Modifier.isPublic(method.getModifiers())
                             && Modifier.isStatic(method.getModifiers()))
                     .map(TypeReflector::jsName).filter(name -> name != null).forEach(staticNames::add);
@@ -449,8 +530,7 @@ public final class TypeReflector {
         if (cls.isInterface() || Modifier.isStatic(method.getModifiers()) || method.getTypeParameters().length != 0
                 || !(method.getGenericReturnType() instanceof Class<?>)
                 || !Arrays.equals(method.getGenericParameterTypes(), method.getParameterTypes())) return null;
-        List<Method> contracts = new ArrayList<>();
-        collectInterfaceMethods(cls, new HashSet<>(), contracts);
+        List<Method> contracts = collectInterfaceMethods(cls);
         FunctionalInterfaceResolver.Signature agreed = null;
         for (Method candidate : contracts) {
             if (Modifier.isStatic(candidate.getModifiers()) || !Modifier.isPublic(candidate.getModifiers())
@@ -493,8 +573,7 @@ public final class TypeReflector {
     private static Type interfaceReturnContract(Class<?> cls, Method method, Type original) {
         if (cls.isInterface() || Modifier.isStatic(method.getModifiers()) || method.getTypeParameters().length != 0
                 || !(original instanceof Class<?> raw) || raw.getTypeParameters().length == 0) return original;
-        List<Method> contracts = new ArrayList<>();
-        collectInterfaceMethods(cls, new HashSet<>(), contracts);
+        List<Method> contracts = collectInterfaceMethods(cls);
         Type agreed = null;
         for (Method candidate : contracts) {
             if (Modifier.isStatic(candidate.getModifiers()) || !Modifier.isPublic(candidate.getModifiers())
@@ -509,6 +588,16 @@ public final class TypeReflector {
             agreed = result;
         }
         return agreed == null ? original : agreed;
+    }
+
+    private static List<Method> collectInterfaceMethods(Class<?> cls) {
+        return INTERFACE_METHODS_CACHE.get(cls);
+    }
+
+    private static List<Method> computeInterfaceMethods(Class<?> cls) {
+        List<Method> methods = new ArrayList<>();
+        collectInterfaceMethods(cls, new HashSet<>(), methods);
+        return List.copyOf(methods);
     }
 
     private static void collectInterfaceMethods(Class<?> cls, Set<Class<?>> visited, List<Method> methods) {
@@ -650,7 +739,15 @@ public final class TypeReflector {
      * member. Without a remap match the original name is returned.
      */
     private static String jsName(java.lang.reflect.Method method) {
-        return JavaMemberIndex.remapName(method, null, method.getName());
+        ConcurrentHashMap<Method, String> classCache = JS_NAME_CACHE.get(method.getDeclaringClass());
+        String cached = classCache.get(method);
+        if (cached == null) {
+            String resolved = JavaMemberIndex.remapName(method, null, method.getName());
+            cached = resolved == null ? HIDDEN_JS_NAME : resolved;
+            String existing = classCache.putIfAbsent(method, cached);
+            if (existing != null) cached = existing;
+        }
+        return cached == HIDDEN_JS_NAME ? null : cached;
     }
 
     private void reflectParamsInto(MethodDecl m, java.lang.reflect.Executable exec) {
@@ -682,10 +779,13 @@ public final class TypeReflector {
         TypeSlot slot = TypeSlot.of(type, toRef(type));
         ScriptInput annotation = parameter.getAnnotation(ScriptInput.class);
         if (annotation != null) {
+            Class<? extends ScriptInputShapeProvider> providerClass = annotation.value();
             try {
-                slot.inputShape = java.util.Objects.requireNonNull(
-                        annotation.value().getConstructor().newInstance().inputShape(), "inputShape");
-            } catch (ReflectiveOperationException | RuntimeException exception) {
+                slot.inputShape = INPUT_SHAPE_CACHE.get(providerClass);
+            } catch (InputShapeResolutionException exception) {
+                throw new IllegalArgumentException("NEKO-4063: Cannot resolve script input shape for "
+                        + parameter.getDeclaringExecutable() + " parameter " + parameter.getName(), exception.getCause());
+            } catch (RuntimeException exception) {
                 throw new IllegalArgumentException("NEKO-4063: Cannot resolve script input shape for "
                         + parameter.getDeclaringExecutable() + " parameter " + parameter.getName(), exception);
             }
@@ -743,15 +843,24 @@ public final class TypeReflector {
 
     /** Reflects generic parameters without loading members when no edited declaration is available. */
     public static List<TypeDecl.TypeParam> typeParametersOf(Class<?> cls) {
-        List<TypeDecl.TypeParam> parameters = new ArrayList<>();
-        for (TypeVariable<?> variable : JavaGenericTypes.parameters(cls)) {
-            List<TypeSlot> bounds = Arrays.stream(variable.getBounds()).filter(bound -> bound != Object.class)
-                    .map(bound -> TypeSlot.of(bound, toRef(bound))).toList();
-            TypeSlot first = bounds.isEmpty() ? null : bounds.getFirst();
-            parameters.add(new TypeDecl.TypeParam(JavaGenericTypes.parameterName(variable), first,
-                    bounds.isEmpty() ? List.of() : bounds.subList(1, bounds.size())));
+        List<TypeParamTemplate> templates = TYPE_PARAMS_CACHE.get(cls);
+        List<TypeDecl.TypeParam> parameters = new ArrayList<>(templates.size());
+        for (TypeParamTemplate template : templates) {
+            parameters.add(template.toTypeParam());
         }
         return parameters;
+    }
+
+    private static List<TypeParamTemplate> computeTypeParamTemplates(Class<?> cls) {
+        List<TypeParamTemplate> templates = new ArrayList<>();
+        for (TypeVariable<?> variable : JavaGenericTypes.parameters(cls)) {
+            List<BoundTemplate> bounds = Arrays.stream(variable.getBounds()).filter(bound -> bound != Object.class)
+                    .map(bound -> new BoundTemplate(bound, toRef(bound))).toList();
+            BoundTemplate first = bounds.isEmpty() ? null : bounds.getFirst();
+            templates.add(new TypeParamTemplate(JavaGenericTypes.parameterName(variable), first,
+                    bounds.isEmpty() ? List.of() : bounds.subList(1, bounds.size())));
+        }
+        return List.copyOf(templates);
     }
 
     // ---- Java Type to ApiTypeRef: the one type mapping, lossless; each renderer applies its own syntax ----

@@ -10,8 +10,10 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
+/** Registry of synthetic {@code .mjs} virtual modules rewritten for GraalJS native ESM loading. */
 public final class NekoEsmVirtualModuleRegistry implements NekoVirtualModuleView {
     private final Path root;
     private final Map<String, String> sources = new ConcurrentHashMap<>();
@@ -22,6 +24,7 @@ public final class NekoEsmVirtualModuleRegistry implements NekoVirtualModuleView
     private final Map<String, Integer> generations = new ConcurrentHashMap<>();
     /** Maps a path key (consistent with SOURCES) to its {@link ScriptType}; returns null for shared modules (node:, java:, or bare package names). */
     private final Map<String, ScriptType> types = new ConcurrentHashMap<>();
+    private final Map<String, Set<String>> cjsInteropVariants = new ConcurrentHashMap<>();
 
     public NekoEsmVirtualModuleRegistry(Path gameRoot) {
         Path canonicalGameRoot = gameRoot.normalize().toAbsolutePath();
@@ -48,6 +51,7 @@ public final class NekoEsmVirtualModuleRegistry implements NekoVirtualModuleView
         if (type != null) {
             types.put(key, type);
         }
+        trackCjsInteropVariant(moduleId);
         return path.toUri();
     }
 
@@ -61,6 +65,16 @@ public final class NekoEsmVirtualModuleRegistry implements NekoVirtualModuleView
         ScriptType type = scriptTypeOf(moduleId);
         if (type != null) {
             types.putIfAbsent(key, type);
+        }
+        trackCjsInteropVariant(moduleId);
+    }
+
+    private void trackCjsInteropVariant(String moduleId) {
+        if (moduleId == null) return;
+        int interopIdx = moduleId.indexOf("#cjs-interop");
+        if (interopIdx > 0) {
+            cjsInteropVariants.computeIfAbsent(moduleId.substring(0, interopIdx),
+                    ignored -> ConcurrentHashMap.newKeySet()).add(moduleId);
         }
     }
 
@@ -115,6 +129,16 @@ public final class NekoEsmVirtualModuleRegistry implements NekoVirtualModuleView
 
     public void invalidate(String moduleId) {
         if (moduleId == null || moduleId.isBlank()) return;
+        invalidateSingle(moduleId);
+        Set<String> variants = cjsInteropVariants.remove(moduleId);
+        if (variants != null) {
+            for (String variant : variants) {
+                invalidateSingle(variant);
+            }
+        }
+    }
+
+    private void invalidateSingle(String moduleId) {
         Path path = path(moduleId);
         String key = path.toString();
         sources.remove(key);
@@ -131,6 +155,7 @@ public final class NekoEsmVirtualModuleRegistry implements NekoVirtualModuleView
         keyByFileName.clear();
         generations.clear();
         types.clear();
+        cjsInteropVariants.clear();
     }
 
     /**
@@ -159,6 +184,7 @@ public final class NekoEsmVirtualModuleRegistry implements NekoVirtualModuleView
             types.remove(key);
         }
         generations.keySet().removeIf(moduleId -> scriptTypeOf(moduleId) == type);
+        cjsInteropVariants.keySet().removeIf(moduleId -> scriptTypeOf(moduleId) == type);
     }
 
     public Path root() {

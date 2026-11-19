@@ -76,7 +76,7 @@ public final class GlobalBindingMemberValidator {
         ValNode.Block ast;
         try {
             ast = parsed.ast();
-        } catch (Throwable e) {
+        } catch (Exception e) {
             // Same as EventCallbackSourceValidator: do not skip silently; log that this file has no preflight protection
             com.tkisor.nekojs.NekoJS.LOGGER.warn(
                     "Binding preflight skipped for {}: source not parseable by ValParser ({}: {})",
@@ -398,7 +398,7 @@ public final class GlobalBindingMemberValidator {
             } else {
                 view.report(type, "binding-preflight " + dedupKey, error);
             }
-        } catch (Throwable ignored) {
+        } catch (Exception ignored) {
             com.tkisor.nekojs.NekoJS.LOGGER.warn("Binding preflight report failed for {}", dedupKey, ignored);
         }
     }

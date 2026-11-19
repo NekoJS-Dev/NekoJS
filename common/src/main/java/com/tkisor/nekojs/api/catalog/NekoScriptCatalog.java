@@ -21,6 +21,9 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * Aggregates script-facing API metadata from a {@link IPluginRuntime} and platform providers into a {@link NekoScriptCatalogSnapshot}.
+ */
 public final class NekoScriptCatalog {
     private static NekoCatalogPlatformProvider platformProvider = NekoCatalogPlatformProvider.EMPTY;
 
@@ -30,6 +33,7 @@ public final class NekoScriptCatalog {
         platformProvider = provider == null ? NekoCatalogPlatformProvider.EMPTY : provider;
     }
 
+    /** Builds a {@link NekoScriptCatalogSnapshot} from the given plugin runtime. */
     public static NekoScriptCatalogSnapshot snapshot(IPluginRuntime runtime) {
         List<BindingCatalogEntry> allBindings = bindings(runtime);
         List<EventCatalogEntry> allEvents = events(runtime);
@@ -155,12 +159,14 @@ public final class NekoScriptCatalog {
                     if (!publication.supports(name, type)) continue;
                     var bus = holder.getBus(type);
                     var projection = publication.views().get(name);
+                    var selector = publication.selectors().get(name);
                     Class<?> payload = projection == null ? bus.bus().eventType() : projection.type();
-                    Class<?> key = bus.bus() instanceof DispatchEventBus<?, ?> dispatch
-                            ? dispatch.dispatchKey().keyType() : null;
+                    Class<?> key = selector != null ? selector.type()
+                            : (bus.bus() instanceof DispatchEventBus<?, ?> dispatch ? dispatch.dispatchKey().keyType() : null);
                     var event = EventCatalogEntry.of(publication.group().name(), name, type, payload,
-                            key, bus.canCancel(), bus.canDispatch());
+                            key, bus.canCancel() && !publication.notificationOnlyEvents().contains(name), bus.canDispatch());
                     if (projection == null) event = event.withCallSignatures(bus.callSignatures());
+                    if (selector != null && selector.required()) event = event.requiringSelector();
                     result.add(new ModuleEventCatalogEntry(publication.moduleId(), publication.owner(),
                             publication.category(), type, event));
                 }

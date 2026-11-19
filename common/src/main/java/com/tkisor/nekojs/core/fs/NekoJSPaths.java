@@ -7,6 +7,7 @@ import com.tkisor.nekojs.platform.Platform;
 
 import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.LinkOption;
 import java.nio.file.Path;
 import java.util.Objects;
 import java.util.Set;
@@ -220,7 +221,7 @@ public final class NekoJSPaths {
     private static Path nearestExistingAncestorOrSelf(Path path) {
         Path current = path;
         while (current != null) {
-            if (Files.exists(current)) {
+            if (Files.exists(current, LinkOption.NOFOLLOW_LINKS)) {
                 return current;
             }
             current = current.getParent();
@@ -236,6 +237,10 @@ public final class NekoJSPaths {
      * differences.
      */
     private static Path canonicalSplicedForm(Path path) {
+        return canonicalSplicedForm(path, 0);
+    }
+
+    private static Path canonicalSplicedForm(Path path, int depth) {
         Path abs = path.normalize().toAbsolutePath();
         Path anchor = nearestExistingAncestorOrSelf(abs);
         if (anchor == null) {
@@ -247,6 +252,19 @@ public final class NekoJSPaths {
                     ? anchorReal
                     : anchorReal.resolve(abs.subpath(anchor.getNameCount(), abs.getNameCount()));
         } catch (IOException e) {
+            if (depth < 32 && Files.isSymbolicLink(anchor)) {
+                try {
+                    Path target = Files.readSymbolicLink(anchor);
+                    Path resolved = (anchor.getParent() != null ? anchor.getParent().resolve(target) : target)
+                            .normalize().toAbsolutePath();
+                    Path targetCanonical = canonicalSplicedForm(resolved, depth + 1);
+                    return anchor.getNameCount() == abs.getNameCount()
+                            ? targetCanonical
+                            : targetCanonical.resolve(abs.subpath(anchor.getNameCount(), abs.getNameCount()));
+                } catch (IOException ignored) {
+                    // Fall through to abs
+                }
+            }
             return abs;
         }
     }
@@ -276,6 +294,15 @@ public final class NekoJSPaths {
             if (!realPath.startsWith(rootForm)) {
                 throw new IOException("Symlink escape detected: " + realPath);
             }
+            if (Files.isSymbolicLink(normalized)) {
+                Path parentReal = normalized.getParent() != null
+                        ? canonicalSplicedForm(normalized.getParent())
+                        : rootForm;
+                if (!parentReal.startsWith(rootForm)) {
+                    throw new IOException("Symlink escape detected: " + parentReal);
+                }
+                return parentReal.resolve(normalized.getFileName());
+            }
             return realPath;
         }
         Path spliced = canonicalSplicedForm(normalized);
@@ -286,6 +313,15 @@ public final class NekoJSPaths {
                 throw new IOException("Symlink escape detected: " + spliced);
             }
             throw new IOException("Access outside allowed root is forbidden: " + normalized);
+        }
+        if (Files.isSymbolicLink(normalized)) {
+            Path parentReal = normalized.getParent() != null
+                    ? canonicalSplicedForm(normalized.getParent())
+                    : rootForm;
+            if (!parentReal.startsWith(rootForm)) {
+                throw new IOException("Symlink escape detected: " + parentReal);
+            }
+            return parentReal.resolve(normalized.getFileName());
         }
         return spliced;
     }

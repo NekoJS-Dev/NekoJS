@@ -113,7 +113,12 @@ public final class NekoPluginRuntime implements IPluginRuntime {
             com.tkisor.nekojs.script.prop.ScriptPropertyRegistry scriptProperties) {
         java.net.URI codeSource;
         try {
-            codeSource = NekoPluginRuntime.class.getProtectionDomain().getCodeSource().getLocation().toURI();
+            var domain = NekoPluginRuntime.class.getProtectionDomain();
+            var cs = domain == null ? null : domain.getCodeSource();
+            var location = cs == null ? null : cs.getLocation();
+            codeSource = location == null
+                    ? java.net.URI.create("nekojs://core/unknown")
+                    : location.toURI();
         } catch (java.net.URISyntaxException e) {
             throw new IllegalStateException("Failed to resolve NekoJS code source URI", e);
         }

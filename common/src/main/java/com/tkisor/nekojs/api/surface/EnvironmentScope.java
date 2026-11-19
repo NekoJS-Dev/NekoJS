@@ -27,7 +27,7 @@ public record EnvironmentScope(
         if (!allowedLoaderIds.isEmpty() && (key.loaderId() == null || !allowedLoaderIds.contains(key.loaderId()))) return false;
         if (loaderVersionRange != null && (key.loaderVersion() == null
                 || !loaderVersionRange.matches(key.loaderVersion()))) return false;
-        if (requiredMods != null && !requiredMods.isEmpty()) {
+        if (!requiredMods.isEmpty()) {
             Map<String, String> installed = key.installedMods();
             for (String mod : requiredMods) {
                 if (!installed.containsKey(mod)) return false;

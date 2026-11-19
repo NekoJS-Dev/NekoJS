@@ -114,13 +114,21 @@ public interface ItemStackExtension extends ItemStackSpec {
         }
         ResourceKey<Enchantment> key = ResourceKey.create(Registries.ENCHANTMENT, parsedId);
         //? if neoforge {
-        Holder.Reference<Enchantment> enchantment = ServerLifecycleHooks.getCurrentServer()
+        var server = ServerLifecycleHooks.getCurrentServer();
+        if (server == null) {
+            throw new IllegalStateException("Cannot resolve enchantment '" + id + "' without a running server");
+        }
+        Holder.Reference<Enchantment> enchantment = server
                 .registryAccess()
                 .lookupOrThrow(Registries.ENCHANTMENT)
                 .getOrThrow(key);
         //?}
         //? if fabric {
-        /*Holder.Reference<Enchantment> enchantment = FabricServerEventBindings.currentServer()
+        /*var server = FabricServerEventBindings.currentServer();
+        if (server == null) {
+            throw new IllegalStateException("Cannot resolve enchantment '" + id + "' without a running server");
+        }
+        Holder.Reference<Enchantment> enchantment = server
                 .registryAccess()
                 .lookupOrThrow(Registries.ENCHANTMENT)
                 .getOrThrow(key);*/
@@ -143,7 +151,9 @@ public interface ItemStackExtension extends ItemStackSpec {
         if (parsedId == null) return false;
         ResourceKey<Enchantment> key = ResourceKey.create(Registries.ENCHANTMENT, parsedId);
         //? if neoforge {
-        return ServerLifecycleHooks.getCurrentServer()
+        var server = ServerLifecycleHooks.getCurrentServer();
+        if (server == null) return false;
+        return server
                 .registryAccess()
                 .lookupOrThrow(Registries.ENCHANTMENT)
                 .get(key)
@@ -151,7 +161,9 @@ public interface ItemStackExtension extends ItemStackSpec {
                 .orElse(false);
         //?}
         //? if fabric {
-        /*return FabricServerEventBindings.currentServer()
+        /*var server = FabricServerEventBindings.currentServer();
+        if (server == null) return false;
+        return server
                 .registryAccess()
                 .lookupOrThrow(Registries.ENCHANTMENT)
                 .get(key)

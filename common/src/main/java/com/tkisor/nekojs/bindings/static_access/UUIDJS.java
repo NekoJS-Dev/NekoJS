@@ -24,6 +24,9 @@ public final class UUIDJS {
     @Param(name = "value", value = "canonical UUID string in hyphenated hex form")
     @Return("the parsed UUID; throws on malformed input")
     public UUID fromString(String value) {
+        if (value == null) {
+            throw new IllegalArgumentException("UUID string must not be null");
+        }
         return UUID.fromString(value);
     }
 
@@ -33,6 +36,9 @@ public final class UUIDJS {
     @Param(name = "value", value = "any string; the same name always yields the same UUID")
     @Return("the name-derived UUID")
     public UUID fromName(String value) {
+        if (value == null) {
+            throw new IllegalArgumentException("Name must not be null");
+        }
         return UUID.nameUUIDFromBytes(value.getBytes(StandardCharsets.UTF_8));
     }
 }

@@ -3,14 +3,18 @@ package com.tkisor.nekojs.wrapper.registry.gen;
 
 import com.tkisor.nekojs.api.catalog.RegistryBuilderSurfaceEntry;
 import com.tkisor.nekojs.api.catalog.RegistryBuilderSurfaceEntry.EventPayload;
+import com.tkisor.nekojs.api.catalog.RegistryBuilderSurfaceEntry.EventVariant;
 import com.tkisor.nekojs.api.catalog.RegistryBuilderSurfaceEntry.Member;
 import com.tkisor.nekojs.api.catalog.RegistryBuilderSurfaceEntry.MemberKind;
+import net.minecraft.core.Registry;
+import net.minecraft.resources.ResourceKey;
 
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
+import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
 
-/** Derives STARTUP proxy signatures from the same registry metadata and factories used by RegistryEventJS. */
+/** Derives STARTUP callback declarations from the explicit target catalog and registry factories. */
 final class StartupRegistryEventSurface {
     private static final String BUILDER_NAMESPACE = "NekoStartupBuilders";
 
@@ -18,44 +22,37 @@ final class StartupRegistryEventSurface {
 
     static EventPayload derive(RegistryInfosPoint.RegistryInfos infos, RegistryTypesPoint.RegistryTypes types,
                                List<RegistryBuilderSurfaceEntry> builders) {
+        var names = new HashSet<String>();
+        builders.forEach(builder -> names.add(builder.builderName()));
+        var variants = new ArrayList<EventVariant>();
+        for (var registry : infos.startupRegistries().stream()
+                .sorted(Comparator.comparing(key -> key.identifier().toString())).toList()) {
+            var id = registry.identifier();
+            String key = id.toString();
+            boolean vanilla = id.getNamespace().equals("minecraft");
+            List<String> selectors = vanilla ? List.of(id.getPath(), key) : List.of(key);
+            String name = "StartupRegistryEvent_" + (vanilla ? id.getPath() : key).replaceAll("[^a-zA-Z0-9_]", "_");
+            while (!names.add(name)) {
+                name += "_";
+            }
+            variants.add(new EventVariant(selectors, name, members(registry, types, builders)));
+        }
+        return EventPayload.scoped(RegistryEventJS.class, BUILDER_NAMESPACE, variants);
+    }
+
+    private static List<Member> members(ResourceKey<? extends Registry<?>> registry, RegistryTypesPoint.RegistryTypes types,
+                                        List<RegistryBuilderSurfaceEntry> builders) {
         var members = new ArrayList<Member>();
-        var bySugar = new LinkedHashMap<String, RegistryInfo>();
-        infos.infos().values().forEach(info -> bySugar.putIfAbsent(info.sugarName(), info));
-        bySugar.entrySet().stream().sorted(java.util.Map.Entry.comparingByKey()).forEach(entry -> {
-            String sugar = entry.getKey();
-            RegistryInfo info = entry.getValue();
-            String registry = info.key().identifier().toString();
-            String defaultName = types.defaults().get(info.key());
-            if (types.defaultType(info.key()) != null) {
-                members.add(sugarMethod(sugar, null, find(builders, registry, defaultName)));
-            }
-            types.typeNames(info.key()).stream().sorted().forEach(typeName ->
-                    members.add(sugarMethod(sugar, typeName, find(builders, registry, typeName))));
-            if (!types.typeNames(info.key()).isEmpty()) {
-                // Computed names are validated by the runtime factory lookup, not by a declaration whitelist.
-                members.add(new Member(sugar, MemberKind.METHOD,
-                        sugar + "(id: string, typeName: string, build: (build: any) => void): any",
-                        "def " + sugar + "(self, id: str, typeName: str, build: Callable[[Any], None]) -> Any: ..."));
-            }
-        });
-        types.byRegistry().values().stream().flatMap(named -> named.keySet().stream()).distinct().sorted()
-                .forEach(typeName -> {
-                    var owners = types.registriesOf(typeName);
-                    if (owners.size() == 1) {
-                        var builder = find(builders, owners.getFirst().identifier().toString(), typeName);
-                        if (builder != null) {
-                            members.add(sugarMethod("custom", typeName, builder));
-                        }
-                    }
-                });
-        // Arbitrary addon factories and Supplier results have no promised concrete script builder type.
-        members.add(new Member("custom", MemberKind.METHOD,
-                "custom(id: string, typeName: string, build: (build: any) => void): any",
-                "def custom(self, id: str, typeName: str, build: Callable[[Any], None]) -> Any: ..."));
-        members.add(new Member("register", MemberKind.METHOD,
-                "register(registry: string, id: string, supplier: () => unknown): any",
-                "def register(self, registry: str, id: str, supplier: Callable[[], Any]) -> Any: ..."));
-        return new EventPayload(RegistryEventJS.class, "StartupRegistryEvent", members, BUILDER_NAMESPACE);
+        String key = registry.identifier().toString();
+        if (types.defaultType(registry) != null) {
+            members.add(createMethod(null, find(builders, key, types.defaults().get(registry))));
+        }
+        types.typeNames(registry).stream().sorted().forEach(typeName ->
+                members.add(createMethod(typeName, find(builders, key, typeName))));
+        members.add(new Member("createCustom", MemberKind.METHOD,
+                "createCustom(id: string, supplier: () => unknown): any",
+                "def createCustom(self, id: str, supplier: Callable[[], Any]) -> Any: ..."));
+        return members;
     }
 
     private static RegistryBuilderSurfaceEntry find(List<RegistryBuilderSurfaceEntry> builders,
@@ -64,14 +61,14 @@ final class StartupRegistryEventSurface {
                 && builder.typeName().equals(typeName)).findFirst().orElse(null);
     }
 
-    private static Member sugarMethod(String name, String typeName, RegistryBuilderSurfaceEntry builder) {
+    private static Member createMethod(String typeName, RegistryBuilderSurfaceEntry builder) {
         String tsBuilder = builder == null ? "any" : BUILDER_NAMESPACE + "." + builder.builderName();
         String pyBuilder = builder == null ? "Any" : builder.builderName();
         String tsType = typeName == null ? "" : ", typeName: " + quoted(typeName);
         String pyType = typeName == null ? "" : ", typeName: Literal[" + quoted(typeName) + "]";
-        return new Member(name, MemberKind.METHOD,
-                name + "(id: string" + tsType + ", build: (build: " + tsBuilder + ") => void): " + tsBuilder,
-                "def " + name + "(self, id: str" + pyType + ", build: Callable[[" + pyBuilder + "], None]) -> " + pyBuilder + ": ...");
+        return new Member("create", MemberKind.METHOD,
+                "create(id: string" + tsType + ", build: (build: " + tsBuilder + ") => void): " + tsBuilder,
+                "def create(self, id: str" + pyType + ", build: Callable[[" + pyBuilder + "], None]) -> " + pyBuilder + ": ...");
     }
 
     private static String quoted(String value) {

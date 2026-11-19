@@ -152,9 +152,9 @@
       "verification": "isolated-contract",
       "requires": [
         "nekojs:event/versioned",
-        "RegistryEvents.register",
-        "event.item",
-        "event.block",
+        "StartupEvents.registry",
+        "item and block registry selectors",
+        "event.create",
         "ItemBuilder.maxStackSize",
         "ItemBuilder.rarity",
         "BlockBuilder.hardness",
@@ -170,7 +170,7 @@
       ],
       "trigger": "Restart the entire game/server process with this script installed; do not use startup reload.",
       "expected": "The example ruby has stack limit 16 and rare rarity; ruby_block has hardness 2, resistance 6, light 3 and an automatically derived same-ID BlockItem. Assets, loot, models and localization are not supplied.",
-      "assertion": "Two configuration-last builders receive the exact properties and distinct IDs; no duplicate item is explicitly registered for the block.",
+      "assertion": "Separate item and block listeners configure builders with the exact properties and distinct IDs. The script relies on block-item co-registration.",
       "cleanup": "Discard the disposable world before removing registered content; removing definitions from an existing used world is not a safe migration."
     },
     {

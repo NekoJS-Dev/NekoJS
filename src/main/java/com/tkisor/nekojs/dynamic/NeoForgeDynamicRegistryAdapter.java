@@ -97,25 +97,32 @@ final class NeoForgeDynamicRegistryAdapter implements DynamicRegistryAdapter {
         previousItemInitializers = RegistrySurgery.checkpointInitializers(BuiltInRegistries.DATA_COMPONENT_INITIALIZERS);
         for (DynamicAdapterRequest request : requests) {
             Identifier id = Identifier.parse(request.id());
-            boolean existedBefore = switch (request.registryKey()) {
-                case "minecraft:item" -> BuiltInRegistries.ITEM.containsKey(id);
-                case "minecraft:sound_event" -> BuiltInRegistries.SOUND_EVENT.containsKey(id);
-                case "minecraft:mob_effect" -> BuiltInRegistries.MOB_EFFECT.containsKey(id);
-                default -> throw new IllegalStateException(
-                        "unsupported dynamic registry key '" + request.registryKey() + "' reached activation");
-            };
-            if (!existedBefore) {
-                // Registration can succeed before item component binding fails.
-                newlyRegisteredByLabel.computeIfAbsent(request.registryKey(), key -> new ArrayList<>()).add(id);
-            }
             switch (request.registryKey()) {
-                case "minecraft:item" -> DynamicRegistries.item(id, request.mode(), request.ownerScriptId(),
-                        registries.get(), maxStackSizeOf(request, id), rarityOf(request, id),
-                        fireResistantOf(request));
-                case "minecraft:sound_event" -> DynamicRegistries.soundEvent(id, request.mode(),
-                        request.ownerScriptId(), fixedRangeOf(request, id));
-                case "minecraft:mob_effect" -> DynamicRegistries.mobEffect(id, request.mode(),
-                        request.ownerScriptId(), categoryOf(request, id), colorOf(request, id));
+                case "minecraft:item" -> {
+                    if (!BuiltInRegistries.ITEM.containsKey(id)) {
+                        // Registration can succeed before item component binding fails.
+                        newlyRegisteredByLabel.computeIfAbsent(request.registryKey(), key -> new ArrayList<>()).add(id);
+                    }
+                    DynamicRegistries.item(id, request.mode(), request.ownerScriptId(),
+                            registries.get(), maxStackSizeOf(request, id), rarityOf(request, id),
+                            fireResistantOf(request));
+                }
+                case "minecraft:sound_event" -> {
+                    if (!BuiltInRegistries.SOUND_EVENT.containsKey(id)) {
+                        // Registration can succeed before sound event post-processing fails.
+                        newlyRegisteredByLabel.computeIfAbsent(request.registryKey(), key -> new ArrayList<>()).add(id);
+                    }
+                    DynamicRegistries.soundEvent(id, request.mode(),
+                            request.ownerScriptId(), fixedRangeOf(request, id));
+                }
+                case "minecraft:mob_effect" -> {
+                    if (!BuiltInRegistries.MOB_EFFECT.containsKey(id)) {
+                        // Registration can succeed before mob effect post-processing fails.
+                        newlyRegisteredByLabel.computeIfAbsent(request.registryKey(), key -> new ArrayList<>()).add(id);
+                    }
+                    DynamicRegistries.mobEffect(id, request.mode(),
+                            request.ownerScriptId(), categoryOf(request, id), colorOf(request, id));
+                }
                 default -> throw new IllegalStateException(
                         "unsupported dynamic registry key '" + request.registryKey() + "' reached activation");
             }

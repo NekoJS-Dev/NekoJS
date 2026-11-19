@@ -2,11 +2,14 @@ package com.tkisor.nekojs.mixin;
 
 import com.tkisor.nekojs.api.data.AttachedData;
 import com.tkisor.nekojs.api.inject.ServerExtension;
+import com.tkisor.nekojs.api.stage.StageHandle;
+import com.tkisor.nekojs.api.stage.StageHandleResolver;
 import com.tkisor.nekojs.core.plugin.AttachedDataHooks;
 import net.minecraft.server.MinecraftServer;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
 
+/** Mixin implementing {@link ServerExtension} on {@code MinecraftServer}. */
 @Mixin(MinecraftServer.class)
 public abstract class MinecraftServerMixin implements ServerExtension {
     @Unique
@@ -19,5 +22,11 @@ public abstract class MinecraftServerMixin implements ServerExtension {
             AttachedDataHooks.fireAttachServer(nekojs$attachedData);
         }
         return nekojs$attachedData;
+    }
+
+    @Override
+    public StageHandle neko$getStages() {
+        StageHandle resolved = StageHandleResolver.resolveServer();
+        return resolved != null ? resolved : StageHandle.EMPTY;
     }
 }

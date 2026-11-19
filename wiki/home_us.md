@@ -43,7 +43,7 @@ For the full walkthrough — changing a recipe, adding an item, and turning on c
 | You want to… | Use | Details |
 |---|---|---|
 | Add, remove or change recipes | `ServerEvents.recipes` | [Recipe system](recipe-system_us) |
-| Add new items, blocks or entities | `RegistryEvents.register` (startup scripts) | [Registering new content](registering-new-content_us) |
+| Add new items, blocks or entities | `StartupEvents.registry` (startup scripts) | [Registering new content](registering-new-content_us) |
 | Run code when players act, blocks break, and so on | `PlayerEvents`, `BlockEvents` and other events | [Event reference](event-reference_us) |
 | Add custom commands | `CommandEvents.register` | [Event reference](event-reference_us#wiki-command-events) |
 | Draw a HUD or build screens | `ClientEvents`, JSX screens | [Client rendering](client-rendering_us), [JSX client UI](jsx-client-ui_us) |

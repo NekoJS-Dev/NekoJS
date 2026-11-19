@@ -7,6 +7,9 @@ import com.tkisor.nekojs.api.contract.ApiContractKind;
 import com.tkisor.nekojs.api.contract.NormativeApiContract;
 import com.tkisor.nekojs.api.contract.VerifiedApiContract;
 import com.tkisor.nekojs.api.contract.VerifiedContractSet;
+import com.tkisor.nekojs.api.event.EventGroup;
+import com.tkisor.nekojs.api.event.EventGroupRegistry;
+import com.tkisor.nekojs.api.event.ModuleEventGroup;
 import com.tkisor.nekojs.api.plugin.OwnedPlugin;
 import com.tkisor.nekojs.api.plugin.PluginIdentity;
 import com.tkisor.nekojs.api.surface.*;
@@ -23,6 +26,7 @@ import java.lang.reflect.Field;
 import java.net.URI;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -109,6 +113,39 @@ class ApiSurfaceBootstrapTest {
         FrozenApiRegistrySet frozenSet = (FrozenApiRegistrySet) provider;
         assertTrue(frozenSet.contracts().all().size() <= 1,
                 "Legacy plugin should not contribute additional contracts");
+    }
+
+    @Test
+    void legacyPluginPublishingVersionedAndStableEventsBootstrapsOwnedWithoutInvalidOwner() throws Exception {
+        ScriptPropertyRegistry scriptProps = new ScriptPropertyRegistry.Impl();
+        VerifiedContractSet emptyContracts = VerifiedContractSet.of(
+                emptyPortablePreview(NekoJS.class.getProtectionDomain().getCodeSource().getLocation().toURI()));
+
+        LegacyEventPublishingPlugin legacyPlugin = new LegacyEventPublishingPlugin();
+        String rawLegacyOwner = "legacy:" + LegacyEventPublishingPlugin.class.getName();
+        PluginIdentity legacyIdentity = new PluginIdentity(
+                rawLegacyOwner, LegacyEventPublishingPlugin.class.getName(), TEST_CODE_SOURCE);
+        OwnedPlugin legacyOwned = new OwnedPlugin(legacyIdentity, legacyPlugin);
+
+        NekoPluginRuntime runtime = assertDoesNotThrow(
+                () -> NekoPluginRuntime.bootstrapOwned(List.of(legacyOwned), scriptProps, emptyContracts),
+                "legacy:... OwnedPlugin publishing versioned/stable events must not fail with NEKO-4057");
+
+        assertEquals(rawLegacyOwner, legacyIdentity.ownerId(),
+                "PluginIdentity raw owner string must remain unchanged");
+        String expectedNormalizedOwner = PluginOwnerIds.resolve(rawLegacyOwner, legacyPlugin);
+        assertTrue(expectedNormalizedOwner.matches("[a-z0-9_.-]+"),
+                "normalized module owner must satisfy [a-z0-9_.-]+");
+
+        Set<String> moduleIds = runtime.moduleEventGroups().stream()
+                .map(ModuleEventGroup::moduleId)
+                .collect(Collectors.toSet());
+        assertEquals(
+                Set.of(
+                        "nekojs:event/versioned/" + expectedNormalizedOwner,
+                        "nekojs:event/stable/" + expectedNormalizedOwner),
+                moduleIds,
+                "bootstrapOwned must normalize legacy:... owner IDs for published module event groups");
     }
 
     @Test
@@ -267,5 +304,17 @@ class ApiSurfaceBootstrapTest {
     }
 
     private static class TestLegacyPlugin implements NekoJSPlugin {
+    }
+
+    private static final class LegacyEventPublishingPlugin implements NekoJSPlugin {
+        @Override
+        public void registerEvents(EventGroupRegistry registry) {
+            EventGroup group = EventGroup.of("LegacyAddonEvents");
+            group.server("loaded", Object.class, api -> {
+                api.versioned();
+                api.stable();
+            });
+            registry.register(group);
+        }
     }
 }

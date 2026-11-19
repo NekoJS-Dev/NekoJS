@@ -142,9 +142,11 @@ public final class DynamicRegistries {
      * event in this batch.
      */
     public static void clearWorldRegistrations() {
+        var worldItemIds = ITEMS.bookkeeping().idsByMode(DynamicRegisterMode.WORLD);
         SOUND_EVENTS.clearWorldRegistrations();
         MOB_EFFECTS.clearWorldRegistrations();
         ITEMS.clearWorldRegistrations();
+        worldItemIds.forEach(ITEM_SPECS::remove);
     }
 
     /**
@@ -203,6 +205,7 @@ public final class DynamicRegistries {
     public static void reapplyDynamicItemComponents(HolderLookup.Provider registries) {
         if (ITEM_SPECS.isEmpty()) return;
         for (DynamicItemSpec spec : ITEM_SPECS.values()) {
+            if (!BuiltInRegistries.ITEM.containsKey(spec.id())) continue;
             Item item = BuiltInRegistries.ITEM.getValue(spec.id());
             if (item == null) continue;
             try {

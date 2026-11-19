@@ -83,6 +83,9 @@ public final class ColorJS {
     @Param(name = "value", value = "hex color string, with or without leading '#'")
     @Return("ARGB color int; 6-digit form gets opaque alpha")
     public int parse(String value) {
+        if (value == null) {
+            throw new IllegalArgumentException("Color must not be null");
+        }
         String hex = value.startsWith("#") ? value.substring(1) : value;
         if (hex.length() == 6) {
             return 0xFF000000 | Integer.parseUnsignedInt(hex, 16);

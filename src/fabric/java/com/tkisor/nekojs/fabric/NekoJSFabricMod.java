@@ -21,6 +21,7 @@ import com.tkisor.nekojs.platform.NekoIdCompat;
 import com.tkisor.nekojs.platform.Platform;
 import com.tkisor.nekojs.script.ScriptBootstrap;
 import com.tkisor.nekojs.script.WorkspaceGenerator;
+import com.tkisor.nekojs.stage.StageDomainOwner;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.command.v2.ArgumentTypeRegistry;
 import net.minecraft.commands.synchronization.SingletonArgumentInfo;
@@ -31,21 +32,17 @@ import org.slf4j.LoggerFactory;
 /**
  * Fabric entry: brings up the script runtime.
  *
- * <p>The assembly order matches {@code NekoJSMod} on NeoForge: plugin discovery -> V2
+ * <p>The assembly order matches {@code NekoJSMod} in the shared tree: plugin discovery -> V2
  * bootstrap -> engine context / sandbox factory / runtime root -> STARTUP script load ->
  * shared registry collection and drain. Two loader differences: plugin discovery goes through
  * {@link FabricPluginLoader} (built-in list plus entrypoint), and registries have no per-pass
  * event, so {@link FabricRegistryAdapter} registers them directly in one batch.
  *
- * <p>Not wired yet (later work; the full list of gaps is in
- * {@code docs/fabric-port-status.md}): the JEI recipe viewer, the workspace editor GUI and its
- * network packets, Modification replay, and custom network channels.
- * The current fabric script surface is neutral bindings + the shared registry + recipe scripts
- * (recipes/afterRecipes and ingredient actions) + GoalEvents + BlockEvents.broken + ServerEvents
- * lifecycle/tick + PlayerEvents join/leave/chat + EntityEvents
- * joinLevel/death/damagePre/damagePost + ItemEvents.rightClicked + ClientEvents tick (CLIENT
- * scripts) + Level/Player/Server/MutableComponent entity extensions + packet distribution and
- * the ClientData/PData network channels + ScriptEvents custom events.
+ * <p>The current Fabric script surface includes neutral bindings, shared registries, recipe
+ * scripts (recipes/afterRecipes and ingredient actions), GoalEvents, BlockEvents, ServerEvents
+ * lifecycle/tick, PlayerEvents, EntityEvents, ItemEvents, ClientEvents, Stages/StageEvents,
+ * entity/player/level/server extensions, packet distribution, ClientData/PData network channels,
+ * and ScriptEvents custom events.
  */
 public final class NekoJSFabricMod extends NekoJS implements ModInitializer {
 
@@ -53,7 +50,7 @@ public final class NekoJSFabricMod extends NekoJS implements ModInitializer {
 
     /**
      * The runtime root that this entry owns privately; there is no public static root. The
-     * fabric entrypoint is instantiated reflectively by the loader, so it cannot be injected
+     * Fabric entrypoint is instantiated reflectively by the loader, so it cannot be injected
      * through the constructor; the composition family in the same package reads the root
      * through the package-private {@link #runtimeRootOrNull()}. The root is still assembled
      * only once, in this entry.
@@ -64,7 +61,7 @@ public final class NekoJSFabricMod extends NekoJS implements ModInitializer {
         return runtimeRoot;
     }
 
-    /** Flushes CLIENT-side node timers on the client tick; same role as NekoJSClient on NeoForge. */
+    /** Flushes CLIENT-side node timers on the client tick; same role as NekoJSClient on other loaders. */
     public static void flushClientNodeTimers() {
         if (runtimeRoot != null) {
             runtimeRoot.flushReadyNodeTimers(com.tkisor.nekojs.api.ScriptType.CLIENT);
@@ -119,15 +116,15 @@ public final class NekoJSFabricMod extends NekoJS implements ModInitializer {
         FabricPDataSync.registerServer();
         // AddressArgument wire registration: vanilla ClientboundCommandsPacket resolves argument
         // infos via ArgumentTypeInfos.BY_CLASS plus a numeric command_argument_type registry id —
-        // the same client-sync contract as the NeoForge side (NekoJSArgumentTypes). An unmapped
-        // class throws "Unrecognized argument type" during world entry; fabric's
+        // the same client-sync contract as NekoJSArgumentTypes in the shared tree. An unmapped
+        // class throws "Unrecognized argument type" during world entry; Fabric's
         // ArgumentTypeRegistry fills both maps. Runs here so it precedes any server start.
         ArgumentTypeRegistry.registerArgumentType(
                 Identifier.fromNamespaceAndPath(NekoJS.MODID, "address"),
                 AddressArgument.class,
                 SingletonArgumentInfo.contextFree(AddressArgument::address));
-        // The /nekojs command tree: FabricNekoJSCommands, the fabric subset with the same names and
-        // behavior as the NeoForge version in the shared tree.
+        // The /nekojs command tree: FabricNekoJSCommands, the Fabric subset with the same names and
+        // behavior as the command surface in the shared tree.
         FabricNekoJSCommands.registerCallback(NekoJSFabricMod::runtimeRootOrNull);
         initializeWorkspace();
         try {
@@ -138,15 +135,14 @@ public final class NekoJSFabricMod extends NekoJS implements ModInitializer {
         }
         FabricRegistryAdapter.onInitialize();
         com.tkisor.nekojs.bindings.event.CapabilityEvents.postAndApply();
-        // The final step once every registration and load is done. NeoForge fires this after
-        // RegistryEventAdapter.onLoadComplete on FMLLoadComplete; on fabric,
+        // The final step once every registration and load is done. On Fabric,
         // FabricRegistryAdapter.onInitialize has already drained the registries, so this sits at the
-        // same point.
+        // same completion point.
         NekoRuntimeAccess.get().fireAfterInit();
         LOGGER.info("NekoJS {} fabric bootstrap done (startup scripts loaded, registry drained).", NekoJS.MODID);
     }
 
-    /** Same order as {@code NekoJSMod#initializeWorkspace} on NeoForge: create folders -> generate
+    /** Same order as {@code NekoJSMod#initializeWorkspace} in the shared tree: create folders -> generate
      * default scripts -> fill in missing folders -> workspace config. */
     private static void initializeWorkspace() {
         NekoJSPaths paths = NekoJSPaths.get();
@@ -156,13 +152,11 @@ public final class NekoJSFabricMod extends NekoJS implements ModInitializer {
         WorkspaceGenerator.setupWorkspace();
     }
 
-    /** Builds the engine: same structure as {@code NekoJSMod#initializeScripts} and the same shared
-     * {@code NekoRuntimeAssembly}, with a different plugin discovery and without the NeoForge-only
-     * hooks. */
+    /** Builds the engine using the shared {@code NekoRuntimeAssembly} and Fabric plugin discovery. */
     private void initializeScripts() {
         FabricPluginLoader.loadPlugins();
-        // The shared assembly sequence, same structure as on NeoForge. Loader differences stay in this
-        // class (FabricPluginLoader discovery, the setPluginRuntime -> bindRuntime wiring order), and
+        // The shared assembly sequence. Loader differences stay in this class
+        // (FabricPluginLoader discovery, the setPluginRuntime -> bindRuntime wiring order), and
         // the result is held privately by this entry.
         runtimeRoot = NekoRuntimeAssembly.assemble(
                 this.scriptEventBridge,
@@ -179,6 +173,9 @@ public final class NekoJSFabricMod extends NekoJS implements ModInitializer {
                 Platform.instance().isClient()
                         ? com.tkisor.nekojs.authoring.AuthoringClientPlatform.create(runtimeRoot) : null));
         runtimeRoot.registerDomainCollector(new com.tkisor.nekojs.wrapper.event.server.ModificationDomainOwner());
+        StageDomainOwner stageDomainOwner = new StageDomainOwner();
+        stageDomainOwner.bindReloadRoot(runtimeRoot);
+        runtimeRoot.registerDomainCollector(stageDomainOwner);
         // Fabric has no registry mutation adapter for villager trades, so this registers an explicitly
         // unavailable owner. Collection still goes through the same events, and preflight rejects the
         // whole batch with the unavailable reason; it is not a silent no-op.

@@ -5,6 +5,9 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Host bridge backing the Node.js {@code path} built-in module, including POSIX and Win32 helpers.
+ */
 public final class NekoNodePath {
     public String sep() {
         return java.io.File.separator;
@@ -99,6 +102,7 @@ public final class NekoNodePath {
         return new Win32();
     }
 
+    /** Parsed components of a filesystem path returned by {@code path.parse()}. */
     public record PathParts(String root, String dir, String base, String ext, String name) {}
 
     public static final class Posix {
@@ -106,7 +110,7 @@ public final class NekoNodePath {
         public String delimiter() { return ":"; }
         public String join(String... parts) { return normalize(String.join("/", clean(parts))); }
         public String normalize(String path) { return normalizeSeparated(path, "/"); }
-        public String dirname(String path) { int index = normalize(path).lastIndexOf('/'); return index < 0 ? "." : normalize(path).substring(0, index); }
+        public String dirname(String path) { String value = normalize(path); int index = value.lastIndexOf('/'); return index < 0 ? "." : (index == 0 ? "/" : value.substring(0, index)); }
         public String basename(String path) { String value = normalize(path); int index = value.lastIndexOf('/'); return index < 0 ? value : value.substring(index + 1); }
         public String extname(String path) { String base = basename(path); int dot = base.lastIndexOf('.'); return dot <= 0 ? "" : base.substring(dot); }
         public boolean isAbsolute(String path) { return path != null && path.startsWith("/"); }
@@ -117,7 +121,21 @@ public final class NekoNodePath {
         public String delimiter() { return ";"; }
         public String join(String... parts) { return normalize(String.join("\\", clean(parts))); }
         public String normalize(String path) { return normalizeSeparated(path, "\\"); }
-        public String dirname(String path) { String value = normalize(path); int index = value.lastIndexOf('\\'); return index < 0 ? "." : value.substring(0, index); }
+        public String dirname(String path) {
+            String value = normalize(path);
+            if ("\\".equals(value) || value.matches("^[A-Za-z]:\\\\?$")) return value;
+            int index = value.lastIndexOf('\\');
+            if (index < 0) {
+                return value.length() >= 2 && Character.isLetter(value.charAt(0)) && value.charAt(1) == ':'
+                        ? value.substring(0, 2)
+                        : ".";
+            }
+            if (index == 0) return "\\";
+            if (index == 2 && Character.isLetter(value.charAt(0)) && value.charAt(1) == ':') {
+                return value.substring(0, 3);
+            }
+            return value.substring(0, index);
+        }
         public String basename(String path) { String value = normalize(path); int index = value.lastIndexOf('\\'); return index < 0 ? value : value.substring(index + 1); }
         public String extname(String path) { String base = basename(path); int dot = base.lastIndexOf('.'); return dot <= 0 ? "" : base.substring(dot); }
         public boolean isAbsolute(String path) { return path != null && (path.startsWith("\\") || path.matches("^[A-Za-z]:[/\\\\].*")); }
@@ -135,6 +153,12 @@ public final class NekoNodePath {
     private static String normalizeSeparated(String path, String separator) {
         if (path == null || path.isEmpty()) return ".";
         String unified = path.replace("\\", "/");
+        String drivePrefix = "";
+        if ("\\".equals(separator) && unified.length() >= 2
+                && Character.isLetter(unified.charAt(0)) && unified.charAt(1) == ':') {
+            drivePrefix = unified.substring(0, 2);
+            unified = unified.substring(2);
+        }
         boolean absolute = unified.startsWith("/");
         List<String> result = new ArrayList<>();
         for (String part : unified.split("/+")) {
@@ -148,6 +172,9 @@ public final class NekoNodePath {
         }
         String joined = String.join(separator, result);
         if (absolute) joined = separator + joined;
+        if (!drivePrefix.isEmpty()) {
+            return drivePrefix + (joined.isEmpty() ? "." : joined);
+        }
         return joined.isEmpty() ? (absolute ? separator : ".") : joined;
     }
 }

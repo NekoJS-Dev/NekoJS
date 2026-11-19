@@ -191,8 +191,8 @@ public final class NekoCommonManualDeclarations {
                         + "register(): void; }",
                 "Startup-only scripted EntityType and vanilla goal registration declarations.",
                 List.of(
-                        "RegistryEvents.entityType(event => event.create('nekojs:test_mob', "
-                                + "builder => builder.goals(goals => goals.floatInWater())))",
+                        "StartupEvents.registry('entity_type', event => event.create('nekojs:test_mob', "
+                                + "build => build.goals(goals => goals.floatInWater())))",
                         "GoalEvents.register(event => event.forType('minecraft:pig', "
                                 + "goals => goals.randomStroll(6, 0.8)))"))
                 .withReferences(select(references, "EntityType")));

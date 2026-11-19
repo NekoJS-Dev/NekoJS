@@ -119,11 +119,16 @@ public class NativeEventsJS implements Binding {
 
     @SuppressWarnings({"unchecked", "rawtypes"})
     private void registerNative(Object priorityObj, boolean receiveCancelled, Object eventType, Object handler) {
+        if (handler == null) return;
         Class<? extends Event> eventClass = resolveEventClass(eventType);
         if (eventClass == null) return;
 
         EventPriority priority = resolvePriority(priorityObj);
-        Value handlerValue = handler == null ? null : Value.asValue(handler);
+        Value handlerValue = Value.asValue(handler);
+        if (handlerValue.isNull() || !handlerValue.canExecute()) {
+            NekoJS.LOGGER.warn("Native event handler is not executable for event {}: {}", eventClass.getName(), handler);
+            return;
+        }
         // Records the handler's owner (Context/ScriptType): an exception thrown during dispatch must reach
         // the error panel under that script type (the same channel as EventBusJS.recordListenerError),
         // not a single debug line. Otherwise a native event handler that throws is invisible and the

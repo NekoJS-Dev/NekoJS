@@ -2,6 +2,7 @@ package com.tkisor.nekojs.core.compiler;
 
 import java.util.*;
 
+/** Minimal JavaScript AST parser used by preflight validators to inspect calls and member accesses. */
 public final class ValParser {
     private final String src;
     private final int n;
@@ -393,7 +394,9 @@ public final class ValParser {
         List<ValNode> stmts = new ArrayList<>();
         ValNode.Block block = new ValNode.Block(stmts, null, new LinkedHashMap<>(), start, 0);
         while (pos < n) {
-            skipWsCmt(); if (pos >= n || peek() == '}') { pos++; break; }
+            skipWsCmt();
+            if (pos >= n) break;
+            if (peek() == '}') { pos++; break; }
             int before = pos;
             ValNode s = parseStatement(block); if (s != null) stmts.add(s);
             if (pos == before) pos++; // Guards against an endless loop: a statement that consumed nothing, such as a bare operator, is skipped
@@ -499,7 +502,7 @@ public final class ValParser {
     private void skipLine() { pos += 2; while (pos < n && src.charAt(pos) != '\n') pos++; }
     private void skipBlock() { pos += 2; while (pos + 1 < n && !(src.charAt(pos) == '*' && src.charAt(pos + 1) == '/')) pos++; if (pos + 1 < n) pos += 2; }
     private void skipSemi() { skipWs(); if (pos < n && src.charAt(pos) == ';') pos++; }
-    private void skipTpl() { pos++; while (pos < n) { if (src.charAt(pos) == '\\') { pos += 2; continue; } if (src.charAt(pos) == '`') { pos++; return; } pos++; } }
+    private void skipTpl() { pos = NekoSourceLexerBase.skipTemplate(src, n, pos); }
     private char peek() { return pos < n ? src.charAt(pos) : '\0'; }
     private char peek(int a) { return pos + a < n ? src.charAt(pos + a) : '\0'; }
     private boolean match(String kw) {

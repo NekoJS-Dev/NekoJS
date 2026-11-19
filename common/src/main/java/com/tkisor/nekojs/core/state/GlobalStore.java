@@ -83,7 +83,7 @@ public final class GlobalStore {
 
         private final GlobalStore store;
         private final Map<String, PendingOp> ops = new LinkedHashMap<>();
-        private boolean cleared;
+        private volatile boolean cleared;
         private long clearBaseEpoch;
 
         MapWriteSet(GlobalStore store) {
@@ -91,31 +91,33 @@ public final class GlobalStore {
         }
 
         boolean hasWrites() {
-            return cleared || !ops.isEmpty();
+            synchronized (store.owner.lock) {
+                return cleared || !ops.isEmpty();
+            }
         }
 
         Object effectiveGet(String key) {
-            PendingOp op = ops.get(key);
-            if (op != null) {
-                return op.remove ? null : op.value;
-            }
-            if (cleared) {
-                return null;
-            }
             synchronized (store.owner.lock) {
+                PendingOp op = ops.get(key);
+                if (op != null) {
+                    return op.remove ? null : op.value;
+                }
+                if (cleared) {
+                    return null;
+                }
                 return store.rawGet(key);
             }
         }
 
         boolean effectiveContainsKey(String key) {
-            PendingOp op = ops.get(key);
-            if (op != null) {
-                return !op.remove;
-            }
-            if (cleared) {
-                return false;
-            }
             synchronized (store.owner.lock) {
+                PendingOp op = ops.get(key);
+                if (op != null) {
+                    return !op.remove;
+                }
+                if (cleared) {
+                    return false;
+                }
                 return store.values.containsKey(key);
             }
         }

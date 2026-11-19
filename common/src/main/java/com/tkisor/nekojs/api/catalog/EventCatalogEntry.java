@@ -13,7 +13,8 @@ public record EventCatalogEntry(
         boolean cancellable,
         boolean dispatchable,
         String snippet,
-        List<EventCallSignature> callSignatures
+        List<EventCallSignature> callSignatures,
+        boolean selectorRequired
 ) {
     public EventCatalogEntry {
         eventType = com.tkisor.nekojs.api.ScriptTypeViews.outputClass(eventType);
@@ -25,9 +26,21 @@ public record EventCatalogEntry(
         this(group, name, scriptType, eventType, dispatchKeyType, cancellable, dispatchable, snippet, List.of());
     }
 
+    public EventCatalogEntry(String group, String name, ScriptTypePredicate scriptType, Class<?> eventType,
+                             Class<?> dispatchKeyType, boolean cancellable, boolean dispatchable, String snippet,
+                             List<EventCallSignature> callSignatures) {
+        this(group, name, scriptType, eventType, dispatchKeyType, cancellable, dispatchable, snippet, callSignatures, false);
+    }
+
     public EventCatalogEntry withCallSignatures(List<EventCallSignature> signatures) {
         return new EventCatalogEntry(group, name, scriptType, eventType, dispatchKeyType, cancellable, dispatchable,
-                snippet, signatures);
+                snippet, signatures, selectorRequired);
+    }
+
+    public EventCatalogEntry requiringSelector() {
+        String keyedSnippet = group + "." + name + "(\"${1:selector}\", event => {\n  $0\n})";
+        return new EventCatalogEntry(group, name, scriptType, eventType, dispatchKeyType, cancellable, dispatchable,
+                keyedSnippet, callSignatures, true);
     }
 
     public static EventCatalogEntry of(

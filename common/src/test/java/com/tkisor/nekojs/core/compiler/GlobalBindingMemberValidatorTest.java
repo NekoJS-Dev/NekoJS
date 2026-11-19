@@ -354,15 +354,14 @@ class GlobalBindingMemberValidatorTest {
     @Test
     void multilineChainedCallbackParamsAreNotFlagged() {
         validate(file("builder"),
-                "RegistryEvents.item(event => {\r\n"
+                "StartupEvents.registry('item', event => {\r\n"
                 + "    event.create('mymod:cool_gem', builder => {\r\n"
-                + "        builder\r\n"
-                + "            .maxStackSize(16)\r\n"
-                + "            .rarity('rare')\r\n"
-                + "            .fireResistant()\r\n"
+                + "        builder.maxStackSize = 16\r\n"
+                + "        builder.rarity = 'rare'\r\n"
+                + "        builder.fireResistant = true\r\n"
                 + "    })\r\n"
                 + "})\r\n"
-                + "RegistryEvents.entityType(event => {\r\n"
+                + "StartupEvents.registry('entity_type', event => {\r\n"
                 + "    event.create('nekojs:test_mob', builder => {\r\n"
                 + "        builder.attributes(attributes => {\r\n"
                 + "            attributes.maxHealth(10)\r\n"

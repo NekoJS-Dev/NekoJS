@@ -97,7 +97,7 @@ class EventSurfaceOwnershipTest {
         Set<String> expected = new HashSet<>(Set.of(
                 "PlayerEvents", "ServerEvents", "BlockEvents", "ItemEvents", "EntityEvents",
                 "GoalEvents", "CommandEvents", "CapabilityEvents", "LevelEvents",
-                "NetworkEvents", "ScriptEvents", "ProbeEvents", "ClientEvents"));
+                "NetworkEvents", "ScriptEvents", "ProbeEvents", "ClientEvents", "StageEvents"));
         //? if >=26 {
         expected.add("KeyBindEvents");
         //?}

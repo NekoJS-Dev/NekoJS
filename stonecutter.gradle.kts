@@ -52,6 +52,7 @@ stonecutter parameters {
             replace("""\bResourceLocation\b""" to "Identifier", """\bIdentifier\b""" to "ResourceLocation")
             replace("""\bGuiGraphics\b""" to "GuiGraphicsExtractor", """\bGuiGraphicsExtractor\b""" to "GuiGraphics")
             replace("""\bdrawCenteredString\b""" to "centeredText", """\bcenteredText\b""" to "drawCenteredString")
+            replace("""\bClickType\b""" to "ContainerInput", """\bContainerInput\b""" to "ClickType")
         }
 
         regex(current.parsed >= "26", "mc_legacy_api") {

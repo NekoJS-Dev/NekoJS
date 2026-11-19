@@ -7,6 +7,9 @@ import com.tkisor.nekojs.api.surface.ApiSymbol;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * Immutable snapshot of all bindings, events, adapters, recipes, and type metadata exposed to scripts and probe generators.
+ */
 public record NekoScriptCatalogSnapshot(
         List<ScriptType> scriptTypes,
         List<BindingCatalogEntry> bindings,
@@ -30,6 +33,17 @@ public record NekoScriptCatalogSnapshot(
         List<ModuleEventCatalogEntry> moduleEvents
 ) {
     public NekoScriptCatalogSnapshot {
+        scriptTypes = List.copyOf(scriptTypes == null ? List.of() : scriptTypes);
+        bindings = List.copyOf(bindings == null ? List.of() : bindings);
+        events = List.copyOf(events == null ? List.of() : events);
+        adapters = List.copyOf(adapters == null ? List.of() : adapters);
+        recipeNamespaces = List.copyOf(recipeNamespaces == null ? List.of() : recipeNamespaces);
+        hostExtensions = List.copyOf(hostExtensions == null ? List.of() : hostExtensions);
+        snippets = List.copyOf(snippets == null ? List.of() : snippets);
+        typeDocs = List.copyOf(typeDocs == null ? List.of() : typeDocs);
+        manualDeclarations = List.copyOf(manualDeclarations == null ? List.of() : manualDeclarations);
+        registryBuilderSurfaces = List.copyOf(registryBuilderSurfaces == null ? List.of() : registryBuilderSurfaces);
+        registryTypes = List.copyOf(registryTypes == null ? List.of() : registryTypes);
         moduleEvents = List.copyOf(moduleEvents == null ? List.of() : moduleEvents);
         moduleBindings = List.copyOf(moduleBindings == null ? List.of() : moduleBindings);
         beanMethodProjections = List.copyOf(beanMethodProjections == null ? List.of() : beanMethodProjections);

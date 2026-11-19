@@ -3,9 +3,13 @@ package com.tkisor.nekojs.wrapper.event.server;
 import com.google.gson.*;
 import com.mojang.serialization.JsonOps;
 import com.tkisor.nekojs.NekoJS;
+import com.tkisor.nekojs.api.annotation.Doc;
+import com.tkisor.nekojs.api.annotation.HideFromJS;
+import com.tkisor.nekojs.api.annotation.Param;
+import com.tkisor.nekojs.api.annotation.Return;
+import com.tkisor.nekojs.api.data.NekoId;
 import com.tkisor.nekojs.api.recipe.RecipeCreationContext;
 import com.tkisor.nekojs.api.recipe.RecipeBuilderSession;
-import com.tkisor.nekojs.api.annotation.HideFromJS;
 import com.tkisor.nekojs.api.recipe.RecipeEntryJS;
 import com.tkisor.nekojs.api.recipe.RecipeFilter;
 import com.tkisor.nekojs.api.recipe.RecipeJsonBuilder;
@@ -16,6 +20,8 @@ import com.tkisor.nekojs.api.recipe.definition.RecipeFieldDefinition;
 import com.tkisor.nekojs.api.recipe.definition.RecipeFieldRole;
 import com.tkisor.nekojs.api.recipe.definition.RecipeTypeDefinition;
 import com.tkisor.nekojs.api.recipe.definition.RecipeTypeDefinitionRegistry;
+import com.tkisor.nekojs.api.stage.StageScope;
+import com.tkisor.nekojs.core.stage.gate.InlineRecipeStageRegistry;
 import com.tkisor.nekojs.wrapper.RecipeRegistryProxy;
 import com.tkisor.nekojs.wrapper.item.IngredientResolver;
 import net.minecraft.core.HolderLookup;
@@ -30,6 +36,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.ItemStackTemplate;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.crafting.*;
+import net.minecraft.world.item.crafting.display.SlotDisplay;
 //? if neoforge {
 import net.neoforged.neoforge.fluids.FluidStack;
 import net.neoforged.neoforge.fluids.crafting.FluidIngredient;
@@ -81,6 +88,9 @@ public class RecipeEventJS implements RecipeLifecycleContext {
     }
 
     public RecipeEventJS(Map<Identifier, JsonElement> originalJsons, HolderLookup.Provider registries, RecipeTypeDefinitionRegistry recipeTypeDefinitions) {
+        // Inline recipe stage gates are pure script state rebuilt on each recipe reload;
+        // clearing on event construction drops stale script gates across reloads and isolated tests.
+        InlineRecipeStageRegistry.current().clear();
         this.jsons = new HashMap<>();
         // Script edits must not mutate the datapack baseline reused by later applications.
         originalJsons.forEach((id, json) -> this.jsons.put(id, json.deepCopy()));
@@ -169,6 +179,7 @@ public class RecipeEventJS implements RecipeLifecycleContext {
         if (parsedId == null) return;
         jsons.remove(parsedId);
         contexts.remove(parsedId);
+        InlineRecipeStageRegistry.current().remove(NekoId.resource(parsedId.getNamespace(), parsedId.getPath()));
     }
 
     public void setRecipeContext(Identifier id, RecipeCreationContext context) {
@@ -451,13 +462,60 @@ public class RecipeEventJS implements RecipeLifecycleContext {
     public void remove(RecipeFilter filter) {
         if (filter == null) return;
         int before = jsons.size();
-        jsons.entrySet().removeIf(entry -> {
+        InlineRecipeStageRegistry.current().runBatch(() -> jsons.entrySet().removeIf(entry -> {
             if (!entry.getValue().isJsonObject()) return false;
             boolean remove = passFilter(entry.getKey(), entry.getValue().getAsJsonObject(), filter);
-            if (remove) contexts.remove(entry.getKey());
+            if (remove) {
+                contexts.remove(entry.getKey());
+                InlineRecipeStageRegistry.current().remove(
+                        NekoId.resource(entry.getKey().getNamespace(), entry.getKey().getPath()));
+            }
             return remove;
-        });
+        }));
         NekoJS.LOGGER.debug("Removed {} recipes matching the filter", before - jsons.size());
+    }
+
+    @Doc("Gates all recipes matching the given filter behind a player progression stage without modifying recipe JSON.")
+    @Param(name = "filter", value = "recipe filter object, recipe id, regex, array, or predicate")
+    @Param(name = "stage", value = "required non-blank stage name")
+    @Return("the number of matched recipes gated")
+    public int stage(RecipeFilter filter, String stage) {
+        return stage(filter, stage, "player");
+    }
+
+    @Doc("Gates all recipes matching the given filter behind a progression stage in the specified evaluation scope without modifying recipe JSON.")
+    @Param(name = "filter", value = "recipe filter object, recipe id, regex, array, or predicate")
+    @Param(name = "stage", value = "required non-blank stage name")
+    @Param(name = "scope", value = "stage evaluation scope ('player', 'server', 'either', or 'both')")
+    @Return("the number of matched recipes gated")
+    public int stage(RecipeFilter filter, String stage, String scope) {
+        if (stage == null || stage.isBlank()) {
+            throw new IllegalArgumentException("[NEKO-4070] Recipe stage must not be blank");
+        }
+        StageScope parsedScope = StageScope.fromString(scope);
+        if (parsedScope == null) {
+            throw new IllegalArgumentException("[NEKO-4070] Unknown recipe stage scope: " + scope);
+        }
+        if (filter == null) {
+            return 0;
+        }
+        String trimmedStage = stage.trim();
+        List<NekoId> matchedIds = new ArrayList<>();
+        for (Map.Entry<Identifier, JsonElement> entry : jsons.entrySet()) {
+            if (!entry.getValue().isJsonObject()) continue;
+            if (passFilter(entry.getKey(), entry.getValue().getAsJsonObject(), filter)) {
+                Identifier id = entry.getKey();
+                matchedIds.add(NekoId.resource(id.getNamespace(), id.getPath()));
+            }
+        }
+        if (!matchedIds.isEmpty()) {
+            InlineRecipeStageRegistry.current().runBatch(() -> {
+                for (NekoId recipeId : matchedIds) {
+                    InlineRecipeStageRegistry.current().put(recipeId, trimmedStage, parsedScope);
+                }
+            });
+        }
+        return matchedIds.size();
     }
 
     public String dump(RecipeFilter filter) {
@@ -662,7 +720,8 @@ public class RecipeEventJS implements RecipeLifecycleContext {
         if (recipe instanceof ShapelessRecipe shapeless) return getIdFromTemplate(shapeless.result);
         if (recipe instanceof SingleItemRecipe single) return getIdFromTemplate(single.result());
         if (recipe instanceof AbstractCookingRecipe cooking) return getIdFromTemplate(cooking.result);
-        return null;
+        ItemStack displayed = staticDisplayResult(recipe);
+        return displayed.isEmpty() ? null : BuiltInRegistries.ITEM.getKey(displayed.getItem()).toString();
     }
 
     private static String getIdFromTemplate(ItemStackTemplate template) {
@@ -692,7 +751,26 @@ public class RecipeEventJS implements RecipeLifecycleContext {
         if (recipe instanceof ShapelessRecipe shapeless) return shapeless.result.create();
         if (recipe instanceof SingleItemRecipe single) return single.result().create();
         if (recipe instanceof AbstractCookingRecipe cooking) return cooking.result.create();
-        return ItemStack.EMPTY;
+        return staticDisplayResult(recipe);
+    }
+
+    private static ItemStack staticDisplayResult(Recipe<?> recipe) {
+        ItemStack output = ItemStack.EMPTY;
+        for (var display : recipe.display()) {
+            ItemStack next = staticDisplayResult(display.result());
+            if (next.isEmpty() || (!output.isEmpty() && !ItemStack.isSameItem(output, next))) return ItemStack.EMPTY;
+            output = next;
+        }
+        return output;
+    }
+
+    private static ItemStack staticDisplayResult(SlotDisplay display) {
+        return switch (display) {
+            case SlotDisplay.ItemStackSlotDisplay stack -> stack.stack().create();
+            case SlotDisplay.ItemSlotDisplay item -> new ItemStack(item.item());
+            case SlotDisplay.WithRemainder remainder -> staticDisplayResult(remainder.input());
+            default -> ItemStack.EMPTY;
+        };
     }
 
     /** Enumerates native ingredient representatives for overlap checks. */

@@ -21,9 +21,11 @@ import com.tkisor.nekojs.script.prop.ScriptPropertyRegistry;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -129,8 +131,7 @@ public final class NekoPluginBootstrap {
                                         ScriptPropertyRegistry scriptProperties) {
         BootstrapContext context = new BootstrapContext(Platform.isClient());
         ExtensionRegistry registry = new ExtensionRegistry();
-        // ADR-0003: Built-in point definition plugins precede explicitly (via the same provider path as third-party; built-in precedence phase
-        // is the engine's guarantee for the graph root, not dependent on plugin priority)
+        // Register built-in extension points first through the same provider path so the root graph does not depend on plugin priority.
         new NekoBuiltinPointsPlugin(scriptProperties, context.client(), plugin ->
                 plugin instanceof NekoCommonBuiltinPlugin ? "nekojs" : ownerLabels.apply(plugin))
                 .registerPluginExtensionPoints(registry.scopedTo("nekojs:builtin-points"));
@@ -181,20 +182,26 @@ public final class NekoPluginBootstrap {
         return product;
     }
 
-    private static List<LegacyGlobalReservation> buildLegacyReservations(Map<String, Object> products) {
+    static List<LegacyGlobalReservation> buildLegacyReservations(Map<String, Object> products) {
         List<LegacyGlobalReservation> reservations = new ArrayList<>();
+        Set<String> seen = new LinkedHashSet<>();
         Map<ScriptType, Map<String, Binding>> bindings = cast(products.get(BindingsPoint.ID));
         for (Map<String, Binding> typeBindings : bindings.values()) {
             for (Binding binding : typeBindings.values()) {
-                String diagId = "global:" + binding.name() + "#" + binding.valueType().getName();
-                reservations.add(new LegacyGlobalReservation(
-                        binding.name(), new ApiSymbolId("global", diagId)));
+                String bindingName = binding.name();
+                if (seen.add(bindingName)) {
+                    String diagId = "global:" + bindingName + "#" + binding.valueType().getName();
+                    reservations.add(new LegacyGlobalReservation(
+                            bindingName, new ApiSymbolId("global", diagId)));
+                }
             }
         }
         for (com.tkisor.nekojs.api.event.EventGroup group : EventsPoint.mergedEventGroups(products).values()) {
-            String diagId = "event-group:" + group.name();
-            reservations.add(new LegacyGlobalReservation(
-                    group.name(), new ApiSymbolId("global", diagId)));
+            if (seen.add(group.name())) {
+                String diagId = "event-group:" + group.name();
+                reservations.add(new LegacyGlobalReservation(
+                        group.name(), new ApiSymbolId("global", diagId)));
+            }
         }
         return List.copyOf(reservations);
     }
@@ -429,6 +436,9 @@ public final class NekoPluginBootstrap {
         }
 
         private <R> R checkType(String pointId, Object product, Class<R> type) {
+            if (product == null) {
+                return null;
+            }
             if (!type.isInstance(product)) {
                 throw new IllegalStateException("Plugin extension point '" + pointId
                         + "' product type mismatch: expected " + type.getName()

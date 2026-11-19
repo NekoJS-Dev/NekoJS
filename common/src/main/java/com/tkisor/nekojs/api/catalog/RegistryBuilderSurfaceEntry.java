@@ -15,7 +15,7 @@ import java.util.List;
  * introduces no Minecraft, loader or Graal types, so the reflection input is produced in the
  * version tree and this record only carries data.
  *
- * @param builderName    simple name of the builder (such as {@code ItemBuilder}), also the type name on both sides
+ * @param builderName    builder type name on both sides (such as {@code ItemBuilder}), empty for event-only entries
  * @param registryKey    full registry key (such as {@code minecraft:item})
  * @param typeName       registry type name (such as {@code basic})
  * @param sugarName      script sugar method name (such as {@code item}); only the default type has one
@@ -51,6 +51,15 @@ public record RegistryBuilderSurfaceEntry(
         nestedBuilders = List.copyOf(nestedBuilders == null ? List.of() : nestedBuilders);
     }
 
+    /** Carries a declaration for events whose factories supply no concrete builder classes. */
+    public static RegistryBuilderSurfaceEntry eventOnly(EventPayload payload) {
+        return new RegistryBuilderSurfaceEntry("", "", "", null, List.of(), "", payload);
+    }
+
+    public boolean hasBuilder() {
+        return !builderName.isEmpty();
+    }
+
     /** Member kind: writable property (both setter forms), read-only property, or method (including an explicit setter). */
     public enum MemberKind { WRITABLE_PROPERTY, READ_ONLY_PROPERTY, METHOD }
 
@@ -70,16 +79,43 @@ public record RegistryBuilderSurfaceEntry(
      * Associate script-only members with an event's host identity without reflecting or exposing that host.
      * Entries for the same event and payload name contribute members to one declaration in each backend.
      * A nonempty TypeScript builder namespace isolates associated types from legacy global declarations;
-     * the three-argument constructor retains global builder names for existing contributors.
+     * Each scoped variant maps accepted selector spellings to one declaration. The older constructors
+     * describe unscoped payloads, including those used by dynamic registry events.
      */
     public record EventPayload(Class<?> eventType, String name, List<Member> members,
-                               String typescriptBuilderNamespace) {
+                               String typescriptBuilderNamespace, List<EventVariant> variants) {
         public EventPayload(Class<?> eventType, String name, List<Member> members) {
             this(eventType, name, members, null);
         }
 
+        public EventPayload(Class<?> eventType, String name, List<Member> members, String typescriptBuilderNamespace) {
+            this(eventType, name, members, typescriptBuilderNamespace, List.of());
+        }
+
+        public static EventPayload scoped(Class<?> eventType, String typescriptBuilderNamespace,
+                                          List<EventVariant> variants) {
+            return new EventPayload(eventType, null, List.of(), typescriptBuilderNamespace, variants);
+        }
+
         public EventPayload {
             members = List.copyOf(members == null ? List.of() : members);
+            variants = List.copyOf(variants);
+        }
+
+        public boolean selectorScoped() {
+            return name == null || !variants.isEmpty();
+        }
+
+        public List<String> declarationNames() {
+            return selectorScoped() ? variants.stream().map(EventVariant::typeName).toList() : List.of(name);
+        }
+    }
+
+    /** One callback type and the literal selectors that select it. */
+    public record EventVariant(List<String> selectors, String typeName, List<Member> members) {
+        public EventVariant {
+            selectors = List.copyOf(selectors);
+            members = List.copyOf(members);
         }
     }
 }

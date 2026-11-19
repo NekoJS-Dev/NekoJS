@@ -20,6 +20,7 @@ public final class ScriptPreflightRunner implements AutoCloseable {
     private final Map<String, Worker> workers = new LinkedHashMap<>();
     private boolean closed;
 
+    /** Creates a runner backed by the given provider catalog and source map registry. */
     public ScriptPreflightRunner(ScriptPreflightCatalog catalog, SourceMapRegistry sourceMaps) {
         this.catalog = Objects.requireNonNull(catalog, "catalog");
         this.sourceMaps = Objects.requireNonNull(sourceMaps, "sourceMaps");
@@ -34,14 +35,16 @@ public final class ScriptPreflightRunner implements AutoCloseable {
                     + request.stage() + "/" + request.scope() + " for " + request.input()
                     + " with capabilities " + request.capabilities() + " at " + request.path());
         }
-        Worker worker = worker(entry, request);
         List<Diagnostic> diagnostics;
-        try {
-            diagnostics = List.copyOf(worker.check(request));
-        } catch (VirtualMachineError | ThreadDeath fatal) {
-            throw fatal;
-        } catch (Throwable failure) {
-            throw providerFailure(id, request, "run", failure);
+        synchronized (this) {
+            Worker worker = worker(entry, request);
+            try {
+                diagnostics = List.copyOf(worker.check(request));
+            } catch (VirtualMachineError | ThreadDeath fatal) {
+                throw fatal;
+            } catch (Throwable failure) {
+                throw providerFailure(id, request, "run", failure);
+            }
         }
         if (diagnostics.isEmpty()) return List.of();
 
@@ -79,7 +82,7 @@ public final class ScriptPreflightRunner implements AutoCloseable {
 
     /** Called by the root after its script sessions have stopped. */
     @Override
-    public void close() throws ProviderFailure {
+    public synchronized void close() throws ProviderFailure {
         Throwable first = null;
         boolean interrupted = false;
         try {
@@ -124,6 +127,7 @@ public final class ScriptPreflightRunner implements AutoCloseable {
     /** Authored location, absent when the current artifact cannot map a generated position. */
     public record AuthoredPosition(String path, Position position) {}
 
+    /** A single preflight diagnostic paired with its provider metadata and optional authored source position. */
     public record Report(String providerId, String providerRevision, Stage stage, Scope scope,
                          Diagnostic diagnostic, AuthoredPosition authoredPosition) {}
 

@@ -2,9 +2,12 @@ package com.tkisor.nekojs.core.plugin;
 
 import com.tkisor.nekojs.api.NekoJSPlugin;
 import com.tkisor.nekojs.api.ScriptType;
+import com.tkisor.nekojs.api.data.BindingRegistry;
 import com.tkisor.nekojs.api.event.EventBusJS;
 import com.tkisor.nekojs.api.event.EventGroup;
 import com.tkisor.nekojs.api.event.EventGroupRegistry;
+import com.tkisor.nekojs.api.event.ModuleEventGroup;
+import com.tkisor.nekojs.api.surface.LegacyGlobalReservation;
 import com.tkisor.nekojs.core.module.NodeModuleRegister;
 import com.tkisor.nekojs.platform.IPlatform;
 import com.tkisor.nekojs.platform.Platform;
@@ -18,8 +21,11 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Proxy;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -266,5 +272,98 @@ class NekoPluginExtensionPointTest {
         } finally {
             instance.set(null, original);
         }
+    }
+
+    /**
+     * Unowned plugin declaring both versioned and stable event publications and registering the
+     * same global binding across multiple ScriptType registries.
+     */
+    private static final class UnownedModuleSurfacePlugin
+            implements NekoJSPlugin, EventsPoint.Contributor, BindingsPoint.Contributor {
+        @Override
+        public void registerEvents(EventGroupRegistry registry) {
+            EventGroup group = EventGroup.of("AddonEvents");
+            group.server("ready", Object.class, api -> {
+                api.versioned();
+                api.stable();
+            });
+            registry.register(group);
+        }
+
+        @Override
+        public void registerBinding(BindingRegistry registry) {
+            if (registry.scriptType() == ScriptType.STARTUP || registry.scriptType() == ScriptType.SERVER) {
+                registry.register("SharedHelper", "helper-instance");
+            }
+        }
+    }
+
+    private static final class SecondSameGroupPlugin implements NekoJSPlugin, EventsPoint.Contributor {
+        @Override
+        public void registerEvents(EventGroupRegistry registry) {
+            EventGroup group = EventGroup.of("AddonEvents");
+            group.server("reloaded", Object.class, api -> api.versioned());
+            registry.register(group);
+        }
+    }
+
+    @Test
+    void unownedBootstrapNormalizesModuleEventOwnerAndDeduplicatesLegacyReservations() {
+        UnownedModuleSurfacePlugin plugin = new UnownedModuleSurfacePlugin();
+
+        NekoPluginRuntime runtime = assertDoesNotThrow(
+                () -> NekoPluginBootstrap.bootstrap(List.of(plugin), new ScriptPropertyRegistry.Impl()),
+                "unowned bootstrap must normalize class-name owner IDs without throwing NEKO-4057");
+
+        String expectedOwner = PluginOwnerIds.resolve(null, plugin);
+        assertTrue(expectedOwner.matches("[a-z0-9_.-]+"),
+                "resolved owner must satisfy module owner pattern");
+
+        List<ModuleEventGroup> moduleGroups = runtime.moduleEventGroups();
+        Set<String> moduleIds = moduleGroups.stream()
+                .map(ModuleEventGroup::moduleId)
+                .collect(Collectors.toSet());
+        assertEquals(
+                Set.of("nekojs:event/versioned/" + expectedOwner, "nekojs:event/stable/" + expectedOwner),
+                moduleIds,
+                "moduleEventGroups must expose lowercase versioned and stable module IDs");
+        for (String moduleId : moduleIds) {
+            assertEquals(moduleId.toLowerCase(Locale.ROOT), moduleId,
+                    "moduleId must be lowercase: " + moduleId);
+        }
+
+        // Verify that SharedHelper was registered in both STARTUP and SERVER, yet buildLegacyReservations
+        // emits each global reservation name at most once (including across distinct event group owners).
+        assertTrue(runtime.bindings(ScriptType.STARTUP).containsKey("SharedHelper"));
+        assertTrue(runtime.bindings(ScriptType.SERVER).containsKey("SharedHelper"));
+
+        NekoPluginRuntime multiOwnerRuntime = NekoPluginBootstrap.bootstrap(
+                List.of(plugin, new SecondSameGroupPlugin()), new ScriptPropertyRegistry.Impl());
+        List<LegacyGlobalReservation> reservations =
+                NekoPluginBootstrap.buildLegacyReservations(multiOwnerRuntime.extensionProducts());
+        List<String> names = reservations.stream()
+                .map(LegacyGlobalReservation::globalName)
+                .toList();
+        assertEquals(new LinkedHashSet<>(names).size(), names.size(),
+                "LegacyGlobalReservation list must not contain duplicate global names: " + names);
+        assertEquals(1L, names.stream().filter("SharedHelper"::equals).count(),
+                "SharedHelper registered across multiple ScriptTypes must be reserved once");
+        assertEquals(1L, names.stream().filter("AddonEvents"::equals).count(),
+                "AddonEvents registered across multiple owners must be reserved once");
+    }
+
+    @Test
+    void pluginOwnerIdsResolvesValidCoreBlankAndLegacyInputs() {
+        PlainPluginA sample = new PlainPluginA();
+        NekoBuiltinPointsPlugin builtinPoints =
+                new NekoBuiltinPointsPlugin(new ScriptPropertyRegistry.Impl(), false);
+
+        assertEquals("my-addon_1.0", PluginOwnerIds.resolve("my-addon_1.0", sample));
+        assertEquals("nekojs", PluginOwnerIds.resolve(null, null));
+        assertEquals("nekojs", PluginOwnerIds.resolve("   ", null));
+        assertEquals("nekojs", PluginOwnerIds.resolve(null, builtinPoints));
+        assertEquals("legacy.com.example.myplugin.inner",
+                PluginOwnerIds.resolve("legacy:com.example.MyPlugin$Inner", sample));
+        assertEquals("nekojs", PluginOwnerIds.resolve(":::$$$---...", sample));
     }
 }

@@ -50,10 +50,10 @@ public final class PostEffectManager {
     /** 1.21.1 has no public getter for the current effect, so the runtime tracks the last set id. */
     private static volatile ResourceLocation lastSetId;
 
-    private static long selectionRevision;
+    private static volatile long selectionRevision;
 
     /** Renderer-owned chain identity; this reference does not extend its lifetime. */
-    private static WeakReference<PostChain> selectedChain = new WeakReference<>(null);
+    private static volatile WeakReference<PostChain> selectedChain = new WeakReference<>(null);
 
     private PostEffectManager() {
     }
@@ -189,11 +189,18 @@ public final class PostEffectManager {
             return false;
         }
         ResourceLocation location = chainLocation(id);
-        lastSetId = id;
-        selectionRevision++;
+        long revision;
+        synchronized (PostEffectManager.class) {
+            lastSetId = id;
+            revision = ++selectionRevision;
+        }
         Minecraft.getInstance().execute(() -> {
             Minecraft.getInstance().gameRenderer.loadEffect(location);
-            selectedChain = new WeakReference<>(Minecraft.getInstance().gameRenderer.currentEffect());
+            synchronized (PostEffectManager.class) {
+                if (selectionRevision == revision) {
+                    selectedChain = new WeakReference<>(Minecraft.getInstance().gameRenderer.currentEffect());
+                }
+            }
         });
         return true;
     }
@@ -206,7 +213,7 @@ public final class PostEffectManager {
     }
 
     /** Cancels a pending resource restoration without touching a renderer-owned replacement. */
-    private static void forgetSelection() {
+    private static synchronized void forgetSelection() {
         lastSetId = null;
         selectionRevision++;
         selectedChain.clear();
@@ -226,9 +233,15 @@ public final class PostEffectManager {
     /** Currently active effect id, or null (tracked via {@code lastSetId}; no public getter). */
     @Nullable
     public static ResourceLocation current() {
-        if (lastSetId == null) return null;
+        ResourceLocation id;
+        WeakReference<PostChain> chainRef;
+        synchronized (PostEffectManager.class) {
+            id = lastSetId;
+            chainRef = selectedChain;
+        }
+        if (id == null) return null;
         PostChain chain = Minecraft.getInstance().gameRenderer.currentEffect();
-        return chain != null && chain == selectedChain.get() ? lastSetId : null;
+        return chain != null && chain == chainRef.get() ? id : null;
     }
 
     /**
@@ -261,16 +274,27 @@ public final class PostEffectManager {
         Minecraft minecraft = Minecraft.getInstance();
         ResourceLocation selected = current();
         if (selected == null || minecraft.level == null) return null;
-        if (minecraft.gameRenderer.currentEffect() != selectedChain.get()) return null;
-        long revision = selectionRevision;
+        long revision;
+        WeakReference<PostChain> chainRef;
+        synchronized (PostEffectManager.class) {
+            revision = selectionRevision;
+            chainRef = selectedChain;
+        }
+        if (minecraft.gameRenderer.currentEffect() != chainRef.get()) return null;
         var level = minecraft.level;
         boolean active = isActive();
         return () -> {
-            if (minecraft.level != level || selectionRevision != revision || !selected.equals(lastSetId)) return;
+            synchronized (PostEffectManager.class) {
+                if (minecraft.level != level || selectionRevision != revision || !selected.equals(lastSetId)) return;
+            }
             if (minecraft.gameRenderer.currentEffect() != null) return;
             if (!isResourceAvailable(selected)) return;
             minecraft.gameRenderer.loadEffect(chainLocation(selected));
-            selectedChain = new WeakReference<>(minecraft.gameRenderer.currentEffect());
+            synchronized (PostEffectManager.class) {
+                if (selectionRevision == revision) {
+                    selectedChain = new WeakReference<>(minecraft.gameRenderer.currentEffect());
+                }
+            }
             if (!active && isActive()) minecraft.gameRenderer.togglePostEffect();
         };
     }

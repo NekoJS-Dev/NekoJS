@@ -1,5 +1,8 @@
 package com.tkisor.nekojs.fabric.mixin;
 
+import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
+import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
+import com.llamalad7.mixinextras.sugar.Local;
 import com.tkisor.nekojs.fabric.event.FabricBlockEventBindingsV2;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.Entity;
@@ -55,6 +58,16 @@ public abstract class MixinFarmlandBlock {
         if (FabricBlockEventBindingsV2.postFarmlandTrample(
                 level, pos, state, (float) fallDistance, entity)) {
             ci.cancel();
+        }
+    }
+
+    @WrapOperation(method = "fallOn(Lnet/minecraft/world/level/Level;Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/entity/Entity;D)V",
+            at = @At(value = "INVOKE", target = "Lnet/minecraft/world/level/block/FarmlandBlock;turnToDirt(Lnet/minecraft/world/entity/Entity;Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/level/Level;Lnet/minecraft/core/BlockPos;)V"),
+            require = 1, allow = 1)
+    private void nekojs$convertTrampledFarmland(Entity entity, BlockState state, Level level, BlockPos pos,
+                                                Operation<Void> original, @Local(argsOnly = true) double fallDistance) {
+        if (!FabricBlockEventBindingsV2.postStableFarmlandTrample(level, pos, state, (float) fallDistance, entity)) {
+            original.call(entity, state, level, pos);
         }
     }
 }

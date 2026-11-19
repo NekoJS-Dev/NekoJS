@@ -101,7 +101,7 @@ final class ProbeIrBuilder {
         if (!ir.isEmpty() && ProbeEvents.MODIFY_TYPE.hasListeners()) {
             try {
                 ProbeEvents.MODIFY_TYPE.post(new ProbeModifyTypeEventJS(ir));
-            } catch (Throwable t) {
+            } catch (Exception t) {
                 NekoJS.LOGGER.error("probe.modify_type event threw; edits may be incomplete", t);
                 warnings.add("probe.modify_type event threw; edits may be incomplete (" + t + ")");
             }
@@ -117,7 +117,7 @@ final class ProbeIrBuilder {
         ProbeAssignTypeEventJS ev = new ProbeAssignTypeEventJS();
         try {
             ProbeEvents.ASSIGN_TYPE.post(ev);
-        } catch (Throwable t) {
+        } catch (Exception t) {
             NekoJS.LOGGER.error("probe.assign_type event threw; assignments may be incomplete", t);
             warnings.add("probe.assign_type event threw; assignments may be incomplete (" + t + ")");
         }
@@ -135,7 +135,7 @@ final class ProbeIrBuilder {
             ProbeAddGlobalEventJS ev = new ProbeAddGlobalEventJS();
             try {
                 ProbeEvents.ADD_GLOBAL.post(ev);
-            } catch (Throwable t) {
+            } catch (Exception t) {
                 NekoJS.LOGGER.error("probe.add_global event threw", t);
                 warnings.add("probe.add_global event threw (" + t + ")");
             }
@@ -145,7 +145,7 @@ final class ProbeIrBuilder {
             ProbeSnippetEventJS ev = new ProbeSnippetEventJS();
             try {
                 ProbeEvents.SNIPPETS.post(ev);
-            } catch (Throwable t) {
+            } catch (Exception t) {
                 NekoJS.LOGGER.error("probe.snippets event threw", t);
                 warnings.add("probe.snippets event threw (" + t + ")");
             }

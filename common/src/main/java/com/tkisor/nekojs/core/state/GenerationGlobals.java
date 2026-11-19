@@ -50,7 +50,7 @@ public final class GenerationGlobals implements AutoCloseable {
     private GlobalView globalView;
     private GlobalView sharedView;
     private volatile boolean closed;
-    private boolean published;
+    private volatile boolean published;
 
     GenerationGlobals(GlobalStateStores stores, ScriptType scriptType, boolean transactional) {
         this(stores, scriptType, transactional, stores.storeFor(scriptType));
@@ -100,14 +100,16 @@ public final class GenerationGlobals implements AutoCloseable {
      */
     public void addPlan(CandidateStatePlan plan) {
         if (plan == null) throw new NullPointerException("plan");
-        if (!isTransactional()) {
-            throw new IllegalStateException(
-                    "generation of " + scriptType.name + " is not a candidate; plans join candidates only");
+        synchronized (stores.lock) {
+            if (!isTransactional()) {
+                throw new IllegalStateException(
+                        "generation of " + scriptType.name + " is not a candidate; plans join candidates only");
+            }
+            if (closed) {
+                throw new IllegalStateException("generation already closed");
+            }
+            plans.add(plan);
         }
-        if (closed) {
-            throw new IllegalStateException("generation already closed");
-        }
-        plans.add(plan);
     }
 
     // ---- Joint preflight, joint publish and discard (transactional generations) ----
@@ -124,12 +126,14 @@ public final class GenerationGlobals implements AutoCloseable {
      * lock, because arbitrary code must not run while the lock is held.
      */
     public void preflightJoint() {
-        if (!isTransactional()) return;
+        List<CandidateStatePlan> plansSnapshot;
         synchronized (stores.lock) {
+            if (!isTransactional()) return;
             if (privateWrites != null) privateWrites.validate();
             if (sharedWrites != null) sharedWrites.validate();
+            plansSnapshot = List.copyOf(plans);
         }
-        for (CandidateStatePlan plan : List.copyOf(plans)) {
+        for (CandidateStatePlan plan : plansSnapshot) {
             try {
                 plan.preflight();
             } catch (GlobalStateException e) {
@@ -151,8 +155,8 @@ public final class GenerationGlobals implements AutoCloseable {
      * lock, so there is no half commit.
      */
     public void publishJoint() {
-        if (!isTransactional()) return;
         synchronized (stores.lock) {
+            if (!isTransactional()) return;
             stores.assertOpen();
             // (a) Recheck before any change: a conflict throws here and leads to discardCandidate,
             // so committed writes are never lost
@@ -211,6 +215,21 @@ public final class GenerationGlobals implements AutoCloseable {
         }
     }
 
+    public void finishPublishedPlans() {
+        if (!published || closed) return;
+        finishPlans(List.copyOf(plans));
+    }
+
+    public static void finishPlans(List<CandidateStatePlan> plans) {
+        for (CandidateStatePlan plan : plans) {
+            try {
+                plan.afterCommit();
+            } catch (Exception failure) {
+                com.tkisor.nekojs.NekoJS.LOGGER.error("[NEKO-1022] Post-commit processing failed for {}", plan.domain(), failure);
+            }
+        }
+    }
+
     private static void validateBatch(List<GenerationGlobals> participants, GlobalStateStores owner) {
         owner.assertOpen();
         List<GlobalStore.MapWriteSet> writes = new ArrayList<>();
@@ -231,12 +250,14 @@ public final class GenerationGlobals implements AutoCloseable {
 
     /** Fails or cancels a candidate: discards every write set and plan without touching the committed store. */
     public void discard() {
+        List<CandidateStatePlan> toDiscard;
         synchronized (stores.lock) {
             if (privateWrites != null) privateWrites.discardOps();
             if (sharedWrites != null) sharedWrites.discardOps();
+            toDiscard = List.copyOf(plans);
+            plans.clear();
         }
-        discardPlans();
-        plans.clear();
+        discardPlans(toDiscard);
     }
 
     /**
@@ -246,8 +267,8 @@ public final class GenerationGlobals implements AutoCloseable {
      * candidate teardown from completing. Idempotent; publish has already released committed
      * plans.
      */
-    private void discardPlans() {
-        for (CandidateStatePlan plan : List.copyOf(plans)) {
+    private void discardPlans(List<CandidateStatePlan> plansToDiscard) {
+        for (CandidateStatePlan plan : plansToDiscard) {
             try {
                 plan.discard();
             } catch (Throwable failure) {
@@ -267,13 +288,20 @@ public final class GenerationGlobals implements AutoCloseable {
      */
     @Override
     public void close() {
-        if (closed) return;
-        closed = true;
+        List<UiRoot> rootsToClose;
+        List<CandidateStatePlan> plansToDiscard;
+        synchronized (stores.lock) {
+            if (closed) return;
+            closed = true;
+            rootsToClose = List.copyOf(uiRoots);
+            uiRoots.clear();
+            plansToDiscard = List.copyOf(plans);
+            plans.clear();
+        }
         privateStore.evictGuestOwned(this);
         sharedStoreRef.evictGuestOwned(this);
-        closeUiRoots("generation-close");
-        discardPlans();
-        plans.clear();
+        closeUiRoots("generation-close", rootsToClose);
+        discardPlans(plansToDiscard);
     }
 
     public boolean isClosed() {
@@ -307,16 +335,20 @@ public final class GenerationGlobals implements AutoCloseable {
      */
     public void registerUiRoot(UiRoot root) {
         if (root == null) throw new NullPointerException("root");
-        if (closed) {
-            throw new IllegalStateException(
-                    "[NEKO-7001] UI root registration rejected: the owning generation is already closed");
+        synchronized (stores.lock) {
+            if (closed) {
+                throw new IllegalStateException(
+                        "[NEKO-7001] UI root registration rejected: the owning generation is already closed");
+            }
+            uiRoots.add(root);
         }
-        uiRoots.add(root);
     }
 
     /** Removes a root that closed itself before its generation ended (owner thread only). */
     public void unregisterUiRoot(UiRoot root) {
-        uiRoots.remove(root);
+        synchronized (stores.lock) {
+            uiRoots.remove(root);
+        }
     }
 
     /**
@@ -329,9 +361,9 @@ public final class GenerationGlobals implements AutoCloseable {
      * generation's guest Context drops them with it, so the host has no independent
      * cancellation mechanism to invoke.
      */
-    private void closeUiRoots(String reason) {
-        if (uiRoots.isEmpty()) return;
-        for (UiRoot root : List.copyOf(uiRoots)) {
+    private void closeUiRoots(String reason, List<UiRoot> rootsToClose) {
+        if (rootsToClose.isEmpty()) return;
+        for (UiRoot root : rootsToClose) {
             try {
                 root.closeForGeneration(reason);
             } catch (Throwable failure) {
@@ -340,6 +372,5 @@ public final class GenerationGlobals implements AutoCloseable {
                         reason, failure);
             }
         }
-        uiRoots.clear();
     }
 }

@@ -93,10 +93,14 @@ public final class JsxScreen extends Screen {
 
     @Override
     public void removed() {
-        if (disposed) return;
-        adapter.removedFromHost();
-        disposed = true;
-        super.removed();
+        try {
+            if (!disposed) {
+                adapter.removedFromHost();
+                disposed = true;
+            }
+        } finally {
+            super.removed();
+        }
     }
 
     boolean closeOnEscape() {

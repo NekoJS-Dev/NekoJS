@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.stream.Stream;
 
 /**
@@ -68,6 +69,14 @@ public abstract class EventBusBase<EVENT, LISTENER> {
             }
         }
         return changed;
+    }
+
+    protected final Stream<LISTENER> orderedListeners(Predicate<EventListenerToken<EVENT>> filter) {
+        return tokens.stream().filter(filter).sorted().map(EventListenerTokenImpl::listener);
+    }
+
+    protected final Stream<EventListenerTokenImpl<EVENT, LISTENER>> orderedTokens() {
+        return tokens.stream().sorted();
     }
 
     protected final LISTENER getBuilt(Function<Stream<LISTENER>, LISTENER> listenerCompiler) {

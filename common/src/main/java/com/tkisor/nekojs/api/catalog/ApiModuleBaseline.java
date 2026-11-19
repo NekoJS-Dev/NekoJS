@@ -46,6 +46,7 @@ public record ApiModuleBaseline(String profile, Map<String, Entry> exports) {
             Set<String> facets = new TreeSet<>();
             facets.add("event:cancel=" + event.cancellable() + ":dispatch=" + event.dispatchable());
             facets.add("key:" + (event.dispatchKeyType() == null ? "none" : event.dispatchKeyType().getName()));
+            if (event.selectorRequired()) facets.add("key:required");
             facets.add("callback:" + event.callSignatures());
             if (event.eventType() != null) collect(event.eventType(), false, "payload.", facets, new HashSet<>());
             entries.put(module.scriptType() + ":" + module.moduleId() + ":" + event.group() + "." + event.name(),

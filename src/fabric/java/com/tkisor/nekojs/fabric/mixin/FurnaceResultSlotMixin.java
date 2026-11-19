@@ -4,6 +4,7 @@ import com.tkisor.nekojs.fabric.event.FabricPlayerEventBindings;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.FurnaceResultSlot;
 import net.minecraft.world.item.ItemStack;
+import org.objectweb.asm.Opcodes;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
@@ -43,5 +44,12 @@ public abstract class FurnaceResultSlotMixin {
         if (removeCount > 0) {
             FabricPlayerEventBindings.postSmelted(player, carried);
         }
+    }
+
+    @Inject(method = "checkTakeAchievements(Lnet/minecraft/world/item/ItemStack;)V",
+            at = @At(value = "FIELD", target = "Lnet/minecraft/world/inventory/FurnaceResultSlot;removeCount:I",
+                    opcode = Opcodes.PUTFIELD), require = 1, allow = 1)
+    private void nekojs$afterSmeltingRewards(ItemStack carried, CallbackInfo ci) {
+        if (removeCount != 0) FabricPlayerEventBindings.postStableResultTake(player, carried, null);
     }
 }

@@ -31,7 +31,7 @@ public final class FabricRegistryAdapter {
         StartupRegistryRuntime previous = runtime;
         if (previous != null && !previous.isFullyDrained()) {
             previous.reportUndelivered(message -> NekoJS.LOGGER.error(
-                    "[registry-startup] stale staging from a previous boot discarded: {}", message));
+                    "[NEKO-4079] Discarded undelivered STARTUP staging from a previous boot: {}", message));
         }
         runtime = new StartupRegistryRuntime(nodeLabel());
     }
@@ -94,24 +94,16 @@ public final class FabricRegistryAdapter {
         // match any concrete key; narrow it with a raw type.
         java.util.Optional<?> resolved = BuiltInRegistries.REGISTRY.get((ResourceKey) key);
         Registry<?> registry = resolved.isPresent() ? (Registry<?>) ((Holder<?>) resolved.get()).value() : null;
-        if (registry == null) {
-            NekoJS.LOGGER.error("Registry '{}' collected objects but no such vanilla registry exists; content NOT registered", key);
-            // The sink throws: each entry lands in DrainResult.errors (source=platform-register, with the
-            // definition, registry and node) instead of counting as registered; the entries are still
-            // drained, so nothing is left behind.
-            current.drainFor(key, (reg, id, supplier) -> {
-                throw new IllegalStateException("no such vanilla registry '" + key + "' on fabric; content NOT registered");
-            }).errors().forEach(error -> NekoJS.LOGGER.error(
-                    "[registry-startup] {} in registry '{}' (node {}, source {}): {}",
-                            error.definition(), error.registry() == null ? "?" : error.registry().identifier(),
-                            error.node(), error.source(), error.message()));
-            return;
-        }
-        current.drainFor(key, (reg, id, supplier) -> register(registry, id, supplier.get()))
-                .errors().forEach(error -> NekoJS.LOGGER.error(
-                        "[registry-startup] {} in registry '{}' (node {}, source {}): {}",
-                                error.definition(), error.registry() == null ? "?" : error.registry().identifier(),
-                                error.node(), error.source(), error.message()));
+        String code = registry == null ? "NEKO-4077" : "NEKO-4078";
+        current.drainFor(key, (reg, id, supplier) -> {
+            if (registry == null) {
+                throw new IllegalStateException("[NEKO-4077] Native registry missing in the Fabric registration window");
+            }
+            register(registry, id, supplier.get());
+        }).errors().forEach(error -> NekoJS.LOGGER.error(
+                "[{}] Could not register STARTUP entry '{}' in registry '{}' (node {}, source {}): {}",
+                code, error.definition(), error.registry() == null ? key.identifier() : error.registry().identifier(),
+                error.node(), error.source(), error.message()));
     }
 
     @SuppressWarnings({"unchecked", "rawtypes"})

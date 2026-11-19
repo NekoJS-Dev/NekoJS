@@ -55,21 +55,30 @@ public class BlockPosAdapter extends AbstractJSTypeAdapter<BlockPos> {
 
     @Override
     protected boolean acceptOther(Value value) {
-        return (value.hasMembers() && value.getMemberKeys().containsAll(XYZ))
-                || (value.hasArrayElements() && value.getArraySize() >= 3);
+        if (value.hasMembers() && value.getMemberKeys().containsAll(XYZ)) {
+            return value.getMember("x").isNumber()
+                    && value.getMember("y").isNumber()
+                    && value.getMember("z").isNumber();
+        }
+        if (value.hasArrayElements() && value.getArraySize() >= 3) {
+            return value.getArrayElement(0).isNumber()
+                    && value.getArrayElement(1).isNumber()
+                    && value.getArrayElement(2).isNumber();
+        }
+        return false;
     }
 
     @Override
     protected BlockPos fromOther(Value value) {
         if (value.hasArrayElements() && value.getArraySize() >= 3) {
-            return new BlockPos(
-                    value.getArrayElement(0).asInt(),
-                    value.getArrayElement(1).asInt(),
-                    value.getArrayElement(2).asInt());
+            return BlockPos.containing(
+                    value.getArrayElement(0).asDouble(),
+                    value.getArrayElement(1).asDouble(),
+                    value.getArrayElement(2).asDouble());
         }
-        return new BlockPos(
-                value.getMember("x").asInt(),
-                value.getMember("y").asInt(),
-                value.getMember("z").asInt());
+        return BlockPos.containing(
+                value.getMember("x").asDouble(),
+                value.getMember("y").asDouble(),
+                value.getMember("z").asDouble());
     }
 }

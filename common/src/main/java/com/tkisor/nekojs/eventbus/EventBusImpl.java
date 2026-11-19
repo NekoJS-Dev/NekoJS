@@ -1,6 +1,9 @@
 package com.tkisor.nekojs.eventbus;
 
 import com.tkisor.nekojs.api.event.EventBus;
+import com.tkisor.nekojs.api.event.EventListenerToken;
+
+import java.util.Set;
 
 import java.util.function.Consumer;
 import java.util.function.IntFunction;
@@ -13,6 +16,11 @@ public final class EventBusImpl<E> extends EventBusBase<E, Consumer<E>> implemen
 
     public EventBusImpl(Class<E> eventType, Object key) {
         super(eventType, key);
+    }
+
+    @org.jetbrains.annotations.ApiStatus.Internal
+    public void postSelected(E event, Set<EventListenerToken<E>> selected) {
+        compile(orderedListeners(selected::contains)).accept(event);
     }
 
     @Override

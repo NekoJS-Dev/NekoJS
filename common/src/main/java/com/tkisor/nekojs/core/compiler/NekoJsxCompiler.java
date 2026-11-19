@@ -5,6 +5,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 
+/** Transpiler that compiles JSX/TSX element syntax into {@code h(...)} calls with source maps. */
 public final class NekoJsxCompiler {
     private NekoJsxCompiler() {}
 
@@ -286,14 +287,18 @@ public final class NekoJsxCompiler {
             char valueStart = source.charAt(index);
             if (valueStart == '\'' || valueStart == '"') {
                 int valueEnd = skipString(index, valueStart);
+                if (valueEnd - 1 <= index || source.charAt(valueEnd - 1) != valueStart || isEscapedQuote(index + 1, valueEnd - 1)) {
+                    throw jsxError("Unterminated JSX attribute value", index);
+                }
                 // Consistent with React/TS JSX semantics: string attribute values decode HTML entities (&amp; → &),
                 // and are escaped via stringLiteral (copying multi-line attribute values literally would produce invalid JS string literals).
                 String decoded = decodeHtmlEntities(source.substring(index + 1, valueEnd - 1));
                 GeneratedPart valuePart = GeneratedPart.unmapped(stringLiteral(decoded));
-                String text = attributeKey(name) + ": " + valuePart.text();
+                String key = attributeKey(name);
+                String text = key + ": " + valuePart.text();
                 return new AttributeResult(new GeneratedPart(text, List.of(
                         new NekoSourceMapBuilder.MappingPoint(0, start),
-                        new NekoSourceMapBuilder.MappingPoint(text.indexOf(source.charAt(index)), index)
+                        new NekoSourceMapBuilder.MappingPoint(key.length() + 2, index)
                 )), valueEnd, name, valuePart);
             }
             if (valueStart == '{') {
@@ -518,11 +523,17 @@ public final class NekoJsxCompiler {
                 return null;
             }
             String[] lines = raw.split("\r\n|\n|\r", -1);
-            int lastNonEmpty = 0;
+            int lastNonEmpty = -1;
             for (int i = 0; i < lines.length; i++) {
                 if (!lines[i].replace(" ", "").replace("\t", "").isEmpty()) {
                     lastNonEmpty = i;
                 }
+            }
+            if (lastNonEmpty < 0) {
+                if (lines.length > 1 || raw.isEmpty()) {
+                    return null;
+                }
+                return decodeHtmlEntities(raw);
             }
             StringBuilder sb = new StringBuilder(raw.length());
             for (int i = 0; i <= lastNonEmpty; i++) {
@@ -881,6 +892,14 @@ public final class NekoJsxCompiler {
 
         private int skipString(int start, char quote) {
             return NekoSourceLexerBase.skipString(source, length, start, quote);
+        }
+
+        private boolean isEscapedQuote(int start, int quoteIndex) {
+            int backslashes = 0;
+            for (int i = quoteIndex - 1; i >= start && source.charAt(i) == '\\'; i--) {
+                backslashes++;
+            }
+            return (backslashes & 1) == 1;
         }
 
         private int skipTemplate(int start) {

@@ -21,10 +21,9 @@ import net.minecraft.resources.ResourceKey;
  * {@link IllegalStateException} during collection, whether the clash is between two main objects,
  * between a main object and a derived entry, or between two derived entries.
  *
- * <p>A main entry carries request metadata: {@link Entry#typeName()} for the named or default type
- * and {@link Entry#origin()} for where the request came from (sugar method, named type, custom or
- * bare supplier). The Runtime drain and diagnostics use it to report the definition, registry,
- * node and error source.
+ * <p>A main entry records the builder type or supplier marker in {@link Entry#typeName()} and
+ * the collection operation in {@link Entry#origin()}. The runtime uses this metadata when
+ * reporting a registry pass.
  */
 public final class RegistryRepository {
 

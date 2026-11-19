@@ -5,7 +5,7 @@
 <a id="wiki-section-1"></a>
 # 注册新内容
 
-新物品、方块、实体等内容写在 `startup_scripts/` 里，用 `RegistryEvents.register` 注册。注册只在游戏启动时进行，所以每次增改注册内容都要**重启游戏**。`/nekojs reload startup` 会被拒绝。
+在 `startup_scripts/` 中用 `StartupEvents.registry(selector, callback)` 注册物品、方块和实体。`StartupEvents` 仅在 STARTUP 脚本中从 `nekojs:event/versioned` 导入。增删或修改条目后必须**完整重启游戏或专用服务器**。`/nekojs reload startup` 会被拒绝。
 
 <a id="wiki-section-2"></a>
 ## 快速上手
@@ -13,20 +13,22 @@
 新建 `nekojs/startup_scripts/content.js`：
 
 ```javascript
-import { RegistryEvents } from "nekojs:event/versioned";
+import { StartupEvents } from "nekojs:event/versioned";
 
-RegistryEvents.register(event => {
-  event.item('mymod:cool_gem', item => {
-    item.maxStackSize = 16
-    item.rarity = 'rare'
-    item.fireResistant = true
+StartupEvents.registry('item', event => {
+  event.create('mymod:cool_gem', build => {
+    build.maxStackSize = 16
+    build.rarity = 'rare'
+    build.fireResistant = true
   })
+})
 
-  event.block('mymod:gem_block', block => {
-    block.hardness = 3.0
-    block.sound = 'stone'
-    block.requiresTool = true
-    block.lightLevel = 7
+StartupEvents.registry('block', event => {
+  event.create('mymod:gem_block', build => {
+    build.hardness = 3.0
+    build.sound = 'stone'
+    build.requiresTool = true
+    build.lightLevel = 7
   })
 })
 ```
@@ -40,40 +42,40 @@ RegistryEvents.register(event => {
 <a id="wiki-section-3"></a>
 ## 基本写法
 
-`event` 上的方法以注册表命名，例如 `event.item`、`event.block`、`event.entityType`。每个方法接收两个参数：ID 和一个配置函数。
+每次订阅都需要一个选择器，事件对象只操作所选的表。原版注册表使用原生路径，例如 `item`、`block` 或 `entity_type`。`item` 和 `minecraft:item` 指向同一个表，分别订阅时两个监听都会执行。模组表使用完整键，例如 `example:machines`。选择器的命名空间与条目 ID 的命名空间相互独立。可用 `StartupEvents.registry(priority, selector, callback)` 指定监听优先级。
 
 ```javascript
-import { RegistryEvents } from "nekojs:event/versioned";
+import { StartupEvents } from "nekojs:event/versioned";
 
-RegistryEvents.register(event => {
-  event.item('mymod:ruby', item => {
-    item.maxStackSize = 16   // 普通设置：直接赋值
-    item.tag('c:gems')       // 动作：调用方法
+StartupEvents.registry('item', event => {
+  event.create('mymod:ruby', build => {
+    build.maxStackSize = 16   // 普通设置：直接赋值
+    build.tag('c:gems')       // 动作：调用方法
   })
 })
 ```
 
-- 普通设置直接赋值，例如 `item.maxStackSize = 16`。
-- 动作和复杂配置调用方法，例如 `item.food(...)`、`item.tag(...)`、`block.noItem()`。
-- 什么都不设也可以。`event.item('mymod:x', item => {})` 会用默认值注册一个能用的物品。下面各表写了默认值。
+- `event.create(id, build)` 使用默认构建器。配置回调可以为空，此时保留默认值。
+- `event.create(id, typeName, build)` 选择此表的命名构建器。例如在 `item` 回调中调用 `event.create('mymod:sapphire', 'basic', build => { build.rarity = 'rare' })` 来显式选择 `basic`。表没有默认构建器时必须指定类型名。
+- 普通设置直接赋值，例如 `build.maxStackSize = 16`。动作和嵌套配置使用方法，例如 `build.tag(...)` 或 `build.noItem()`。
+- `event.createCustom(id, supplier)` 接收返回所选表原生条目的函数。加载器在提交条目时调用此函数。注册表没有构建器时仍可使用此方法，并遵循脚本访问权限和加载器注册规则。
 
-内置可用的方法：
+内置选择器
 
-| 方法 | 注册什么 |
+| 选择器 | 注册什么 |
 |---|---|
-| `event.item` | 物品 |
-| `event.block` | 方块，默认带同名物品 |
-| `event.fluid` | 流体（仅 NeoForge） |
-| `event.entityType` | 实体 |
-| `event.creativeModeTab` | 创造标签页 |
-| `event.mobEffect` | 状态效果 |
-| `event.potion` | 药水 |
-| `event.soundEvent` | 声音 |
-| `event.particleType` | 粒子类型 |
-| `event.villagerType` | 村民类型 |
-| `event.enchantment` | 附魔（仅 NeoForge 1.21.1） |
+| `item` | 物品 |
+| `block` | 方块，默认带同名物品 |
+| `fluid` | 流体（仅 NeoForge） |
+| `entity_type` | 实体 |
+| `creative_mode_tab` | 创造标签页 |
+| `mob_effect` | 状态效果 |
+| `potion` | 药水 |
+| `sound_event` | 声音 |
+| `particle_type` | 粒子类型 |
+| `villager_type` | 村民类型 |
 
-其他模组或插件可能会增加更多方法。方法名拼错时，报错会列出当前能用的全部方法。
+只能订阅当前 Minecraft 版本和加载器显式开放的静态表。NekoJS 不会自动发现可写注册表。要开放模组表，宿主模组需通过加载器创建原生静态表，NekoJS 插件需声明完整表键以及支持的版本和加载器。插件也能为已开放的表添加命名构建器。
 
 <a id="wiki-section-4"></a>
 ## 物品
@@ -98,11 +100,11 @@ RegistryEvents.register(event => {
 ### 食物
 
 ```javascript
-import { RegistryEvents } from "nekojs:event/versioned";
+import { StartupEvents } from "nekojs:event/versioned";
 
-RegistryEvents.register(event => {
-  event.item('mymod:cheese', item => {
-    item.food(food => {
+StartupEvents.registry('item', event => {
+  event.create('mymod:cheese', build => {
+    build.food(food => {
       food.nutrition(4)
       food.saturation(0.6)
       food.fastEat()
@@ -125,16 +127,16 @@ RegistryEvents.register(event => {
 需要设置上面没有的属性时，可以直接写物品组件。值的格式和原版数据包里的组件 JSON 一样：
 
 ```javascript
-import { RegistryEvents } from "nekojs:event/versioned";
+import { StartupEvents } from "nekojs:event/versioned";
 
-RegistryEvents.register(event => {
-  event.item('mymod:gem', item => {
-    item.component('minecraft:rarity', 'epic')
+StartupEvents.registry('item', event => {
+  event.create('mymod:gem', build => {
+    build.component('minecraft:rarity', 'epic')
   })
 })
 ```
 
-`item.components = { ... }` 会替换掉之前设置的所有组件，`item.component(id, value)` 只改一个。组件在普通属性之后应用。值写错时游戏会在启动时报错。
+`build.components = { ... }` 会替换掉之前设置的所有组件，`build.component(id, value)` 只改一个。组件在普通属性之后应用。值写错时游戏会在启动时报错。
 
 物品的提示文字不在这里设置，请用客户端事件 `ItemEvents.tooltip`，见 [事件参考](event-reference_cn)。
 
@@ -156,17 +158,17 @@ RegistryEvents.register(event => {
 | `tag(...)` | — | 把**方块**加入标签 |
 
 ```javascript
-import { RegistryEvents } from "nekojs:event/versioned";
+import { StartupEvents } from "nekojs:event/versioned";
 
-RegistryEvents.register(event => {
-  event.block('mymod:ruby_ore', block => {
-    block.hardness = 3.0
-    block.requiresTool = true
-    block.tag('minecraft:mineable/pickaxe', 'minecraft:needs_iron_tool')
+StartupEvents.registry('block', event => {
+  event.create('mymod:ruby_ore', build => {
+    build.hardness = 3.0
+    build.requiresTool = true
+    build.tag('minecraft:mineable/pickaxe', 'minecraft:needs_iron_tool')
 
     // 设置自动生成的物品
-    block.item.maxStackSize = 16
-    block.item.tag('c:ores')
+    build.item.maxStackSize = 16
+    build.item.tag('c:ores')
   })
 })
 ```
@@ -180,19 +182,19 @@ RegistryEvents.register(event => {
 <a id="wiki-section-8"></a>
 ## 流体（仅 NeoForge）
 
-一次 `event.fluid` 会注册一整套可以放置、流动、用桶装起来的流体：
+在 `fluid` 回调中调用一次 `event.create`，即可注册能放置、流动和装桶的完整流体。
 
 ```javascript
-import { RegistryEvents } from "nekojs:event/versioned";
+import { StartupEvents } from "nekojs:event/versioned";
 
-RegistryEvents.register(event => {
-  event.fluid('mymod:molten_iron', fluid => {
-    fluid.density = 3000
-    fluid.viscosity = 2000
-    fluid.temperature = 1500
-    fluid.lightLevel = 12
-    // fluid.noBucket()   // 不要桶
-    // fluid.noBlock()    // 不要液体方块
+StartupEvents.registry('fluid', event => {
+  event.create('mymod:molten_iron', build => {
+    build.density = 3000
+    build.viscosity = 2000
+    build.temperature = 1500
+    build.lightLevel = 12
+    // build.noBucket()   // 不要桶
+    // build.noBlock()    // 不要液体方块
   })
 })
 ```
@@ -217,15 +219,15 @@ RegistryEvents.register(event => {
 ## 实体
 
 ```javascript
-import { RegistryEvents } from "nekojs:event/versioned";
+import { StartupEvents } from "nekojs:event/versioned";
 
-RegistryEvents.register(event => {
-  event.entityType('mymod:test_mob', mob => {
-    mob.category = 'monster'
-    mob.size(0.6, 1.8)
-    mob.spawnEgg(0x8a6f4d, 0xffe2b3)
-    mob.attributes(attr => attr.maxHealth(18).movementSpeed(0.3).attackDamage(4))
-    mob.goals(goals => goals
+StartupEvents.registry('entity_type', event => {
+  event.create('mymod:test_mob', build => {
+    build.category = 'monster'
+    build.size(0.6, 1.8)
+    build.spawnEgg(0x8a6f4d, 0xffe2b3)
+    build.attributes(attr => attr.maxHealth(18).movementSpeed(0.3).attackDamage(4))
+    build.goals(goals => goals
       .floatInWater(0)
       .meleeAttack(2, 1.2, false)
       .target(4, 'minecraft:player', true))
@@ -256,14 +258,14 @@ RegistryEvents.register(event => {
 想让实体沿用某个现有生物的行为和外观，可以指定 Java 类和渲染器：
 
 ```javascript
-import { RegistryEvents } from "nekojs:event/versioned";
+import { StartupEvents } from "nekojs:event/versioned";
 
 const Zombie = Java.type('net.minecraft.world.entity.monster.zombie.Zombie')
 
-RegistryEvents.register(event => {
-  event.entityType('mymod:my_zombie', mob => {
-    mob.entityClass(Zombie)
-    mob.renderer = 'net.minecraft.client.renderer.entity.ZombieRenderer'
+StartupEvents.registry('entity_type', event => {
+  event.create('mymod:my_zombie', build => {
+    build.entityClass(Zombie)
+    build.renderer = 'net.minecraft.client.renderer.entity.ZombieRenderer'
   })
 })
 ```
@@ -312,108 +314,102 @@ GoalEvents.register(event => {
 ## 创造标签页
 
 ```javascript
-import { RegistryEvents } from "nekojs:event/versioned";
+import { StartupEvents } from "nekojs:event/versioned";
 
-RegistryEvents.register(event => {
-  event.creativeModeTab('mymod:main', tab => {
-    tab.title = '我的模组'
-    tab.icon = 'mymod:cool_gem'
-    tab.add('mymod:cool_gem')
-    tab.add('mymod:gem_block')
+StartupEvents.registry('creative_mode_tab', event => {
+  event.create('mymod:main', build => {
+    build.title = '我的模组'
+    build.icon = 'mymod:cool_gem'
+    build.add('mymod:cool_gem')
+    build.add('mymod:gem_block')
   })
 })
 ```
 
-`icon` 和 `add` 都可以写物品 ID 或 `Item.of(...)`。不设图标时显示屏障。也可以在物品上写 `item.groupTab = 'mymod:main'` 把它放进这个标签页。
+`icon` 和 `add` 都可以写物品 ID 或 `Item.of(...)`。不设图标时显示屏障。也可以在物品上写 `build.groupTab = 'mymod:main'` 把它放进这个标签页。
 
 <a id="wiki-section-14"></a>
 ## 其他内容
 
 ```javascript
-import { RegistryEvents } from "nekojs:event/versioned";
+import { StartupEvents } from "nekojs:event/versioned";
 
-RegistryEvents.register(event => {
+StartupEvents.registry('mob_effect', event => {
   // 状态效果：category 可以是 'beneficial'、'harmful'、'neutral'（默认）
-  event.mobEffect('mymod:shock', effect => {
-    effect.category = 'harmful'
-    effect.color = 0x00FF00
+  event.create('mymod:shock', build => {
+    build.category = 'harmful'
+    build.color = 0x00FF00
   })
+})
 
+StartupEvents.registry('potion', event => {
   // 药水：effect(效果, 时长tick, 等级)，可以写多次
-  event.potion('mymod:shock_potion', potion => {
-    potion.effect('minecraft:poison', 600, 0)
-    potion.effect('minecraft:speed', 3600, 1, false, true)   // 再加：是否为信标效果、是否显示粒子
+  event.create('mymod:shock_potion', build => {
+    build.effect('minecraft:poison', 600, 0)
+    build.effect('minecraft:speed', 3600, 1, false, true)   // 再加：是否为信标效果、是否显示粒子
   })
+})
 
+StartupEvents.registry('sound_event', event => {
   // 声音：fixedRange 不设时由声音本身决定
-  event.soundEvent('mymod:thunder_clap', sound => {
-    sound.fixedRange = 64
+  event.create('mymod:thunder_clap', build => {
+    build.fixedRange = 64
   })
+})
 
+StartupEvents.registry('particle_type', event => {
   // 粒子类型
-  event.particleType('mymod:sparkle', particle => {
-    particle.overrideLimiter = true
+  event.create('mymod:sparkle', build => {
+    build.overrideLimiter = true
   })
+})
 
+StartupEvents.registry('villager_type', event => {
   // 村民类型：没有可设置的属性
-  event.villagerType('mymod:miner', villager => {})
+  event.create('mymod:miner', build => {})
 })
 ```
 
 药水只能使用游戏里已经存在的效果，ID 写错时这个效果会被忽略，不会报错。同一个脚本里刚注册的效果此时还不存在，所以上面用的是原版效果。
 
 <a id="wiki-section-15"></a>
-### 附魔（仅 NeoForge 1.21.1）
+### 附魔与数据包注册表
 
-```javascript
-import { RegistryEvents } from "nekojs:event/versioned";
-
-RegistryEvents.register(event => {
-  event.enchantment('mymod:ice_bane', ench => {
-    ench.supportedItems = 'minecraft:enchantable/weapon'
-    ench.weight = 5
-    ench.maxLevel = 3
-    ench.minCostBase = 5
-    ench.minCostPerLevel = 5
-    ench.maxCostBase = 20
-    ench.maxCostPerLevel = 5
-    ench.anvilCost = 2
-    ench.slots = 'mainhand'
-  })
-})
-```
-
-这样注册的附魔可以出现在附魔台和书上，但**没有任何实际效果**，效果需要自己用事件实现。Minecraft 26.x 上附魔改为由数据包定义，请把附魔 JSON 放在 `nekojs/data/` 下。
+附魔和其他数据包注册表由数据包加载。把相应 JSON 放在 `nekojs/data/` 下，使用目标 Minecraft 版本的数据包格式。
 
 <a id="wiki-builder-tags"></a>
 <a id="wiki-section-16"></a>
 ## 在注册时加入标签
 
-物品、方块、流体、实体和附魔可以在注册时直接加入标签，不用再单独写数据包 JSON：
+物品、方块、流体和实体可以在注册时直接加入标签，不用再单独写数据包 JSON：
 
 ```javascript
-import { RegistryEvents } from "nekojs:event/versioned";
+import { StartupEvents } from "nekojs:event/versioned";
 
-RegistryEvents.register(event => {
-  event.item('mymod:ruby_pickaxe', item => {
-    item.maxDamage = 500
-    item.tag('minecraft:pickaxes', 'c:tools/mining_tool')
+StartupEvents.registry('item', event => {
+  event.create('mymod:ruby_pickaxe', build => {
+    build.maxDamage = 500
+    build.tag('minecraft:pickaxes', 'c:tools/mining_tool')
   })
+})
 
-  event.block('mymod:ruby_ore', block => {
-    block.requiresTool = true
-    block.tag('minecraft:mineable/pickaxe', 'minecraft:needs_iron_tool')
+StartupEvents.registry('block', event => {
+  event.create('mymod:ruby_ore', build => {
+    build.requiresTool = true
+    build.tag('minecraft:mineable/pickaxe', 'minecraft:needs_iron_tool')
   })
+})
 
-  event.entityType('mymod:raider_golem', mob => {
-    mob.tag('minecraft:raiders')
+StartupEvents.registry('entity_type', event => {
+  event.create('mymod:raider_golem', build => {
+    build.tag('minecraft:raiders')
   })
 })
 ```
 
 - 一次可以传多个标签，也可以调用多次。
 - 只写名字时默认是 `minecraft:`。开头带 `#` 也可以。
-- 方块的 `tag` 加的是方块标签。要给同名物品加物品标签，写 `block.item.tag(...)`。
+- 方块的 `tag` 加的是方块标签。要给同名物品加物品标签，写 `build.item.tag(...)`。
 - 流体的标签会同时加给静止和流动两种流体。
 - 每次服务器启动和执行 `/reload` 时都会重新应用。它们先于 `ServerEvents.tags` 加入，所以脚本里仍然可以再增删。
 
@@ -449,11 +445,11 @@ RegistryEvents.register(event => {
 只放了物品材质、不想手写模型时，可以让 NekoJS 生成模型：
 
 ```javascript
-import { RegistryEvents } from "nekojs:event/versioned";
+import { StartupEvents } from "nekojs:event/versioned";
 
-RegistryEvents.register(event => {
-  event.item('mymod:cool_gem', item => {
-    item.texture('mymod:item/cool_gem')
+StartupEvents.registry('item', event => {
+  event.create('mymod:cool_gem', build => {
+    build.texture('mymod:item/cool_gem')
   })
 })
 ```
@@ -505,22 +501,16 @@ DynamicRegistryEvents.dynamicRegistry(event => {
 <a id="wiki-section-20"></a>
 ## 从旧写法迁移
 
-旧版本每种注册表有单独的入口，属性用链式方法设置。现在统一用 `RegistryEvents.register`，属性直接赋值：
+旧版 `RegistryEvents` 已删除，不提供别名。改为导入 `StartupEvents`，并把涉及多个表的回调拆成每表一个监听。保留原条目 ID，避免依赖不同注册表回调之间的顺序。
 
 | 旧写法 | 新写法 |
 |---|---|
-| `RegistryEvents.item(e => e.create(id, b => ...))` | `RegistryEvents.register(e => e.item(id, b => ...))` |
-| `RegistryEvents.block(...)` 等每种一个入口 | `event.block(id, b => ...)` 等 |
-| `b.maxStackSize(16)` | `b.maxStackSize = 16` |
-| `b.fireResistant()` / `b.glowing()` | `b.fireResistant = true` / `b.glowing = true` |
-| `b.group('tab_id')` | `b.groupTab = 'tab_id'` |
-| `b.hardness(3).resistance(6)` | `b.hardness = 3`，`b.resistance = 6` |
-| `b.requiresTool()` | `b.requiresTool = true` |
-| `fluid.bucket(false)` / `fluid.block(false)` | `b.noBucket()` / `b.noBlock()` |
-| `entity.fireImmune()` | `b.fireImmune = true` |
-| `enchantment.minCost(5, 5)` | `b.minCostBase = 5`，`b.minCostPerLevel = 5` |
+| `RegistryEvents.register(...)` 内的 `event.item(id, build)` 或 `event.block(id, build)` | 分别订阅 `StartupEvents.registry('item', ...)` 或 `StartupEvents.registry('block', ...)`，在对应回调中调用 `event.create(id, build)` |
+| `event.item(id, typeName, build)` | 在 `item` 回调中调用 `event.create(id, typeName, build)` |
+| `event.custom(id, typeName, build)` | 订阅构建器所属的表，再调用 `event.create(id, typeName, build)` |
+| `event.register(registry, id, supplier)` | 订阅对应表，再调用 `event.createCustom(id, supplier)` |
 
-`food(...)`、`tag(...)`、`unbreakable()`、`noItem()`、`size(...)`、`spawnEgg(...)`、`attributes(...)`、`goals(...)`、`potion.effect(...)` 这些动作仍然是方法，写法不变。
+构建器仍使用原有的属性赋值和动作方法。
 
 <a id="wiki-section-21"></a>
 ## 常见错误
@@ -529,14 +519,11 @@ DynamicRegistryEvents.dynamicRegistry(event => {
 
 | 报错 | 原因 |
 |---|---|
-| `Duplicate registration '...'` | 同一个 ID 注册了两次。后一次不会覆盖前一次，而是直接报错 |
-| `RegistryEvent has no member '...'` | 方法名拼错，或当前平台没有这种注册表。报错会列出能用的方法 |
-| `unknown registry '...'` | `event.register` 里的注册表名写错 |
-| `... expects a builder callback as the last argument` | 少了配置函数 |
-| `... expects an id string like 'mymod:thing'` | ID 不是字符串 |
-| `maxStackSize must be in [1, 99] ...` | 属性值超出范围，其他属性也有类似检查 |
-
-> 进阶用法：`event.register('item', 'mymod:raw', () => ...)` 可以直接提供一个创建对象的函数，注册表名可以写 `'item'` 或 `'minecraft:item'`。`event.<注册表>(id, 类型名, 配置函数)` 和 `event.custom(id, 类型名, 配置函数)` 用来调用插件提供的其他构建器类型。
+| 同一注册表中的条目 ID 重复 | 后一次注册不会覆盖第一条 |
+| 选择器无效或注册表未开放 | 检查原生注册表键以及当前加载器和 Minecraft 版本的支持范围 |
+| 找不到构建器 | 确认该表有默认构建器，或指定属于该表的命名构建器 |
+| 缺少配置回调 | 在 `event.create(...)` 中把配置函数放在最后 |
+| 原生注册失败 | 检查加载器是否支持提交此表，以及 `createCustom` 的函数是否返回合法条目 |
 
 <a id="wiki-section-22"></a>
 ## 平台差异
@@ -545,7 +532,6 @@ DynamicRegistryEvents.dynamicRegistry(event => {
 |---|---|---|---|
 | 物品、方块、实体、创造标签页、效果、药水、声音、粒子、村民类型 | ✅ | ✅ | ✅ |
 | 流体 | ✅ | ✅ | ❌ |
-| 附魔 | ❌（用数据包） | ✅ | ❌ |
 | 注册时加入标签 | ✅ | ❌ | ❌ |
 | 自动生成物品模型 | ✅ | ✅ | ✅ |
 | 服务器运行中注册 | ✅（实验性） | ❌ | ❌ |
@@ -555,7 +541,7 @@ DynamicRegistryEvents.dynamicRegistry(event => {
 <a id="wiki-section-23"></a>
 ## 下一步
 
-- [事件参考](event-reference_cn)：`RegistryEvents`、`GoalEvents`、`ServerEvents.tags`。
+- [事件参考](event-reference_cn)：`StartupEvents.registry`、`GoalEvents`、`ServerEvents.tags`。
 - [快速开始](quick-start_cn)
 
 <!-- wiki-nav -->

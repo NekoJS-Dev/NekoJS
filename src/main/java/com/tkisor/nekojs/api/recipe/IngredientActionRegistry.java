@@ -47,22 +47,56 @@ public final class IngredientActionRegistry {
      */
     public record Action(Kind kind, Ingredient filter, int amount, ItemStack replacement) {}
 
-    private static final Map<Identifier, List<Action>> ACTIONS = new ConcurrentHashMap<>();
+    private static volatile Map<Identifier, List<Action>> actions = new ConcurrentHashMap<>();
+    private static final ThreadLocal<Map<Identifier, List<Action>>> DRAFT = new ThreadLocal<>();
+
+    private static Map<Identifier, List<Action>> writableActions() {
+        var draft = DRAFT.get();
+        return draft == null ? actions : draft;
+    }
+
+    public static <T> T withDraft(Map<Identifier, List<Action>> draft, java.util.function.Supplier<T> operation) {
+        var previous = DRAFT.get();
+        DRAFT.set(draft);
+        try {
+            return operation.get();
+        } finally {
+            if (previous == null) {
+                DRAFT.remove();
+            } else {
+                DRAFT.set(previous);
+            }
+        }
+    }
+
+    public static void publishDraft(Map<Identifier, List<Action>> draft) {
+        actions = new ConcurrentHashMap<>(draft);
+    }
 
     private IngredientActionRegistry() {}
 
     /** Clears the whole table before scripts rerun. RecipeManagerMixin calls it before it posts the RECIPES event. */
     public static void clear() {
-        ACTIONS.clear();
+        writableActions().clear();
     }
 
     public static boolean isEmpty() {
-        return ACTIONS.isEmpty();
+        return actions.isEmpty();
     }
 
     public static void record(Identifier recipeId, Action action) {
         if (recipeId == null || action == null) return;
-        ACTIONS.computeIfAbsent(recipeId, k -> new ArrayList<>()).add(action);
+        writableActions().computeIfAbsent(recipeId, k -> new ArrayList<>()).add(action);
+    }
+
+    /** Re-keys any actions recorded under {@code oldId} to {@code newId}. */
+    public static void rekey(Identifier oldId, Identifier newId) {
+        if (oldId == null || newId == null || oldId.equals(newId)) return;
+        var current = writableActions();
+        List<Action> moved = current.remove(oldId);
+        if (moved != null && !moved.isEmpty()) {
+            current.computeIfAbsent(newId, k -> new ArrayList<>()).addAll(moved);
+        }
     }
 
     /**
@@ -74,7 +108,7 @@ public final class IngredientActionRegistry {
      *         equals the vanilla result
      */
     public static NonNullList<ItemStack> transform(Identifier recipeId, CraftingInput input, NonNullList<ItemStack> remainders) {
-        List<Action> actions = recipeId == null ? null : ACTIONS.get(recipeId);
+        List<Action> actions = recipeId == null ? null : IngredientActionRegistry.actions.get(recipeId);
         if (actions == null || actions.isEmpty() || input == null) {
             return remainders;
         }

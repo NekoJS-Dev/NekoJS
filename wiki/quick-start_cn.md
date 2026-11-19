@@ -96,12 +96,12 @@ ServerEvents.recipes(event => {
 注册新物品必须写在**启动脚本**里。新建 `nekojs/startup_scripts/items.js`：
 
 ```javascript
-import { RegistryEvents } from "nekojs:event/versioned";
+import { StartupEvents } from "nekojs:event/versioned";
 
-RegistryEvents.register(event => {
-  event.item('mymod:cool_gem', item => {
-    item.maxStackSize = 16
-    item.rarity = 'rare'
+StartupEvents.registry('item', event => {
+  event.create('mymod:cool_gem', build => {
+    build.maxStackSize = 16
+    build.rarity = 'rare'
   })
 })
 ```

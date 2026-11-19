@@ -14,6 +14,7 @@ import net.neoforged.bus.api.EventPriority;
 import net.neoforged.neoforge.event.server.ServerStoppedEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 
+/** Synchronizes entity persistent data ({@code pData}) to clients on join, tracking, and respawn. */
 @EventBusSubscriber(modid = NekoJS.MODID)
 public final class PDataSyncListener {
     /**
@@ -31,10 +32,13 @@ public final class PDataSyncListener {
 
     @SubscribeEvent
     public static void onServerTickPost(ServerTickEvent.Post event) {
-        runtimeRoot.flushReadyNodeTimers(ScriptType.SERVER);
-        var testSm = runtimeRoot.scriptManagerOrNull(ScriptType.TEST);
-        if (testSm != null) {
-            testSm.flushReadyNodeTimers();
+        var root = runtimeRoot;
+        if (root != null) {
+            root.flushReadyNodeTimers(ScriptType.SERVER);
+            var testSm = root.scriptManagerOrNull(ScriptType.TEST);
+            if (testSm != null) {
+                testSm.flushReadyNodeTimers();
+            }
         }
         PDataSyncService.flush(event.getServer());
     }

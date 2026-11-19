@@ -83,6 +83,7 @@ public interface NumberComponent<S, T extends Number> extends RecipeComponent<T>
 
 	@Override
 	default boolean hasPriority(RecipeMatchContext cx, Object from) {
+		from = NativeComponentValues.scalar(from);
 		return from instanceof Number || from instanceof JsonPrimitive json && json.isNumber();
 	}
 

@@ -138,6 +138,9 @@ public final class DefaultNbtFacade implements NbtFacade {
     }
 
     private static String serialize(NbtValue value) {
+        if (value == null) {
+            throw mismatch("NBT value cannot be null");
+        }
         try { return NbtSnbtSerializer.serialize(value); }
         catch (IllegalArgumentException error) { throw new ApiInvocationException(ApiErrorCodes.NBT_LIMIT_EXCEEDED, "NBT value exceeds portable limits", Map.of(), error); }
     }

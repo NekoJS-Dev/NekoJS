@@ -4,13 +4,15 @@ package com.tkisor.nekojs.bindings.event;
 
 import com.tkisor.nekojs.api.JSTypeAdapter;
 import com.tkisor.nekojs.api.ScriptType;
-import com.tkisor.nekojs.api.catalog.ManualDeclarationCatalogEntry;
 import com.tkisor.nekojs.api.catalog.LegacySurfaceAdapter;
+import com.tkisor.nekojs.api.catalog.ManualDeclarationCatalogEntry;
 import com.tkisor.nekojs.api.catalog.NekoScriptCatalog;
 import com.tkisor.nekojs.api.catalog.NekoScriptCatalogSnapshot;
 import com.tkisor.nekojs.api.catalog.TypeDocCatalogEntry;
 import com.tkisor.nekojs.api.data.Binding;
+import com.tkisor.nekojs.api.data.BindingExposure;
 import com.tkisor.nekojs.api.data.BindingRegistry;
+import com.tkisor.nekojs.api.data.ModuleBinding;
 import com.tkisor.nekojs.api.event.EventGroup;
 import com.tkisor.nekojs.api.plugin.IPluginRuntime;
 import com.tkisor.nekojs.api.recipe.RecipeLifecycleContext;
@@ -30,18 +32,21 @@ import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Characterizes the tier of {@code NativeEvents}: it stays a legacy/raw adapter observation
- * surface (the raw NeoForge event bridge). Its declaration source is a
- * {@code TypeDocCatalogEntry} (for completion and docs), and the catalog collection step does
- * <strong>not</strong> silently upgrade it to managed stable:
+ * surface (the raw NeoForge event bridge) and a STARTUP-only versioned module export under
+ * {@code nekojs/api/version}. Its declaration source is a {@code TypeDocCatalogEntry} (for
+ * completion and docs), and neither module exposure nor the catalog collection step
+ * <strong>ever</strong> upgrades it to stable:
  *
  * <ul>
  *   <li>registration: it is registered only in the STARTUP binding set (a STARTUP reload calls
- *       {@code close()}, which unregisters the previous round's native listeners); the
- *       SERVER/CLIENT binding sets do not have it;</li>
+ *       {@code close()}, which unregisters the previous round's native listeners) and exported
+ *       under {@code nekojs/api/version} ({@link BindingExposure.Category#VERSION}); the
+ *       SERVER/CLIENT binding sets and {@link BindingExposure.Category#STABLE} do not have it;</li>
  *   <li>catalog: the binding enters the {@code legacySurface} observation surface (the
  *       {@code global:} kind plus a placeholder signature, the legacy shadow semantics), it does
  *       not appear in the events catalog (it is not an event group), and it does not enter
@@ -64,11 +69,33 @@ class NativeEventsLegacyTierCharacterizationTest {
         assertTrue(binding.value() instanceof NativeEventsJS,
                 "the binding value is the raw NativeEventsJS bridge");
 
+        List<ModuleBinding> startupNativeEventsExports = startup.moduleBindings().stream()
+                .filter(entry -> "NativeEvents".equals(entry.binding().name()))
+                .toList();
+        assertEquals(1, startupNativeEventsExports.size(),
+                "NativeEvents must be exported once in STARTUP module bindings");
+        ModuleBinding versionExport = startupNativeEventsExports.getFirst();
+        assertEquals("nekojs/api/version", versionExport.moduleId(),
+                "NativeEvents must be published under the nekojs/api/version module");
+        assertEquals(BindingExposure.Category.VERSION, versionExport.category(),
+                "NativeEvents module export must use BindingExposure.Category.VERSION");
+        assertEquals(ScriptType.STARTUP, versionExport.scriptType(),
+                "NativeEvents module export must stay scoped to STARTUP");
+        assertSame(binding.value(), versionExport.binding().value(),
+                "global and versioned module registrations share the same NativeEventsJS instance");
+        assertFalse(startup.moduleBindings().stream()
+                        .anyMatch(entry -> "NativeEvents".equals(entry.binding().name())
+                                && entry.category() == BindingExposure.Category.STABLE),
+                "NativeEvents must NOT be exported in BindingExposure.Category.STABLE");
+
         BindingRegistry.BindingRegistryImpl server =
                 new BindingRegistry.BindingRegistryImpl(ScriptType.SERVER).scopedTo("nekojs");
         new NekoJSCorePlugin().registerBinding(server);
         assertFalse(server.viewRegistered().containsKey("NativeEvents"),
                 "NativeEvents must NOT be registered outside STARTUP (STARTUP reload owns its lifecycle)");
+        assertFalse(server.moduleBindings().stream()
+                        .anyMatch(entry -> "NativeEvents".equals(entry.binding().name())),
+                "NativeEvents must NOT be exported in SERVER module bindings");
     }
 
     @Test

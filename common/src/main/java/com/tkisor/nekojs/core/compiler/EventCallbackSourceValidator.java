@@ -41,7 +41,7 @@ public final class EventCallbackSourceValidator {
         ValNode.Block ast;
         try {
             ast = parsed.ast();
-        } catch (Throwable e) {
+        } catch (Exception e) {
             // ValParser is a simplified parser: static checking is not possible if the script
             // contains unsupported syntax. Do not silent—log at least one warning so the user
             // knows this file is not protected by preflight.
@@ -570,7 +570,7 @@ public final class EventCallbackSourceValidator {
             } else {
                 context.schemaView.report(type, "event-cb-preflight", error);
             }
-        } catch (Throwable ignored) {
+        } catch (Exception ignored) {
             com.tkisor.nekojs.NekoJS.LOGGER.warn("Event callback preflight report failed", ignored);
         }
     }

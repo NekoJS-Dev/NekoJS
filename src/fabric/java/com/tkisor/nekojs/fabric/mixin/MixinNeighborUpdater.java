@@ -2,10 +2,9 @@ package com.tkisor.nekojs.fabric.mixin;
 
 import com.tkisor.nekojs.fabric.event.FabricBlockEventBindingsV2;
 import net.minecraft.core.BlockPos;
-import net.minecraft.world.level.Level;
+import net.minecraft.core.Direction;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.block.Block;
-import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.level.redstone.NeighborUpdater;
 import net.minecraft.world.level.redstone.Orientation;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
@@ -45,18 +44,22 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
  * {@code isClientSide} and {@code hasListeners} first, so no event object is created without
  * listeners. This is still a high-frequency path: keep script listeners light.
  */
-@Mixin(NeighborUpdater.class)
-public interface MixinNeighborUpdater {
+@Mixin(ServerLevel.class)
+public abstract class MixinNeighborUpdater {
 
-    @Inject(method = "executeUpdate", at = @At("HEAD"), cancellable = true)
-    private static void nekojs$onNeighborNotify(Level level, BlockState state, BlockPos pos,
-                                                Block block, Orientation orientation,
-                                                boolean forceRedstone, CallbackInfo ci) {
-        if (level.isClientSide()) {
-            return;
+    @Inject(method = "updateNeighborsAt(Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/level/block/Block;)V",
+            at = @At("HEAD"), cancellable = true)
+    private void nekojs$onNotifyAllNeighbors(BlockPos pos, Block sourceBlock, CallbackInfo ci) {
+        if (FabricBlockEventBindingsV2.postNeighborNotify((ServerLevel) (Object) this, pos, sourceBlock, null)) {
+            ci.cancel();
         }
-        if (FabricBlockEventBindingsV2.postNeighborNotify(
-                level, state, pos, block, orientation, forceRedstone)) {
+    }
+
+    @Inject(method = "updateNeighborsAtExceptFromFacing(Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/level/block/Block;Lnet/minecraft/core/Direction;Lnet/minecraft/world/level/redstone/Orientation;)V",
+            at = @At("HEAD"), cancellable = true)
+    private void nekojs$onNotifyNeighborsExcept(BlockPos pos, Block sourceBlock, Direction skipDirection,
+                                                 Orientation orientation, CallbackInfo ci) {
+        if (FabricBlockEventBindingsV2.postNeighborNotify((ServerLevel) (Object) this, pos, sourceBlock, orientation)) {
             ci.cancel();
         }
     }

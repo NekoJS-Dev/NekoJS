@@ -96,12 +96,12 @@ See [Recipe system](recipe-system_us) for more.
 New items must be registered in a **startup script**. Create `nekojs/startup_scripts/items.js`:
 
 ```javascript
-import { RegistryEvents } from "nekojs:event/versioned";
+import { StartupEvents } from "nekojs:event/versioned";
 
-RegistryEvents.register(event => {
-  event.item('mymod:cool_gem', item => {
-    item.maxStackSize = 16
-    item.rarity = 'rare'
+StartupEvents.registry('item', event => {
+  event.create('mymod:cool_gem', build => {
+    build.maxStackSize = 16
+    build.rarity = 'rare'
   })
 })
 ```

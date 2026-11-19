@@ -70,7 +70,7 @@ public final class ProbeConfigLoader {
             return new ProbeConfig(enabled, runAtStartup, baseDir,
                     new ProbeConfig.ScanConfig(includePackages, extraIncludePackages, excludePackages, forceScanMods, maxDepth, mode),
                     languages);
-        } catch (Throwable e) {
+        } catch (Exception e) {
             if (java.nio.file.Files.exists(probeConfig)) {
                 // The file exists but does not parse, so probe.toml is corrupt and the user gets an explicit warning.
                 // A missing file falling back to the defaults silently is normal.

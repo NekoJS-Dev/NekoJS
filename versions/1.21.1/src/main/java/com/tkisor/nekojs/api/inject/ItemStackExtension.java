@@ -102,8 +102,12 @@ public interface ItemStackExtension extends ItemStackSpec {
         if (parsedId == null) {
             throw new IllegalArgumentException("Invalid enchantment id: " + id);
         }
+        var server = ServerLifecycleHooks.getCurrentServer();
+        if (server == null) {
+            throw new IllegalStateException("Cannot resolve enchantment registry without an active server: " + id);
+        }
         ResourceKey<Enchantment> key = ResourceKey.create(Registries.ENCHANTMENT, parsedId);
-        Holder.Reference<Enchantment> enchantment = ServerLifecycleHooks.getCurrentServer()
+        Holder.Reference<Enchantment> enchantment = server
                 .registryAccess()
                 .lookupOrThrow(Registries.ENCHANTMENT)
                 .getOrThrow(key);
@@ -123,8 +127,10 @@ public interface ItemStackExtension extends ItemStackSpec {
     default boolean neko$hasEnchantment(String id, int level) {
         ResourceLocation parsedId = ResourceLocation.tryParse(id.contains(":") ? id : "minecraft:" + id);
         if (parsedId == null) return false;
+        var server = ServerLifecycleHooks.getCurrentServer();
+        if (server == null) return false;
         ResourceKey<Enchantment> key = ResourceKey.create(Registries.ENCHANTMENT, parsedId);
-        return ServerLifecycleHooks.getCurrentServer()
+        return server
                 .registryAccess()
                 .lookupOrThrow(Registries.ENCHANTMENT)
                 .get(key)

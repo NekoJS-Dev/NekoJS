@@ -93,7 +93,8 @@ Every event group is available on NeoForge. Fabric 26.x supports most common eve
 | `ItemEvents` | Server; `tooltip` is client | All | All |
 | `LevelEvents` | Server | All | No old `tick` name |
 | `NetworkEvents` | Server / client | Yes | Yes |
-| `RegistryEvents`, `GoalEvents` | Startup | Yes | Yes |
+| `StartupEvents` | Startup | Supported static registries | Supported static registries |
+| `GoalEvents` | Startup | Yes | Yes |
 | `CapabilityEvents` | Startup | Yes | Yes, with different methods |
 | `CommandEvents` | Server | `register`, `command` | `register` only |
 | `KeyBindEvents` | Client | 26.x only | Yes |
@@ -571,26 +572,26 @@ NetworkEvents.server('my_channel', event => {
 `data` is an NBT object. When sending, write a plain JS object and it is converted for you. Data the server receives comes from a client, so check that it makes sense before using it.
 
 <a id="wiki-section-20"></a>
-## RegistryEvents
+## StartupEvents
 
-Registers new items, blocks, entities and other content. Goes in `startup_scripts`; **restart the game** to apply changes. For the full guide, see [Registering new content](registering-new-content_us).
+Import `StartupEvents` from `nekojs:event/versioned` in `startup_scripts`. **Fully restart the game or dedicated server** to apply registration changes.
 
 | Event | Notes |
 |---|---|
-| `register` | In the callback, register content with `event.item(id, b => {})`, `event.block(...)`, `event.entityType(...)` and similar methods |
+| `registry(selector, callback)` | Subscribe to one explicitly opened static registry. The callback can use `event.create(id, build)`, `event.create(id, typeName, build)`, or `event.createCustom(id, supplier)` |
 
 ```javascript
-import { RegistryEvents } from "nekojs:event/versioned";
+import { StartupEvents } from "nekojs:event/versioned";
 
 // startup_scripts/items.js
-RegistryEvents.register(event => {
-  event.item('mymod:cool_gem', item => {
-    item.maxStackSize = 16
+StartupEvents.registry('item', event => {
+  event.create('mymod:cool_gem', build => {
+    build.maxStackSize = 16
   })
 })
 ```
 
-The available registration methods depend on platform and version. For example, `particleType` and `paintingVariant` are NeoForge only, and on 26.x enchantments are defined by data packs and cannot be registered from scripts.
+Use the original Minecraft registry path, such as `item`, `block`, or `entity_type`, or a full key such as `minecraft:item`. A modded registry requires its full key and explicit NekoJS plugin support. Enchantments and other data-pack registries use data packs. See [Registering new content](registering-new-content_us) for supported selectors and migration examples.
 
 <a id="wiki-section-21"></a>
 ## GoalEvents
@@ -1013,7 +1014,7 @@ Member names only known at run time (for example, a name taken from network data
 
 - [Global bindings](global-bindings_us): global objects such as `Item`, `Text` and `Network`.
 - [Recipe system](recipe-system_us): `ServerEvents.recipes` in depth.
-- [Registering new content](registering-new-content_us): `RegistryEvents` and `GoalEvents` in depth.
+- [Registering new content](registering-new-content_us): `StartupEvents.registry` and `GoalEvents` in depth.
 - [Client rendering](client-rendering_us): HUD, world drawing and post-processing.
 
 <!-- wiki-nav -->

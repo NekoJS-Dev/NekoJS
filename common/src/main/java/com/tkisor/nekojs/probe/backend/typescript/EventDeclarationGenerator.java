@@ -4,6 +4,7 @@ import com.tkisor.nekojs.api.catalog.EventCatalogEntry;
 import com.tkisor.nekojs.api.catalog.EventCallSignature;
 import com.tkisor.nekojs.api.catalog.RegistryBuilderSurfaceEntry;
 import com.tkisor.nekojs.api.catalog.RegistryBuilderSurfaceEntry.EventPayload;
+import com.tkisor.nekojs.api.catalog.RegistryBuilderSurfaceEntry.EventVariant;
 import com.tkisor.nekojs.probe.EventPayloadDeclarations;
 import com.tkisor.nekojs.probe.ir.TypeReflector;
 import com.tkisor.nekojs.probe.ir.TypeScriptClassRenderer;
@@ -57,7 +58,7 @@ public final class EventDeclarationGenerator {
                            List<RegistryBuilderSurfaceEntry> builders) {
         Map<Class<?>, EventPayload> payloads = EventPayloadDeclarations.resolve(events, builders);
         StringBuilder sb = new StringBuilder();
-        if (!payloads.isEmpty()) {
+        if (!EventPayloadDeclarations.builderNames(payloads, builders).isEmpty()) {
             sb.append("/// <reference path=\"../../../@event-builders/index.d.ts\" />\n\n");
         }
 
@@ -68,11 +69,13 @@ public final class EventDeclarationGenerator {
         Set<String> imports = referencedClasses(events, payloads);
         Set<TypeScriptImportNames.Symbol> symbols = new LinkedHashSet<>();
         for (String fqn : imports) {
-            symbols.add(new TypeScriptImportNames.Symbol(fqn, "$" + fqn.substring(fqn.lastIndexOf('.') + 1)));
+            int dot = fqn.lastIndexOf('.');
+            symbols.add(new TypeScriptImportNames.Symbol(fqn, "$" + (dot >= 0 ? fqn.substring(dot + 1) : fqn)));
             String adapterName = adapterAliasGenerator.aliasNameOf(fqn);
             if (adapterName != null) symbols.add(new TypeScriptImportNames.Symbol(fqn, adapterName));
         }
-        Set<String> payloadNames = payloads.values().stream().map(EventPayload::name).collect(Collectors.toSet());
+        Set<String> payloadNames = payloads.values().stream()
+                .flatMap(payload -> payload.declarationNames().stream()).collect(Collectors.toSet());
         TypeScriptImportNames importNames = new TypeScriptImportNames(symbols, payloadNames, Set.of());
         // Imports and signatures share a module-local view; catalog identities and shared aliases stay unchanged.
         TypeAliasRegistry moduleAliases = importNames.hasAliases()
@@ -82,7 +85,8 @@ public final class EventDeclarationGenerator {
             Map<String, List<String>> importsByPackage = new TreeMap<>();
             for (var binding : importNames.bindings().entrySet()) {
                 String fqn = binding.getKey().fqn();
-                String pkg = fqn.substring(0, fqn.lastIndexOf('.'));
+                int dot = fqn.lastIndexOf('.');
+                String pkg = dot >= 0 ? fqn.substring(0, dot) : "";
                 List<String> names = importsByPackage.computeIfAbsent(pkg, k -> new ArrayList<>());
                 String exported = binding.getKey().exportedName();
                 String local = binding.getValue();
@@ -100,19 +104,7 @@ public final class EventDeclarationGenerator {
             sb.append("\n");
         }
 
-        for (EventPayload payload : payloads.values()) {
-            sb.append("interface ").append(payload.name()).append(" {\n");
-            for (RegistryBuilderSurfaceEntry.Member member : payload.members()) {
-                switch (member.kind()) {
-                    case WRITABLE_PROPERTY -> sb.append("    ").append(member.name()).append(": ")
-                            .append(member.tsType()).append(";\n");
-                    case READ_ONLY_PROPERTY -> sb.append("    readonly ").append(member.name()).append(": ")
-                            .append(member.tsType()).append(";\n");
-                    case METHOD -> sb.append("    ").append(member.tsType()).append(";\n");
-                }
-            }
-            sb.append("}\n\n");
-        }
+        appendPayloadInterfaces(sb, payloads, "\n");
 
         // Empty module declaration, to keep the structure consistent
         sb.append("declare module \"@side-only/").append(scriptType.name).append("/events\" {\n");
@@ -158,29 +150,20 @@ public final class EventDeclarationGenerator {
         return generateModuleNamespaces(events, List.of());
     }
 
+    /** Generates TypeScript namespace declarations for module-scoped events and registry builders. */
     public String generateModuleNamespaces(List<EventCatalogEntry> events, List<RegistryBuilderSurfaceEntry> builders) {
         Map<Class<?>, EventPayload> payloads = EventPayloadDeclarations.resolve(events, builders);
-        TypeAliasRegistry inline = aliasRegistry.withReferences((fqn, symbol) ->
-                "import(\"java:" + fqn.substring(0, fqn.lastIndexOf('.')).replace('.', '/')
-                        + "\")." + symbol);
+        TypeAliasRegistry inline = aliasRegistry.withReferences((fqn, symbol) -> {
+            int dot = fqn.lastIndexOf('.');
+            String pkg = dot >= 0 ? fqn.substring(0, dot) : "";
+            return "import(\"java:" + pkg.replace('.', '/') + "\")." + symbol;
+        });
         StringBuilder output = new StringBuilder();
         if (events.stream().flatMap(event -> callShapes(event, inline).stream())
                 .anyMatch(AdapterAliasGenerator.RenderedShape::usesRegistry)) {
             output.append("    import type { RegistryTypes } from \"@special/types\";\n");
         }
-        for (EventPayload payload : payloads.values()) {
-            output.append("interface ").append(payload.name()).append(" {\n");
-            for (RegistryBuilderSurfaceEntry.Member member : payload.members()) {
-                output.append("    ");
-                switch (member.kind()) {
-                    case WRITABLE_PROPERTY -> output.append(member.name()).append(": ").append(member.tsType());
-                    case READ_ONLY_PROPERTY -> output.append("readonly ").append(member.name()).append(": ").append(member.tsType());
-                    case METHOD -> output.append(member.tsType());
-                }
-                output.append(";\n");
-            }
-            output.append("}\n");
-        }
+        appendPayloadInterfaces(output, payloads, "");
         Map<String, List<EventCatalogEntry>> groups = events.stream().collect(Collectors.groupingBy(
                 EventCatalogEntry::group, TreeMap::new, Collectors.toList()));
         groups.forEach((name, entries) -> {
@@ -190,6 +173,44 @@ public final class EventDeclarationGenerator {
             output.append("    }\n");
         });
         return output.toString();
+    }
+
+    private static void appendPayloadInterfaces(StringBuilder output, Map<Class<?>, EventPayload> payloads,
+                                                String separator) {
+        for (EventPayload payload : payloads.values()) {
+            if (payload.selectorScoped()) {
+                for (EventVariant variant : payload.variants()) {
+                    appendPayloadInterface(output, variant.typeName(), variant.members());
+                    output.append(separator);
+                }
+            } else {
+                appendPayloadInterface(output, payload.name(), payload.members());
+                output.append(separator);
+            }
+        }
+    }
+
+    private static void appendPayloadInterface(StringBuilder output, String name,
+                                               List<RegistryBuilderSurfaceEntry.Member> members) {
+        output.append("interface ").append(name).append(" {\n");
+        for (RegistryBuilderSurfaceEntry.Member member : members) {
+            output.append("    ");
+            switch (member.kind()) {
+                case WRITABLE_PROPERTY -> output.append(member.name()).append(": ").append(member.tsType());
+                case READ_ONLY_PROPERTY -> output.append("readonly ").append(member.name()).append(": ").append(member.tsType());
+                case METHOD -> output.append(member.tsType());
+            }
+            output.append(";\n");
+        }
+        output.append("}\n");
+    }
+
+    private static void appendRequiredSelector(StringBuilder sb, String name, String keyType, String eventType) {
+        String key = "selector: " + keyType;
+        String handler = "handler: ((event: " + eventType + ") => void)";
+        String priority = "priority: \"HIGHEST\" | \"HIGH\" | \"NORMAL\" | \"LOW\" | \"LOWEST\"";
+        TypeScriptDeclarationFormatter.appendCallable(sb, 8, "function " + name, List.of(key, handler), ": void;");
+        TypeScriptDeclarationFormatter.appendCallable(sb, 8, "function " + name, List.of(priority, key, handler), ": void;");
     }
 
     private String generateEventMethod(EventCatalogEntry event, EventPayload payload, TypeAliasRegistry moduleAliases) {
@@ -224,6 +245,18 @@ public final class EventDeclarationGenerator {
             return sb.toString();
         }
 
+        if (payload != null && payload.selectorScoped()) {
+            if (payload.variants().isEmpty()) {
+                appendRequiredSelector(sb, event.name(), "never", "never");
+            }
+            for (EventVariant variant : payload.variants()) {
+                String keyType = variant.selectors().stream().map(EventPayloadDeclarations::quoteSelector)
+                        .collect(Collectors.joining(" | "));
+                appendRequiredSelector(sb, event.name(), keyType, variant.typeName());
+            }
+            return sb.toString();
+        }
+
         // Event class type
         String eventType = "any";
         if (payload != null) {
@@ -243,20 +276,30 @@ public final class EventDeclarationGenerator {
             }
         }
 
+        if (event.selectorRequired()) {
+            String keyType = event.dispatchKeyType() == null ? "unknown" : renderKeyType(event, moduleAliases);
+            appendRequiredSelector(sb, event.name(), keyType, eventType);
+            return sb.toString();
+        }
+
         // The version without a dispatch key
         TypeScriptDeclarationFormatter.appendCallable(sb, 8, "function " + event.name(),
                 List.of("handler: ((event: " + eventType + ") => void)"), ": void;");
 
         // Variant that includes a dispatch key.
         if (event.dispatchable() && event.dispatchKeyType() != null) {
-            String keyType = TypeScriptClassRenderer.renderTypeRef(
-                    JavaTypeScriptProjection.project(event.dispatchKeyType(), TypeReflector.toRef(event.dispatchKeyType())),
-                    moduleAliases, true);
+            String keyType = renderKeyType(event, moduleAliases);
             TypeScriptDeclarationFormatter.appendCallable(sb, 8, "function " + event.name(),
                     List.of("extra: " + keyType, "handler: ((event: " + eventType + ") => void)"), ": void;");
         }
 
         return sb.toString();
+    }
+
+    private static String renderKeyType(EventCatalogEntry event, TypeAliasRegistry moduleAliases) {
+        return TypeScriptClassRenderer.renderTypeRef(
+                JavaTypeScriptProjection.project(event.dispatchKeyType(), TypeReflector.toRef(event.dispatchKeyType())),
+                moduleAliases, true);
     }
 
     /** Includes emitted payload and dispatch imports without reflecting replaced builder payloads. */
@@ -275,7 +318,10 @@ public final class EventDeclarationGenerator {
                 continue;
             }
             if (event.eventType() != null && !payloads.containsKey(event.eventType())) collectImports(event.eventType(), imports);
-            if (event.dispatchable() && event.dispatchKeyType() != null) collectImports(event.dispatchKeyType(), imports);
+            EventPayload payload = payloads.get(event.eventType());
+            if (event.dispatchable() && event.dispatchKeyType() != null && (payload == null || !payload.selectorScoped())) {
+                collectImports(event.dispatchKeyType(), imports);
+            }
         }
         return imports;
     }

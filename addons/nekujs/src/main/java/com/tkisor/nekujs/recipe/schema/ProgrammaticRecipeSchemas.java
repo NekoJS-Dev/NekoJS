@@ -130,7 +130,8 @@ public final class ProgrammaticRecipeSchemas {
         if (raw == String.class) return string();
         if (raw.isEnum()) {
             AdapterInputShape[] names = java.util.Arrays.stream(raw.getEnumConstants())
-                    .map(value -> literal(((net.minecraft.util.StringRepresentable) value).getSerializedName()))
+                    .map(value -> literal(value instanceof net.minecraft.util.StringRepresentable named
+                            ? named.getSerializedName() : ((Enum<?>) value).name()))
                     .toArray(AdapterInputShape[]::new);
             return union(host(raw), new AdapterInputShape.UnionValue(List.of(names)));
         }

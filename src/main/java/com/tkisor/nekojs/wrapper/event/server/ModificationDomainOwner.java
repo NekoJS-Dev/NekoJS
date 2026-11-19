@@ -233,18 +233,7 @@ public final class ModificationDomainOwner implements CandidateDomainCollector, 
         Float resistance = floatProperty(properties, "resistance");
         Integer lightLevel = intProperty(properties, "lightLevel");
         Float friction = floatProperty(properties, "friction");
-        if (hardness != null && hardness < 0) {
-            throw new IllegalArgumentException("Invalid hardness " + hardness + ": must be >= 0");
-        }
-        if (resistance != null && resistance < 0) {
-            throw new IllegalArgumentException("Invalid resistance " + resistance + ": must be >= 0");
-        }
-        if (lightLevel != null && (lightLevel < 0 || lightLevel > 15)) {
-            throw new IllegalArgumentException("Invalid lightLevel " + lightLevel + ": must be between 0 and 15");
-        }
-        if (friction != null && (friction < 0 || friction > 1)) {
-            throw new IllegalArgumentException("Invalid friction " + friction + ": must be between 0 and 1");
-        }
+        BlockModificationJS.validateRanges(hardness, resistance, lightLevel, friction);
     }
 
     /**
@@ -373,8 +362,8 @@ public final class ModificationDomainOwner implements CandidateDomainCollector, 
             }
         }
         if (properties.containsKey("attackDamage") || properties.containsKey("attackSpeed")) {
-            Double attackDamage = (Double) properties.get("attackDamage");
-            Double attackSpeed = (Double) properties.get("attackSpeed");
+            Double attackDamage = doubleProperty(properties, "attackDamage");
+            Double attackSpeed = doubleProperty(properties, "attackSpeed");
             ItemModificationComponents.applyAttributes(builder, base, attackDamage, attackSpeed);
         }
     }
@@ -390,12 +379,17 @@ public final class ModificationDomainOwner implements CandidateDomainCollector, 
         baseline.applyTo(block);
         BlockModificationJS view = new BlockModificationJS(block);
         Map<String, Object> properties = declaration.properties();
-        if (properties.containsKey("hardness")) view.setHardness((Float) properties.get("hardness"));
-        if (properties.containsKey("resistance")) view.setResistance((Float) properties.get("resistance"));
-        if (properties.containsKey("lightLevel")) view.setLightLevel((Integer) properties.get("lightLevel"));
+        Float hardness = floatProperty(properties, "hardness");
+        if (hardness != null) view.setHardness(hardness);
+        Float resistance = floatProperty(properties, "resistance");
+        if (resistance != null) view.setResistance(resistance);
+        Integer lightLevel = intProperty(properties, "lightLevel");
+        if (lightLevel != null) view.setLightLevel(lightLevel);
         if (properties.containsKey("requiresTool")) view.setRequiresTool((Boolean) properties.get("requiresTool"));
-        if (properties.containsKey("friction")) view.setFriction((Float) properties.get("friction"));
-        if (properties.containsKey("jumpFactor")) view.setJumpFactor((Float) properties.get("jumpFactor"));
+        Float friction = floatProperty(properties, "friction");
+        if (friction != null) view.setFriction(friction);
+        Float jumpFactor = floatProperty(properties, "jumpFactor");
+        if (jumpFactor != null) view.setJumpFactor(jumpFactor);
         view.applyTo(block);
     }
 
@@ -435,6 +429,11 @@ public final class ModificationDomainOwner implements CandidateDomainCollector, 
     private static Float floatProperty(Map<String, Object> properties, String name) {
         Object value = properties.get(name);
         return value == null ? null : ((Number) value).floatValue();
+    }
+
+    private static Double doubleProperty(Map<String, Object> properties, String name) {
+        Object value = properties.get(name);
+        return value == null ? null : ((Number) value).doubleValue();
     }
 
     private static int countKind(List<ModificationDeclaration> declarations, String kind) {

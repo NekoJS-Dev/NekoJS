@@ -67,8 +67,16 @@ public final class RegistryBuilderSurfaces {
     /** Associates the actual STARTUP proxy methods with contract-derived builders in an isolated TS namespace. */
     public static void register(TypeDocsRegister registry, RegistryInfosPoint.RegistryInfos infos,
                                 RegistryTypesPoint.RegistryTypes types) {
-        List<RegistryBuilderSurfaceEntry> entries = derive(types);
+        var startupKeys = infos.startupRegistries().stream().map(key -> key.identifier().toString())
+                .collect(java.util.stream.Collectors.toSet());
+        List<RegistryBuilderSurfaceEntry> entries = derive(types).stream()
+                .filter(entry -> startupKeys.contains(entry.registryKey()))
+                .toList();
         var payload = StartupRegistryEventSurface.derive(infos, types, entries);
+        if (entries.isEmpty()) {
+            registry.registerRegistryBuilderSurface(RegistryBuilderSurfaceEntry.eventOnly(payload));
+            return;
+        }
         entries.stream().map(entry -> new RegistryBuilderSurfaceEntry(entry.builderName(), entry.registryKey(),
                 entry.typeName(), entry.sugarName(), entry.members(), entry.description(), payload, entry.nestedBuilders()))
                 .forEach(registry::registerRegistryBuilderSurface);

@@ -1,3 +1,9 @@
+import { ServerEvents } from "nekojs:event/versioned"
+
+if (typeof ServerEvents.started !== "function") {
+  throw new Error("Fabric smoke bindings are unavailable")
+}
+
 ServerEvents.started(event => {
   console.info("FABRIC-CI-SMOKE: server started")
   // 票 31 AC：真实兼容面调用。level.spawnLightning 经运行时 Graal remapper 解析到

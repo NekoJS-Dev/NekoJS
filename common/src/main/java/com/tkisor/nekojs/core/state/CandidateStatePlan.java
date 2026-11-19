@@ -47,6 +47,9 @@ public interface CandidateStatePlan {
      */
     void publish();
 
+    default void afterCommit() {
+    }
+
     /**
      * Releases the plan when the candidate fails or is cancelled. Called on the owner thread from
      * the candidate discard path: the plan releases whatever candidate-scoped resources it

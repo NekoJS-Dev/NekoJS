@@ -3,6 +3,7 @@ package com.tkisor.nekojs.api.inject;
 import com.tkisor.nekojs.api.annotation.RemapByPrefix;
 import com.tkisor.nekojs.api.data.AttachedData;
 import com.tkisor.nekojs.api.spec.inject.PlayerSpec;
+import com.tkisor.nekojs.api.stage.StageHandle;
 //? if >=26 {
 import net.minecraft.commands.Commands;
 //?}
@@ -12,6 +13,7 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.GameType;
 
+/** Mixin-injected extension interface adding NekoJS {@link PlayerSpec} helpers to {@code Player}. */
 @RemapByPrefix("neko$")
 public interface PlayerExtension extends PlayerSpec {
 
@@ -82,6 +84,10 @@ public interface PlayerExtension extends PlayerSpec {
             serverPlayer.connection.disconnect(toComponent(reason != null ? reason : "Kicked"));
         }
     }
+
+    /** Returns the stage handle attached to this player. */
+    @Override
+    StageHandle neko$getStages();
 
     // ---- Methods left out of the spec (name collision with vanilla, or platform specific) ----
 

@@ -30,10 +30,21 @@ public class ItemEntityPickupEventJS {
 
     @Doc("The item entity that is being / was picked up.")
     private final ItemEntity itemEntity;
+    @Getter(lombok.AccessLevel.NONE)
+    private final ItemStack pickedUpStack;
 
     public ItemEntityPickupEventJS(Player player, ItemEntity itemEntity) {
+        this(player, itemEntity, null);
+    }
+
+    public ItemEntityPickupEventJS(Player player, ItemEntity itemEntity, ItemStack pickedUpStack) {
         this.player = player;
         this.itemEntity = itemEntity;
+        this.pickedUpStack = pickedUpStack;
+    }
+
+    public ItemStack pickedUpStack() {
+        return pickedUpStack == null ? getItem() : pickedUpStack;
     }
 
     @Doc("The item stack on the item entity.")

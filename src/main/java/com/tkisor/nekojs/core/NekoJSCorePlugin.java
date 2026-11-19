@@ -94,6 +94,7 @@ import java.util.Map;
 import static com.tkisor.nekojs.api.catalog.ManualDeclarationCatalogEntry.TypeReference.host;
 import static com.tkisor.nekojs.api.catalog.ManualDeclarationCatalogEntry.TypeReference.input;
 
+/** Core built-in {@link NekoJSPlugin} registering standard bindings, events, type adapters, and recipe namespaces. */
 @RegisterNekoJSPlugin(priority = NekoJSPlugin.CORE_PRIORITY)
 public class NekoJSCorePlugin implements NekoJSPlugin, com.tkisor.nekojs.core.plugin.BindingsPoint.Contributor, com.tkisor.nekojs.core.plugin.TypeDocsPoint.Contributor, com.tkisor.nekojs.core.plugin.NodeTypeDocsPoint.Contributor, com.tkisor.nekojs.core.plugin.EventsPoint.Contributor, com.tkisor.nekojs.core.plugin.ClientEventsPoint.Contributor, com.tkisor.nekojs.core.plugin.AdaptersPoint.Contributor, com.tkisor.nekojs.core.plugin.RecipeNamespacesPoint.Contributor {
 
@@ -111,6 +112,7 @@ public class NekoJSCorePlugin implements NekoJSPlugin, com.tkisor.nekojs.core.pl
         registry.register(ScriptEvents.GROUP);
         registry.register(NetworkEvents.GROUP);
         registry.register(ProbeEvents.GROUP);
+        registry.register(com.tkisor.nekojs.api.stage.StageEvents.GROUP);
     }
 
     @Override
@@ -125,6 +127,11 @@ public class NekoJSCorePlugin implements NekoJSPlugin, com.tkisor.nekojs.core.pl
     public void registerBinding(BindingRegistry registry) {
         registry.register(com.tkisor.nekojs.api.data.Binding.of("Native",
                 new com.tkisor.nekojs.bindings.static_access.NativeBridgeJS()), expose -> expose.stable());
+        var stages = Binding.of("Stages",
+                new com.tkisor.nekojs.core.stage.StagesBinding(registry.scriptType()),
+                com.tkisor.nekojs.api.stage.StagesFacade.class);
+        registry.register(stages);
+        registry.register(stages, expose -> expose.stable());
         registry.register(com.tkisor.nekojs.api.data.Binding.of("Item",
                 new com.tkisor.nekojs.bindings.static_access.ItemJS()), expose -> expose.versioned());
         // Same-name vanilla class combination binding (same pattern as Item/Block proxy delegation below): factory methods go to helper,
@@ -178,6 +185,7 @@ public class NekoJSCorePlugin implements NekoJSPlugin, com.tkisor.nekojs.core.pl
         if (registry.scriptType() == ScriptType.STARTUP) {
             NativeEventsJS nativeEvents = new NativeEventsJS();
             registry.register(nativeEvents);
+            registry.register(nativeEvents, expose -> expose.versioned());
         }
         registry.register(ScriptType.TEST, "Test", new TestJS());
 //? if >=26 {
@@ -238,6 +246,9 @@ public class NekoJSCorePlugin implements NekoJSPlugin, com.tkisor.nekojs.core.pl
 
     @Override
     public void registerAdapters(JSTypeAdapterRegistry registry) {
+        registry.register(new com.tkisor.nekojs.core.stage.NekoIdAdapter());
+        registry.register(new com.tkisor.nekojs.core.stage.StagePlayerRefAdapter());
+        registry.register(new com.tkisor.nekojs.core.stage.StageNotifyOptionsAdapter());
         registry.register(new ItemStackAdapter());
         registry.register(new IngredientAdapter());
         registry.register(new SizedIngredientAdapter());
@@ -315,7 +326,7 @@ public class NekoJSCorePlugin implements NekoJSPlugin, com.tkisor.nekojs.core.pl
                 null,
                 "Startup-side custom server/client event declaration event group.",
                 List.of("ScriptEvents.server(event => event.register('MyEvents', 'bossKilled'))")));
-        registry.register(TypeDocCatalogEntry.binding(ScriptType.STARTUP, "RegistryEvents", null, "Startup-side registry builders, including scripted entity types.", List.of("RegistryEvents.register(event => event.entityType('mymod:cat', b => { }))")));
+        registry.register(TypeDocCatalogEntry.binding(ScriptType.STARTUP, "StartupEvents", null, "Startup-side registry builders, including scripted entity types.", List.of("StartupEvents.registry('entity_type', event => event.create('mymod:cat', build => { }))")));
         registry.register(TypeDocCatalogEntry.binding(ScriptType.STARTUP, "GoalEvents", null, "Startup-side goal registration for existing or scripted entity types.", List.of("GoalEvents.register(event => { })")));
 
         NekoCommonManualDeclarations.register(registry, Map.ofEntries(

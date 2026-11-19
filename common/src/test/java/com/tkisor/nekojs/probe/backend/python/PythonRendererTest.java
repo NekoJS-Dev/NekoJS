@@ -26,6 +26,8 @@ import static org.junit.jupiter.api.Assertions.*;
  */
 class PythonRendererTest {
 
+    private static final TypeReflector REFLECTOR = new TypeReflector();
+
     @Test
     void heritageOrderingUsesEditedTransitiveSymbolsAndKeepsUnrelatedOrder() {
         TypeDecl root = new TypeDecl(TypeDecl.Kind.INTERFACE, null, "pkg.Root");
@@ -121,8 +123,7 @@ class PythonRendererTest {
 
     @Test
     void javaOnlyMembersDoNotInventPythonAliasesOrInvalidBeanProperties() {
-        TypeReflector reflector = new TypeReflector();
-        TypeDecl declaration = reflector.reflect(JavaOnlyNames.class);
+        TypeDecl declaration = REFLECTOR.reflect(JavaOnlyNames.class);
         PythonClassRenderer renderer = new PythonClassRenderer(new ApiTypeRefPyRenderer(Set.of(declaration.fqn)));
         String output = renderer.render(declaration);
         assertFalse(output.contains("def nekojs$applyScripts"), output);
@@ -132,7 +133,7 @@ class PythonRendererTest {
         assertTrue(output.contains("def get2DigitYearStart(self) -> int"), output);
         assertTrue(output.contains("def set2DigitYearStart(self, value: int) -> None"), output);
         assertTrue(output.contains("def applyScripts(self) -> None"), output);
-        String interfaceOutput = renderer.render(reflector.reflect(JavaOnlyInterface.class));
+        String interfaceOutput = renderer.render(REFLECTOR.reflect(JavaOnlyInterface.class));
         assertFalse(interfaceOutput.contains("def loader$invoke"), interfaceOutput);
         assertFalse(interfaceOutput.contains("def loader_invoke"), interfaceOutput);
         assertTrue(interfaceOutput.contains("def invoke(self) -> None"), interfaceOutput);
@@ -180,8 +181,7 @@ class PythonRendererTest {
 
     @Test
     void renderClass_emitsFieldsGetterMethodsCtor() {
-        TypeReflector reflector = new TypeReflector();
-        TypeDecl d = reflector.reflect(Sample.class);
+        TypeDecl d = REFLECTOR.reflect(Sample.class);
         ApiTypeRefPyRenderer typeR = new ApiTypeRefPyRenderer(Set.of(d.fqn));
         PythonClassRenderer classR = new PythonClassRenderer(typeR);
 
@@ -207,8 +207,7 @@ class PythonRendererTest {
 
     @Test
     void renderClass_emitsMethodAndFieldDocs() {
-        TypeReflector reflector = new TypeReflector();
-        TypeDecl d = reflector.reflect(Sample.class);
+        TypeDecl d = REFLECTOR.reflect(Sample.class);
         ApiTypeRefPyRenderer typeR = new ApiTypeRefPyRenderer(Set.of(d.fqn));
         PythonClassRenderer classR = new PythonClassRenderer(typeR);
 
@@ -249,7 +248,7 @@ class PythonRendererTest {
     void renderClass_javaOverloadsUseOverloadDecorator() {
         // Sample has greet(String)/greet(String, int) overloads plus two constructors, so every def of the same name is marked
         // @overload; otherwise Pylance reports that a declaration is obscured by a declaration with the same name
-        TypeDecl d = new TypeReflector().reflect(Sample.class);
+        TypeDecl d = REFLECTOR.reflect(Sample.class);
         ApiTypeRefPyRenderer typeR = new ApiTypeRefPyRenderer(Set.of(d.fqn));
         PythonClassRenderer classR = new PythonClassRenderer(typeR);
 

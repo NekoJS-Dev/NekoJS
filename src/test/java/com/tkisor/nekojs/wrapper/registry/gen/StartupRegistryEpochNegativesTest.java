@@ -1,9 +1,6 @@
 package com.tkisor.nekojs.wrapper.registry.gen;
 //~ mc_legacy_api
 
-import com.tkisor.nekojs.api.ScriptType;
-import com.tkisor.nekojs.api.event.EventGroupJS;
-import graal.graalvm.polyglot.Context;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
@@ -37,99 +34,53 @@ class StartupRegistryEpochNegativesTest {
 
     private static final String NODE = "negative-test-node";
 
-    /** Lets JS record exceptions thrown during collection; EventBusJS catches listener
-     * exceptions and does not rethrow them. Public because Graal host access requires it. */
-    public static final class ErrorLog {
-        final List<String> messages = new ArrayList<>();
-
-        public void add(String message) {
-            messages.add(message);
-        }
-
-        List<String> messages() {
-            return messages;
-        }
-    }
-
-    private static RegistryInfosPoint.RegistryInfos testInfos() {
-        return RegistryInfosPoint.scan(new RegistryInfosPoint.RegistryInfosCollector());
-    }
-
-    private static RegistryTypesPoint.RegistryTypes testTypes() {
-        RegistryTypesPoint.RegistryTypesCollector collector = new RegistryTypesPoint.RegistryTypesCollector();
-        collector.registerType(Registries.SOUND_EVENT, "basic", SoundEventBuilder.class, SoundEventBuilder::new);
-        collector.setDefault(Registries.SOUND_EVENT, "basic");
-        return new RegistryTypesPoint.RegistryTypes(collector.byRegistry, collector.defaults, collector.builderClasses);
-    }
-
     @Test
     void throwingConfigCallbackLeavesNoDrainableHalfFinishedEntry() {
         StartupRegistryRuntime runtime = new StartupRegistryRuntime(NODE);
-        ErrorLog errors = new ErrorLog();
-        try (Context context = Context.newBuilder("js").allowAllAccess(true).build()) {
-            com.tkisor.nekojs.script.ScriptContextRegistry.bind(context, ScriptType.STARTUP);
-            try {
-                context.getBindings("js").putMember("RegistryEvents", new EventGroupJS(RegistryEvents.GROUP, ScriptType.STARTUP));
-                context.getBindings("js").putMember("errors", errors);
-                context.eval("js", """
-                        RegistryEvents.register(event => {
-                            // 先完成一条完整声明（保留：它是完整产物，不是半成品）
-                            event.soundEvent('mymod:complete', b => { b.fixedRange = 16 })
-                            // 配置途中抛错：该 builder 不得成为可 drain 的半成品
-                            event.soundEvent('mymod:broken', b => {
-                                b.fixedRange = 8;
-                                throw new Error('script exploded mid-config');
-                            })
+        try (var script = new StartupRegistryScriptFixture(new NekoRegistryPointsPlugin())) {
+            script.context.eval("js", """
+                    StartupEvents.registry('sound_event', event => {
+                        event.create('mymod:complete', build => { build.fixedRange = 16 });
+                        event.create('mymod:broken', build => {
+                            build.fixedRange = 8;
+                            throw new Error('script exploded mid-config');
                         });
-                        """);
-                runtime.collectOnce(new RegistryEventJS(runtime.repository(), NODE, testInfos(), testTypes()));
-            } finally {
-                // Unbind even when an assertion fails, so no static binding leaks.
-                com.tkisor.nekojs.script.ScriptContextRegistry.unbind(context);
-            }
+                    });
+                    StartupEvents.registry('minecraft:sound_event', event => {
+                        event.create('mymod:next_listener', build => {});
+                    });
+                    """);
+            runtime.collectOnce();
         }
 
-        // EventGroupJS/EventBusJS catch listener exceptions and carry on: complete entries are kept,
-        // half-built ones never reach the repository.
+        // Completed entries and subsequent listeners survive the configuration failure.
         var view = runtime.undrainedLiveView();
-        assertEquals(List.of(Identifier.parse("mymod:complete")), view.get(Registries.SOUND_EVENT),
+        assertEquals(List.of(Identifier.parse("mymod:complete"), Identifier.parse("mymod:next_listener")), view.get(Registries.SOUND_EVENT),
                 "抛错的 builder 不入库；完整条目保留");
 
         RecordingSink sink = new RecordingSink();
         var drained = runtime.drainFor(Registries.SOUND_EVENT, sink);
-        assertEquals(1, drained.registered().size());
-        assertEquals("mymod:complete", drained.registered().get(0).definition().toString());
+        assertEquals(List.of("mymod:complete", "mymod:next_listener"),
+                drained.registered().stream().map(record -> record.definition().toString()).toList());
         assertTrue(runtime.isFullyDrained(), "半成品没有残留到 drain 期");
     }
 
     @Test
     void postDrainCollectionChangesDoNotAlterThePublishedSnapshot() {
         StartupRegistryRuntime runtime = new StartupRegistryRuntime(NODE);
-        ErrorLog errors = new ErrorLog();
-        try (Context context = Context.newBuilder("js").allowAllAccess(true).build()) {
-            com.tkisor.nekojs.script.ScriptContextRegistry.bind(context, ScriptType.STARTUP);
-            try {
-                context.getBindings("js").putMember("RegistryEvents", new EventGroupJS(RegistryEvents.GROUP, ScriptType.STARTUP));
-                context.getBindings("js").putMember("errors", errors);
-                context.eval("js", "RegistryEvents.register(event => { event.soundEvent('mymod:first', b => { }) });");
-                runtime.collectOnce(new RegistryEventJS(runtime.repository(), NODE, testInfos(), testTypes()));
-                var first = runtime.drainFor(Registries.SOUND_EVENT, new RecordingSink());
-                // Change the underlying collection container after the snapshot: a new declaration with the
-                // same name in the same registry, added straight to the repository.
-                runtime.repository().add(Registries.SOUND_EVENT,
-                        new SoundEventBuilder(Identifier.parse("mymod:second")), "basic", "post-snapshot");
-
-                assertEquals(1, first.registered().size(), "已发布快照不受后续收集影响");
-                assertEquals("mymod:first", first.registered().get(0).definition().toString());
-                assertThrows(UnsupportedOperationException.class, () -> first.registered().add(null),
-                        "快照本身不可变");
-                assertEquals(1, runtime.drainFor(Registries.SOUND_EVENT, new RecordingSink()).registered().size(),
-                        "后到的声明进下一轮 drain，不改写上一轮结果");
-            } finally {
-                // Unbind even when an assertion fails, so no static binding leaks.
-                com.tkisor.nekojs.script.ScriptContextRegistry.unbind(context);
-            }
+        try (var script = new StartupRegistryScriptFixture(new NekoRegistryPointsPlugin())) {
+            script.context.eval("js", "StartupEvents.registry('sound_event', event => event.create('mymod:first', build => {}));");
+            runtime.collectOnce();
         }
+        var first = runtime.drainFor(Registries.SOUND_EVENT, new RecordingSink());
+        runtime.repository().add(Registries.SOUND_EVENT,
+                new SoundEventBuilder(Identifier.parse("mymod:second")), "basic", "post-snapshot");
+
+        assertEquals(1, first.registered().size());
+        assertEquals("mymod:first", first.registered().get(0).definition().toString());
+        assertThrows(UnsupportedOperationException.class, () -> first.registered().add(null));
+        assertEquals("mymod:second", runtime.drainFor(Registries.SOUND_EVENT, new RecordingSink())
+                .registered().getFirst().definition().toString());
     }
 
     @Test

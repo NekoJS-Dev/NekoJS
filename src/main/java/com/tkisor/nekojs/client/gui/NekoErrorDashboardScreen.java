@@ -37,7 +37,11 @@ public final class NekoErrorDashboardScreen extends AbstractErrorDashboardScreen
         }, mouseX, mouseY);
         if (searchBox.visible) {
             var r = view.layout().search(); graphics.enableScissor(r.x(), r.y(), r.right(), r.bottom());
-            searchBox.extractRenderState(graphics, mouseX, mouseY, partialTick); graphics.disableScissor();
+            try {
+                searchBox.extractRenderState(graphics, mouseX, mouseY, partialTick);
+            } finally {
+                graphics.disableScissor();
+            }
         }
         String tooltip = view.tooltip(mouseX, mouseY);
         if (!tooltip.isEmpty()) graphics.setTooltipForNextFrame(font, Component.literal(DashboardText.display(tooltip)), mouseX, mouseY);

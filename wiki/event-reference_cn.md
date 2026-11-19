@@ -37,7 +37,7 @@ PlayerEvents.loggedIn(event => {
 | **玩家事件** | `PlayerEvents.loggedIn`, `PlayerEvents.loggedOut` | 处理登录/退出逻辑 |
 | **世界事件** | `WorldEvents.tick`, `WorldEvents.blockChange` | 监听世界逻辑 |
 | **交互事件** | `InputEvents.key`, `InputEvents.mouse` | 处理玩家输入 |
-| **脚本事件** | `StartupEvents.registry` | 注册新内容 (仅限 startup) |
+| **启动事件** | `StartupEvents.registry(selector, callback)` | 按表注册新内容（仅限 STARTUP）。从 `nekojs:event/versioned` 导入，详见 [注册新内容](registering-new-content_cn)。 |
 | **配方/物品** | `ServerEvents.recipes`, `ItemEvents.entityInteract` | 改配方、右键事件 |
 
 ---

@@ -13,6 +13,7 @@ import java.util.List;
 /** Minecraft API adapter for the approved blue-a-2 dashboard. */
 public final class NekoErrorDashboardScreen extends AbstractErrorDashboardScreen {
     private NekoErrorDashboardScreen() { super(); }
+    /** Creates a new error dashboard screen populated with the given error summaries. */
     public static NekoErrorDashboardScreen create(List<ErrorSummaryDTO> errors) {
         var screen = new NekoErrorDashboardScreen();
         screen.updateErrors(errors);
@@ -34,7 +35,11 @@ public final class NekoErrorDashboardScreen extends AbstractErrorDashboardScreen
         }, mouseX, mouseY);
         if (searchBox.visible) {
             var r = view.layout().search(); graphics.enableScissor(r.x(), r.y(), r.right(), r.bottom());
-            searchBox.render(graphics, mouseX, mouseY, partialTick); graphics.disableScissor();
+            try {
+                searchBox.render(graphics, mouseX, mouseY, partialTick);
+            } finally {
+                graphics.disableScissor();
+            }
         }
         String tooltip = view.tooltip(mouseX, mouseY);
         if (!tooltip.isEmpty()) setTooltipForNextRenderPass(Component.literal(DashboardText.display(tooltip)));

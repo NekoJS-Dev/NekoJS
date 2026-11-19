@@ -1,9 +1,16 @@
 //? if neoforge {
 package com.tkisor.nekojs.mixin;
 
+import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
+import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import com.tkisor.nekojs.bindings.event.BlockEvents;
 import com.tkisor.nekojs.event.level.BlockEntityTickEvent;
+import net.minecraft.core.BlockPos;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.entity.BlockEntityTicker;
+import net.minecraft.world.level.block.state.BlockState;
 import net.neoforged.neoforge.common.NeoForge;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -35,6 +42,20 @@ public abstract class LevelChunkBoundTickingBlockEntityMixin {
             return;
         }
         NeoForge.EVENT_BUS.post(new BlockEntityTickEvent(this.blockEntity));
+    }
+
+    @WrapOperation(method = "tick()V", at = @At(value = "INVOKE",
+            target = "Lnet/minecraft/world/level/block/entity/BlockEntityTicker;tick(Lnet/minecraft/world/level/Level;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/level/block/entity/BlockEntity;)V"),
+            require = 1, allow = 1)
+    private void nekojs$beforeActualTick(BlockEntityTicker<?> ticker, Level level, BlockPos pos, BlockState state,
+                                         BlockEntity entity, Operation<Void> original) {
+        if (level instanceof ServerLevel serverLevel) {
+            var bus = BlockEvents.BLOCK_ENTITY_TICK;
+            if (serverLevel.getServer().isSameThread() && bus.canDispatch()) {
+                bus.post(new BlockEntityTickEvent.Actual(entity, serverLevel, pos), entity.getType());
+            }
+        }
+        original.call(ticker, level, pos, state, entity);
     }
 }
 //?}

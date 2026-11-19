@@ -278,6 +278,10 @@ public class BlockModificationJS implements graal.graalvm.polyglot.proxy.ProxyOb
      * assignment, matching {@link ItemModificationJS}.
      */
     private void validate() {
+        validateRanges(hardness, resistance, lightLevel, friction);
+    }
+
+    static void validateRanges(Float hardness, Float resistance, Integer lightLevel, Float friction) {
         if (hardness != null && hardness < 0) {
             throw new IllegalArgumentException("Invalid hardness " + hardness + ": must be >= 0");
         }

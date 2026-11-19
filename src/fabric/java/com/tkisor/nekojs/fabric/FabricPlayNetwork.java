@@ -3,17 +3,22 @@ package com.tkisor.nekojs.fabric;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonParser;
 import com.tkisor.nekojs.NekoJS;
+import com.tkisor.nekojs.core.stage.ClientStageMirror;
+import com.tkisor.nekojs.core.stage.gate.StageWireProtocol;
+import com.tkisor.nekojs.fabric.event.FabricServerEventBindings;
 import com.tkisor.nekojs.network.ClientDataSyncPacket;
 import com.tkisor.nekojs.network.PlayPacketDispatcher;
 import com.tkisor.nekojs.network.PlayPacketDispatchers;
 import com.tkisor.nekojs.wrapper.clientdata.ClientDataStore;
+import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
-import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
+import net.fabricmc.fabric.api.networking.v1.PacketSender;
 import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
 import net.fabricmc.fabric.api.networking.v1.PlayerLookup;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
+import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
@@ -23,22 +28,21 @@ import net.minecraft.world.entity.Entity;
 /**
  * Fabric bridge for play-phase networking: sets up the {@link PlayPacketDispatcher} send side and
  * registers the play payload types (the S2C sync packet and the bidirectional script channel) with
- * their receivers. The payload classes and wire format come from the shared tree and match NeoForge.
+ * their receivers. The payload classes and wire format come from the shared tree.
  *
  * <p>The explicit Fabric play subset: {@code ClientData} key-value sync ({@code ClientData.sync} to
- * {@code clientData.get}) and the script channel {@code NekoScriptPayload} (bidirectional, delivered
- * neutrally through {@link com.tkisor.nekojs.network.NetworkMessageHandler}). Pdata sync goes
- * through {@link FabricPDataSync} (the Fabric {@code MixinEntity} attaches the entity extension and
- * {@code NekoEntityPDataMixin} provides the storage container), and configuration-phase pack
- * distribution goes through {@link FabricPackSync}. The network pieces deliberately left out (the
- * error panel {@code ShowErrorListPacket} and the script editor/dashboard sync packets) are listed
- * in {@code docs/fabric-port-status.md}; that parity is intentionally not faked.
+ * {@code clientData.get}), reserved stage/gate synchronization over {@link StageWireProtocol#CHANNEL_KEY},
+ * and the script channel {@code NekoScriptPayload} (bidirectional, delivered neutrally through
+ * {@link com.tkisor.nekojs.network.NetworkMessageHandler}). Pdata sync goes through
+ * {@link FabricPDataSync}, and configuration-phase pack distribution goes through
+ * {@link FabricPackSync}.
  */
 public final class FabricPlayNetwork {
 
     /** Sending to the whole server needs a server instance, and script threads have no context, so the
      * current instance is held for the life of the server. */
     private static volatile MinecraftServer currentServer;
+    private static StageClientSession stageClientSession;
 
     /** Clears only when the client leaves an old world; the null-to-level change on first join does not
      * clear. See {@link ClientLevelWatch}. */
@@ -62,43 +66,89 @@ public final class FabricPlayNetwork {
         ServerPlayNetworking.registerGlobalReceiver(com.tkisor.nekojs.network.NekoScriptPayload.TYPE,
                 (payload, context) -> context.server().execute(() ->
                         com.tkisor.nekojs.network.NetworkMessageHandler.postServerEvent(payload, context.player())));
-        ServerLifecycleEvents.SERVER_STARTING.register(server -> currentServer = server);
-        ServerLifecycleEvents.SERVER_STOPPED.register(server -> currentServer = null);
+        ServerLifecycleEvents.SERVER_STARTING.register(FabricPlayNetwork::bindServer);
+        ServerLifecycleEvents.SERVER_STOPPED.register(server -> {
+            if (!FabricServerEventBindings.isStopDeferred(server)) releaseServer(server);
+        });
     }
 
-    /** Client side: receivers, plus clearing the store on disconnect and on world change (called from
-     * client init). */
+    private static synchronized void bindServer(MinecraftServer server) {
+        currentServer = server;
+    }
+
+    public static synchronized void releaseServer(MinecraftServer server) {
+        if (currentServer == server) currentServer = null;
+    }
+
+    /** Client side: receivers, plus clearing the store and stage mirror on disconnect and world change. */
     public static void registerClient() {
-        ClientPlayNetworking.registerGlobalReceiver(ClientDataSyncPacket.TYPE, (payload, context) ->
-                context.client().execute(() -> acceptClientData(payload)));
+        ClientPlayNetworking.registerGlobalReceiver(ClientDataSyncPacket.TYPE, (payload, context) -> {
+            var client = context.client();
+            var sender = context.responseSender();
+            client.execute(() -> acceptClientData(payload, sender));
+        });
         // Script channel client receiver: hops to the client main thread first, then posts the event
         // neutrally
         ClientPlayNetworking.registerGlobalReceiver(com.tkisor.nekojs.network.NekoScriptPayload.TYPE,
                 (payload, context) -> context.client().execute(() ->
                         com.tkisor.nekojs.network.NetworkMessageHandler.postClientEvent(payload)));
-        ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> ClientDataStore.SHARED.clear());
-        // NeoForge hooks client level unload, which clears on both disconnect and dimension change; Fabric
-        // has no matching event, so watching the client level instance is equivalent. It clears only
-        // when leaving an existing world (the previous level is non-null); the null-to-level change on
-        // first join does not clear, or it would wipe the data just pushed down on join. The rule lives
-        // in ClientLevelWatch
+        ClientPlayConnectionEvents.JOIN.register((handler, sender, client) -> {
+            if (stageClientSession != null && stageClientSession.connection() != handler) clearClientStages();
+            stageClientSession = new StageClientSession(handler, sender);
+            if (client.player != null && client.player.connection == handler) {
+                ClientStageMirror.SHARED.setLocalPlayer(
+                        client.player.getStringUUID(), client.player.getScoreboardName());
+            }
+        });
+        ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> {
+            ClientDataStore.SHARED.clear();
+            client.execute(() -> {
+                if (stageClientSession == null || stageClientSession.connection() != handler) return;
+                stageClientSession = null;
+                clearClientStages();
+            });
+        });
+        // Watching the client level instance clears only when leaving an existing world (the previous
+        // level is non-null); the null-to-level change on first join does not clear, so data pushed on
+        // join is preserved. The rule lives in ClientLevelWatch.
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             if (LEVEL_WATCH.leftPreviousLevel(client.level)) {
                 ClientDataStore.SHARED.clear();
             }
+            if (stageClientSession != null && client.player != null
+                    && client.player.connection == stageClientSession.connection()) {
+                ClientStageMirror.SHARED.setLocalPlayer(
+                        client.player.getStringUUID(), client.player.getScoreboardName());
+                if (client.level != null) ClientStageMirror.SHARED.tickClient();
+            }
         });
     }
 
+    private record StageClientSession(ClientPacketListener connection, PacketSender sender) {}
+
+    private static void clearClientStages() {
+        ClientStageMirror.SHARED.clear();
+        StageWireProtocol.clearCachedSummary(ClientStageMirror.SHARED);
+    }
+
     /**
-     * Same as {@code ClientDataMessageHandler} on NeoForge: parses the JSON on the main thread,
-     * then writes it into the shared store.
+     * Parses incoming {@link ClientDataSyncPacket} payloads on the client main thread, routing
+     * reserved stage packets to {@link StageWireProtocol} and script data entries to
+     * {@link ClientDataStore#SHARED}.
      */
-    private static void acceptClientData(ClientDataSyncPacket payload) {
+    private static void acceptClientData(ClientDataSyncPacket payload, PacketSender sender) {
+        if (StageWireProtocol.CHANNEL_KEY.equals(payload.key())) {
+            if (stageClientSession == null || stageClientSession.sender() != sender) return;
+            try {
+                StageWireProtocol.applyOnClient(payload.json(), ClientStageMirror.SHARED);
+            } catch (Exception e) {
+                NekoJS.LOGGER.warn("Discarding malformed client stage sync packet: {}", e.toString());
+            }
+            return;
+        }
         try {
             JsonElement json = JsonParser.parseString(payload.json());
             ClientDataStore.SHARED.accept(payload.key(), json);
-        } catch (IllegalArgumentException ignored) {
-            // Invalid key (empty or too long). The sending side validates it, so a bad packet is just dropped.
         } catch (Exception e) {
             NekoJS.LOGGER.warn("Discarding malformed client data packet for key {}: {}", payload.key(), e.toString());
         }

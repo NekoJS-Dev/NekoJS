@@ -111,6 +111,7 @@ public final class ClassEditor {
 
     /** Changes a parameter type by name (every parameter with that name in all overloads). */
     public ClassEditor changeParamType(String name, String paramName, Object type) {
+        if (paramName == null) return this;
         return editMethods(name, m -> m.params.stream().anyMatch(p -> paramName.equals(p.name)), m -> {
             for (var p : m.params) {
                 if (paramName.equals(p.name)) {
@@ -122,6 +123,7 @@ public final class ClassEditor {
 
     /** Renames a method parameter by name. */
     public ClassEditor renameParam(String name, String paramName, String newName) {
+        if (paramName == null) return this;
         return editMethods(name, m -> m.params.stream().anyMatch(p -> paramName.equals(p.name)), m -> {
             for (var p : m.params) if (paramName.equals(p.name)) p.name = newName;
         });
@@ -141,6 +143,7 @@ public final class ClassEditor {
      * immediately. Varargs count as optional too (rendered as {@code name?: T[]}).
      */
     public ClassEditor markOptional(String name, String paramName) {
+        if (paramName == null) return this;
         return editMethods(name, m -> m.params.stream().anyMatch(p -> paramName.equals(p.name)), m -> {
             for (var p : m.params) if (paramName.equals(p.name)) p.optional = true;
             validateOptionalParamsTrail(m, "markOptional('" + name + "', '" + paramName + "')");
@@ -249,6 +252,7 @@ public final class ClassEditor {
         return editField(name, f -> f.type = ProbeModifyTypeEventJS.override(f.type, type));
     }
 
+    /** Attaches a documentation comment to the named field in the generated declaration. */
     public ClassEditor setFieldDoc(String name, String doc) {
         return editField(name, f -> {
             f.docs.clear();

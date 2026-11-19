@@ -13,18 +13,29 @@
 // set is kept), rather than being silently ignored.
 package com.tkisor.nekojs.bindings.event;
 
+import com.tkisor.nekojs.api.ScriptType;
 import com.tkisor.nekojs.api.event.EventBusJS;
 import com.tkisor.nekojs.api.event.EventGroup;
+import com.tkisor.nekojs.api.recipe.StableRecipeEvent;
 import com.tkisor.nekojs.core.villager.VillagerTradeDeclarationEventJS;
 import com.tkisor.nekojs.core.villager.VillagerTradeReloadEventJS;
+import com.tkisor.nekojs.stage.StableRecipeEventProjection;
 import com.tkisor.nekojs.wrapper.event.server.RecipeEventJS;
 
 /** Recipe script events (SERVER side): the bus names match {@code ServerEvents} on NeoForge, so
  * scripts look the same on both loaders. */
 public interface ServerEvents {
+    static boolean hasStableLootTableLoadListeners() {
+        return com.tkisor.nekojs.fabric.event.FabricServerEventBindings.LOOT_TABLE_LOAD.hasStableModuleListeners(ScriptType.SERVER);
+    }
+
     EventGroup GROUP = EventGroup.of("ServerEvents");
 
-    EventBusJS<RecipeEventJS, Void> RECIPES = GROUP.server("recipes", RecipeEventJS.class, api -> api.versioned());
+    EventBusJS<RecipeEventJS, Void> RECIPES = GROUP.server("recipes", RecipeEventJS.class, api -> {
+        api.versioned();
+        api.stable().view(StableRecipeEvent.class, StableRecipeEventProjection::new)
+                .scriptTypes(ScriptType.SERVER);
+    });
     EventBusJS<RecipeEventJS, Void> AFTER_RECIPES = GROUP.server("afterRecipes", RecipeEventJS.class, api -> api.versioned());
 
     /** Villager trade declarations: see the file header; on Fabric the whole batch is explicitly

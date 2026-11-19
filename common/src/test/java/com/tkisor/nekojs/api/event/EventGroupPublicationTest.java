@@ -78,10 +78,12 @@ class EventGroupPublicationTest {
         assertEquals(new View(7), stable.views().get("changed").converter().apply(new Payload(7)));
     }
 
-    @Test void separateSourcesKeepPerEventScopesWhenTheirModuleExportIsMerged() {
+    @Test void separateSourcesKeepPerEventScopesAndSelectorsWhenTheirModuleExportIsMerged() {
+        var token = new net.minecraft.nekojstest.NativeToken();
         var first = EventGroup.of("SplitEvents");
         var serverBus = first.server("serverChanged", Payload.class,
-                api -> api.stable().scriptTypes(ScriptType.SERVER));
+                DispatchKey.of(net.minecraft.nekojstest.NativeToken.class, ignored -> token),
+                api -> api.stable().scriptTypes(ScriptType.SERVER).selector(String.class, id -> token));
         var second = EventGroup.of("SplitEvents");
         var clientBus = second.client("clientChanged", Payload.class,
                 api -> api.stable().scriptTypes(ScriptType.CLIENT));
@@ -94,6 +96,9 @@ class EventGroupPublicationTest {
         assertFalse(publication.supports("serverChanged", ScriptType.STARTUP));
         assertTrue(publication.supports("clientChanged", ScriptType.CLIENT));
         assertFalse(publication.supports("clientChanged", ScriptType.SERVER));
+        assertEquals(String.class, publication.selectors().get("serverChanged").type());
+        assertSame(token, publication.selectors().get("serverChanged").converter().apply("minecraft:stone"));
+        assertFalse(publication.selectors().containsKey("clientChanged"));
         assertSame(serverBus, publication.group().getBusHolder("serverChanged").getBus(ScriptType.SERVER));
         assertSame(clientBus, publication.group().getBusHolder("clientChanged").getBus(ScriptType.CLIENT));
         assertEquals(2, registry.sources().size());
@@ -162,6 +167,8 @@ class EventGroupPublicationTest {
         });
         assertThrows(IllegalArgumentException.class, () -> retained.get().versioned());
         assertThrows(IllegalArgumentException.class, () -> scope.get().scriptTypes(ScriptType.SERVER));
+        assertThrows(IllegalArgumentException.class, () -> scope.get().cancellable());
+        assertThrows(IllegalArgumentException.class, () -> scope.get().selector(String.class, Function.identity()));
         group.freeze();
         assertThrows(IllegalStateException.class, () -> group.server("late", Payload.class, api -> api.stable()));
     }
@@ -252,7 +259,7 @@ class EventGroupPublicationTest {
 
     @ParameterizedTest
     @ValueSource(booleans = {false, true})
-    void viewsRejectDuplicateNullAndFrozenConfigurationBeforeAddingABus(boolean stable) {
+    void viewsSelectorsAndCancellationRejectDuplicateNullAndInvalidConfiguration(boolean stable) {
         var group = EventGroup.of("InvalidViewEvents");
         assertThrows(IllegalArgumentException.class, () -> group.server("duplicate", Payload.class, api -> {
             var target = stable ? api.stable() : api.versioned();
@@ -260,6 +267,16 @@ class EventGroupPublicationTest {
             target.view(View.class, event -> new View(event.count()));
         }));
         assertNull(group.getBusHolder("duplicate"));
+        assertThrows(IllegalArgumentException.class, () -> group.server("duplicateCancel", Payload.class, api -> {
+            var target = stable ? api.stable() : api.versioned();
+            target.cancellable().cancellable();
+        }));
+        assertNull(group.getBusHolder("duplicateCancel"));
+        assertThrows(IllegalArgumentException.class, () -> group.server("duplicateSelector", Payload.class, DispatchKey.string(), api -> {
+            var target = stable ? api.stable() : api.versioned();
+            target.selector(String.class, Function.identity()).selector(String.class, Function.identity());
+        }));
+        assertNull(group.getBusHolder("duplicateSelector"));
         assertThrows(NullPointerException.class, () -> group.server("nullType", Payload.class, api -> {
             var target = stable ? api.stable() : api.versioned();
             target.view(null, event -> new View(event.count()));
@@ -270,6 +287,14 @@ class EventGroupPublicationTest {
             target.view(View.class, null);
         }));
         assertNull(group.getBusHolder("nullConverter"));
+        assertThrows(NullPointerException.class, () -> group.server("nullSelectorType", Payload.class, DispatchKey.string(), api -> {
+            var target = stable ? api.stable() : api.versioned();
+            target.selector(null, Function.identity());
+        }));
+        assertThrows(NullPointerException.class, () -> group.server("nullSelectorConverter", Payload.class, DispatchKey.string(), api -> {
+            var target = stable ? api.stable() : api.versioned();
+            target.selector(String.class, null);
+        }));
         var retained = new AtomicReference<EventPublication<Payload>.Scope>();
         group.server("changed", Payload.class, api -> retained.set(stable ? api.stable() : api.versioned()));
         assertThrows(IllegalArgumentException.class,
@@ -278,6 +303,25 @@ class EventGroupPublicationTest {
         registry.register(group);
         assertEquals(Set.of("changed"), registry.moduleGroups().getFirst().events());
         assertTrue(registry.moduleGroups().getFirst().views().isEmpty());
+
+        var nonDispatchSelector = EventGroup.of("NonDispatchSelectorEvents");
+        nonDispatchSelector.server("plain", Payload.class, api -> {
+            var target = stable ? api.stable() : api.versioned();
+            target.selector(String.class, Function.identity());
+        });
+        var failure = assertThrows(IllegalArgumentException.class, () -> registry.register(nonDispatchSelector));
+        assertTrue(failure.getMessage().contains("NEKO-4057"));
+    }
+
+    @Test void legacyModuleEventGroupConstructorsDefaultSelectorsToEmptyMap() {
+        var group = EventGroup.of("CompatibleConstructors");
+        group.server("changed", Payload.class);
+        var fiveArg = new ModuleEventGroup("example", BindingExposure.Category.STABLE, group, Set.of("changed"), Map.of());
+        var sixArg = new ModuleEventGroup("example", BindingExposure.Category.STABLE, group, Set.of("changed"), Map.of(), Set.of(ScriptType.SERVER));
+        var sevenArg = new ModuleEventGroup("example", BindingExposure.Category.STABLE, group, Set.of("changed"), Map.of(), Set.of(ScriptType.SERVER), Map.of());
+        assertTrue(fiveArg.selectors().isEmpty());
+        assertTrue(sixArg.selectors().isEmpty());
+        assertTrue(sevenArg.selectors().isEmpty());
     }
 
     private static ModuleEventGroup publication(EventGroupRegistry registry, BindingExposure.Category category) {

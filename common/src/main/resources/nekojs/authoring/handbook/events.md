@@ -1,8 +1,10 @@
 # Events
 
-Import a Java plugin/native Event Group before subscribing. For example, `import { ServerEvents } from "nekojs:event/stable"` selects the portable server tick view, then `ServerEvents.tickPost(event => { ... })` subscribes. Use `nekojs:event/versioned` for the native payload instead; plugin event paths include their owner. See [API modules](api-modules.md). These groups are not globals or Binding aggregate exports. The callback receives an Event Object; the group is a subscription namespace.
+Import a Java plugin or built-in Event Group before subscribing. Across both NeoForge and Fabric (and across supported Minecraft versions), all 8 built-in event families (`ServerEvents`, `LevelEvents`, `PlayerEvents`, `CommandEvents`, `BlockEvents`, `ItemEvents`, `EntityEvents`, and `ClientEvents`) publish the identical 80-event portable `"nekojs:event/stable"` contract (`CommonStableEvents`, with immutable `Stable*Event` snapshot views and string ID selectors), while `"nekojs:event/versioned"` exposes each loader's native or wrapper events and dispatch keys where natively supported by the loader API (and NeoForge also exports the raw bus bridge `NativeEvents` from `"nekojs/api/version"` in `STARTUP` scripts). For example, `import { ServerEvents } from "nekojs:event/stable"` selects the portable view, then `ServerEvents.tickPost(event => { ... })` subscribes; plugin event paths append their owner. See [API modules](api-modules.md). These groups are subscription namespaces rather than globals or Binding aggregate exports, and each callback receives an Event Object.
 
 Script-created dynamic groups remain global; import their `ScriptEvents` registrar from `nekojs:event/versioned`.
+
+Use `StartupEvents.registry(selector, callback)` from the versioned module to register content in a STARTUP script. Each callback handles one registry. See [Registry builders](registry-builders.md) for selectors and creation methods.
 
 Before subscribing, resolve the group and event in the current Script Type. Read the final declaration for callback parameters, selectors and event payloads. A same-name event from another mod or scripting engine is not evidence of availability.
 

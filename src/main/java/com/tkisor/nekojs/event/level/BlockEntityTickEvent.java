@@ -1,6 +1,8 @@
 //? if neoforge {
 package com.tkisor.nekojs.event.level;
 
+import net.minecraft.core.BlockPos;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.neoforged.bus.api.Event;
@@ -22,5 +24,19 @@ public class BlockEntityTickEvent extends Event {
 
     public BlockEntity getBlockEntity() { return blockEntity; }
     public BlockEntityType<?> getType() { return blockEntity.getType(); }
+
+    public static final class Actual extends BlockEntityTickEvent {
+        private final ServerLevel level;
+        private final BlockPos pos;
+
+        public Actual(BlockEntity blockEntity, ServerLevel level, BlockPos pos) {
+            super(blockEntity);
+            this.level = level;
+            this.pos = pos;
+        }
+
+        public ServerLevel level() { return level; }
+        public BlockPos pos() { return pos; }
+    }
 }
 //?}

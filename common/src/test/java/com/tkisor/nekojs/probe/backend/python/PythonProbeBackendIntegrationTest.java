@@ -2,12 +2,19 @@ package com.tkisor.nekojs.probe.backend.python;
 
 import com.tkisor.nekojs.api.AdapterInputShape;
 import com.tkisor.nekojs.api.ScriptType;
+import com.tkisor.nekojs.api.ScriptTypePredicate;
 import com.tkisor.nekojs.api.catalog.AdapterCatalogEntry;
 import com.tkisor.nekojs.api.catalog.BindingCatalogEntry;
 import com.tkisor.nekojs.api.catalog.EventCatalogEntry;
+import com.tkisor.nekojs.api.catalog.ModuleBindingCatalogEntry;
+import com.tkisor.nekojs.api.catalog.ModuleEventCatalogEntry;
 import com.tkisor.nekojs.api.catalog.NekoScriptCatalogSnapshot;
 import com.tkisor.nekojs.api.catalog.RegistryTypeCatalogEntry;
+import com.tkisor.nekojs.api.data.BindingExposure;
 import com.tkisor.nekojs.api.data.ConversionPrecedence;
+import com.tkisor.nekojs.api.data.NekoId;
+import com.tkisor.nekojs.api.event.StableServerTickEvent;
+import com.tkisor.nekojs.api.facade.IdFacade;
 import com.tkisor.nekojs.api.surface.ApiSymbolId;
 import com.tkisor.nekojs.api.surface.ApiTypeRef;
 import com.tkisor.nekojs.core.fs.NekoJSPaths;
@@ -46,9 +53,11 @@ import static org.junit.jupiter.api.Assertions.*;
  */
 class PythonProbeBackendIntegrationTest {
 
+    private static final TypeReflector REFLECTOR = new TypeReflector();
+
     @Test
     void actualSameNameFieldsAndMethodsKeepTheirSharedFacts(@TempDir Path temp) throws Exception {
-        TypeDecl declaration = new TypeReflector().reflect(PythonFieldMethodCollisionTest.HostFixture.class);
+        TypeDecl declaration = REFLECTOR.reflect(PythonFieldMethodCollisionTest.HostFixture.class);
         assertEquals(2, declaration.fields.size());
         assertEquals(2, declaration.methods.size());
         assertTrue(declaration.methods.stream().noneMatch(method -> method.isStatic));
@@ -71,7 +80,7 @@ class PythonProbeBackendIntegrationTest {
 
     @Test
     void beanFieldMethodCollisionKeepsTheOriginalWriter(@TempDir Path temp) throws Exception {
-        TypeDecl declaration = new TypeReflector().reflect(PythonFieldMethodCollisionTest.BeanFixture.class);
+        TypeDecl declaration = REFLECTOR.reflect(PythonFieldMethodCollisionTest.BeanFixture.class);
         assertTrue(runGenerate(temp, emptySnapshot(), List.of(declaration), List.of()).success());
         Path output = temp.resolve("probe-python");
         retainGenerated(output, "probe-python-bean-field-method-collision");
@@ -86,7 +95,7 @@ class PythonProbeBackendIntegrationTest {
     @Test
     void actualJavaCallableDoesNotReplaceTypingCallable(@TempDir Path temp) throws Exception {
         assertTrue(runGenerate(temp, emptySnapshot(), List.of(
-                new TypeReflector().reflect(java.util.concurrent.Callable.class)), List.of()).success());
+                REFLECTOR.reflect(java.util.concurrent.Callable.class)), List.of()).success());
         Path output = temp.resolve("probe-python");
         retainGenerated(output, "probe-python-jdk-callable-identity");
         String module = Files.readString(output.resolve("nekojs/_java/java/util/concurrent/__init__.pyi"));
@@ -109,16 +118,15 @@ class PythonProbeBackendIntegrationTest {
             context.getBindings("js").putMember("target", target);
             assertEquals("value!", context.eval("js", "target.apply(function(value) { return value + '!'; })").asString());
         }
-        var reflector = new TypeReflector();
-        TypeDecl child = reflector.reflect(com.tkisor.nekojs.probe.backend.python.fixture.typing.CallableChild.class);
+        TypeDecl child = REFLECTOR.reflect(com.tkisor.nekojs.probe.backend.python.fixture.typing.CallableChild.class);
         MethodDecl apply = child.methods.stream().filter(method -> method.name.equals("apply")).findFirst().orElseThrow();
         apply.params.getFirst().type.ref = ApiTypeRef.callback(
                 com.tkisor.nekojs.api.surface.ApiSignature.function(List.of(
                         new com.tkisor.nekojs.api.surface.ApiParameter("value", ApiTypeRef.primitive("object"), false, false)),
                         ApiTypeRef.primitive("object")));
         assertTrue(runGenerate(temp, emptySnapshot(), List.of(child,
-                reflector.reflect(com.tkisor.nekojs.probe.backend.python.fixture.typing.Callable.class),
-                reflector.reflect(com.tkisor.nekojs.probe.backend.python.fixture.typing._NekoTyping_Callable.class)),
+                REFLECTOR.reflect(com.tkisor.nekojs.probe.backend.python.fixture.typing.Callable.class),
+                REFLECTOR.reflect(com.tkisor.nekojs.probe.backend.python.fixture.typing._NekoTyping_Callable.class)),
                 List.of()).success());
         Path output = temp.resolve("probe-python");
         retainGenerated(output, "probe-python-local-callable-identity");
@@ -133,8 +141,7 @@ class PythonProbeBackendIntegrationTest {
 
     @Test
     void editedCallbackAndUnionBasesRemainExcludedWithPrivateTypingName(@TempDir Path temp) throws Exception {
-        var reflector = new TypeReflector();
-        TypeDecl child = reflector.reflect(com.tkisor.nekojs.probe.backend.python.fixture.typing.CallableChild.class);
+        TypeDecl child = REFLECTOR.reflect(com.tkisor.nekojs.probe.backend.python.fixture.typing.CallableChild.class);
         ApiTypeRef callback = ApiTypeRef.callback(com.tkisor.nekojs.api.surface.ApiSignature.function(
                 List.of(), ApiTypeRef.primitive("object")));
         child.interfaces.clear();
@@ -143,7 +150,7 @@ class PythonProbeBackendIntegrationTest {
                 new ApiSymbolId("java", com.tkisor.nekojs.probe.backend.python.fixture.typing.Callable.class.getName())),
                 ApiTypeRef.primitive("string")))));
         assertTrue(runGenerate(temp, emptySnapshot(), List.of(child,
-                reflector.reflect(com.tkisor.nekojs.probe.backend.python.fixture.typing.Callable.class)),
+                REFLECTOR.reflect(com.tkisor.nekojs.probe.backend.python.fixture.typing.Callable.class)),
                 List.of()).success());
         String module = Files.readString(temp.resolve("probe-python/nekojs/_java/com/tkisor/nekojs/probe/backend/python/fixture/typing/__init__.pyi"));
         assertTrue(module.contains("class CallableChild:\n"), module);
@@ -151,13 +158,12 @@ class PythonProbeBackendIntegrationTest {
 
     @Test
     void actualRedundantChannelBasesKeepEveryContractInConsistentOrder(@TempDir Path temp) throws Exception {
-        var reflector = new TypeReflector();
         List<TypeDecl> declarations = List.of(
-                reflector.reflect(java.nio.channels.spi.AbstractInterruptibleChannel.class),
-                reflector.reflect(java.nio.channels.Channel.class),
-                reflector.reflect(java.nio.channels.InterruptibleChannel.class),
-                reflector.reflect(java.io.Closeable.class),
-                reflector.reflect(AutoCloseable.class));
+                REFLECTOR.reflect(java.nio.channels.spi.AbstractInterruptibleChannel.class),
+                REFLECTOR.reflect(java.nio.channels.Channel.class),
+                REFLECTOR.reflect(java.nio.channels.InterruptibleChannel.class),
+                REFLECTOR.reflect(java.io.Closeable.class),
+                REFLECTOR.reflect(AutoCloseable.class));
         assertTrue(runGenerate(temp, emptySnapshot(), declarations, List.of()).success());
         Path output = temp.resolve("probe-python");
         retainGenerated(output, "probe-python-channel-heritage-order");
@@ -171,11 +177,10 @@ class PythonProbeBackendIntegrationTest {
     @Test
     void localPublicClassIsPreservedWhenEnumAliasUsesItsName(@TempDir Path temp) throws Exception {
         Class<?> target = com.tkisor.nekojs.probe.backend.python.fixture.names.consumer.Color.class;
-        var reflector = new TypeReflector();
         var snapshot = snapshotWith(List.of(), List.of(new EventCatalogEntry("ColorEvents", "pick",
                 ScriptType.SERVER, target, target, false, true, "")), List.of());
-        assertTrue(runGenerate(temp, snapshot, List.of(reflector.reflect(target),
-                reflector.reflect(com.tkisor.nekojs.probe.backend.python.fixture.names.consumer.Color_.class)),
+        assertTrue(runGenerate(temp, snapshot, List.of(REFLECTOR.reflect(target),
+                REFLECTOR.reflect(com.tkisor.nekojs.probe.backend.python.fixture.names.consumer.Color_.class)),
                 List.of()).success());
         Path output = temp.resolve("probe-python");
         retainGenerated(output, "probe-python-local-enum-alias-collision");
@@ -192,14 +197,13 @@ class PythonProbeBackendIntegrationTest {
     @Test
     void localPublicClassIsPreservedWhenAdapterAliasUsesItsName(@TempDir Path temp) throws Exception {
         Class<?> target = com.tkisor.nekojs.probe.backend.python.fixture.names.first.Record.class;
-        var reflector = new TypeReflector();
         var snapshot = snapshotWith(List.of(), List.of(new EventCatalogEntry("LocalEvents", "pick",
                         ScriptType.SERVER, target, target, false, true, "")),
                 List.of(new AdapterCatalogEntry(target, List.of(AdapterInputShape.string()),
                         ConversionPrecedence.HIGH, Optional.empty())));
-        assertTrue(runGenerate(temp, snapshot, List.of(reflector.reflect(target),
-                reflector.reflect(com.tkisor.nekojs.probe.backend.python.fixture.names.first.Record_.class),
-                reflector.reflect(com.tkisor.nekojs.probe.backend.python.fixture.names.second.Record.class)),
+        assertTrue(runGenerate(temp, snapshot, List.of(REFLECTOR.reflect(target),
+                REFLECTOR.reflect(com.tkisor.nekojs.probe.backend.python.fixture.names.first.Record_.class),
+                REFLECTOR.reflect(com.tkisor.nekojs.probe.backend.python.fixture.names.second.Record.class)),
                 List.of()).success());
         Path output = temp.resolve("probe-python");
         retainGenerated(output, "probe-python-local-input-alias-collision");
@@ -217,8 +221,7 @@ class PythonProbeBackendIntegrationTest {
     void renamedExportsRemainConsistentAcrossModulesBindingsEventsAndAdapters(@TempDir Path temp) throws Exception {
         Class<?> first = com.tkisor.nekojs.probe.backend.python.fixture.names.first.Record.class;
         Class<?> second = com.tkisor.nekojs.probe.backend.python.fixture.names.second.Record.class;
-        var reflector = new TypeReflector();
-        TypeDecl producer = reflector.reflect(first);
+        TypeDecl producer = REFLECTOR.reflect(first);
         producer.renameTo = "Renamed";
         var snapshot = snapshotWith(List.of(new BindingCatalogEntry("Record", ScriptType.SERVER,
                         first, false, false, true, null, null, List.of(), List.of())),
@@ -226,8 +229,8 @@ class PythonProbeBackendIntegrationTest {
                         first, null, false, false, "")),
                 List.of(new AdapterCatalogEntry(second, List.of(AdapterInputShape.host(first)),
                         ConversionPrecedence.HIGH, Optional.empty())));
-        assertTrue(runGenerate(temp, snapshot, List.of(producer, reflector.reflect(second),
-                reflector.reflect(com.tkisor.nekojs.probe.backend.python.fixture.names.consumer.Record.class)),
+        assertTrue(runGenerate(temp, snapshot, List.of(producer, REFLECTOR.reflect(second),
+                REFLECTOR.reflect(com.tkisor.nekojs.probe.backend.python.fixture.names.consumer.Record.class)),
                 List.of()).success());
         Path output = temp.resolve("probe-python");
         retainGenerated(output, "probe-python-renamed-exports");
@@ -248,13 +251,12 @@ class PythonProbeBackendIntegrationTest {
 
     @Test
     void enumInputAliasDoesNotReplaceImportedClass(@TempDir Path temp) throws Exception {
-        var reflector = new TypeReflector();
         assertTrue(runGenerate(temp, emptySnapshot(), List.of(
-                reflector.reflect(com.tkisor.nekojs.probe.backend.python.fixture.names.consumer.Color.class),
-                reflector.reflect(com.tkisor.nekojs.probe.backend.python.fixture.names.second.Color_.class),
-                reflector.reflect(com.tkisor.nekojs.probe.backend.python.fixture.names.consumer.Record.class),
-                reflector.reflect(com.tkisor.nekojs.probe.backend.python.fixture.names.first.Record.class),
-                reflector.reflect(com.tkisor.nekojs.probe.backend.python.fixture.names.second.Record.class)),
+                REFLECTOR.reflect(com.tkisor.nekojs.probe.backend.python.fixture.names.consumer.Color.class),
+                REFLECTOR.reflect(com.tkisor.nekojs.probe.backend.python.fixture.names.second.Color_.class),
+                REFLECTOR.reflect(com.tkisor.nekojs.probe.backend.python.fixture.names.consumer.Record.class),
+                REFLECTOR.reflect(com.tkisor.nekojs.probe.backend.python.fixture.names.first.Record.class),
+                REFLECTOR.reflect(com.tkisor.nekojs.probe.backend.python.fixture.names.second.Record.class)),
                 List.of()).success());
         Path output = temp.resolve("probe-python");
         retainGenerated(output, "probe-python-enum-import-collision");
@@ -287,11 +289,10 @@ class PythonProbeBackendIntegrationTest {
 
     @Test
     void sameNamedPackageTypesKeepDistinctImportsAndHeritage(@TempDir Path temp) throws Exception {
-        var reflector = new TypeReflector();
         List<TypeDecl> declarations = List.of(
-                reflector.reflect(com.tkisor.nekojs.probe.backend.python.fixture.names.first.Record.class),
-                reflector.reflect(com.tkisor.nekojs.probe.backend.python.fixture.names.second.Record.class),
-                reflector.reflect(com.tkisor.nekojs.probe.backend.python.fixture.names.consumer.Record.class));
+                REFLECTOR.reflect(com.tkisor.nekojs.probe.backend.python.fixture.names.first.Record.class),
+                REFLECTOR.reflect(com.tkisor.nekojs.probe.backend.python.fixture.names.second.Record.class),
+                REFLECTOR.reflect(com.tkisor.nekojs.probe.backend.python.fixture.names.consumer.Record.class));
         Path output = temp.resolve("probe-python");
         var context = new ProbeContext.Of(emptySnapshot(), List.of(), ProbeConfig.defaultConfig(),
                 NekoJSPaths.fromGameDir(temp), "python", output, declarations);
@@ -311,7 +312,6 @@ class PythonProbeBackendIntegrationTest {
     void sameNamedTypesRemainDistinctInBindingsEventsAndAdapterInputs(@TempDir Path temp) throws Exception {
         Class<?> first = com.tkisor.nekojs.probe.backend.python.fixture.names.first.Record.class;
         Class<?> second = com.tkisor.nekojs.probe.backend.python.fixture.names.second.Record.class;
-        var reflector = new TypeReflector();
         var snapshot = snapshotWith(List.of(
                 new BindingCatalogEntry("First", ScriptType.SERVER, first, false, false, true,
                         null, null, List.of(), List.of()),
@@ -321,7 +321,7 @@ class PythonProbeBackendIntegrationTest {
                 new EventCatalogEntry("SecondEvents", "tick", ScriptType.SERVER, second, null, false, false, "")),
                 List.of(new AdapterCatalogEntry(first, List.of(AdapterInputShape.host(second)),
                         ConversionPrecedence.HIGH, Optional.empty())));
-        assertTrue(runGenerate(temp, snapshot, List.of(reflector.reflect(first), reflector.reflect(second)), List.of()).success());
+        assertTrue(runGenerate(temp, snapshot, List.of(REFLECTOR.reflect(first), REFLECTOR.reflect(second)), List.of()).success());
         Path output = temp.resolve("probe-python");
         retainGenerated(output, "probe-python-binding-event-adapter-collision");
         String bindings = Files.readString(output.resolve("nekojs/__init__.pyi"));
@@ -344,7 +344,7 @@ class PythonProbeBackendIntegrationTest {
                         AdapterInputShape.arrayOf(AdapterInputShape.self()),
                         AdapterInputShape.arrayOf(AdapterInputShape.host(type))),
                 ConversionPrecedence.HIGH, Optional.empty())));
-        assertTrue(runGenerate(temp, snapshot, List.of(new TypeReflector().reflect(type)), List.of()).success());
+        assertTrue(runGenerate(temp, snapshot, List.of(REFLECTOR.reflect(type)), List.of()).success());
         String module = Files.readString(temp.resolve(
                 "probe-python/nekojs/_java/com/tkisor/nekojs/probe/backend/python/fixture/names/first/__init__.pyi"));
         assertTrue(module.contains("Record_ = Record | list[Record]"), module);
@@ -352,11 +352,10 @@ class PythonProbeBackendIntegrationTest {
 
     @Test
     void inheritedFieldWriterImportsKeepDifferentSameNamedReadType(@TempDir Path temp) throws Exception {
-        var reflector = new TypeReflector();
         var declarations = List.of(
-                reflector.reflect(com.tkisor.nekojs.probe.backend.python.fixture.names.first.Record.class),
-                reflector.reflect(com.tkisor.nekojs.probe.backend.python.fixture.names.second.Record.class),
-                reflector.reflect(com.tkisor.nekojs.probe.backend.python.fixture.names.writer.Child.class));
+                REFLECTOR.reflect(com.tkisor.nekojs.probe.backend.python.fixture.names.first.Record.class),
+                REFLECTOR.reflect(com.tkisor.nekojs.probe.backend.python.fixture.names.second.Record.class),
+                REFLECTOR.reflect(com.tkisor.nekojs.probe.backend.python.fixture.names.writer.Child.class));
         var target = new com.tkisor.nekojs.probe.backend.python.fixture.names.writer.Child();
         var incoming = new com.tkisor.nekojs.probe.backend.python.fixture.names.second.Record();
         try (Context guest = Context.newBuilder("js").allowExperimentalOptions(true)
@@ -653,7 +652,7 @@ class PythonProbeBackendIntegrationTest {
     void generate_enumDispatchKeyEventKeyWidenedToEnumAlias(@TempDir Path temp) throws Exception {
         // A reflected enum as the dispatch key: the extra parameter of the event overload should be
         // widened to FakeProbeEnum_
-        TypeDecl keyEnum = new TypeReflector().reflect(FakeProbeEnum.class);
+        TypeDecl keyEnum = REFLECTOR.reflect(FakeProbeEnum.class);
         TypeDecl event = new TypeDecl(TypeDecl.Kind.CLASS, FakeProbeEvent.class, FakeProbeEvent.class.getName());
         List<TypeDecl> ir = List.of(keyEnum, event);
 
@@ -879,6 +878,140 @@ class PythonProbeBackendIntegrationTest {
                 .map(s -> (List<String>) s.value())
                 .findFirst()
                 .orElse(List.of());
+    }
+
+    // -------------------- Scoped API module stubs (nekojs/_modules) --------------------
+
+    @Test
+    void generate_emptyModuleCatalog_doesNotEmitModulesPackage(@TempDir Path temp) throws Exception {
+        List<TypeDecl> ir = List.of(REFLECTOR.reflect(FakeProbeEvent.class));
+        ProbeBackend.GenerateResult res = runGenerate(temp, emptySnapshot(), ir, List.of());
+        assertTrue(res.success(), "generate failed: " + res.message());
+        assertFalse(Files.exists(temp.resolve("probe-python/nekojs/_modules")),
+                "empty moduleBindings and moduleEvents must not emit nekojs/_modules");
+    }
+
+    @Test
+    void generate_apiModules_emitsBindingsEventGroupsOverloadsAndAncestorMarkers(@TempDir Path temp) throws Exception {
+        List<TypeDecl> ir = List.of(
+                REFLECTOR.reflect(IdFacade.class),
+                REFLECTOR.reflect(NekoId.class),
+                REFLECTOR.reflect(StableServerTickEvent.class),
+                REFLECTOR.reflect(FakeProbeEvent.class),
+                REFLECTOR.reflect(FakeProbeEnum.class));
+
+        List<ModuleBindingCatalogEntry> moduleBindings = List.of(
+                new ModuleBindingCatalogEntry("nekojs/api/stable", "nekojs", BindingExposure.Category.STABLE,
+                        BindingCatalogEntry.of("ID", ScriptType.SERVER, IdFacade.class, false)),
+                new ModuleBindingCatalogEntry("nekojs/api/stable", "nekojs", BindingExposure.Category.STABLE,
+                        BindingCatalogEntry.of("StaticEvent", ScriptType.SERVER, FakeProbeEvent.class, true)),
+                new ModuleBindingCatalogEntry("nekojs/api/stable", "nekojs", BindingExposure.Category.STABLE,
+                        BindingCatalogEntry.of("Uncollected", ScriptType.SERVER, java.util.UUID.class, false)),
+                new ModuleBindingCatalogEntry("nekojs/plugins/my-addon/api/stable", "my-addon",
+                        BindingExposure.Category.STABLE,
+                        BindingCatalogEntry.of("ID", ScriptType.SERVER, IdFacade.class, false)));
+
+        List<ModuleEventCatalogEntry> moduleEvents = List.of(
+                new ModuleEventCatalogEntry("nekojs:event/stable", "nekojs", BindingExposure.Category.STABLE,
+                        ScriptType.SERVER,
+                        EventCatalogEntry.of("ServerEvents", "tickPre", ScriptTypePredicate.exact(ScriptType.SERVER),
+                                StableServerTickEvent.class, null, false, false)),
+                new ModuleEventCatalogEntry("nekojs:event/versioned", "nekojs", BindingExposure.Category.VERSION,
+                        ScriptType.SERVER,
+                        EventCatalogEntry.of("ServerEvents", "recipes", ScriptTypePredicate.exact(ScriptType.SERVER),
+                                FakeProbeEvent.class, FakeProbeEnum.class, true, true)),
+                new ModuleEventCatalogEntry("nekojs:event/stable/my.addon", "my.addon",
+                        BindingExposure.Category.STABLE, ScriptType.SERVER,
+                        EventCatalogEntry.of("AddonEvents", "ping", ScriptTypePredicate.exact(ScriptType.SERVER),
+                                NekoId.class, null, false, false)));
+
+        NekoScriptCatalogSnapshot snapshot = new NekoScriptCatalogSnapshot(
+                List.of(ScriptType.SERVER), List.of(), List.of(), List.of(), List.of(),
+                List.of(), List.of(), List.of(), List.of(), List.of(), List.of(),
+                List.of(), List.of(), null, Map.of(), List.of(),
+                List.of(), List.of(), moduleBindings, moduleEvents);
+
+        ProbeBackend.GenerateResult res = runGenerate(temp, snapshot, ir, List.of());
+        assertTrue(res.success(), "generate failed: " + res.message());
+
+        Path out = temp.resolve("probe-python");
+
+        // Ancestor namespace markers
+        assertTrue(Files.exists(out.resolve("nekojs/_modules/__init__.pyi")), "_modules root marker missing");
+        assertTrue(Files.exists(out.resolve("nekojs/_modules/server/__init__.pyi")), "server side marker missing");
+        assertTrue(Files.exists(out.resolve("nekojs/_modules/server/api/__init__.pyi")), "api ancestor marker missing");
+        assertTrue(Files.exists(out.resolve("nekojs/_modules/server/plugins/__init__.pyi")), "plugins marker missing");
+        assertTrue(Files.exists(out.resolve("nekojs/_modules/server/plugins/my_addon/__init__.pyi")),
+                "sanitized owner marker missing");
+        assertTrue(Files.exists(out.resolve("nekojs/_modules/server/plugins/my_addon/api/__init__.pyi")),
+                "plugin api marker missing");
+        assertTrue(Files.exists(out.resolve("nekojs/_modules/server/event/__init__.pyi")),
+                "event ancestor marker missing");
+
+        // Stable API bindings module: nekojs/api/stable
+        String apiStable = Files.readString(out.resolve("nekojs/_modules/server/api/stable/__init__.pyi"));
+        assertTrue(apiStable.contains("# Module: nekojs/api/stable"), apiStable);
+        assertTrue(apiStable.contains("from nekojs._java.com.tkisor.nekojs.api.facade import IdFacade"), apiStable);
+        assertTrue(apiStable.contains("from nekojs._java.com.tkisor.nekojs.probe.backend.python import FakeProbeEvent"),
+                apiStable);
+        assertTrue(apiStable.contains("ID: IdFacade"), apiStable);
+        assertTrue(apiStable.contains("StaticEvent: type[FakeProbeEvent]"), apiStable);
+        assertTrue(apiStable.contains("Uncollected: Any"), apiStable);
+        assertTrue(apiStable.contains("__all__ = [\"ID\", \"StaticEvent\", \"Uncollected\"]"), apiStable);
+
+        // Plugin API bindings module with hyphenated owner sanitized to underscore
+        String pluginStable = Files.readString(
+                out.resolve("nekojs/_modules/server/plugins/my_addon/api/stable/__init__.pyi"));
+        assertTrue(pluginStable.contains("# Module: nekojs/plugins/my-addon/api/stable"), pluginStable);
+        assertTrue(pluginStable.contains("ID: IdFacade"), pluginStable);
+
+        // Stable event module: nekojs:event/stable (must not be overwritten by child my_addon marker)
+        String eventStable = Files.readString(out.resolve("nekojs/_modules/server/event/stable/__init__.pyi"));
+        assertTrue(eventStable.contains("# Module: nekojs:event/stable"), eventStable);
+        assertTrue(eventStable.contains("from nekojs._java.com.tkisor.nekojs.api.event import StableServerTickEvent"),
+                eventStable);
+        assertTrue(eventStable.contains("class _ServerEventsGroup:"), eventStable);
+        assertTrue(eventStable.contains(
+                "def tickPre(self, handler: Callable[[StableServerTickEvent], None]) -> None: ..."), eventStable);
+        assertTrue(eventStable.contains(
+                "def tickPre(self, priority: _EventPriority, handler: Callable[[StableServerTickEvent], None]) -> None: ..."),
+                eventStable);
+        assertTrue(eventStable.contains("ServerEvents: _ServerEventsGroup"), eventStable);
+        assertTrue(eventStable.contains("__all__ = [\"ServerEvents\"]"), eventStable);
+
+        // Versioned event module: dispatchable + cancellable overloads + widened enum key
+        String eventVersioned = Files.readString(out.resolve("nekojs/_modules/server/event/versioned/__init__.pyi"));
+        assertTrue(eventVersioned.contains("# Module: nekojs:event/versioned"), eventVersioned);
+        assertTrue(eventVersioned.contains(
+                "from nekojs._java.com.tkisor.nekojs.probe.backend.python import FakeProbeEnum_"), eventVersioned);
+        assertTrue(eventVersioned.contains(
+                "from nekojs._java.com.tkisor.nekojs.probe.backend.python import FakeProbeEvent"), eventVersioned);
+        assertTrue(eventVersioned.contains(
+                "def recipes(self, handler: Callable[[FakeProbeEvent], bool | None]) -> None: ..."), eventVersioned);
+        assertTrue(eventVersioned.contains(
+                "def recipes(self, priority: _EventPriority, handler: Callable[[FakeProbeEvent], bool | None]) -> None: ..."),
+                eventVersioned);
+        assertTrue(eventVersioned.contains(
+                "def recipes(self, extra: FakeProbeEnum_, handler: Callable[[FakeProbeEvent], bool | None]) -> None: ..."),
+                eventVersioned);
+        assertTrue(eventVersioned.contains(
+                "def recipes(self, priority: _EventPriority, extra: FakeProbeEnum_, handler: Callable[[FakeProbeEvent], bool | None]) -> None: ..."),
+                eventVersioned);
+        assertTrue(eventVersioned.contains("ServerEvents: _ServerEventsGroup"), eventVersioned);
+        assertTrue(eventVersioned.contains("__all__ = [\"ServerEvents\"]"), eventVersioned);
+
+        // Plugin event module under nekojs:event/stable/<owner> with dot sanitized to underscore
+        String addonEvent = Files.readString(
+                out.resolve("nekojs/_modules/server/event/stable/my_addon/__init__.pyi"));
+        assertTrue(addonEvent.contains("# Module: nekojs:event/stable/my.addon"), addonEvent);
+        assertTrue(addonEvent.contains("from nekojs._java.com.tkisor.nekojs.api.data import NekoId"), addonEvent);
+        assertTrue(addonEvent.contains("AddonEvents: _AddonEventsGroup"), addonEvent);
+
+        // Module-only exports must not leak into global nekojs/__init__.pyi
+        String globalInit = Files.readString(out.resolve("nekojs/__init__.pyi"));
+        assertFalse(globalInit.contains("ID"), globalInit);
+        assertFalse(globalInit.contains("ServerEvents"), globalInit);
+        assertFalse(globalInit.contains("AddonEvents"), globalInit);
     }
 
     // -------------------- helpers --------------------

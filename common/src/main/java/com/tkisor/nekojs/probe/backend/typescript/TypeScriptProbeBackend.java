@@ -594,9 +594,10 @@ public final class TypeScriptProbeBackend implements ProbeBackend {
             Map<String, String> eventNamespaces = new TreeMap<>();
             moduleEvents.forEach((id, entries) -> eventNamespaces.put(id,
                     eventGenerator.generateModuleNamespaces(entries, snapshot.registryBuilderSurfaces())));
+            var modulePayloads = EventPayloadDeclarations.resolve(moduleEvents.values().stream().flatMap(List::stream).toList(),
+                    snapshot.registryBuilderSurfaces());
             files.put("@side-only/" + type.name + "/bindings/api-modules.d.ts",
-                    (EventPayloadDeclarations.resolve(moduleEvents.values().stream().flatMap(List::stream).toList(),
-                            snapshot.registryBuilderSurfaces()).isEmpty() ? ""
+                    (EventPayloadDeclarations.builderNames(modulePayloads, snapshot.registryBuilderSurfaces()).isEmpty() ? ""
                             : "/// <reference path=\"../../../@event-builders/index.d.ts\" />\n")
                             + bindingGenerator.generateModules(modules, eventNamespaces));
             String mixinDeclarations = MixinHookDeclarations.render(mixinPlans, type);
@@ -724,11 +725,13 @@ public final class TypeScriptProbeBackend implements ProbeBackend {
         if (entries == null || entries.isEmpty()) {
             return;
         }
-        files.put("@registry-builders/index.d.ts", RegistryBuilderTsRenderer.render(entries));
+        String legacyBuilders = RegistryBuilderTsRenderer.render(entries);
+        if (!legacyBuilders.isEmpty()) {
+            files.put("@registry-builders/index.d.ts", legacyBuilders);
+        }
         var payloads = EventPayloadDeclarations.resolve(java.util.stream.Stream.concat(snapshot.events().stream(),
                 snapshot.moduleEvents().stream().map(com.tkisor.nekojs.api.catalog.ModuleEventCatalogEntry::event)).toList(), entries);
-        var eventBuilders = entries.stream().filter(entry -> entry.eventPayload() != null
-                && payloads.containsKey(entry.eventPayload().eventType())).distinct().toList();
+        var eventBuilders = EventPayloadDeclarations.associatedBuilders(payloads, entries).stream().distinct().toList();
         if (!eventBuilders.isEmpty()) {
             files.put("@event-builders/index.d.ts", RegistryBuilderTsRenderer.renderEventDependencies(eventBuilders));
         }

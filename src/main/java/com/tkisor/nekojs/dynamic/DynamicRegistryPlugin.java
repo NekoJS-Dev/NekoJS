@@ -14,7 +14,7 @@ import com.tkisor.nekojs.core.plugin.TypeDocsPoint;
 /**
  * Registers the runtime dynamic-registry event facade ({@link DynamicRegistryEvents#GROUP}:
  * inert candidate plans and typed callback builders, a lifecycle separate from startup
- * {@code RegistryEvents}) plus the derived dynamic-builder declaration entries. The platform
+ * {@code StartupEvents.registry}) plus the derived dynamic-builder declaration entries. The platform
  * assembly ({@code NekoJSMod}) registers the facade's candidate domain collector into the
  * runtime root, not this plugin, because the root does not exist yet during plugin bootstrap.
  */

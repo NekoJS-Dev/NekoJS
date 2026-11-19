@@ -6,7 +6,7 @@ import java.util.Locale;
  * Registration mode for runtime (post-server-start) registry entries.
  *
  * <p>GLOBAL is deliberately absent: permanent registrations belong to the
- * STARTUP {@code RegistryEvents.*} builders and cannot be created at runtime.
+ * STARTUP {@code StartupEvents.registry} builders and cannot be created at runtime.
  *
  * <p>Honest v1 semantics (both modes never unregister mid-session):
  * <ul>
@@ -41,7 +41,7 @@ public enum DynamicRegisterMode {
             case "reloadable" -> RELOADABLE;
             case "global" -> throw new IllegalArgumentException(
                     "Register mode 'global' is not available at runtime: register permanent content from "
-                            + "STARTUP scripts via RegistryEvents instead");
+                            + "STARTUP scripts via StartupEvents.registry instead");
             default -> throw new IllegalArgumentException(
                     "Unknown register mode '" + name.trim() + "': expected 'world' or 'reloadable'");
         };

@@ -122,7 +122,10 @@ public final class ScriptOptionSchema implements ScriptInputShapeProvider {
     }
     public boolean hasField(String name) { return fields.containsKey(name); }
     public String[] fieldNames() { return fields.keySet().toArray(String[]::new); }
-    public AdapterInputShape fieldShape(String name) { return fields.get(name).shape(); }
+    public AdapterInputShape fieldShape(String name) {
+        Field field = fields.get(name);
+        return field != null ? field.shape() : null;
+    }
 
     @Override
     public AdapterInputShape inputShape() {

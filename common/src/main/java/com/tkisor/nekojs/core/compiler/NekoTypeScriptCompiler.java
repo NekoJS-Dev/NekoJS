@@ -4,6 +4,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 
+/** Two-pass TypeScript-to-JavaScript type-erasure compiler that preserves line/column mappings via source maps. */
 public final class NekoTypeScriptCompiler {
     private NekoTypeScriptCompiler() {}
 
@@ -402,7 +403,15 @@ public final class NekoTypeScriptCompiler {
                 if (c == '/' && i + 1 < out.length() && out.charAt(i + 1) == '/') { i = skipOutLine(i + 2); continue; }
                 if (c == '/' && i + 1 < out.length() && out.charAt(i + 1) == '*') { i = skipOutBlock(i + 2); continue; }
                 if (isIdentifierStart(c) && outKeywordAt(i, "class")) {
-                    i = eraseClassModifiers(i + 5);
+                    int prev = previousOutNonTrivia(i - 1);
+                    int after = nextOutTrivia(i + 5);
+                    if ((prev < 0 || out.charAt(prev) != '.')
+                            && after < out.length()
+                            && (out.charAt(after) == '{' || isIdentifierStart(out.charAt(after)))) {
+                        i = eraseClassModifiers(i + 5);
+                        continue;
+                    }
+                    i += 5;
                     continue;
                 }
                 i++;
@@ -507,7 +516,7 @@ public final class NekoTypeScriptCompiler {
             int braceClose = matchOutBrace(braceOpen);
             if (braceClose < 0) return out.length();
             String body = out.substring(braceOpen + 1, braceClose);
-            // Phase 1 only blanks spans, so phase-2 offsets index the authored source 1:1: erasing
+            // Pass 1 only blanks spans, so pass-2 offsets index the authored source 1:1: erasing
             // never changes length or line count before transform() starts rewriting enum/namespace.
             String iife = generateEnumIife(name, parseEnumMembers(body, braceOpen + 1));
             out.replace(start, braceClose + 1, iife);
@@ -802,7 +811,7 @@ public final class NekoTypeScriptCompiler {
                         continue;
                     } else if (kwLen == -1) {
                         // interface/type: No runtime value; remove 'export' but do not export as a member.
-                        // Its declaration body was already erased to spaces by phase1, leaving only naked 'export' + name; erase 'export' here too.
+                        // Its declaration body was already erased to spaces by pass 1, leaving only naked 'export' + name; erase 'export' here too.
                         cleaned.append(body, lastCopy, i).append("      ");
                         lastCopy = i + 6;
                         i += 6;
@@ -908,7 +917,7 @@ public final class NekoTypeScriptCompiler {
             if (bodyKeywordAt(body, i, "module")) return 6;
             if (bodyKeywordAt(body, i, "let")) return 3;
             if (bodyKeywordAt(body, i, "var")) return 3;
-            // interface/type: No value member produced at runtime, but phase1 has already erased their declaration bodies to spaces.
+            // interface/type: No value member produced at runtime, but pass 1 has already erased their declaration bodies to spaces.
             // Return the length to remove their 'export' keyword and avoid naked 'export' in the IIFE body.
             // Note: Do not add these members to the 'members' list (they have no runtime binding to export).
             if (bodyKeywordAt(body, i, "interface")) return -1; // Sentinel: remove 'export' but do not treat as a value member
@@ -1432,7 +1441,7 @@ public final class NekoTypeScriptCompiler {
 
         /**
          * Locate the named clause '{' after the import/export statement header (skipping default binding, commas, and the 'type' keyword:
-         * {@code import def, { type A, B } from '...'} ). If a declaration body boundary (keywords like =、(、const/function/
+         * {@code import def, { type A, B } from '...'} ). If a declaration body boundary (keywords like =, (, const/function/
          * class) or a semicolon/newline is encountered, there is no named clause; same applies to module strings (import '...').
          */
         private int findNamedClauseBrace(int from) {
@@ -1499,6 +1508,13 @@ public final class NekoTypeScriptCompiler {
                 int specEnd = readIdentifierEnd(typeStart + 1); // end of the 'type' keyword
                 int nameStart = nextNonWhitespace(specEnd);
                 int nameEnd = readIdentifierEnd(nameStart + 1); // end of X
+                int afterName = nextNonWhitespace(nameEnd);
+                if (afterName < close && startsWithKeyword(afterName, "as")) {
+                    int aliasStart = nextNonWhitespace(afterName + 2);
+                    if (aliasStart < close && isIdentifierStart(source.charAt(aliasStart))) {
+                        nameEnd = readIdentifierEnd(aliasStart + 1);
+                    }
+                }
                 int eraseTo = nameEnd;
                 // Consume following comma (if any)
                 int afterComma = nextNonWhitespace(nameEnd);

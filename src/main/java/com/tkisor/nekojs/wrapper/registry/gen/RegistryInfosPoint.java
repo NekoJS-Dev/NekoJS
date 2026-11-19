@@ -9,9 +9,11 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 
 import net.minecraft.core.Registry;
 import net.minecraft.core.registries.Registries;
@@ -23,9 +25,8 @@ import net.minecraft.resources.ResourceKey;
  *
  * <p>The default scan root is vanilla {@link Registries}: it reflects the public static
  * {@link ResourceKey} fields, so a version that ships a different field set needs no change.
- * Plugins add scan classes or manual entries through {@link Contributor}, for example a mod's own
- * registries. The merge policy is {@link MergePolicy#append}, because contributors add scan classes
- * and info entries and keys do not collide.
+ * Contributors can add scan roots and manual metadata. Opening a static registry for STARTUP writes
+ * is a separate, explicit contribution.
  *
  * <p>This point and {@link RegistryTypesPoint} are the first engine-level consumers of the
  * extension point system, and they test the goal that a new built-in extension point costs one file
@@ -39,18 +40,19 @@ public final class RegistryInfosPoint {
     private RegistryInfosPoint() {
     }
 
-    /** Contribution side: plugins that implement it add registry scan roots or manual entries. */
+    /** Contributes registry metadata and explicitly opens static STARTUP registries. */
     public interface Contributor extends NekoJSPlugin {
 
-        /** Default no-op: scans only the built-in roots. */
+        /** Default no-op. */
         default void registerRegistryInfos(RegistryInfosCollector collector) {
         }
     }
 
-    /** Collector used while collecting: a class list and a manual entry list, merged with append. */
+    /** Collects registry metadata and the explicit STARTUP catalog. */
     public static final class RegistryInfosCollector {
         final List<Class<?>> classesToScan = new ArrayList<>();
         final List<RegistryInfo> additionalInfos = new ArrayList<>();
+        private final Set<ResourceKey<? extends Registry<?>>> startupRegistries = new LinkedHashSet<>();
 
         /** Adds a scan root class; its public static ResourceKey fields are reflected and registered. */
         public void addClassToScan(Class<?> root) {
@@ -61,13 +63,20 @@ public final class RegistryInfosPoint {
         public void addInfo(RegistryInfo info) {
             additionalInfos.add(Objects.requireNonNull(info, "info"));
         }
+
+        /** Opens a static registry to STARTUP scripts. The host mod must install it before native registration. */
+        public void openStartupRegistry(ResourceKey<? extends Registry<?>> key) {
+            startupRegistries.add(Objects.requireNonNull(key, "key"));
+        }
     }
 
-    /** Output: the full registry info table from scan roots and manual entries, de-duplicated by key
-     * with the first entry winning. */
-    record RegistryInfos(Map<ResourceKey<? extends Registry<?>>, RegistryInfo> infos) {
+    /** Registry metadata and the independent catalog of static STARTUP targets. */
+    record RegistryInfos(
+            Map<ResourceKey<? extends Registry<?>>, RegistryInfo> infos,
+            Set<ResourceKey<? extends Registry<?>>> startupRegistries) {
         RegistryInfos {
             infos = Map.copyOf(infos);
+            startupRegistries = Set.copyOf(startupRegistries);
         }
 
         /** Looks a registry up by its key. */
@@ -96,7 +105,7 @@ public final class RegistryInfosPoint {
         for (RegistryInfo info : collector.additionalInfos) {
             map.putIfAbsent(info.key(), info);
         }
-        return new RegistryInfos(map);
+        return new RegistryInfos(map, collector.startupRegistries);
     }
 
     /** The extension point definition; NekoRegistryPointsPlugin registers it. */

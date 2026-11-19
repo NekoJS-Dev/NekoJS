@@ -12,19 +12,25 @@ import com.tkisor.nekojs.api.event.EventListenerToken;
 import com.tkisor.nekojs.api.event.DispatchCancellableEventBus;
 import com.tkisor.nekojs.api.event.DispatchEventBus;
 import com.tkisor.nekojs.api.event.DispatchKey;
+import com.tkisor.nekojs.eventbus.CancellableEventBusImpl;
 import com.tkisor.nekojs.eventbus.CommonPriority;
+import com.tkisor.nekojs.eventbus.dispatch.DispatchCancellableEventBusImpl;
+import com.tkisor.nekojs.eventbus.dispatch.DispatchEventBusImpl;
+import com.tkisor.nekojs.eventbus.EventBusImpl;
 import graal.graalvm.polyglot.Context;
 import graal.graalvm.polyglot.Value;
 import graal.graalvm.polyglot.proxy.ProxyExecutable;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.function.BooleanSupplier;
 import java.util.function.Predicate;
 
 /**
@@ -137,7 +143,115 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
         for (List<ScriptEventListenerToken<EVENT>> list : tokensByType.values()) {
             if (!list.isEmpty()) return true;
         }
+        if (bus instanceof DispatchEventBusImpl<?, ?> dispatch) return !dispatch.isEmpty();
+        if (bus instanceof DispatchCancellableEventBusImpl<?, ?> dispatch) return !dispatch.isEmpty();
         return bus instanceof com.tkisor.nekojs.eventbus.EventBusBase<?, ?> base && !base.isEmpty();
+    }
+
+    @org.jetbrains.annotations.ApiStatus.Internal
+    public final boolean hasStableModuleListeners(ScriptType type) {
+        var listeners = tokensByType.get(type);
+        if (listeners == null) return false;
+        for (var listener : listeners) {
+            if (listener.stableModule() && !ScriptManager.isCandidateContext(listener.context())
+                    && !ScriptManager.isContextDead(listener.context())) return true;
+        }
+        return false;
+    }
+
+    @org.jetbrains.annotations.ApiStatus.Internal
+    public final void postStableModuleNotification(EVENT event, ScriptType type) {
+        if (!(bus instanceof EventBusImpl<EVENT> simple)) {
+            throw new IllegalStateException("[NEKO-4057] Stable notification selection requires a non-cancellable, non-dispatch bus");
+        }
+        var selected = stableModuleTokens(type);
+        if (selected.isEmpty()) return;
+        postSelected(() -> {
+            simple.postSelected(event, selected);
+            return false;
+        });
+    }
+
+    @org.jetbrains.annotations.ApiStatus.Internal
+    @SuppressWarnings("unchecked")
+    public final void postStableModuleNotification(EVENT event, KEY key, ScriptType type) {
+        if (!(bus instanceof DispatchEventBusImpl<?, ?>)) {
+            throw new IllegalStateException("[NEKO-4057] Stable keyed notification selection requires a non-cancellable dispatch bus");
+        }
+        var dispatch = (DispatchEventBusImpl<EVENT, KEY>) bus;
+        var selected = stableModuleTokens(type);
+        if (selected.isEmpty()) return;
+        postSelected(() -> {
+            dispatch.postSelected(event, key, selected);
+            return false;
+        });
+    }
+
+    @org.jetbrains.annotations.ApiStatus.Internal
+    public final boolean postStableModuleCancellable(EVENT event, ScriptType type) {
+        if (!(bus instanceof CancellableEventBusImpl<EVENT> cancellable)) {
+            throw new IllegalStateException("[NEKO-4057] Stable cancellation selection requires a non-dispatch cancellable bus");
+        }
+        var selected = stableModuleTokens(type);
+        return !selected.isEmpty() && postSelected(() -> cancellable.postSelected(event, selected));
+    }
+
+    @org.jetbrains.annotations.ApiStatus.Internal
+    @SuppressWarnings("unchecked")
+    public final boolean postStableModuleCancellable(EVENT event, KEY key, ScriptType type) {
+        if (!(bus instanceof DispatchCancellableEventBusImpl<?, ?>)) {
+            throw new IllegalStateException("[NEKO-4057] Stable keyed cancellation selection requires a dispatch cancellable bus");
+        }
+        var cancellable = (DispatchCancellableEventBusImpl<EVENT, KEY>) bus;
+        var selected = stableModuleTokens(type);
+        return !selected.isEmpty() && postSelected(() -> cancellable.postSelected(event, key, selected));
+    }
+
+    @org.jetbrains.annotations.ApiStatus.Internal
+    public final boolean postWithStableModuleCancellation(EVENT event, ScriptType type) {
+        if (!(bus instanceof CancellableEventBusImpl<EVENT> cancellable)) {
+            throw new IllegalStateException("[NEKO-4057] Stable cancellation requires a non-dispatch cancellable bus");
+        }
+        var cancellers = stableModuleTokens(type);
+        return postSelected(() -> cancellable.postWithCancellationFrom(event, cancellers));
+    }
+
+    @org.jetbrains.annotations.ApiStatus.Internal
+    @SuppressWarnings("unchecked")
+    public final void postIgnoringCancellation(EVENT event, KEY key) {
+        if (!(bus instanceof DispatchCancellableEventBusImpl<?, ?>)) {
+            throw new IllegalStateException("[NEKO-4057] A keyed notification requires a dispatch cancellable bus");
+        }
+        var cancellable = (DispatchCancellableEventBusImpl<EVENT, KEY>) bus;
+        postSelected(() -> {
+            cancellable.postIgnoringCancellation(event, key);
+            return false;
+        });
+    }
+
+    private Set<EventListenerToken<EVENT>> stableModuleTokens(ScriptType type) {
+        var listeners = tokensByType.get(type);
+        if (listeners == null) return Set.of();
+        Set<EventListenerToken<EVENT>> selected = new HashSet<>();
+        for (var listener : listeners) {
+            if (listener.stableModule() && !ScriptManager.isCandidateContext(listener.context())
+                    && !ScriptManager.isContextDead(listener.context())) selected.add(listener.token());
+        }
+        return selected;
+    }
+
+    private boolean postSelected(BooleanSupplier dispatch) {
+        Boolean previous = collectionDispatch.get();
+        collectionDispatch.set(false);
+        try {
+            return dispatch.getAsBoolean();
+        } catch (Exception e) {
+            markCheckedDispatchFailed();
+            NekoJS.LOGGER.error("[NEKO-4057] Stable event dispatch failed for {}.{}", groupName, eventName, e);
+            return false;
+        } finally {
+            restoreDispatchMode(previous);
+        }
     }
 
     /** Returns the underlying Java event bus. */
@@ -357,11 +471,25 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
      */
     @Override
     public Object execute(Value... args) {
+        return executeFiltered(args, null);
+    }
+
+    public final Object executeFiltered(Value[] args, @Nullable Predicate<Object> filter) {
+        return executeFiltered(args, filter, false);
+    }
+
+    @org.jetbrains.annotations.ApiStatus.Internal
+    public final Object executeStableModule(Value[] args, @Nullable Predicate<Object> filter) {
+        return executeFiltered(args, filter, true);
+    }
+
+    private Object executeFiltered(Value[] args, @Nullable Predicate<Object> filter, boolean stableModule) {
         var subscription = com.tkisor.nekojs.core.api.EventSubscriptionArguments.parse(args, canDispatch());
         Value listener = subscription.listener();
         ScriptType type = ScriptContextRegistry.scriptTypeOf(listener.getContext());
         String scriptId = ScriptContextRegistry.currentScriptIdOf(listener.getContext());
-        PendingListener pending = new PendingListener(this, subscription.priority(), listener, subscription.key(), type, scriptId);
+        PendingListener pending = new PendingListener(this, subscription.priority(), listener, subscription.key(), type, scriptId,
+                filter, stableModule);
         if (ScriptManager.collectPendingListener(listener.getContext(), pending)) {
             // Candidate generation: suspend registration, activate on commit (see class comment)
             return true;
@@ -399,6 +527,8 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
         private final Value key;
         private final ScriptType type;
         private final String scriptId;
+        private final @Nullable Predicate<Object> filter;
+        private final boolean stableModule;
 
         /** Key parsed by {@link #prepareForActivation()} that can be mounted directly (null if not prepared). */
         private Object resolvedKey;
@@ -409,12 +539,24 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
 
         PendingListener(EventBusJS<?, ?> owner, byte priority, Value listener, Value key,
                         ScriptType type, String scriptId) {
+            this(owner, priority, listener, key, type, scriptId, null, false);
+        }
+
+        private PendingListener(EventBusJS<?, ?> owner, byte priority, Value listener, Value key,
+                                ScriptType type, String scriptId, @Nullable Predicate<Object> filter,
+                                boolean stableModule) {
             this.owner = owner;
             this.priority = priority;
             this.listener = listener;
             this.key = key;
             this.type = type;
             this.scriptId = scriptId;
+            this.filter = filter;
+            this.stableModule = stableModule;
+        }
+
+        private boolean accepts(Object event) {
+            return filter == null || filter.test(event);
         }
 
         /** Associated bus. The candidate collector uses it to pick the pending registrations that belong
@@ -428,6 +570,10 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
             return priority;
         }
 
+        public boolean matchesCollectionKey(Object dispatchKey) {
+            return resolvedKey == null || Objects.equals(resolvedKey, dispatchKey);
+        }
+
         /**
          * Runs the listener for candidate collection. The listener callback runs directly on the
          * owner thread, with the same scriptId switch and callback depth marking as production
@@ -436,6 +582,7 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
          * going". The underlying bus is not touched; the listener is only called.
          */
         public void executeForCollection(Object event) {
+            if (!accepts(event)) return;
             Context context = listener.getContext();
             String previousScriptId = ScriptContextRegistry.switchCurrentScriptId(context, scriptId);
             ScriptManager.noteCallbackEnter();
@@ -550,7 +697,9 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
     /** Complete a previously prepared listener replacement. */
     public void commitPendingListeners(ScriptType type, List<PendingListener> pending) {
         PendingCommit commit = preparePendingListeners(type, pending);
-        commit.finish();
+        if (commit != null) {
+            commit.finish();
+        }
     }
 
     /** A prepared listener replacement that can be finished or rolled back as part of a bridge batch. */
@@ -630,24 +779,25 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
                         : (pending.key == null ? null : pending.key.as(dispatchBus.dispatchKey().keyType()));
                 if (cancellable) {
                     token = dispatchKey != null
-                            ? self.registerDispatchCancellable(priority, listener, dispatchKey)
-                            : self.registerCancellable(priority, listener);
+                            ? self.registerDispatchCancellable(priority, listener, dispatchKey, pending)
+                            : self.registerCancellable(priority, listener, pending);
                 } else {
                     token = dispatchKey != null
-                            ? self.registerDispatch(priority, listener, dispatchKey)
-                            : self.register(priority, listener);
+                            ? self.registerDispatch(priority, listener, dispatchKey, pending)
+                            : self.register(priority, listener, pending);
                 }
             } else if (cancellable) {
-                token = self.registerCancellable(priority, listener);
+                token = self.registerCancellable(priority, listener, pending);
             } else {
-                token = self.register(priority, listener);
+                token = self.register(priority, listener, pending);
             }
             EventListenerToken<EVENT> activated = token;
             // The entire registration is placed within compute to avoid orphan tokens between cleanup and mirror addition.
             this.tokensByType.compute(pending.type, (ignored, tokens) -> {
                 List<ScriptEventListenerToken<EVENT>> list =
                         tokens == null ? new CopyOnWriteArrayList<>() : tokens;
-                list.add(new ScriptEventListenerToken<>(activated, pending.scriptId, pending.listener.getContext()));
+                list.add(new ScriptEventListenerToken<>(activated, pending.scriptId, pending.listener.getContext(),
+                        pending.stableModule));
                 return list;
             });
             pending.activatedToken = token;
@@ -701,7 +851,7 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
         throw new RuntimeException(failure);
     }
 
-    private EventListenerToken<EVENT> register(byte priority, Value listener) {
+    private EventListenerToken<EVENT> register(byte priority, Value listener, PendingListener pending) {
         Context context = listener.getContext();
         ScriptType type = ScriptContextRegistry.scriptTypeOf(context);
         String scriptId = ScriptContextRegistry.currentScriptIdOf(context);
@@ -714,6 +864,7 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
                 return;
             }
             try {
+                if (!pending.accepts(event)) return;
                 // Dispatch happens only on the owner thread (SERVER = tick, CLIENT = render; a network
                 // receiver hands the event over first, then dispatches), so dispatch and lifecycle changes
                 // on that thread are serialized naturally. Cross-thread concurrency is covered by Graal's
@@ -740,7 +891,7 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
         });
     }
 
-    private EventListenerToken<EVENT> registerCancellable(byte priority, Value listener) {
+    private EventListenerToken<EVENT> registerCancellable(byte priority, Value listener, PendingListener pending) {
         Context context = listener.getContext();
         ScriptType type = ScriptContextRegistry.scriptTypeOf(context);
         String scriptId = ScriptContextRegistry.currentScriptIdOf(context);
@@ -752,6 +903,7 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
                 return false;
             }
             try {
+                if (!pending.accepts(event)) return false;
                 // Threading rules are the same as in register(): dispatch on the owner thread, plus
                 // callback depth marking.
                 String previousScriptId = ScriptContextRegistry.switchCurrentScriptId(context, scriptId);
@@ -774,7 +926,7 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
         });
     }
 
-    private <K> EventListenerToken<EVENT> registerDispatch(byte priority, Value listener, K key) {
+    private <K> EventListenerToken<EVENT> registerDispatch(byte priority, Value listener, K key, PendingListener pending) {
         Context context = listener.getContext();
         ScriptType type = ScriptContextRegistry.scriptTypeOf(context);
         String scriptId = ScriptContextRegistry.currentScriptIdOf(context);
@@ -789,6 +941,7 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
                         return;
                     }
                     try {
+                        if (!pending.accepts(event)) return;
                         // Threading rules are the same as in register(): dispatch on the owner thread, plus
                         // callback depth marking.
                         String previousScriptId = ScriptContextRegistry.switchCurrentScriptId(context, scriptId);
@@ -812,7 +965,7 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
         );
     }
 
-    private <K> EventListenerToken<EVENT> registerDispatchCancellable(byte priority, Value listener, K key) {
+    private <K> EventListenerToken<EVENT> registerDispatchCancellable(byte priority, Value listener, K key, PendingListener pending) {
         Context context = listener.getContext();
         ScriptType type = ScriptContextRegistry.scriptTypeOf(context);
         String scriptId = ScriptContextRegistry.currentScriptIdOf(context);
@@ -827,6 +980,7 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
                         return false;
                     }
                     try {
+                        if (!pending.accepts(event)) return false;
                         // Threading rules are the same as in register(): dispatch on the owner thread, plus
                         // callback depth marking.
                         String previousScriptId = ScriptContextRegistry.switchCurrentScriptId(context, scriptId);
@@ -866,5 +1020,6 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
         ScriptErrorReporter.recordCallbackError(context, type, kind, throwable);
     }
 
-    private record ScriptEventListenerToken<EVENT>(EventListenerToken<EVENT> token, String scriptId, Context context) {}
+    private record ScriptEventListenerToken<EVENT>(EventListenerToken<EVENT> token, String scriptId, Context context,
+                                                   boolean stableModule) {}
 }

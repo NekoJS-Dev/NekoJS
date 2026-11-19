@@ -5,6 +5,7 @@ import com.tkisor.nekojs.api.ScriptType;
 import com.tkisor.nekojs.api.catalog.EventCatalogEntry;
 import com.tkisor.nekojs.api.catalog.RegistryBuilderSurfaceEntry;
 import com.tkisor.nekojs.api.catalog.RegistryBuilderSurfaceEntry.EventPayload;
+import com.tkisor.nekojs.api.catalog.RegistryBuilderSurfaceEntry.EventVariant;
 import com.tkisor.nekojs.probe.EventPayloadDeclarations;
 import com.tkisor.nekojs.api.surface.ApiSymbolId;
 import com.tkisor.nekojs.api.surface.ApiTypeRef;
@@ -32,6 +33,9 @@ import java.util.stream.Collectors;
  * widen the input type.
  */
 public final class PythonEventRenderer {
+    static final String PRIORITY_ALIAS_LINE =
+            "_EventPriority = Literal[\"HIGHEST\", \"HIGH\", \"NORMAL\", \"LOW\", \"LOWEST\"]\n";
+
     private final ApiTypeRefPyRenderer typeR;
     private final Set<String> availableFqns;
 
@@ -58,7 +62,13 @@ public final class PythonEventRenderer {
         // 1. Collect imports: event types plus dispatch key types and aliases
         Set<String> reserved = new LinkedHashSet<>(List.of("Any", "Callable", "overload", "Protocol", "Literal"));
         events.forEach(event -> reserved.add(groupTypeName(event.group())));
-        payloads.values().forEach(payload -> reserved.add(payload.name()));
+        payloads.values().forEach(payload -> reserved.addAll(payload.declarationNames()));
+        boolean requiredSelectors = events.stream().anyMatch(EventCatalogEntry::selectorRequired)
+                || payloads.values().stream().anyMatch(EventPayload::selectorScoped);
+        if (requiredSelectors) {
+            reserved.add("_EventPriority");
+            reserved.add("NoReturn");
+        }
         List<String> builderNames = EventPayloadDeclarations.builderNames(payloads, builders);
         reserved.addAll(builderNames);
         PythonImports importByName = new PythonImports(reserved, typeR);
@@ -67,7 +77,7 @@ public final class PythonEventRenderer {
             EventPayload payload = payloads.get(e.eventType());
             String eventType = payload == null ? renderClass(e.eventType(), importByName) : payload.name();
             String keyType = null;
-            if (e.dispatchable() && e.dispatchKeyType() != null) {
+            if (e.dispatchable() && e.dispatchKeyType() != null && (payload == null || !payload.selectorScoped())) {
                 keyType = renderKey(e.dispatchKeyType(), adapterAliases, importByName);
             }
             infos.add(new EventInfo(e, eventType, keyType));
@@ -80,9 +90,12 @@ public final class PythonEventRenderer {
         // overload is always imported even with no dispatch events; an unused name is no error in a stub.
         sb.append("from typing import Any, Callable, overload")
                 .append(payloads.isEmpty() ? "" : ", Protocol");
-        if (payloads.values().stream().flatMap(payload -> payload.members().stream())
+        if (requiredSelectors || payloads.values().stream().flatMap(payload -> payload.members().stream())
                 .anyMatch(member -> member.pyType().contains("Literal["))) {
             sb.append(", Literal");
+        }
+        if (hasEmptySelectorCatalog(payloads)) {
+            sb.append(", NoReturn");
         }
         sb.append('\n');
         if (!builderNames.isEmpty()) {
@@ -90,29 +103,10 @@ public final class PythonEventRenderer {
         }
         importByName.appendTo(sb);
 
-        for (EventPayload payload : payloads.values()) {
-            sb.append("\nclass ").append(payload.name()).append("(Protocol):\n");
-            if (payload.members().isEmpty()) {
-                sb.append("    ...\n");
-            }
-            Map<String, Long> methodCounts = payload.members().stream()
-                    .filter(member -> member.kind() == RegistryBuilderSurfaceEntry.MemberKind.METHOD)
-                    .collect(Collectors.groupingBy(RegistryBuilderSurfaceEntry.Member::name, Collectors.counting()));
-            for (RegistryBuilderSurfaceEntry.Member member : payload.members()) {
-                switch (member.kind()) {
-                    case WRITABLE_PROPERTY -> sb.append("    ").append(member.name()).append(": ")
-                            .append(member.pyType()).append("\n");
-                    case READ_ONLY_PROPERTY -> sb.append("    ").append(member.name()).append(": ")
-                            .append(member.pyType()).append("  # read-only\n");
-                    case METHOD -> {
-                        if (methodCounts.get(member.name()) > 1) {
-                            sb.append("    @overload\n");
-                        }
-                        sb.append("    ").append(member.pyType()).append("\n");
-                    }
-                }
-            }
+        if (requiredSelectors) {
+            sb.append('\n').append(PRIORITY_ALIAS_LINE);
         }
+        appendPayloadProtocols(sb, payloads);
 
         // 3. Group by group, keeping the order events appear in; each group becomes one <Group>Type class
         Map<String, List<EventInfo>> byGroup = infos.stream().collect(
@@ -121,6 +115,7 @@ public final class PythonEventRenderer {
             sb.append("\nclass ").append(groupTypeName(groupEntry.getKey())).append(":\n");
             for (EventInfo info : groupEntry.getValue()) {
                 String name = PythonClassRenderer.pyIdent(info.entry().name());
+                EventPayload payload = payloads.get(info.entry().eventType());
                 if (info.entry().scriptDefined()) {
                     // Custom events declared by ScriptEvents: the payload is Any and the script may fire them itself.
                     // Python has no namespace merging (the TS function plus namespace), so a nested class plus a
@@ -131,6 +126,9 @@ public final class PythonEventRenderer {
                     sb.append("        def __call__(self, handler: Callable[[Any], None]) -> None: ...\n");
                     sb.append("        def post(self, payload: Any = ...) -> None: ...\n");
                     sb.append("    ").append(name).append(": ").append(name).append("\n");
+                } else if (info.entry().selectorRequired() || (payload != null && payload.selectorScoped())) {
+                    appendRequiredSelectors(sb, info.entry(), payload,
+                            info.eventType(), info.keyType(), true);
                 } else if (info.keyType() != null) {
                     // Both signatures of a dispatch event must be declared with @overload: in a .pyi, two bare defs
                     // with the same name and different parameters make Pylance/pyright report reportRedeclaration
@@ -151,6 +149,80 @@ public final class PythonEventRenderer {
             }
         }
         return sb.toString();
+    }
+
+    static void appendPayloadProtocols(StringBuilder output, Map<Class<?>, EventPayload> payloads) {
+        for (EventPayload payload : payloads.values()) {
+            if (payload.selectorScoped()) {
+                for (EventVariant variant : payload.variants()) {
+                    appendPayloadProtocol(output, variant.typeName(), variant.members());
+                }
+            } else {
+                appendPayloadProtocol(output, payload.name(), payload.members());
+            }
+        }
+    }
+
+    private static void appendPayloadProtocol(StringBuilder output, String name,
+                                              List<RegistryBuilderSurfaceEntry.Member> members) {
+        output.append("\nclass ").append(name).append("(Protocol):\n");
+        if (members.isEmpty()) {
+            output.append("    ...\n");
+        }
+        Map<String, Long> methodCounts = members.stream()
+                .filter(member -> member.kind() == RegistryBuilderSurfaceEntry.MemberKind.METHOD)
+                .collect(Collectors.groupingBy(RegistryBuilderSurfaceEntry.Member::name, Collectors.counting()));
+        for (RegistryBuilderSurfaceEntry.Member member : members) {
+            switch (member.kind()) {
+                case WRITABLE_PROPERTY -> output.append("    ").append(member.name()).append(": ")
+                        .append(member.pyType()).append('\n');
+                case READ_ONLY_PROPERTY -> output.append("    ").append(member.name()).append(": ")
+                        .append(member.pyType()).append("  # read-only\n");
+                case METHOD -> {
+                    if (methodCounts.get(member.name()) > 1) {
+                        output.append("    @overload\n");
+                    }
+                    output.append("    ").append(member.pyType()).append('\n');
+                }
+            }
+        }
+    }
+
+    static boolean hasEmptySelectorCatalog(Map<Class<?>, EventPayload> payloads) {
+        return payloads.values().stream().anyMatch(payload -> payload.selectorScoped() && payload.variants().isEmpty());
+    }
+
+    static void appendRequiredSelectors(StringBuilder output, EventCatalogEntry event, EventPayload payload,
+                                        String eventType, String keyType, boolean isStatic) {
+        String name = PythonClassRenderer.pyIdent(event.name());
+        String callbackReturn = event.cancellable() ? "bool | None" : "None";
+        if (payload == null || !payload.selectorScoped()) {
+            appendSelectorOverloads(output, name, keyType == null ? "Any" : keyType, eventType, callbackReturn, isStatic);
+            return;
+        }
+        if (payload.variants().isEmpty()) {
+            appendSelectorOverloads(output, name, "NoReturn", "NoReturn", callbackReturn, isStatic);
+        }
+        for (EventVariant variant : payload.variants()) {
+            String literals = variant.selectors().stream().map(EventPayloadDeclarations::quoteSelector)
+                    .collect(Collectors.joining(", "));
+            appendSelectorOverloads(output, name, "Literal[" + literals + "]", variant.typeName(), callbackReturn, isStatic);
+        }
+    }
+
+    private static void appendSelectorOverloads(StringBuilder output, String name, String keyType,
+                                               String eventType, String callbackReturn, boolean isStatic) {
+        for (String priority : List.of("", "priority: _EventPriority, ")) {
+            if (isStatic) {
+                output.append("    @staticmethod\n");
+            }
+            output.append("    @overload\n    def ").append(name).append('(');
+            if (!isStatic) {
+                output.append("self, ");
+            }
+            output.append(priority).append("selector: ").append(keyType).append(", handler: Callable[[")
+                    .append(eventType).append("], ").append(callbackReturn).append("]) -> None: ...\n");
+        }
     }
 
     /**

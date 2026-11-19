@@ -23,6 +23,7 @@ pluginManager.apply("dev.kikugie.loom-back-compat")
 val mcVersion = property("deps.minecraft") as String
 val loaderVersion = property("deps.loader_version") as String
 val fabricApiVersion = property("deps.fabric_api") as String
+val jeiVersion = property("deps.jei_version") as String
 val javaRelease = (property("deps.java") as String).toInt()
 val graalMinimumVersion = libs.versions.graalRuntime.get()
 
@@ -44,6 +45,7 @@ tasks.withType<Jar>().configureEach { archiveVersion.set("$mcVersion-$modVersion
 repositories {
     mavenCentral()
     maven("https://maven.fabricmc.net/")
+    maven("https://maven.blamejared.com/")
     exclusiveContent {
         forRepository { maven { url = uri("https://cursemaven.com") } }
         filter { includeGroup("curse.maven") }
@@ -73,6 +75,7 @@ dependencies {
     extensions.getByName("loomx").withGroovyBuilder { "applyMojangMappings"() }
     add("modImplementation", "net.fabricmc:fabric-loader:$loaderVersion")
     add("modImplementation", "net.fabricmc.fabric-api:fabric-api:$fabricApiVersion")
+    add("modCompileOnly", "mezz.jei:jei-$mcVersion-fabric:$jeiVersion")
 
     implementation(project(":common"))
     bundled(libs.night.config.core)

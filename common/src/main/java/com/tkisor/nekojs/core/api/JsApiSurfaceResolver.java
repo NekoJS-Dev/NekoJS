@@ -103,10 +103,12 @@ public final class JsApiSurfaceResolver {
             }
 
             List<ApiContribution> contribs = contributionsBySymbol.getOrDefault(symbolId, List.of());
+            Map<String, ApiInvoker> symbolInvokers = invokerIndex.computeIfAbsent(symbolId, k -> new LinkedHashMap<>());
             for (ApiContribution contrib : contribs) {
-                ApiInvoker invoker = createInvoker(contrib, environmentKey);
-                invokerIndex.computeIfAbsent(symbolId, k -> new LinkedHashMap<>())
-                        .put(contrib.signatures().getFirst().callKey(), invoker);
+                for (ApiSignature sig : contrib.signatures()) {
+                    ApiInvoker invoker = createInvoker(contrib, sig, environmentKey);
+                    symbolInvokers.put(sig.callKey(), invoker);
+                }
             }
         }
 
@@ -392,13 +394,16 @@ public final class JsApiSurfaceResolver {
         return contracts.requirePortable("nekojs-core").compatibilitySha256();
     }
 
-    private static ApiInvoker createInvoker(ApiContribution contribution, EnvironmentKey environmentKey) {
+    private static ApiInvoker createInvoker(
+            ApiContribution contribution,
+            ApiSignature signature,
+            EnvironmentKey environmentKey) {
         return (receiver, args) -> {
             com.tkisor.nekojs.api.surface.ApiCallContext context =
                     new com.tkisor.nekojs.api.surface.ApiCallContext(
                             environmentKey,
                             contribution.symbolId(),
-                            contribution.signatures().getFirst());
+                            signature);
             return contribution.handler().invoke(context, receiver, args);
         };
     }

@@ -1,10 +1,13 @@
 package com.tkisor.nekojs.core.plugin;
 
+import com.google.gson.JsonParser;
 import com.tkisor.nekojs.api.NekoJSPlugin;
 import com.tkisor.nekojs.api.ScriptType;
 import com.tkisor.nekojs.api.annotation.RegisterNekoJSPlugin;
-import com.tkisor.nekojs.api.contract.VerifiedContractSet;
+import com.tkisor.nekojs.api.data.BindingExposure;
 import com.tkisor.nekojs.api.data.BindingRegistry;
+import com.tkisor.nekojs.api.event.EventGroup;
+import com.tkisor.nekojs.api.event.ModuleEventGroup;
 import com.tkisor.nekojs.api.plugin.OwnedPlugin;
 import com.tkisor.nekojs.api.plugin.PluginIdentity;
 import com.tkisor.nekojs.core.NekoCoreContext;
@@ -28,16 +31,20 @@ import graal.graalvm.polyglot.Engine;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
+import java.io.InputStream;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.net.URLClassLoader;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.atomic.AtomicReference;
+import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.jar.JarFile;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -129,7 +136,7 @@ class Ticket08ExternalAddonChainTest {
     void addonContributesThroughHookAndProviderAndFreezesOneProduct() throws Exception {
         try (ExternalAddonFixture.ManagerEntriesSnapshot ignored = new ExternalAddonFixture.ManagerEntriesSnapshot();
              URLClassLoader loader = ExternalAddonFixture.openJarLoader()) {
-            ExternalAddonFixture.registerDiscovered(
+            registerOwnedDiscovered(
                     ExternalAddonFixture.scanAnnotatedPluginClasses(loader));
             NekoJSBasePluginManager.registerClass(ChainRecorderPlugin.class);
             NekoJSBasePluginManager.registerClass(ChainContributorPlugin.class);
@@ -171,6 +178,38 @@ class Ticket08ExternalAddonChainTest {
             assertEquals("exampleaddon-frozen-product", ExternalAddonFixture.call(surface, "marker"));
             assertEquals("greetings=[primary, secondary], serverBindings=3",
                     ExternalAddonFixture.call(surface, "publishedSummary"));
+
+            // Event hook contribution lands in both the owner-qualified runtime index and event modules
+            EventGroup addonEvents = runtime.eventGroups().get("exampleaddon:AddonEvents");
+            assertNotNull(addonEvents, "addon event group registered under exampleaddon:AddonEvents");
+            assertEquals("AddonEvents", addonEvents.name());
+            assertNotNull(addonEvents.getBusHolder("pinged"), "pinged bus registered in AddonEvents");
+
+            ModuleEventGroup versionedAddonEvents = runtime.moduleEventGroups().stream()
+                    .filter(group -> "nekojs:event/versioned/exampleaddon".equals(group.moduleId())
+                            && "AddonEvents".equals(group.group().name()))
+                    .findFirst()
+                    .orElse(null);
+            assertNotNull(versionedAddonEvents,
+                    "addon event published to nekojs:event/versioned/exampleaddon");
+            assertEquals("exampleaddon", versionedAddonEvents.owner());
+            assertEquals(BindingExposure.Category.VERSION, versionedAddonEvents.category());
+            assertTrue(versionedAddonEvents.events().contains("pinged"));
+            assertTrue(versionedAddonEvents.available(ScriptType.SERVER));
+
+            ModuleEventGroup stableAddonEvents = runtime.moduleEventGroups().stream()
+                    .filter(group -> "nekojs:event/stable/exampleaddon".equals(group.moduleId())
+                            && "AddonEvents".equals(group.group().name()))
+                    .findFirst()
+                    .orElse(null);
+            assertNotNull(stableAddonEvents,
+                    "addon event published to nekojs:event/stable/exampleaddon");
+            assertEquals("exampleaddon", stableAddonEvents.owner());
+            assertEquals(BindingExposure.Category.STABLE, stableAddonEvents.category());
+            assertTrue(stableAddonEvents.events().contains("pinged"));
+            assertEquals(Set.of(ScriptType.SERVER), stableAddonEvents.scriptTypes());
+            assertTrue(stableAddonEvents.available(ScriptType.SERVER));
+            assertFalse(stableAddonEvents.available(ScriptType.STARTUP));
         }
     }
 
@@ -460,6 +499,19 @@ class Ticket08ExternalAddonChainTest {
     }
 
     // ---- helpers -----------------------------------------------------------------------
+
+    /** Registers discovered fixture classes under the mod owner id declared in the jar metadata. */
+    private static void registerOwnedDiscovered(List<Class<?>> classes) throws Exception {
+        String modId;
+        try (JarFile jar = new JarFile(ExternalAddonFixture.jarPath().toFile());
+             InputStream in = jar.getInputStream(jar.getJarEntry("fabric.mod.json"))) {
+            String json = new String(in.readAllBytes(), StandardCharsets.UTF_8);
+            modId = JsonParser.parseString(json).getAsJsonObject().get("id").getAsString();
+        }
+        for (Class<?> clazz : classes) {
+            NekoJSBasePluginManager.registerClass(modId, clazz);
+        }
+    }
 
     /** File-header properties the ScriptManager's load-order sorter expects to be registered. */
     private static ScriptPropertyRegistry scriptPropertiesWithFileRules() {

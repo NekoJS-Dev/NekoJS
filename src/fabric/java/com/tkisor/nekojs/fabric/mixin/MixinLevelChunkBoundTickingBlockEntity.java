@@ -2,8 +2,15 @@
 // src/main/java/com/tkisor/nekojs/mixin/LevelChunkBoundTickingBlockEntityMixin.java
 package com.tkisor.nekojs.fabric.mixin;
 
+import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
+import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import com.tkisor.nekojs.fabric.event.FabricBlockEventBindingsV2;
+import net.minecraft.core.BlockPos;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.entity.BlockEntityTicker;
+import net.minecraft.world.level.block.state.BlockState;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
@@ -33,5 +40,16 @@ public abstract class MixinLevelChunkBoundTickingBlockEntity {
             return;
         }
         FabricBlockEventBindingsV2.postBlockEntityTick(this.blockEntity);
+    }
+
+    @WrapOperation(method = "tick()V", at = @At(value = "INVOKE",
+            target = "Lnet/minecraft/world/level/block/entity/BlockEntityTicker;tick(Lnet/minecraft/world/level/Level;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/level/block/entity/BlockEntity;)V"),
+            require = 1, allow = 1)
+    private void nekojs$beforeActualTick(BlockEntityTicker<?> ticker, Level level, BlockPos pos, BlockState state,
+                                         BlockEntity entity, Operation<Void> original) {
+        if (level instanceof ServerLevel serverLevel) {
+            FabricBlockEventBindingsV2.postActualBlockEntityTick(serverLevel, pos, entity);
+        }
+        original.call(ticker, level, pos, state, entity);
     }
 }

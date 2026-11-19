@@ -14,22 +14,19 @@ import net.minecraft.core.registries.Registries;
 /**
  * Plugin that defines the extension points for the common registries. It registers the two
  * engine-level extension points {@code nekojs:registry_infos} and {@code nekojs:registry_types}
- * through the same provider path a third-party plugin uses, attaches the single registration entry
- * point {@link RegistryEvents#REGISTER} to the event group, and registers the built-in builder types.
+ * through the same provider path a third-party plugin uses. It publishes {@link StartupEvents}, opens
+ * static registries for STARTUP scripts, and contributes the built-in builder types.
  *
  * <p>Both points touch Minecraft types, so they live in the version tree. That is why they are
  * registered here, by this plugin (found by the {@code @RegisterNekoJSPlugin} scan), instead of
  * going through the common {@code NekoBuiltinPointsPlugin} manifest: an engine extension point
  * defined in the version tree is registered this way. registry_types declares
  * {@code dependsOn(registry_infos)}, and the engine guarantees the topological order.
- *
- * <p>The built-in type list grows as builders are rewritten; for now it carries the first type
- * (sound_event/basic).
  */
 @RegisterNekoJSPlugin
 public final class NekoRegistryPointsPlugin
         implements NekoJSPlugin, NekoPluginExtensionProvider,
-        EventsPoint.Contributor, RegistryTypesPoint.Contributor, TypeDocsPoint.Contributor {
+        EventsPoint.Contributor, RegistryInfosPoint.Contributor, RegistryTypesPoint.Contributor, TypeDocsPoint.Contributor {
 
     private static NekoPluginExtensionHandle<RegistryInfosPoint.RegistryInfos> infosHandle;
     private static NekoPluginExtensionHandle<RegistryTypesPoint.RegistryTypes> typesHandle;
@@ -42,13 +39,29 @@ public final class NekoRegistryPointsPlugin
 
     @Override
     public void registerEvents(EventGroupRegistry registry) {
-        registry.register(RegistryEvents.GROUP);
+        registry.register(StartupEvents.GROUP);
     }
 
     @Override
     public void registerTypeDocs(com.tkisor.nekojs.core.plugin.TypeDocsRegister registry) {
         // Runtime factories and builder contracts also supply the event payload and both declaration backends.
         RegistryBuilderSurfaces.register(registry, registryInfos(), registryTypes());
+    }
+
+    @Override
+    public void registerRegistryInfos(RegistryInfosPoint.RegistryInfosCollector collector) {
+        collector.openStartupRegistry(Registries.BLOCK);
+        collector.openStartupRegistry(Registries.CREATIVE_MODE_TAB);
+        collector.openStartupRegistry(Registries.ENTITY_TYPE);
+//? if neoforge {
+        collector.openStartupRegistry(Registries.FLUID);
+//?}
+        collector.openStartupRegistry(Registries.ITEM);
+        collector.openStartupRegistry(Registries.MOB_EFFECT);
+        collector.openStartupRegistry(Registries.PARTICLE_TYPE);
+        collector.openStartupRegistry(Registries.POTION);
+        collector.openStartupRegistry(Registries.SOUND_EVENT);
+        collector.openStartupRegistry(Registries.VILLAGER_TYPE);
     }
 
     @Override
@@ -87,8 +100,7 @@ public final class NekoRegistryPointsPlugin
         collector.setDefault(Registries.CREATIVE_MODE_TAB, "basic");
     }
 
-    /** The registry_infos result. Available once bootstrap finishes; the adapter reads it when it builds
-     * the script-facing events. */
+    /** The metadata and explicit STARTUP catalog are available after bootstrap. */
     static RegistryInfosPoint.RegistryInfos registryInfos() {
         return requireResult(infosHandle, RegistryInfosPoint.ID);
     }

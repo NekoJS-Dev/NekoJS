@@ -25,6 +25,7 @@ import com.tkisor.nekojs.probe.ProbeBackend;
 import com.tkisor.nekojs.probe.ProbeBackendRegistry;
 import com.tkisor.nekojs.probe.ProbeBackendSelector;
 import com.tkisor.nekojs.probe.ProbeCoordinator;
+import com.tkisor.nekojs.stage.StageCommandsHelper;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.network.chat.ClickEvent;
@@ -33,7 +34,6 @@ import net.minecraft.network.chat.HoverEvent;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.item.crafting.RecipeManager;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
 import net.neoforged.neoforge.network.PacketDistributor;
 
@@ -42,10 +42,12 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
+/** Registers the {@code /nekojs} command tree (reload, errors, dump, and inspection subcommands). */
 public final class NekoJSCommands {
 
     private NekoJSCommands() {}
 
+    /** Registers all {@code /nekojs} commands onto the Brigadier dispatcher. */
     public static void register(RegisterCommandsEvent event, NekoRuntimeRoot root) {
         CommandDispatcher<CommandSourceStack> dispatcher = event.getDispatcher();
 
@@ -85,9 +87,10 @@ public final class NekoJSCommands {
                                         return 0;
                                     }
                                     NekoRuntimeRoot.ErrorSnapshot errors = root.errors();
-                                    if (errors.count() > 0 || source.getEntity() instanceof ServerPlayer) {
-                                        ServerPlayer player = source.getPlayerOrException();
+                                    if (source.getEntity() instanceof ServerPlayer player) {
                                         PacketDistributor.sendToPlayer(player, new ShowErrorListPacket(errorSnapshot(errors)));
+                                    } else if (errors.count() > 0) {
+                                        source.sendFailure(NekoErrorUIHelper.getErrorComponent(errors.count()));
                                     } else {
                                         source.sendSuccess(() -> Component.translatable("nekojs.command.error.none"), false);
                                     }
@@ -102,6 +105,8 @@ public final class NekoJSCommands {
                         .then(Commands.literal("trust")
                                 .then(Commands.argument("address", AddressArgument.address())
                                         .executes(context -> trustServer(context.getSource(), AddressArgument.getAddress(context, "address")))))
+
+                        .then(StageCommandsHelper.buildStagesLiteral())
 
                         .then(probeCommand(root)),
                 NeoForgeInformationCommands::containedFluid
@@ -243,11 +248,13 @@ public final class NekoJSCommands {
             });
             return 1;
         }
+        IRecipeManagerExtension.ReplayObservation replay = type == ScriptType.SERVER
+                ? observeRecipeReplay(source) : () -> false;
         var result = root.reloadPack(type, selector);
         int outcome = reportPackReload(source, result);
-        if (result.success() && type == ScriptType.SERVER) {
-            try { applyRecipeScripts(source); }
-            catch (Exception failure) { source.sendFailure(Component.translatable("nekojs.command.packs.post_reload_failed", failure.getMessage())); return 0; }
+        if (result.success() && type == ScriptType.SERVER && !result.affected().isEmpty() && !replay.succeeded()) {
+            source.sendFailure(Component.translatable("nekojs.command.packs.post_reload_failed", "Recipe replay did not complete."));
+            return 0;
         }
         return outcome;
     }
@@ -389,12 +396,14 @@ public final class NekoJSCommands {
             if (type == ScriptType.CLIENT && com.tkisor.nekojs.client.ClientReloadExecutor.isClientDist()) {
                 return scheduleClientReload(source, type, root, null);
             }
-            reloadResult = root.reload(type);
+            IRecipeManagerExtension.ReplayObservation replay = type == ScriptType.SERVER
+                    ? observeRecipeReplay(source) : () -> false;
             // Re-applies recipe scripts after a SERVER script reload (NeoForge recipe hot reload)
+            reloadResult = root.reload(type);
             boolean recipeBroadcast = false;
-            if (type == ScriptType.SERVER) {
+            if (type == ScriptType.SERVER && reloadResult.success()) {
                 try {
-                    recipeBroadcast = applyRecipeScripts(source);
+                    recipeBroadcast = replay.succeeded();
                     // SERVER domain plans are committed with the generation before platform follow-up.
                     MinecraftServer server = source.getServer();
                     var packs = com.tkisor.nekojs.core.pack.ScriptPackRegistry.get().enabledPacks();
@@ -405,6 +414,9 @@ public final class NekoJSCommands {
                 } catch (Exception postReloadFailure) {
                     return reportPostReloadFailure(source, root, reloadResult,
                             "recipe/pack processing", postReloadFailure);
+                }
+                if (!recipeBroadcast) {
+                    return reportPostReloadFailure(source, root, reloadResult, "recipe replay", null);
                 }
             }
             // Recipe reload has its own broadcast; report the committed generation as well.
@@ -511,15 +523,12 @@ public final class NekoJSCommands {
      * cached baseJsons, reruns the recipe scripts, and re-parses the recipe JSON they add,
      * change or remove into the RecipeManager's recipes.
      */
-    private static boolean applyRecipeScripts(CommandSourceStack source) {
-        MinecraftServer server = source.getServer();
-        if (server == null) return false;
-        RecipeManager recipeManager = server.getRecipeManager();
-        if (recipeManager instanceof IRecipeManagerExtension ext) {
-            ext.nekojs$applyScripts();
-            return true;
+    private static IRecipeManagerExtension.ReplayObservation observeRecipeReplay(CommandSourceStack source) {
+        var server = source.getServer();
+        if (server != null && server.getRecipeManager() instanceof IRecipeManagerExtension extension) {
+            return extension.nekojs$observeScriptReplays();
         }
-        return false;
+        return () -> false;
     }
 
     private static int reloadFile(CommandSourceStack source, ScriptType type, String filePath, NekoRuntimeRoot root) {
@@ -665,55 +674,81 @@ public final class NekoJSCommands {
                 .map(b -> b.languageId() + ":" + b.name())
                 .collect(Collectors.joining(", "));
         source.sendSystemMessage(Component.literal("Generating probe (" + names + ")..."));
-        boolean allOk = true;
 
+        final com.tkisor.nekojs.api.catalog.NekoScriptCatalogSnapshot snapshot;
         try {
-            var snapshot = NekoScriptCatalog.snapshot(NekoRuntimeAccess.get());
-            List<ProbeBackend.GenerateResult> results = ProbeCoordinator.run(snapshot, request);
-
-            int totalFiles = 0;
-            long maxMs = 0;
-            for (ProbeBackend.GenerateResult r : results) {
-                if (r.success()) {
-                    totalFiles += r.filesGenerated();
-                    maxMs = Math.max(maxMs, r.durationMs());
-                    for (String w : r.warnings()) {
-                        source.sendSystemMessage(Component.literal("  warning: " + w));
-                    }
-                } else {
-                    allOk = false;
-                    source.sendFailure(Component.literal("  backend failed: " + r.message()));
-                }
-            }
-            if (allOk) {
-                final int tf = totalFiles;
-                final long ms = maxMs;
-                source.sendSuccess(() -> Component.literal(
-                        "Probe generated: " + tf + " files in " + ms + "ms"), false);
-                // Shows the output directory relative to the game directory: the question users ask most
-                // is where the files went.
-                String dirs = results.stream()
-                        .map(ProbeBackend.GenerateResult::outputDir)
-                        .filter(java.util.Objects::nonNull)
-                        .map(d -> {
-                            try {
-                                return NekoJSPaths.get().gameDir().relativize(d).toString();
-                            } catch (IllegalArgumentException e) {
-                                return d.toString();
-                            }
-                        })
-                        .distinct()
-                        .collect(Collectors.joining(", "));
-                if (!dirs.isEmpty()) {
-                    source.sendSystemMessage(Component.literal("  Output: " + dirs));
-                }
-            }
+            snapshot = NekoScriptCatalog.snapshot(NekoRuntimeAccess.get());
         } catch (Exception e) {
             NekoJS.LOGGER.error("Probe generation failed", e);
             source.sendFailure(Component.literal("Probe generation failed: " + e.getMessage()));
             return 0;
         }
-        return allOk ? 1 : 0;
+
+        MinecraftServer server = source.getServer();
+        if (server == null) {
+            try {
+                return reportProbeResults(source, ProbeCoordinator.run(snapshot, request)) ? 1 : 0;
+            } catch (Exception e) {
+                NekoJS.LOGGER.error("Probe generation failed", e);
+                source.sendFailure(Component.literal("Probe generation failed: " + e.getMessage()));
+                return 0;
+            }
+        }
+
+        CompletableFuture.supplyAsync(() -> ProbeCoordinator.run(snapshot, request))
+                .whenComplete((results, error) -> server.execute(() -> {
+                    if (error != null) {
+                        Throwable cause = error instanceof java.util.concurrent.CompletionException ce && ce.getCause() != null
+                                ? ce.getCause() : error;
+                        NekoJS.LOGGER.error("Probe generation failed", cause);
+                        source.sendFailure(Component.literal("Probe generation failed: " + cause.getMessage()));
+                        return;
+                    }
+                    reportProbeResults(source, results);
+                }));
+        return 1;
+    }
+
+    private static boolean reportProbeResults(CommandSourceStack source, List<ProbeBackend.GenerateResult> results) {
+        boolean allOk = true;
+        int totalFiles = 0;
+        long maxMs = 0;
+        for (ProbeBackend.GenerateResult r : results) {
+            if (r.success()) {
+                totalFiles += r.filesGenerated();
+                maxMs = Math.max(maxMs, r.durationMs());
+                for (String w : r.warnings()) {
+                    source.sendSystemMessage(Component.literal("  warning: " + w));
+                }
+            } else {
+                allOk = false;
+                source.sendFailure(Component.literal("  backend failed: " + r.message()));
+            }
+        }
+        if (allOk) {
+            final int tf = totalFiles;
+            final long ms = maxMs;
+            source.sendSuccess(() -> Component.literal(
+                    "Probe generated: " + tf + " files in " + ms + "ms"), false);
+            // Shows the output directory relative to the game directory: the question users ask most
+            // is where the files went.
+            String dirs = results.stream()
+                    .map(ProbeBackend.GenerateResult::outputDir)
+                    .filter(java.util.Objects::nonNull)
+                    .map(d -> {
+                        try {
+                            return NekoJSPaths.get().gameDir().relativize(d).toString();
+                        } catch (IllegalArgumentException e) {
+                            return d.toString();
+                        }
+                    })
+                    .distinct()
+                    .collect(Collectors.joining(", "));
+            if (!dirs.isEmpty()) {
+                source.sendSystemMessage(Component.literal("  Output: " + dirs));
+            }
+        }
+        return allOk;
     }
 
     private static int listProbeBackends(CommandSourceStack source) {

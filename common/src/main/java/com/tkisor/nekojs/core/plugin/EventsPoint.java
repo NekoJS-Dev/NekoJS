@@ -72,14 +72,19 @@ public final class EventsPoint {
     }
 
     /** Extension point definition, registered by the {@link NekoBuiltinPointsPlugin} manifest. */
-    public static final NekoPluginExtensionPoint<NekoJSPlugin, EventGroupRegistry, Map<String, EventGroup>> POINT = point(plugin -> null);
+    public static final NekoPluginExtensionPoint<NekoJSPlugin, EventGroupRegistry, Map<String, EventGroup>> POINT =
+            point(plugin -> PluginOwnerIds.resolve(null, plugin));
 
     static NekoPluginExtensionPoint<NekoJSPlugin, EventGroupRegistry, Map<String, EventGroup>> point(
-            java.util.function.Function<NekoJSPlugin, String> owners) {
+            java.util.function.Function<NekoJSPlugin, String> ownerResolver) {
         return NekoPluginExtensionPoint.<NekoJSPlugin, EventGroupRegistry, Map<String, EventGroup>>builder(ID, NekoJSPlugin.class)
                     .merge(MergePolicy.failFast())
                     .initializer(context -> new EventGroupRegistry.Impl())
-                    .collector((plugin, registry) -> plugin.registerEvents(((EventGroupRegistry.Impl) registry).scopedTo(owners.apply(plugin))))
+                    .collector((plugin, accumulator) -> {
+                        String owner = PluginOwnerIds.resolve(
+                                ownerResolver != null ? ownerResolver.apply(plugin) : null, plugin);
+                        plugin.registerEvents(((EventGroupRegistry.Impl) accumulator).scopedTo(owner));
+                    })
                     .finish(EventsPoint::freezeEventGroups)
                     .build();
     }

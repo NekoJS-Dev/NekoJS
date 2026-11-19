@@ -2,6 +2,7 @@ package com.tkisor.nekojs.fabric;
 
 import com.tkisor.nekojs.api.inject.EntityPDataStore;
 import com.tkisor.nekojs.api.inject.NekoEntityPData;
+import com.tkisor.nekojs.fabric.event.FabricServerEventBindings;
 import com.tkisor.nekojs.network.PDataSyncPacket;
 import com.tkisor.nekojs.wrapper.pdata.PDataSyncService;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
@@ -53,13 +54,9 @@ public final class FabricPDataSync {
                 PDataSyncService.copyPlayerData(original, replacement));
         ServerPlayerEvents.AFTER_RESPAWN.register((original, replacement, alive) ->
                 PDataSyncService.markDirty(replacement));
-        ServerLifecycleEvents.SERVER_STARTING.register(server -> {
-            currentServer = server;
-            PDataSyncService.resetServerState();
-        });
+        ServerLifecycleEvents.SERVER_STARTING.register(FabricPDataSync::bindServer);
         ServerLifecycleEvents.SERVER_STOPPED.register(server -> {
-            currentServer = null;
-            PDataSyncService.resetServerState();
+            if (!FabricServerEventBindings.isStopDeferred(server)) releaseServer(server);
         });
         ServerTickEvents.END_SERVER_TICK.register(FabricPDataSync::flush);
         // Matches NeoForge's EntityLeaveLevelEvent semantics (chunk unload, death, despawn and dimension
@@ -72,6 +69,17 @@ public final class FabricPDataSync {
         });
         ServerEntityEvents.ENTITY_UNLOAD.register(
                 (entity, level) -> PDataSyncService.onEntityRemoved(entity));
+    }
+
+    private static synchronized void bindServer(MinecraftServer server) {
+        PDataSyncService.resetServerState();
+        currentServer = server;
+    }
+
+    public static synchronized void releaseServer(MinecraftServer server) {
+        if (currentServer != server) return;
+        currentServer = null;
+        PDataSyncService.resetServerState();
     }
 
     private static EntityPDataStore.Access fullAccess() {

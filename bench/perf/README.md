@@ -147,10 +147,10 @@ powershell -NoProfile -ExecutionPolicy Bypass -File bench/perf/sample.ps1 -Mode 
 事件名与绑定面以代码为准（2026-09-12 @3400e97e 实读并实测）：
 
 - `ServerEvents.tickPre/tickPost/started/stopped`：`src/main/java/.../bindings/event/ServerEvents.java`
-- `RegistryEvents.register(event => event.item/block/entityType/fluid/creativeModeTab(...))`：
-  `src/main/java/.../wrapper/registry/gen/RegistryEvents.java`
-- 注册 builder 的属性面是 **public 字段**（`b.title = 'x'`、`b.icon = 'y'`、`b.maxStackSize = 16`），
-  动作是方法（`b.add('id')` 单参、`size/spawnEgg/attributes/goals`）；`attributes`/`goals` 的回调
+- 从 `nekojs:event/versioned` 导入 `StartupEvents`，用 `StartupEvents.registry(selector, event => event.create(id, build => { ... }))` 注册；
+  `selector` 为 `item`、`block`、`entity_type`、`fluid` 或 `creative_mode_tab`，见 [StartupEvents.java](../../src/main/java/com/tkisor/nekojs/wrapper/registry/gen/StartupEvents.java)。
+- 注册 builder 使用可写属性（`build.title = 'x'`、`build.icon = 'y'`、`build.maxStackSize = 16`），
+  动作是方法（`build.add('id')` 单参、`size/spawnEgg/attributes/goals`）；`attributes`/`goals` 的回调
   builder 支持链式（返回自身）。把 `title`/`icon` 当方法调用会报错——首轮实测踩过。
 - `ScriptEvents.server(event => event.register('Ns', 'name'))`：`common/.../api/event/ScriptEvents.java`
 - `process.hrtime.bigint()` / `performance.now()` / `process.memoryUsage()`：node shim

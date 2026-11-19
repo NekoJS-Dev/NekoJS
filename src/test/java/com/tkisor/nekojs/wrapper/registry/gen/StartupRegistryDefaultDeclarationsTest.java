@@ -1,73 +1,62 @@
 package com.tkisor.nekojs.wrapper.registry.gen;
+//~ mc_legacy_api
 
-import com.tkisor.nekojs.api.NekoJSPlugin;
 import com.tkisor.nekojs.api.catalog.NekoScriptCatalog;
-import com.tkisor.nekojs.api.contract.ApiContractIdentity;
-import com.tkisor.nekojs.api.contract.ApiContractKind;
-import com.tkisor.nekojs.api.contract.NormativeApiContract;
-import com.tkisor.nekojs.api.contract.VerifiedApiContract;
-import com.tkisor.nekojs.api.contract.VerifiedContractSet;
-import com.tkisor.nekojs.api.surface.ApiVersion;
-import com.tkisor.nekojs.api.plugin.OwnedPlugin;
-import com.tkisor.nekojs.api.plugin.PluginIdentity;
+import com.tkisor.nekojs.api.catalog.NekoScriptCatalogSnapshot;
+import com.tkisor.nekojs.api.catalog.RegistryBuilderSurfaceEntry.EventVariant;
 import com.tkisor.nekojs.core.fs.NekoJSPaths;
-import com.tkisor.nekojs.core.plugin.NekoPluginBootstrap;
-import com.tkisor.nekojs.platform.IModInfo;
-import com.tkisor.nekojs.platform.IPlatform;
-import com.tkisor.nekojs.platform.Platform;
+import com.tkisor.nekojs.probe.EventPayloadDeclarations;
 import com.tkisor.nekojs.probe.ProbeConfig;
 import com.tkisor.nekojs.probe.ProbeContext;
 import com.tkisor.nekojs.probe.ProbeCoordinator;
 import com.tkisor.nekojs.probe.backend.python.PythonProbeBackend;
 import com.tkisor.nekojs.probe.backend.typescript.TypeScriptProbeBackend;
 import com.tkisor.nekojs.probe.ir.TypeReflector;
-import com.tkisor.nekojs.script.prop.ScriptPropertyRegistry;
+import net.minecraft.core.Registry;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceKey;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
-import java.net.URI;
+import java.util.Set;
 import java.util.stream.Collectors;
 
+import static com.tkisor.nekojs.wrapper.registry.gen.StartupRegistryScriptFixture.bootstrap;
+import static com.tkisor.nekojs.wrapper.registry.gen.StartupRegistryScriptFixture.initializePlatform;
 import static org.junit.jupiter.api.Assertions.*;
 
 class StartupRegistryDefaultDeclarationsTest {
     @TempDir Path temporary;
 
-    private static com.tkisor.nekojs.core.plugin.NekoPluginRuntime bootstrapOwned(NekoJSPlugin... plugins) {
-        List<OwnedPlugin> owned = Arrays.stream(plugins).map(plugin -> {
-            String owner = plugin instanceof NekoRegistryPointsPlugin ? "nekojs" : "startup-test-addon";
-            return new OwnedPlugin(new PluginIdentity(owner, plugin.getClass().getName(), URI.create("test:" + owner)), plugin);
-        }).toList();
-        ApiContractIdentity identity = new ApiContractIdentity(
-                "nekojs-core", ApiContractKind.PORTABLE, "portable-core", ApiVersion.parse("0.0.0"));
-        NormativeApiContract contract = new NormativeApiContract(2,
-                new NormativeApiContract.ContractIdentity(
-                        "nekojs-core", ApiContractKind.PORTABLE, "portable-core", ApiVersion.parse("0.0.0")),
-                null, List.of(), List.of(), List.of());
-        VerifiedContractSet contracts = VerifiedContractSet.of(VerifiedApiContract.create(identity, contract,
-                URI.create("test:/nekojs-core"), "nekojs/api-contract/preview", "sha256:preview", "sha256:preview"));
-        return NekoPluginBootstrap.bootstrapOwned(owned, new ScriptPropertyRegistry.Impl(), contracts);
+    private static final ResourceKey<Registry<Object>> BUILDERLESS = ResourceKey.createRegistryKey(
+            Identifier.parse("startup-test-addon:builderless"));
+    private static final ResourceKey<Registry<Object>> METADATA_ONLY = ResourceKey.createRegistryKey(
+            Identifier.parse("startup-test-addon:metadata_only"));
+
+    private static final class DeclarationRegistries implements RegistryInfosPoint.Contributor {
+        @Override
+        public void registerRegistryInfos(RegistryInfosPoint.RegistryInfosCollector collector) {
+            collector.openStartupRegistry(BUILDERLESS);
+            collector.addInfo(new RegistryInfo(METADATA_ONLY, Object.class));
+        }
     }
 
-    private void initializePlatform() {
-        try {
-            Platform.init(new TestPlatform());
-        } catch (IllegalStateException initialized) {
-            assertNotNull(Platform.instance());
-        }
+    private static EventVariant variant(NekoScriptCatalogSnapshot snapshot, String selector) {
+        return EventPayloadDeclarations.resolve(snapshot.events(), snapshot.registryBuilderSurfaces())
+                .get(RegistryEventJS.class).variants().stream().filter(entry -> entry.selectors().contains(selector))
+                .findFirst().orElseThrow();
     }
 
 //? if neoforge {
     @Test
     void nestedItemDeclarationKeepsOneNullableCallableProperty() throws Exception {
-        initializePlatform();
-        var runtime = bootstrapOwned(new NekoRegistryPointsPlugin());
+        var runtime = bootstrap(new NekoRegistryPointsPlugin());
         var snapshot = NekoScriptCatalog.snapshot(runtime);
         String manual = com.tkisor.nekojs.probe.backend.typescript.RegistryBuilderTsRenderer
                 .render(snapshot.registryBuilderSurfaces());
@@ -86,7 +75,7 @@ class StartupRegistryDefaultDeclarationsTest {
     @Test
     void nestedItemCallbackPropertyAndNullWritesUseTheRestrictedRuntimeSurface() {
         initializePlatform();
-        var block = new BlockBuilder(net.minecraft.resources.Identifier.parse("test:manual_item"));
+        var block = new BlockBuilder(Identifier.parse("test:manual_item"));
         try (var context = graal.graalvm.polyglot.Context.newBuilder("js")
                 .allowHostAccess(new com.tkisor.nekojs.core.NekoSharedHostAccess(List.of()).get())
                 .allowHostClassLookup(name -> false).build()) {
@@ -108,7 +97,7 @@ class StartupRegistryDefaultDeclarationsTest {
     @Test
     void nestedFoodCallbackAcceptsDeclaredStringIdsWithoutANodeSpecificAdapter() {
         initializePlatform();
-        var item = new ItemBuilder(net.minecraft.resources.Identifier.parse("test:food_callback"));
+        var item = new ItemBuilder(Identifier.parse("test:food_callback"));
         try (var context = graal.graalvm.polyglot.Context.newBuilder("js")
                 .allowHostAccess(new com.tkisor.nekojs.core.NekoSharedHostAccess(List.of()).get())
                 .allowHostClassLookup(name -> false).build()) {
@@ -126,58 +115,59 @@ class StartupRegistryDefaultDeclarationsTest {
 
     @Test
     void contributedFactoriesSelectTheirOwnBuilderTypesAndRetainUntypedRoutes() {
-        initializePlatform();
         RegistryTypesPoint.Contributor addon = new RegistryTypesPoint.Contributor() {
             @Override
             public void registerRegistryTypes(RegistryTypesPoint.RegistryTypesCollector collector) {
-                collector.registerType(net.minecraft.core.registries.Registries.SOUND_EVENT, "variant",
+                collector.registerType(Registries.SOUND_EVENT, "variant",
                         VariantSoundBuilder.class, VariantSoundBuilder::new);
-                collector.registerType(net.minecraft.core.registries.Registries.VILLAGER_TYPE, "opaque", VillagerTypeBuilder::new);
-                collector.setDefault(net.minecraft.core.registries.Registries.VILLAGER_TYPE, "opaque");
+                collector.registerType(Registries.VILLAGER_TYPE, "opaque", VillagerTypeBuilder::new);
+                collector.setDefault(Registries.VILLAGER_TYPE, "opaque");
             }
         };
-        var runtime = bootstrapOwned(new NekoRegistryPointsPlugin(), addon);
+        var runtime = bootstrap(new NekoRegistryPointsPlugin(), addon);
         var snapshot = NekoScriptCatalog.snapshot(runtime);
-        var payload = com.tkisor.nekojs.probe.EventPayloadDeclarations.resolve(snapshot.events(), snapshot.registryBuilderSurfaces())
-                .get(RegistryEventJS.class);
-        List<String> signatures = payload.members().stream().map(member -> member.tsType()).toList();
-        assertTrue(signatures.contains("soundEvent(id: string, typeName: \"variant\", build: (build: NekoStartupBuilders.VariantSoundBuilder) => void): NekoStartupBuilders.VariantSoundBuilder"));
-        assertTrue(signatures.contains("custom(id: string, typeName: \"variant\", build: (build: NekoStartupBuilders.VariantSoundBuilder) => void): NekoStartupBuilders.VariantSoundBuilder"));
-        assertTrue(signatures.contains("villagerType(id: string, build: (build: any) => void): any"));
-        assertTrue(signatures.contains("villagerType(id: string, typeName: \"opaque\", build: (build: any) => void): any"));
-        assertTrue(signatures.contains("soundEvent(id: string, typeName: string, build: (build: any) => void): any"));
-        assertTrue(payload.members().stream().anyMatch(member -> member.pyType().equals(
-                "def soundEvent(self, id: str, typeName: str, build: Callable[[Any], None]) -> Any: ...")));
-        assertFalse(signatures.stream().anyMatch(signature -> signature.startsWith("custom(id: string, typeName: \"basic\"")));
+        var sound = variant(snapshot, "sound_event");
+        var villager = variant(snapshot, "villager_type");
+        assertTrue(sound.members().stream().anyMatch(member -> member.tsType().equals(
+                "create(id: string, typeName: \"variant\", build: (build: NekoStartupBuilders.VariantSoundBuilder) => void): NekoStartupBuilders.VariantSoundBuilder")));
+        assertTrue(sound.members().stream().anyMatch(member -> member.pyType().equals(
+                "def create(self, id: str, typeName: Literal[\"variant\"], build: Callable[[VariantSoundBuilder], None]) -> VariantSoundBuilder: ...")));
+        assertFalse(sound.members().stream().anyMatch(member -> member.tsType().contains("typeName: string")));
+        assertFalse(villager.members().stream().anyMatch(member -> member.tsType().contains("VariantSoundBuilder")));
+        List<String> signatures = villager.members().stream().map(member -> member.tsType()).toList();
+        assertTrue(signatures.contains("create(id: string, build: (build: any) => void): any"));
+        assertTrue(signatures.contains("create(id: string, typeName: \"opaque\", build: (build: any) => void): any"));
         assertTrue(snapshot.registryBuilderSurfaces().stream().noneMatch(entry -> entry.typeName().equals("opaque")));
     }
 
     @Test
-    void startupProxyCallsKeepRequiredCallbacksAmbiguityAndDeferredSupplierSemantics() {
+    void startupProxyCallsKeepRequiredCallbacksAndDeferredSupplierSemantics() {
         initializePlatform();
-        bootstrapOwned(new NekoRegistryPointsPlugin());
-        var event = RegistryEventJS.create(new RegistryRepository(), "restricted-startup-test");
+        bootstrap(new NekoRegistryPointsPlugin());
+        var event = new RegistryEventJS(new RegistryRepository(), "restricted-startup-test", Registries.SOUND_EVENT,
+                NekoRegistryPointsPlugin.registryTypes());
         try (var context = graal.graalvm.polyglot.Context.newBuilder("js")
                 .allowHostAccess(new com.tkisor.nekojs.core.NekoSharedHostAccess(List.of()).get())
                 .allowHostClassLookup(name -> false).build()) {
             context.getBindings("js").putMember("event", event);
             assertTrue(context.eval("js", """
-                    const sound = event.soundEvent('test:default', build => { build.fixedRange = null; });
-                    const named = event.soundEvent('test:named', 'basic', build => { build.setFixedRange(null); });
+                    const sound = event.create('test:default', build => { build.fixedRange = null; });
+                    const named = event.create('test:named', 'basic', build => { build.setFixedRange(null); });
                     let supplierCalls = 0;
-                    const supplied = event.register('minecraft:sound_event', 'test:supplier', () => { supplierCalls++; return null; });
+                    const supplied = event.createCustom('test:supplier', () => { supplierCalls++; return null; });
                     typeof sound === 'object' && typeof named === 'object' &&
                         typeof supplied === 'object' && supplierCalls === 0
                     """).asBoolean());
-            assertThrows(RuntimeException.class, () -> context.eval("js", "event.soundEvent('test:missing')"));
-            assertThrows(RuntimeException.class, () -> context.eval("js", "event.soundEvent('test:null', null)"));
-            assertThrows(RuntimeException.class, () -> context.eval("js", "event.custom('test:ambiguous', 'basic', build => {})"));
-            assertThrows(RuntimeException.class, () -> context.eval("js", "event.create('test:host_factory', build => {})"));
+            assertThrows(RuntimeException.class, () -> context.eval("js", "event.create('test:missing')"));
+            assertThrows(RuntimeException.class, () -> context.eval("js", "event.create('test:null', null)"));
+            assertThrows(RuntimeException.class, () -> context.eval("js", "event.createCustom('test:bad_supplier', 1)"));
+            assertTrue(context.eval("js", "typeof event.soundEvent === 'undefined' && typeof event.custom === 'undefined' "
+                    + "&& typeof event.register === 'undefined' && typeof event.registryName === 'undefined'").asBoolean());
         }
     }
 
     public static final class VariantSoundBuilder extends RegistryObjectBuilder<net.minecraft.sounds.SoundEvent> {
-        public VariantSoundBuilder(net.minecraft.resources.Identifier id) { super(id); }
+        public VariantSoundBuilder(Identifier id) { super(id); }
         public int getVolume() { return 1; }
         public void setVolume(int volume) {}
         @Override public net.minecraft.sounds.SoundEvent build() { return new SoundEventBuilder(id).build(); }
@@ -189,46 +179,110 @@ class StartupRegistryDefaultDeclarationsTest {
         RegistryTypesPoint.Contributor addon = new RegistryTypesPoint.Contributor() {
             @Override
             public void registerRegistryTypes(RegistryTypesPoint.RegistryTypesCollector collector) {
-                collector.registerType(net.minecraft.core.registries.Registries.SOUND_EVENT, "basic", VariantSoundBuilder::new);
+                collector.registerType(Registries.SOUND_EVENT, "basic", VariantSoundBuilder::new);
             }
         };
-        var runtime = bootstrapOwned(new NekoRegistryPointsPlugin(), addon);
+        var runtime = bootstrap(new NekoRegistryPointsPlugin(), addon);
         var types = NekoRegistryPointsPlugin.registryTypes();
-        var soundRegistry = net.minecraft.core.registries.Registries.SOUND_EVENT;
+        var soundRegistry = Registries.SOUND_EVENT;
         assertInstanceOf(VariantSoundBuilder.class, types.defaultType(soundRegistry)
-                .apply(net.minecraft.resources.Identifier.parse("test:overridden")));
+                .apply(Identifier.parse("test:overridden")));
         assertFalse(types.builderClassesOf(soundRegistry).containsKey("basic"),
                 "An untyped replacement factory must discard the previous factory's class metadata");
         var snapshot = NekoScriptCatalog.snapshot(runtime);
-        var payload = com.tkisor.nekojs.probe.EventPayloadDeclarations.resolve(snapshot.events(), snapshot.registryBuilderSurfaces())
-                .get(RegistryEventJS.class);
-        List<String> signatures = payload.members().stream().map(member -> member.tsType()).toList();
-        assertTrue(signatures.contains("soundEvent(id: string, build: (build: any) => void): any"));
-        assertTrue(signatures.contains("soundEvent(id: string, typeName: \"basic\", build: (build: any) => void): any"));
-        assertTrue(payload.members().stream().filter(member -> member.name().equals("soundEvent"))
+        var sound = variant(snapshot, "sound_event");
+        List<String> signatures = sound.members().stream().map(member -> member.tsType()).toList();
+        assertTrue(signatures.contains("create(id: string, build: (build: any) => void): any"));
+        assertTrue(signatures.contains("create(id: string, typeName: \"basic\", build: (build: any) => void): any"));
+        assertTrue(sound.members().stream().filter(member -> member.name().equals("create"))
                 .allMatch(member -> member.pyType().contains("Callable[[Any], None]) -> Any")));
     }
 
     @Test
     void realPluginAndDefaultCollectorExposeTheProxyContractInBothBackends() throws Exception {
-        initializePlatform();
-        var runtime = bootstrapOwned(new NekoRegistryPointsPlugin());
+        var runtime = bootstrap(new NekoRegistryPointsPlugin(), new DeclarationRegistries());
         var snapshot = NekoScriptCatalog.snapshot(runtime);
         assertTrue(snapshot.manualDeclarations().stream().noneMatch(entry -> entry.id().equals("nekojs.registry")));
         var entries = snapshot.registryBuilderSurfaces();
         assertFalse(entries.isEmpty());
         assertTrue(entries.stream().allMatch(entry -> entry.eventPayload() != null),
-                "The real type_docs producer must associate STARTUP proxy members with their event");
-        var payloads = com.tkisor.nekojs.probe.EventPayloadDeclarations.resolve(snapshot.events(), entries);
-        var payload = payloads.get(RegistryEventJS.class);
-        assertNotNull(payload);
-        var event = RegistryEventJS.create(new RegistryRepository(), "declaration-test");
-        assertEquals(Arrays.stream((Object[]) event.getMemberKeys()).map(Object::toString).collect(Collectors.toSet()),
-                payload.members().stream().map(member -> member.name()).collect(Collectors.toSet()));
-        assertFalse(payload.members().stream().anyMatch(member -> member.name().equals("create") || member.name().equals("paintingVariant")));
-        var sugarNames = payload.members().stream().map(member -> member.name()).distinct()
-                .filter(name -> !name.equals("custom") && !name.equals("register")).toList();
-        assertEquals(sugarNames.stream().sorted().toList(), sugarNames);
+                "The real type docs producer associates STARTUP proxy members with their event");
+        var item = variant(snapshot, "item");
+        assertEquals(List.of("item", "minecraft:item"), item.selectors());
+        assertEquals("StartupRegistryEvent_item", item.typeName());
+        var builderless = variant(snapshot, "startup-test-addon:builderless");
+        assertEquals(List.of("startup-test-addon:builderless"), builderless.selectors());
+        assertEquals(List.of("createCustom"), builderless.members().stream().map(member -> member.name()).toList());
+        assertRuntimeMembersMatch(item, Registries.ITEM);
+        assertRuntimeMembersMatch(builderless, BUILDERLESS);
+        var declarations = renderDeclarations(snapshot);
+        var ts = declarations.typescript();
+        var py = declarations.python();
+        String tsEvents = ts.get("@side-only/startup/bindings/api-modules.d.ts");
+        assertNotNull(tsEvents);
+        assertTrue(tsEvents.contains("nekojs:event/versioned"), tsEvents);
+        assertTrue(tsEvents.contains("export namespace StartupEvents"), tsEvents);
+        assertFalse(tsEvents.contains("$RegistryEventJS"), tsEvents);
+        assertFalse(ts.values().stream().anyMatch(file -> file.matches("(?s).*\\bRegistryEvents\\b.*")));
+        assertFalse(py.values().stream().anyMatch(file -> file.matches("(?s).*\\bRegistryEvents\\b.*")));
+        String pyEvents = py.get("nekojs/_modules/startup/event/versioned/__init__.pyi");
+        assertNotNull(pyEvents);
+        assertTrue(pyEvents.contains("StartupEvents:"), pyEvents);
+        assertFalse(py.getOrDefault("nekojs/_events/startup/__init__.pyi", "").contains("StartupEvents"));
+        assertFalse(ts.getOrDefault("@side-only/startup/events/index.d.ts", "").contains("StartupEvents"));
+        String tsFlat = tsEvents.replaceAll("\\s+", " ");
+        String pyFlat = pyEvents.replaceAll("\\s+", " ");
+        assertTrue(tsFlat.contains("selector: \"item\" | \"minecraft:item\", handler: ((event: StartupRegistryEvent_item) => void)"), tsEvents);
+        assertTrue(tsFlat.contains("priority: \"HIGHEST\" | \"HIGH\" | \"NORMAL\" | \"LOW\" | \"LOWEST\", selector: \"item\" | \"minecraft:item\""), tsEvents);
+        assertFalse(tsFlat.matches(".*function registry\\(\\s*handler:.*"), tsEvents);
+        assertFalse(tsFlat.contains("selector: string"), tsEvents);
+        assertTrue(tsFlat.contains("selector: \"startup-test-addon:builderless\", handler: ((event: " + builderless.typeName() + ") => void)"), tsEvents);
+        assertFalse(tsEvents.contains("startup-test-addon:metadata_only"), tsEvents);
+        assertTrue(tsFlat.contains("interface " + builderless.typeName()
+                + " { createCustom(id: string, supplier: () => unknown): any; }"), tsEvents);
+        assertTrue(tsEvents.contains("create(id: string, build: (build: NekoStartupBuilders.ItemBuilder) => void): NekoStartupBuilders.ItemBuilder;"), tsEvents);
+        assertTrue(tsEvents.contains("create(id: string, typeName: \"basic\", build: (build: NekoStartupBuilders.ItemBuilder) => void)"), tsEvents);
+        assertTrue(pyEvents.contains("class StartupRegistryEvent_item(Protocol):"), pyEvents);
+        assertTrue(pyFlat.contains("selector: Literal[\"item\", \"minecraft:item\"]"), pyEvents);
+        assertTrue(pyFlat.contains("priority: _EventPriority, selector: Literal[\"item\", \"minecraft:item\"]"), pyEvents);
+        assertFalse(pyFlat.contains("def registry(self, handler:"), pyEvents);
+        assertFalse(pyEvents.contains("selector: str"), pyEvents);
+        assertTrue(pyEvents.contains("selector: Literal[\"startup-test-addon:builderless\"]"), pyEvents);
+        assertFalse(pyEvents.contains("startup-test-addon:metadata_only"), pyEvents);
+        assertTrue(pyFlat.contains("class " + builderless.typeName() + "(Protocol): def createCustom(self, id: str, supplier: Callable[[], Any]) -> Any: ..."), pyEvents);
+        assertTrue(pyEvents.contains("    @overload\n    def create(self, id: str, build: Callable[[ItemBuilder], None]) -> ItemBuilder: ..."), pyEvents);
+        assertTrue(pyEvents.contains("typeName: Literal[\"basic\"], build: Callable[[ItemBuilder], None]"), pyEvents);
+        assertTrue(ts.get("@event-builders/index.d.ts").contains("declare namespace NekoStartupBuilders {"));
+        assertFalse(ts.getOrDefault("@manual/index.d.ts", "").contains("interface SoundEventBuilder"));
+        assertTrue(ts.get("@registry-builders/index.d.ts").contains("interface SoundEventBuilder"));
+        if (entries.stream().anyMatch(entry -> entry.builderName().equals("ItemBuilder"))) {
+            String builders = ts.get("@event-builders/index.d.ts");
+            assertTrue(builders.contains("(build: FoodBuilder) => void"), builders);
+            assertTrue(builders.contains("nutrition(nutrition: number): FoodBuilder;"), builders);
+            assertTrue(builders.contains("buildFood(): any;"), builders);
+            assertTrue(builders.contains("groupTab: string | null;"), builders);
+            assertTrue(py.get("nekojs/_registry_builders/__init__.pyi").contains("Callable[[FoodBuilder], None]"));
+        }
+        var selectors = EventPayloadDeclarations.resolve(snapshot.events(), entries).get(RegistryEventJS.class)
+                .variants().stream().flatMap(entry -> entry.selectors().stream()).collect(Collectors.toSet());
+        assertFalse(selectors.contains("minecraft:enchantment"));
+//? if neoforge {
+        assertTrue(selectors.contains("minecraft:fluid"));
+//?} else {
+        /*assertFalse(selectors.contains("minecraft:fluid"));
+         *///?}
+        String capture = System.getenv("NEKO_STARTUP_DECLARATION_CAPTURE");
+        if (capture != null) {
+            Path nodeRoot = Path.of(capture).resolve(Path.of("").toAbsolutePath().getFileName());
+            var defaults = renderDeclarations(NekoScriptCatalog.snapshot(bootstrap(new NekoRegistryPointsPlugin())));
+            capture(nodeRoot.resolve("typescript"), defaults.typescript());
+            capture(nodeRoot.resolve("python"), defaults.python());
+        }
+    }
+
+    private record Declarations(Map<String, String> typescript, Map<String, String> python) {}
+
+    private Declarations renderDeclarations(NekoScriptCatalogSnapshot snapshot) throws Exception {
         var config = ProbeConfig.defaultConfig();
         var classes = List.copyOf(ProbeCoordinator.collectClasses(snapshot, config));
         assertTrue(classes.contains(RegistryEventJS.class));
@@ -240,47 +294,7 @@ class StartupRegistryDefaultDeclarationsTest {
                 "typescript", temporary.resolve("typescript"), declarations));
         var py = new PythonProbeBackend().render(new ProbeContext.Of(snapshot, classes, config, paths,
                 "python", temporary.resolve("python"), declarations));
-        String tsEvents = ts.get("@side-only/startup/bindings/api-modules.d.ts");
-        assertNotNull(tsEvents);
-        assertTrue(tsEvents.contains("nekojs:event/versioned"), tsEvents);
-        assertFalse(ts.getOrDefault("@side-only/startup/events/index.d.ts", "").contains("RegistryEvents"));
-        assertFalse(py.getOrDefault("nekojs/__init__.pyi", "").contains("RegistryEvents"));
-        String pyEvents = py.get("nekojs/_events/startup/__init__.pyi");
-        assertTrue(tsEvents.contains("event: StartupRegistryEvent"), tsEvents);
-        assertFalse(tsEvents.contains("$RegistryEventJS"), tsEvents);
-        assertTrue(tsEvents.contains("soundEvent(id: string, build: (build: NekoStartupBuilders.SoundEventBuilder) => void): NekoStartupBuilders.SoundEventBuilder;"), tsEvents);
-        assertTrue(tsEvents.contains("typeName: \"basic\", build: (build: NekoStartupBuilders.SoundEventBuilder) => void"), tsEvents);
-        assertTrue(tsEvents.contains("register(registry: string, id: string, supplier: () => unknown): any;"), tsEvents);
-        assertTrue(pyEvents.contains("class StartupRegistryEvent(Protocol):"), pyEvents);
-        assertTrue(pyEvents.contains("    @overload\n    def soundEvent(self, id: str, build: Callable[[SoundEventBuilder], None]) -> SoundEventBuilder: ..."), pyEvents);
-        assertTrue(pyEvents.contains("typeName: Literal[\"basic\"], build: Callable[[SoundEventBuilder], None]"), pyEvents);
-        assertTrue(pyEvents.contains("Literal"), pyEvents);
-        assertTrue(ts.get("@event-builders/index.d.ts").contains("declare namespace NekoStartupBuilders {"));
-        String sugarDeclaration = ts.get("@event-builders/index.d.ts").lines()
-                .filter(line -> line.contains("type RegistrySugar =")).findFirst().orElseThrow();
-        for (String sugar : sugarNames) {
-            assertTrue(sugarDeclaration.contains("\"" + sugar + "\""), sugarDeclaration);
-        }
-        assertFalse(sugarDeclaration.contains("\"custom\"") || sugarDeclaration.contains("\"register\""));
-        assertFalse(ts.getOrDefault("@manual/index.d.ts", "").contains("interface SoundEventBuilder"));
-        assertTrue(ts.get("@registry-builders/index.d.ts").contains("interface SoundEventBuilder"));
-        if (entries.stream().anyMatch(entry -> entry.builderName().equals("ItemBuilder"))) {
-            String builders = ts.get("@event-builders/index.d.ts");
-            assertTrue(builders.contains("(build: FoodBuilder) => void"), builders);
-            assertTrue(builders.contains("nutrition(nutrition: number): FoodBuilder;"), builders);
-            assertTrue(builders.contains("buildFood(): any;"), builders);
-            assertTrue(builders.contains("groupTab: string | null;"), builders);
-            assertTrue(py.get("nekojs/_registry_builders/__init__.pyi").contains("Callable[[FoodBuilder], None]"));
-        }
-        boolean fluid = entries.stream().anyMatch(entry -> entry.builderName().equals("FluidBuilder"));
-        assertEquals(fluid ? 11 : 10, payload.members().stream().map(member -> member.name()).distinct()
-                .filter(name -> !name.equals("custom") && !name.equals("register")).count());
-        String capture = System.getenv("NEKO_STARTUP_DECLARATION_CAPTURE");
-        if (capture != null) {
-            Path nodeRoot = Path.of(capture).resolve(Path.of("").toAbsolutePath().getFileName());
-            capture(nodeRoot.resolve("typescript"), ts);
-            capture(nodeRoot.resolve("python"), py);
-        }
+        return new Declarations(ts, py);
     }
 
     private static void capture(Path root, Map<String, String> files) throws Exception {
@@ -291,14 +305,10 @@ class StartupRegistryDefaultDeclarationsTest {
         }
     }
 
-    private final class TestPlatform implements IPlatform {
-        public boolean isClient() { return false; }
-        public boolean isDevelopment() { return true; }
-        public String getMcVersion() { return "0.0.0"; }
-        public Path getGameDir() { return temporary; }
-        public Map<String, IModInfo> getMods() { return Map.of(); }
-        public IModInfo getInfo(String modId) { return null; }
-        public String getLoaderId() { return "test"; }
-        public String getLoaderVersion() { return "0.0.0"; }
+    private static void assertRuntimeMembersMatch(EventVariant variant, ResourceKey<? extends Registry<?>> key) {
+        var event = new RegistryEventJS(new RegistryRepository(), "declaration-test", key,
+                NekoRegistryPointsPlugin.registryTypes());
+        Set<String> runtimeMembers = Set.of((String[]) event.getMemberKeys());
+        assertEquals(runtimeMembers, variant.members().stream().map(member -> member.name()).collect(Collectors.toSet()));
     }
 }

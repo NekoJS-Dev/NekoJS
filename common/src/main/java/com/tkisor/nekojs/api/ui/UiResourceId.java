@@ -19,10 +19,10 @@ public record UiResourceId(String namespace, String path) {
     static final Pattern VALID_PATH = Pattern.compile("[a-z0-9/._-]+");
 
     public UiResourceId {
-        if (!VALID_NAMESPACE.matcher(namespace).matches()) {
+        if (namespace == null || !VALID_NAMESPACE.matcher(namespace).matches()) {
             throw new IllegalArgumentException("Invalid resource namespace '" + namespace + "'");
         }
-        if (!VALID_PATH.matcher(path).matches()) {
+        if (path == null || !VALID_PATH.matcher(path).matches()) {
             throw new IllegalArgumentException("Invalid resource path '" + path + "'");
         }
     }

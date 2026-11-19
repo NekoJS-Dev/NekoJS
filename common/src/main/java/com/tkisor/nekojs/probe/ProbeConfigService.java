@@ -17,16 +17,15 @@ final class ProbeConfigService {
 
     private final NekoJSPaths paths;
     private final ProbeConfigLoader configLoader = new ProbeConfigLoader();
-    private volatile ProbeConfig cachedConfig;
-    /** Cache stamp for probe.toml (mtime plus size). {@link ConfigStamp#MISSING} means no cache, or a file
-     *  that is missing or unreadable. */
-    private volatile ConfigStamp cachedConfigStamp = ConfigStamp.MISSING;
+    private volatile CachedConfig cached;
 
     /** Cache stamp for the config. An mtime alone misses writes that keep the same timestamp but change the
      *  content, because some file systems have coarse mtime granularity, so size is the second factor. */
     private record ConfigStamp(long mtime, long size) {
         static final ConfigStamp MISSING = new ConfigStamp(Long.MIN_VALUE, -1L);
     }
+
+    private record CachedConfig(ProbeConfig config, ConfigStamp stamp) {}
 
     ProbeConfigService(NekoJSPaths paths) {
         this.paths = paths;
@@ -39,17 +38,17 @@ final class ProbeConfigService {
      * idempotent and the later write wins, so the result is the same.
      */
     ProbeConfig readConfig() {
-        ProbeConfig c = cachedConfig;
+        CachedConfig entry = cached;
         ConfigStamp stamp = configStamp();
-        if (c == null || !stamp.equals(cachedConfigStamp)) {
-            c = configLoader.load(paths.probeConfig());
-            cachedConfig = c;
+        if (entry == null || !stamp.equals(entry.stamp())) {
+            ProbeConfig loaded = configLoader.load(paths.probeConfig());
             // load() may create the file when it is missing (autosave writes the defaults), which changes the
             // stamp on disk. Take the stamp again so the next read does not mistake that for a change and
             // reload a second time.
-            cachedConfigStamp = configStamp();
+            cached = new CachedConfig(loaded, configStamp());
+            return loaded;
         }
-        return c;
+        return entry.config();
     }
 
     /**
@@ -71,8 +70,7 @@ final class ProbeConfigService {
      * noticed by readConfig, so callers do not need this.
      */
     void reloadConfigCache() {
-        cachedConfig = null;
-        cachedConfigStamp = ConfigStamp.MISSING;
+        cached = null;
     }
 
     /**
@@ -83,7 +81,7 @@ final class ProbeConfigService {
     void applyEnabled(boolean enabled) {
         try {
             ProbeConfigLoader.setEnabled(paths.probeConfig(), enabled);
-        } catch (Throwable e) {
+        } catch (Exception e) {
             NekoJS.LOGGER.warn("Failed to persist probe enabled={} into {}; the setting will be lost on next reload",
                     enabled, paths.probeConfig(), e);
         }

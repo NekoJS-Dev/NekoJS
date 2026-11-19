@@ -43,7 +43,8 @@ final class TypeScriptCaptureViews {
         for (TypeDecl declaration : declarations.values()) {
             if (declaration.hidden) continue;
             Set<String> reserved = occupied.computeIfAbsent(packageOf(declaration.fqn), key -> new LinkedHashSet<>());
-            reserved.add("$" + declaration.fqn.substring(declaration.fqn.lastIndexOf('.') + 1));
+            int dot = declaration.fqn.lastIndexOf('.');
+            reserved.add("$" + (dot >= 0 ? declaration.fqn.substring(dot + 1) : declaration.fqn));
             if (declaration.effectiveTypeName() != null) reserved.add("$" + declaration.effectiveTypeName());
         }
         DEFAULT_NAMES.entrySet().stream().sorted(Map.Entry.comparingByKey()).forEach(entry -> {
@@ -70,7 +71,10 @@ final class TypeScriptCaptureViews {
     Map<String, String> names() { return Map.copyOf(names); }
     boolean available(String fqn) { return names.containsKey(fqn); }
     String name(String fqn) { return names.getOrDefault(fqn, DEFAULT_NAMES.get(fqn)); }
-    private static String packageOf(String fqn) { return fqn.substring(0, fqn.lastIndexOf('.')); }
+    private static String packageOf(String fqn) {
+        int dot = fqn.lastIndexOf('.');
+        return dot >= 0 ? fqn.substring(0, dot) : "";
+    }
     private static String fqn(ApiTypeRef ref) { return ref.name().substring(ref.name().indexOf(':') + 1); }
     private static ApiTypeRef symbol(String fqn, ApiTypeRef argument) {
         return new ApiTypeRef(ApiTypeRef.Kind.SYMBOL, "java:" + fqn, List.of(argument), null);
@@ -322,6 +326,25 @@ final class TypeScriptCaptureViews {
                 || !method.sourceMethod.isVarArgs() && method.params.stream().anyMatch(parameter -> parameter.varargs));
     }
     private static boolean containsVariable(String value, String variable) {
-        return java.util.regex.Pattern.compile("(?<![\\w$])" + java.util.regex.Pattern.quote(variable) + "(?![\\w$])").matcher(value).find();
+        int varLen = variable.length();
+        if (varLen == 0) return true;
+        int valLen = value.length();
+        int index = value.indexOf(variable);
+        while (index >= 0) {
+            boolean leftOk = index == 0 || !isWordOrDollar(value.charAt(index - 1));
+            int end = index + varLen;
+            boolean rightOk = end == valLen || !isWordOrDollar(value.charAt(end));
+            if (leftOk && rightOk) return true;
+            index = value.indexOf(variable, index + 1);
+        }
+        return false;
+    }
+
+    private static boolean isWordOrDollar(char c) {
+        return (c >= 'a' && c <= 'z')
+                || (c >= 'A' && c <= 'Z')
+                || (c >= '0' && c <= '9')
+                || c == '_'
+                || c == '$';
     }
 }

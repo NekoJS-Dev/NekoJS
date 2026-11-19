@@ -8,22 +8,45 @@ import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Predicate;
 
 /** Frozen module publication of existing event sources; owns no second bus or listener set. */
 public record ModuleEventGroup(String owner, BindingExposure.Category category, EventGroup group,
-                               Set<String> events, Map<String, EventExposure.View> views, Set<ScriptType> scriptTypes,
-                               Map<String, Set<ScriptType>> eventScriptTypes) {
+                               Set<String> events, Map<String, EventExposure.View> views,
+                               Map<String, EventExposure.Selector> selectors, Set<ScriptType> scriptTypes,
+                               Map<String, Set<ScriptType>> eventScriptTypes,
+                               Map<String, Predicate<Object>> deliveryFilters, Set<String> notificationOnlyEvents) {
     public ModuleEventGroup(String owner, BindingExposure.Category category, EventGroup group,
                             Set<String> events, Map<String, EventExposure.View> views) {
-        this(owner, category, group, events, views, Set.copyOf(ScriptType.all()));
+        this(owner, category, group, events, views, Map.of(), Set.copyOf(ScriptType.all()), Map.of());
     }
     public ModuleEventGroup(String owner, BindingExposure.Category category, EventGroup group,
                             Set<String> events, Map<String, EventExposure.View> views, Set<ScriptType> scriptTypes) {
-        this(owner, category, group, events, views, scriptTypes, Map.of());
+        this(owner, category, group, events, views, Map.of(), scriptTypes, Map.of());
+    }
+    public ModuleEventGroup(String owner, BindingExposure.Category category, EventGroup group,
+                            Set<String> events, Map<String, EventExposure.View> views, Set<ScriptType> scriptTypes,
+                            Map<String, Set<ScriptType>> eventScriptTypes) {
+        this(owner, category, group, events, views, Map.of(), scriptTypes, eventScriptTypes);
+    }
+    public ModuleEventGroup(String owner, BindingExposure.Category category, EventGroup group,
+                            Set<String> events, Map<String, EventExposure.View> views,
+                            Map<String, EventExposure.Selector> selectors, Set<ScriptType> scriptTypes,
+                            Map<String, Set<ScriptType>> eventScriptTypes) {
+        this(owner, category, group, events, views, selectors, scriptTypes, eventScriptTypes, Map.of());
+    }
+    public ModuleEventGroup(String owner, BindingExposure.Category category, EventGroup group,
+                            Set<String> events, Map<String, EventExposure.View> views,
+                            Map<String, EventExposure.Selector> selectors, Set<ScriptType> scriptTypes,
+                            Map<String, Set<ScriptType>> eventScriptTypes, Map<String, Predicate<Object>> deliveryFilters) {
+        this(owner, category, group, events, views, selectors, scriptTypes, eventScriptTypes, deliveryFilters, Set.of());
     }
     public ModuleEventGroup {
         events = Set.copyOf(events);
         views = Map.copyOf(views);
+        selectors = Map.copyOf(selectors);
+        deliveryFilters = Map.copyOf(deliveryFilters);
+        notificationOnlyEvents = Set.copyOf(notificationOnlyEvents);
         scriptTypes = Set.copyOf(scriptTypes);
         Map<String, Set<ScriptType>> scopes = new LinkedHashMap<>();
         eventScriptTypes.forEach((name, types) -> scopes.put(name, Set.copyOf(types)));
@@ -61,12 +84,18 @@ public record ModuleEventGroup(String owner, BindingExposure.Category category, 
         }
         Map<String, EventExposure.View> projections = new LinkedHashMap<>(views);
         projections.putAll(other.views);
+        Map<String, EventExposure.Selector> mergedSelectors = new LinkedHashMap<>(selectors);
+        mergedSelectors.putAll(other.selectors);
         Map<String, Set<ScriptType>> scopes = new LinkedHashMap<>();
         events.forEach(name -> scopes.put(name, eventScriptTypes.getOrDefault(name, scriptTypes)));
         other.events.forEach(name -> scopes.put(name, other.eventScriptTypes.getOrDefault(name, other.scriptTypes)));
         Set<ScriptType> types = new LinkedHashSet<>(scriptTypes);
         types.addAll(other.scriptTypes);
-        return new ModuleEventGroup(owner, category, source, names, projections, types, scopes);
+        Map<String, Predicate<Object>> filters = new LinkedHashMap<>(deliveryFilters);
+        filters.putAll(other.deliveryFilters);
+        Set<String> notifications = new LinkedHashSet<>(notificationOnlyEvents);
+        notifications.addAll(other.notificationOnlyEvents);
+        return new ModuleEventGroup(owner, category, source, names, projections, mergedSelectors, types, scopes, filters, notifications);
     }
 
     private static void copyPublishedBuses(EventGroup target, ModuleEventGroup publication) {

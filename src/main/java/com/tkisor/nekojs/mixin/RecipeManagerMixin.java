@@ -10,23 +10,32 @@ import com.tkisor.nekojs.NekoJS;
 //? if fabric {
 /*import com.tkisor.nekojs.fabric.event.FabricServerEventBindings;
 *///?}
+import com.tkisor.nekojs.api.data.NekoId;
 import com.tkisor.nekojs.api.event.ScriptErrorReporter;
 import com.tkisor.nekojs.api.recipe.definition.RecipeTypeDefinitionStorage;
 import com.tkisor.nekojs.bindings.event.ServerEvents;
 import com.tkisor.nekojs.core.error.NekoErrorUIHelper;
+import com.tkisor.nekojs.core.plugin.NekoPluginRuntime;
+import com.tkisor.nekojs.core.stage.gate.InlineRecipeStageRegistry;
 import com.tkisor.nekojs.api.plugin.NekoRuntimeAccess;
 import com.tkisor.nekojs.api.recipe.IRecipeManagerExtension;
+import com.tkisor.nekojs.api.recipe.IngredientActionRegistry;
 import com.tkisor.nekojs.api.ScriptType;
+import com.tkisor.nekojs.stage.CandidateRecipeReplay;
+import com.tkisor.nekojs.stage.StageDomainOwner;
 import com.tkisor.nekojs.wrapper.event.server.RecipeEventJS;
 import graal.graalvm.polyglot.PolyglotException;
 import net.minecraft.commands.Commands;
 import net.minecraft.core.HolderLookup;
+import net.minecraft.core.registries.BuiltInRegistries;
+import com.tkisor.nekojs.core.stage.gate.StageRegistryAccess.RecipeDescriptor;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.FileToIdConverter;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.RegistryOps;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.packs.resources.Resource;
 import net.minecraft.server.packs.resources.ResourceManager;
@@ -53,9 +62,11 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 import java.io.Reader;
 import java.util.*;
 import java.util.List;
+import java.util.function.Consumer;
 
+/** Mixin hooking {@code RecipeManager} reload to apply NekoJS recipe additions, removals, and edits. */
 @Mixin(RecipeManager.class)
-public abstract class RecipeManagerMixin implements IRecipeManagerExtension {
+public abstract class RecipeManagerMixin implements IRecipeManagerExtension, CandidateRecipeReplay {
 
     @Final @Shadow private HolderLookup.Provider registries;
     @Shadow private RecipeMap recipes;
@@ -140,7 +151,52 @@ public abstract class RecipeManagerMixin implements IRecipeManagerExtension {
 
     @Unique
     @Override
+    public List<RecipeDescriptor> nekojs$recipeDescriptors() {
+        return nekojs$describeRecipes(this.recipes.values());
+    }
+
+    @Unique
+    private void nekojs$syncCommittedRecipes(MinecraftServer server) {
+        if (server == null) return;
+        RecipeManager manager = (RecipeManager) (Object) this;
+        manager.finalizeRecipeLoading(server.getWorldData().enabledFeatures());
+        if (server.getPlayerList() == null || server.getPlayerList().getPlayers().isEmpty()) return;
+        var packet = new net.minecraft.network.protocol.game.ClientboundUpdateRecipesPacket(
+                manager.getSynchronizedItemProperties(), manager.getSynchronizedStonecutterRecipes());
+        for (ServerPlayer player : server.getPlayerList().getPlayers()) {
+            player.connection.send(packet);
+            player.getRecipeBook().sendInitialRecipeBook(player);
+        }
+    }
+
+    @Unique
+    private List<RecipeDescriptor> nekojs$describeRecipes(Collection<RecipeHolder<?>> holders) {
+        return holders.stream().map(holder -> {
+            Recipe<?> recipe = holder.value();
+            var id = holder.id().identifier();
+            var type = BuiltInRegistries.RECIPE_TYPE.getKey(recipe.getType());
+            var result = RecipeEventJS.getRecipeOutputId(recipe, this.registries);
+            return new RecipeDescriptor(NekoId.resource(id.toString()),
+                    type == null ? null : NekoId.resource(type.toString()),
+                    result == null ? null : NekoId.resource(result));
+        }).toList();
+    }
+
+    @Unique
+    @Override
     public boolean nekojs$applyScriptsChecked() {
+        InlineRecipeStageRegistry draft = new InlineRecipeStageRegistry();
+        Map<Identifier, List<IngredientActionRegistry.Action>> actions = new HashMap<>();
+        return InlineRecipeStageRegistry.withDraft(draft, () -> IngredientActionRegistry.withDraft(actions,
+                () -> nekojs$applyDraftChecked(draft, actions)));
+    }
+
+    @Unique
+    private boolean nekojs$applyDraftChecked(InlineRecipeStageRegistry draft,
+                                             Map<Identifier, List<IngredientActionRegistry.Action>> actions) {
+        Map<NekoId, InlineRecipeStageRegistry.InlineEntry> previousInlineStages =
+                InlineRecipeStageRegistry.SHARED.snapshot();
+        boolean recipesCommitted = false;
         boolean[] successful = {this.nekojs$sourceJsonsValid};
         boolean replaySucceeded = false;
         try {
@@ -149,23 +205,14 @@ public abstract class RecipeManagerMixin implements IRecipeManagerExtension {
             // so the copy from baseJsons is remade on each entry.
             this.nekojs$rawJsons.clear();
             this.nekojs$rawJsons.putAll(this.nekojs$baseJsons);
-            int beforeCount = this.nekojs$rawJsons.size();
-//? if neoforge {
-// Same as: ! ICondition.conditionsMatched(JsonOps.INSTANCE, entry.getValue())
-// Written this way only to avoid creating the ConditionalOps repeatedly.
-            var conditionalCodec = ConditionalOps.createConditionalCodec(Unit.CODEC);
-            this.nekojs$rawJsons.entrySet().removeIf(entry -> ICondition.getWithConditionalCodec(conditionalCodec, JsonOps.INSTANCE, entry.getValue()).isEmpty());
-
-            int afterCount = this.nekojs$rawJsons.size();
-            NekoJS.LOGGER.debug("Filtered out {} recipes that did not meet conditions", beforeCount - afterCount);
-//?}
+            nekojs$filterRecipeConditions(this.nekojs$rawJsons);
 
             RecipeEventJS eventJS = new RecipeEventJS(this.nekojs$rawJsons, this.registries, RecipeTypeDefinitionStorage.current());
             try {
                 // Ingredient actions (damage/keep/replaceIngredient) are pure script state: the whole table is
                 // cleared before the scripts rerun and rebuilt by the RecipeJsonBuilder calls made while the
                 // scripts run, so actions of deleted scripts disappear with them.
-                com.tkisor.nekojs.api.recipe.IngredientActionRegistry.clear();
+                IngredientActionRegistry.clear();
                 NekoRuntimeAccess.get().beforeRecipeLoading(eventJS);
                 if (!ServerEvents.RECIPES.postChecked(eventJS)) successful[0] = false;
                 eventJS.prepareRecipesForDecode();
@@ -180,41 +227,20 @@ public abstract class RecipeManagerMixin implements IRecipeManagerExtension {
                 com.tkisor.nekojs.script.ScriptTypeEnv.logger(ScriptType.SERVER).error("Recipe script execution crashed", e);
             }
 
-            List<RecipeHolder<?>> newHolders = new ArrayList<>();
             // Keep registry lookup reuse within this decode pass and after the modification hooks.
-            RegistryOps<JsonElement> recipeOps = null;
-            for (Map.Entry<Identifier, JsonElement> entry : eventJS.getFinalJsons().entrySet()) {
-                try {
-                    if (recipeOps == null) {
-                        recipeOps = this.registries.createSerializationContext(JsonOps.INSTANCE);
-                    }
-                    Recipe<?> recipe = Recipe.CODEC.parse(recipeOps, entry.getValue()).getOrThrow(JsonParseException::new);
-                    newHolders.add(new RecipeHolder<>(ResourceKey.create(Registries.RECIPE, entry.getKey()), recipe));
-                } catch (Exception e) {
-                    successful[0] = false;
-                    if (entry.getValue().isJsonObject()) {
-                        NekoJS.LOGGER.error("{}", eventJS.formatRecipeError("Invalid recipe after script processing", entry.getKey(), entry.getValue().getAsJsonObject(), e));
-                    } else {
-                        NekoJS.LOGGER.error("Invalid recipe after script processing (id={}): {}", entry.getKey(), e.getMessage());
-                    }
-                }
-            }
+            RecipeMap newRecipes = nekojs$decodeRecipes(eventJS, draft, null, successful);
 
             // After the whole batch has parsed, the RecipeMap is replaced in one go: a single reference commit,
             // never a half update. afterRecipes (script event and plugin hooks) fires only after that commit,
             // so consumers see the committed recipe table, and changes made during afterRecipes do not enter
             // this commit.
-            this.recipes = RecipeMap.create(newHolders);
-            try {
-                if (!ServerEvents.AFTER_RECIPES.postChecked(eventJS)) successful[0] = false;
-                NekoRuntimeAccess.get().afterRecipes(eventJS);
-            } catch (PolyglotException e) {
-                successful[0] = false;
-                ScriptErrorReporter.recordEventError(ScriptType.SERVER, e);
-            } catch (Exception e) {
-                successful[0] = false;
-                com.tkisor.nekojs.script.ScriptTypeEnv.logger(ScriptType.SERVER).error("afterRecipes lifecycle phase crashed", e);
-            }
+            if (!successful[0]) return false;
+            this.recipes = newRecipes;
+            IngredientActionRegistry.publishDraft(actions);
+            InlineRecipeStageRegistry.SHARED.replaceSnapshot(draft.snapshot(), false);
+            recipesCommitted = true;
+            if (!nekojs$runAfterRecipes(eventJS, false)) successful[0] = false;
+            nekojs$refreshInlineRecipeStages();
 
             com.tkisor.nekojs.script.ScriptTypeEnv.logger(ScriptType.SERVER).debug("Script execution completed, total recipes: {}", this.recipes.values().size());
 //? if neoforge {
@@ -240,9 +266,209 @@ public abstract class RecipeManagerMixin implements IRecipeManagerExtension {
             }
             replaySucceeded = successful[0];
             return replaySucceeded;
+        } catch (Throwable t) {
+            // Roll back inline recipe stages to the pre-replay snapshot when an error aborts before the new
+            // recipe map is committed, keeping active recipe gates aligned with the active RecipeManager.
+            if (!recipesCommitted) {
+                nekojs$restoreInlineRecipeStages(previousInlineStages);
+            }
+            nekojs$refreshInlineRecipeStages();
+            throw t;
         } finally {
             this.nekojs$rawJsons.clear();
             nekojs$recordScriptReplay(replaySucceeded);
+        }
+    }
+
+    @Unique
+    @Override
+    public CandidateRecipeReplay.Prepared nekojs$prepareScriptReplay(Consumer<RecipeEventJS> dispatch) {
+        if (!this.nekojs$sourceJsonsValid) {
+            throw new IllegalStateException("[NEKO-1008] Recipe replay requires valid datapack recipe JSON.");
+        }
+        InlineRecipeStageRegistry inlineStages = new InlineRecipeStageRegistry();
+        Map<Identifier, List<IngredientActionRegistry.Action>> ingredientActions = new HashMap<>();
+        return InlineRecipeStageRegistry.withDraft(inlineStages, () ->
+                IngredientActionRegistry.withDraft(ingredientActions, () -> {
+                    Map<Identifier, JsonElement> rawJsons = new HashMap<>(this.nekojs$baseJsons);
+                    nekojs$filterRecipeConditions(rawJsons);
+                    RecipeEventJS eventJS = new RecipeEventJS(rawJsons, this.registries, RecipeTypeDefinitionStorage.current());
+                    var pluginRuntime = NekoRuntimeAccess.get();
+                    if (pluginRuntime instanceof NekoPluginRuntime runtime) {
+                        for (var hook : runtime.beforeRecipeLoadingHooks()) hook.accept(eventJS);
+                    } else {
+                        pluginRuntime.beforeRecipeLoading(eventJS);
+                    }
+                    dispatch.accept(eventJS);
+                    eventJS.prepareRecipesForDecode();
+                    Map<NekoId, JsonElement> acceptedJsons = new LinkedHashMap<>();
+                    RecipeMap preparedRecipes = nekojs$decodeRecipes(eventJS, inlineStages, acceptedJsons, new boolean[]{true});
+                    var acceptedTable = CandidateRecipeReplay.AcceptedTable.capture(acceptedJsons);
+                    return new CandidateRecipeReplay.Prepared(inlineStages.snapshot(), nekojs$describeRecipes(preparedRecipes.values()), acceptedTable, () -> {
+                        IngredientActionRegistry.publishDraft(ingredientActions);
+                        this.recipes = preparedRecipes;
+                    }, server -> {
+                        boolean successful = false;
+                        try {
+                            nekojs$syncCommittedRecipes(server);
+                            successful = InlineRecipeStageRegistry.withDraft(inlineStages, () ->
+                                    IngredientActionRegistry.withDraft(new HashMap<>(), () -> nekojs$runAfterRecipes(eventJS, true)));
+                        } finally {
+                            nekojs$recordScriptReplay(successful);
+                        }
+                    });
+                }));
+    }
+
+    @Unique
+    @Override
+    public void nekojs$restoreAcceptedTable(CandidateRecipeReplay.AcceptedTable table) {
+        Map<NekoId, JsonElement> acceptedJsons = table.copyRecipes();
+        RegistryOps<JsonElement> recipeOps = this.registries.createSerializationContext(JsonOps.INSTANCE);
+        List<RecipeHolder<?>> restoredHolders = new ArrayList<>(acceptedJsons.size());
+        for (var entry : acceptedJsons.entrySet()) {
+            NekoId id = entry.getKey();
+            try {
+                Identifier nativeId = Identifier.fromNamespaceAndPath(id.namespace(), id.path());
+                restoredHolders.add(nekojs$decodeRecipe(recipeOps, nativeId, entry.getValue()));
+            } catch (Exception e) {
+                throw new JsonParseException("[NEKO-1008] Failed to restore accepted recipe (id=" + id + ")", e);
+            }
+        }
+        this.recipes = RecipeMap.create(restoredHolders);
+    }
+
+    @Unique
+    private void nekojs$filterRecipeConditions(Map<Identifier, JsonElement> jsons) {
+//? if neoforge {
+        int beforeCount = jsons.size();
+// Same as: ! ICondition.conditionsMatched(JsonOps.INSTANCE, entry.getValue())
+// Written this way only to avoid creating the ConditionalOps repeatedly.
+        var conditionalCodec = ConditionalOps.createConditionalCodec(Unit.CODEC);
+        jsons.entrySet().removeIf(entry -> ICondition.getWithConditionalCodec(conditionalCodec, JsonOps.INSTANCE, entry.getValue()).isEmpty());
+
+        int afterCount = jsons.size();
+        NekoJS.LOGGER.debug("Filtered out {} recipes that did not meet conditions", beforeCount - afterCount);
+//?}
+    }
+
+    @Unique
+    private RecipeHolder<?> nekojs$decodeRecipe(RegistryOps<JsonElement> recipeOps, Identifier id, JsonElement json) {
+        Recipe<?> recipe = Recipe.CODEC.parse(recipeOps, json).getOrThrow(JsonParseException::new);
+        return new RecipeHolder<>(ResourceKey.create(Registries.RECIPE, id), recipe);
+    }
+
+    @Unique
+    private RecipeMap nekojs$decodeRecipes(RecipeEventJS eventJS, InlineRecipeStageRegistry inlineStages,
+                                          Map<NekoId, JsonElement> acceptedJsons, boolean[] successful) {
+        boolean strict = acceptedJsons != null;
+        Set<NekoId> committedRecipeIds = strict ? acceptedJsons.keySet() : new HashSet<>();
+        List<RecipeHolder<?>> newHolders = new ArrayList<>();
+        RegistryOps<JsonElement> recipeOps = null;
+        for (Map.Entry<Identifier, JsonElement> entry : eventJS.getFinalJsons().entrySet()) {
+            try {
+                if (recipeOps == null) {
+                    recipeOps = this.registries.createSerializationContext(JsonOps.INSTANCE);
+                }
+                JsonElement json = entry.getValue();
+                newHolders.add(nekojs$decodeRecipe(recipeOps, entry.getKey(), strict ? json.deepCopy() : json));
+                NekoId id = NekoId.resource(entry.getKey().getNamespace(), entry.getKey().getPath());
+                if (strict) acceptedJsons.put(id, json);
+                else committedRecipeIds.add(id);
+            } catch (Exception e) {
+                successful[0] = false;
+                if (strict) {
+                    String message = entry.getValue().isJsonObject()
+                            ? eventJS.formatRecipeError("[NEKO-1008] Invalid recipe after script processing", entry.getKey(), entry.getValue().getAsJsonObject(), e)
+                            : "[NEKO-1008] Invalid recipe after script processing (id=" + entry.getKey() + ")";
+                    throw new JsonParseException(message, e);
+                }
+                inlineStages.remove(
+                        NekoId.resource(entry.getKey().getNamespace(), entry.getKey().getPath()));
+                if (entry.getValue().isJsonObject()) {
+                    NekoJS.LOGGER.error("{}", eventJS.formatRecipeError("Invalid recipe after script processing", entry.getKey(), entry.getValue().getAsJsonObject(), e));
+                } else {
+                    NekoJS.LOGGER.error("Invalid recipe after script processing (id={}): {}", entry.getKey(), e.getMessage());
+                }
+            }
+        }
+        nekojs$pruneUncommittedInlineStages(inlineStages, committedRecipeIds);
+        return RecipeMap.create(newHolders);
+    }
+
+    @Unique
+    private boolean nekojs$runAfterRecipes(RecipeEventJS eventJS, boolean candidate) {
+        boolean successful = true;
+        try {
+            if (!ServerEvents.AFTER_RECIPES.postChecked(eventJS)) successful = false;
+            var pluginRuntime = NekoRuntimeAccess.get();
+            if (candidate && pluginRuntime instanceof NekoPluginRuntime runtime) {
+                for (var hook : runtime.afterRecipesHooks()) {
+                    try {
+                        hook.accept(eventJS);
+                    } catch (Exception e) {
+                        successful = false;
+                        ScriptTypeEnv.logger(ScriptType.SERVER).error("[NEKO-1022] afterRecipes lifecycle hook failed", e);
+                    }
+                }
+            } else {
+                pluginRuntime.afterRecipes(eventJS);
+            }
+        } catch (PolyglotException e) {
+            successful = false;
+            ScriptErrorReporter.recordEventError(ScriptType.SERVER, e);
+        } catch (Exception e) {
+            successful = false;
+            com.tkisor.nekojs.script.ScriptTypeEnv.logger(ScriptType.SERVER).error("afterRecipes lifecycle phase crashed", e);
+        }
+        return successful;
+    }
+
+    @Unique
+    private MinecraftServer nekojs$currentServer() {
+//? if neoforge {
+        MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
+//?} else {
+/*        MinecraftServer server = FabricServerEventBindings.currentServer();
+*///?}
+        return server != null && server.getPlayerList() != null ? server : null;
+    }
+
+    @Unique
+    private void nekojs$pruneUncommittedInlineStages(InlineRecipeStageRegistry inlineStages, Set<NekoId> committedRecipeIds) {
+        Map<NekoId, InlineRecipeStageRegistry.InlineEntry> current = inlineStages.snapshot();
+        if (current.isEmpty()) {
+            return;
+        }
+        inlineStages.runBatch(() -> {
+            for (NekoId recipeId : current.keySet()) {
+                if (!committedRecipeIds.contains(recipeId)) {
+                    inlineStages.remove(recipeId);
+                }
+            }
+        });
+    }
+
+    @Unique
+    private void nekojs$restoreInlineRecipeStages(
+            Map<NekoId, InlineRecipeStageRegistry.InlineEntry> previousEntries) {
+        InlineRecipeStageRegistry.SHARED.runBatch(() -> {
+            InlineRecipeStageRegistry.SHARED.clear();
+            for (InlineRecipeStageRegistry.InlineEntry entry : previousEntries.values()) {
+                InlineRecipeStageRegistry.SHARED.put(entry.recipeId(), entry.stage(), entry.scope());
+            }
+        });
+    }
+
+    @Unique
+    private void nekojs$refreshInlineRecipeStages() {
+        try {
+            StageDomainOwner stageOwner = StageDomainOwner.current();
+            if (stageOwner != null) {
+                stageOwner.refreshInlineRecipesAndSync(nekojs$currentServer(), nekojs$recipeDescriptors());
+            }
+        } catch (Exception e) {
+            NekoJS.LOGGER.error("Failed to refresh inline recipe stage snapshot after recipe reload", e);
         }
     }
 }

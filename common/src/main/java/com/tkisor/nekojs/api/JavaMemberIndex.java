@@ -125,7 +125,7 @@ public final class JavaMemberIndex {
             if (java.lang.reflect.Modifier.isStatic(f.getModifiers())) continue;
             if (f.getDeclaringClass() == Object.class) continue;
             String jsName = remapName(f, HIDE_MARKER, f.getName());
-            if (jsName == null) continue;
+            if (!isExposedName(f, jsName)) continue;
             fields.computeIfAbsent(jsName, ignored -> new java.util.ArrayList<>()).add(f);
         }
         return new ExposedMembers(methods, propertyGetters, fields);
@@ -146,7 +146,7 @@ public final class JavaMemberIndex {
      * The remap must be evaluated before this check because interface-injected methods are reflected
      * from the Minecraft host class, while their {@code @RemapByPrefix} lives on the injected interface.
      */
-    private static boolean isExposedName(Method method, String jsName) {
+    private static boolean isExposedName(Member method, String jsName) {
         return jsName != null && !jsName.isBlank() && !HIDE_MARKER.equals(jsName)
                 && (!method.getName().startsWith("neko$") || !jsName.startsWith("neko$"));
     }

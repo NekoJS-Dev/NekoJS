@@ -20,8 +20,19 @@ public class CommandRegistryEventJS {
     @Getter
     private final CommandBuildContext registryAccess;
 
+    @Getter
+    private final String commandSelection;
+
     public CommandRegistryEventJS(CommandDispatcher<CommandSourceStack> dispatcher, CommandBuildContext registryAccess) {
+        this(dispatcher, registryAccess, "");
+    }
+
+    public CommandRegistryEventJS(
+            CommandDispatcher<CommandSourceStack> dispatcher,
+            CommandBuildContext registryAccess,
+            String commandSelection) {
         this.dispatcher = dispatcher;
         this.registryAccess = registryAccess;
+        this.commandSelection = commandSelection == null ? "" : commandSelection;
     }
 }

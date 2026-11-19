@@ -40,14 +40,14 @@ public abstract class MixinEndermanLeaveBlockGoal {
     private EnderMan enderman;
 
     @Inject(method = "canPlaceBlock(Lnet/minecraft/world/level/Level;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/core/BlockPos;)Z",
-            at = @At("HEAD"), cancellable = true)
+            at = @At("RETURN"), cancellable = true)
     private void nekojs$onEndermanPlace(Level level, BlockPos pos, BlockState carried,
                                         BlockState targetState, BlockState belowState,
                                         BlockPos below, CallbackInfoReturnable<Boolean> cir) {
-        if (level.isClientSide()) {
+        if (level.isClientSide() || !cir.getReturnValueZ()) {
             return;
         }
-        if (FabricBlockEventBindingsV2.postPlaced(level, pos, carried, belowState, enderman)) {
+        if (FabricBlockEventBindingsV2.postEndermanPlaced(level, pos, carried, belowState, enderman)) {
             cir.setReturnValue(false);
         }
     }

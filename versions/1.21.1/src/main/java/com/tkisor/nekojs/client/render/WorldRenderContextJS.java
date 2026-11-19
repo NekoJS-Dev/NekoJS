@@ -3,6 +3,7 @@
 // changes.
 package com.tkisor.nekojs.client.render;
 
+import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.tkisor.nekojs.api.ui.UiColor;
@@ -83,15 +84,21 @@ public class WorldRenderContextJS {
         poseStack.translate(-cameraPos.x, -cameraPos.y, -cameraPos.z);
         var pose = poseStack.last();
 
-        MultiBufferSource.BufferSource bufferSource = Minecraft.getInstance().renderBuffers().bufferSource();
-        VertexConsumer consumer = bufferSource.getBuffer(RenderType.lines());
-        consumer.addVertex(pose, (float) x1, (float) y1, (float) z1)
-                .setColor(r, g, b, a)
-                .setNormal(nx, ny, nz);
-        consumer.addVertex(pose, (float) x2, (float) y2, (float) z2)
-                .setColor(r, g, b, a)
-                .setNormal(nx, ny, nz);
-        bufferSource.endBatch(RenderType.lines());
+        float width = Math.max(1f, lineWidth);
+        RenderSystem.lineWidth(width);
+        try {
+            MultiBufferSource.BufferSource bufferSource = Minecraft.getInstance().renderBuffers().bufferSource();
+            VertexConsumer consumer = bufferSource.getBuffer(RenderType.lines());
+            consumer.addVertex(pose, (float) x1, (float) y1, (float) z1)
+                    .setColor(r, g, b, a)
+                    .setNormal(nx, ny, nz);
+            consumer.addVertex(pose, (float) x2, (float) y2, (float) z2)
+                    .setColor(r, g, b, a)
+                    .setNormal(nx, ny, nz);
+            bufferSource.endBatch(RenderType.lines());
+        } finally {
+            RenderSystem.lineWidth(1.0f);
+        }
         return this;
     }
 

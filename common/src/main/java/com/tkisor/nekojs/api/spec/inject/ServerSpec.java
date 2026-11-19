@@ -2,6 +2,7 @@ package com.tkisor.nekojs.api.spec.inject;
 
 import com.tkisor.nekojs.api.annotation.RemapByPrefix;
 import com.tkisor.nekojs.api.spec.PlatformAvailability;
+import com.tkisor.nekojs.api.stage.StageHandle;
 
 /**
  * Cross-platform extension specification for MinecraftServer. NF_ONLY: CR 1.12.2 has no such
@@ -20,5 +21,10 @@ public interface ServerSpec {
     /** In-memory data container attached to this server. */
     default Object neko$data() {
         throw new UnsupportedOperationException("ServerSpec.neko$data not implemented");
+    }
+
+    /** Returns the server-wide stage handle attached to this server. */
+    default StageHandle neko$getStages() {
+        throw new UnsupportedOperationException("ServerSpec.neko$getStages not implemented");
     }
 }

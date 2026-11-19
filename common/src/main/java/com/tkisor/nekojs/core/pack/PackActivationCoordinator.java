@@ -39,6 +39,7 @@ public final class PackActivationCoordinator implements AutoCloseable {
     private volatile Thread operationOwner;
     private final java.util.concurrent.CopyOnWriteArrayList<ScriptManager> inFlight = new java.util.concurrent.CopyOnWriteArrayList<>();
     private final Set<ScriptPackScope> pendingRevocations = java.util.EnumSet.noneOf(ScriptPackScope.class);
+    private final Set<PreparedReload> deferredReloads = new LinkedHashSet<>();
 
     public PackActivationCoordinator(BiFunction<ScriptType, ScriptPack, ScriptManager> create,
             Function<ScriptType, ScriptManager> legacy, Function<ScriptType, List<ScriptContainer>> discover,
@@ -88,24 +89,41 @@ public final class PackActivationCoordinator implements AutoCloseable {
 
     /** Null selector means a complete type replacement, including the legacy partition. */
     public synchronized Result reload(ScriptType type, String selector) {
-        if (closing) return new Result(type, false, Map.of(), Map.of(), "[NEKO-1017] Package runtime is closing");
-        TypeState state = types.computeIfAbsent(type, ignored -> new TypeState());
-        var decision = state.gate.tryEnter(ScriptLifecycleGate.Operation.RELOAD);
-        if (decision != ScriptLifecycleGate.Decision.EXECUTED) {
-            return new Result(type, false, Map.of(), state.waiting, "[NEKO-1017] Package operation rejected: " + decision);
-        }
-        try {
-            operationOwner = Thread.currentThread();
-            return replace(type, selector, state);
-        } finally {
-            inFlight.clear(); operationOwner = null;
-            state.gate.exit(ScriptLifecycleGate.Operation.RELOAD);
-            for (ScriptPackScope scope : List.copyOf(pendingRevocations)) stopScope(scope);
-            pendingRevocations.clear();
+        try (PreparedReload pending = prepareReload(type, selector)) {
+            return pending.commit();
         }
     }
 
-    private Result replace(ScriptType type, String selector, TypeState state) {
+    public synchronized PreparedReload prepareReload(ScriptType type, String selector) {
+        TypeState state = types.computeIfAbsent(type, ignored -> new TypeState());
+        if (closing || operationOwner != null) {
+            return rejected(type, state, "[NEKO-1017] Package runtime is closing or busy");
+        }
+        var decision = state.gate.tryEnter(ScriptLifecycleGate.Operation.RELOAD);
+        if (decision != ScriptLifecycleGate.Decision.EXECUTED) {
+            return rejected(type, state, "[NEKO-1017] Package operation rejected: " + decision);
+        }
+        operationOwner = Thread.currentThread();
+        try {
+            PreparedReload pending = prepare(type, selector, state);
+            if (pending.batch != null) deferredReloads.add(pending);
+            else state.gate.exit(ScriptLifecycleGate.Operation.RELOAD);
+            return pending;
+        } catch (RuntimeException | Error failure) {
+            state.gate.exit(ScriptLifecycleGate.Operation.RELOAD);
+            throw failure;
+        } finally {
+            leaveOperation();
+        }
+    }
+
+    private PreparedReload rejected(ScriptType type, TypeState state, String message) {
+        return rejected(new Result(type, false, Map.of(), state.waiting, message));
+    }
+
+    private PreparedReload rejected(Result result) { return new PreparedReload(null, result); }
+
+    private PreparedReload prepare(ScriptType type, String selector, TypeState state) {
         var registry = ScriptPackRegistry.get();
         registry.refreshLocalPacks();
         long epoch = sourceEpoch.get();
@@ -117,8 +135,8 @@ public final class PackActivationCoordinator implements AutoCloseable {
         for (Unit previous : state.active.values()) {
             if (sources.stream().noneMatch(source -> source.root().equals(previous.source().root())) && java.nio.file.Files.isRegularFile(
                     previous.source().root().resolve(ScriptPackManifest.FILE_NAME))) {
-                return new Result(type, false, Map.of(previous.source().selector(), "invalid discovered replacement"),
-                        state.waiting, "existing package content or descriptor is invalid; healthy activation retained: " + previous.source().selector());
+                return rejected(new Result(type, false, Map.of(previous.source().selector(), "invalid discovered replacement"),
+                        state.waiting, "existing package content or descriptor is invalid; healthy activation retained: " + previous.source().selector()));
             }
         }
         Map<String, String> affected = new LinkedHashMap<>();
@@ -130,8 +148,8 @@ public final class PackActivationCoordinator implements AutoCloseable {
             selectable.addAll(state.active.keySet());
             List<String> matches = selectable.stream().filter(key -> key.equalsIgnoreCase(selector)
                     || !selector.contains(":") && key.endsWith(":" + selector)).toList();
-            if (matches.size() != 1) return new Result(type, false, Map.of(), state.waiting,
-                    "selector is missing or ambiguous: " + selector);
+            if (matches.size() != 1) return rejected(new Result(type, false, Map.of(), state.waiting,
+                    "selector is missing or ambiguous: " + selector));
             affected.put(matches.getFirst(), "requested package");
         }
         boolean expanded;
@@ -158,7 +176,7 @@ public final class PackActivationCoordinator implements AutoCloseable {
             state.active.keySet().forEach(key -> affected.putIfAbsent(key, "expanded for shared domain contribution tables"));
         }
         if (type == ScriptType.STARTUP && (state.initialized || startupEvaluated)) {
-            return new Result(type, false, affected, state.waiting, "STARTUP package changes require a loader restart");
+            return rejected(new Result(type, false, affected, state.waiting, "STARTUP package changes require a loader restart"));
         }
         List<ScriptContainer> scripts = discover.apply(type);
         Map<String, String> waiting = new LinkedHashMap<>();
@@ -168,15 +186,16 @@ public final class PackActivationCoordinator implements AutoCloseable {
         List<ScriptManager.PreparedPack> candidates = new ArrayList<>();
         List<PackCapabilityBridge> preparedBindings = new ArrayList<>();
         List<ScriptManager> newManagers = new ArrayList<>();
-        ScriptEventBridge.ListenerBatch listenerBatch = null;
-        com.tkisor.nekojs.core.lifecycle.ReloadPhase phase = com.tkisor.nekojs.core.lifecycle.ReloadPhase.EXECUTION;
         List<String> cleanupFailures = new ArrayList<>();
+        List<ScriptManager> managers = new ArrayList<>();
         try {
             plugins.fireBeforeScriptsLoaded(type);
             try {
                 if (includeLegacy) {
-                    inFlight.addIfAbsent(legacy.apply(type));
-                    candidates.add(legacy.apply(type).preparePackCandidate(scripts.stream()
+                    ScriptManager manager = legacy.apply(type);
+                    managers.add(manager);
+                    inFlight.addIfAbsent(manager);
+                    candidates.add(manager.preparePackCandidate(scripts.stream()
                             .filter(script -> script.pack == null || script.pack.manifest().descriptor() == null).toList(), context -> {}));
                 }
                 for (ScriptPack source : plan.ordered()) {
@@ -194,6 +213,7 @@ public final class PackActivationCoordinator implements AutoCloseable {
                     String instance = registry.instanceKey(source);
                     boolean reuse = previous != null && previous.instance().equals(instance);
                     ScriptManager manager = reuse ? previous.manager() : create.apply(type, source);
+                    managers.add(manager);
                     inFlight.addIfAbsent(manager);
                     if (!reuse) newManagers.add(manager);
                     long activation = ++nextActivation;
@@ -221,6 +241,109 @@ public final class PackActivationCoordinator implements AutoCloseable {
             } finally {
                 plugins.fireAfterScriptsLoaded(type);
             }
+            return new PreparedReload(new ReloadBatch(type, state, epoch, plan, domains, affected, waiting,
+                    next, candidates, preparedBindings, newManagers, managers, cleanupFailures), null);
+        } catch (Throwable failure) {
+            abortPreparation(candidates, preparedBindings, newManagers, managers, cleanupFailures);
+            return rejected(failed(type, state, affected, cleanupFailures,
+                    com.tkisor.nekojs.core.lifecycle.ReloadPhase.EXECUTION, failure));
+        }
+    }
+
+    private record ReloadBatch(ScriptType type, TypeState state, long epoch, PackDependencyPlan plan,
+            List<CandidateDomainCollector> domains, Map<String, String> affected, Map<String, String> waiting,
+            Map<String, Unit> next, List<ScriptManager.PreparedPack> candidates,
+            List<PackCapabilityBridge> preparedBindings, List<ScriptManager> newManagers,
+            List<ScriptManager> managers, List<String> cleanupFailures) {
+    }
+
+    public final class PreparedReload implements AutoCloseable {
+        private final ReloadBatch batch;
+        private Result result;
+        private boolean finished;
+
+        private PreparedReload(ReloadBatch batch, Result result) {
+            this.batch = batch;
+            this.result = result;
+        }
+
+        public void dispatch(EventBusJS<?, ?> bus, Object event, Object key) {
+            synchronized (PackActivationCoordinator.this) {
+                if (finished) throw new IllegalStateException("[NEKO-1017] Package candidate is closed");
+                if (batch == null) throw new IllegalStateException(result.failure());
+                if (operationOwner != null) throw new IllegalStateException("[NEKO-1017] Package runtime is busy");
+                operationOwner = Thread.currentThread();
+                try {
+                    assertEpoch(batch.epoch(), batch.candidates());
+                    var merged = mergedHandle(batch.type(), batch.candidates());
+                    for (var listener : merged.listenersOf(bus)) {
+                        if (listener.matchesCollectionKey(key)) merged.execute(listener, event);
+                    }
+                } finally {
+                    leaveOperation();
+                }
+            }
+        }
+
+        public boolean prepared() { return batch != null; }
+
+        public Result commit() {
+            synchronized (PackActivationCoordinator.this) {
+                if (result != null) return result;
+                if (finished || operationOwner != null) throw new IllegalStateException("[NEKO-1017] Package candidate cannot commit");
+                operationOwner = Thread.currentThread();
+                try {
+                    result = publish(batch);
+                    return result;
+                } finally {
+                    release();
+                    leaveOperation();
+                }
+            }
+        }
+
+        private void release() {
+            finished = true;
+            deferredReloads.remove(this);
+            inFlight.removeAll(batch.managers());
+            batch.state().gate.exit(ScriptLifecycleGate.Operation.RELOAD);
+        }
+
+        @Override
+        public void close() {
+            synchronized (PackActivationCoordinator.this) {
+                if (finished || batch == null) return;
+                try {
+                    abortPreparation(batch.candidates(), batch.preparedBindings(), batch.newManagers(),
+                            batch.managers(), batch.cleanupFailures());
+                } finally {
+                    release();
+                }
+            }
+        }
+    }
+
+    private void leaveOperation() {
+        operationOwner = null;
+        for (ScriptPackScope scope : List.copyOf(pendingRevocations)) stopScope(scope);
+        pendingRevocations.clear();
+    }
+
+    private Result publish(ReloadBatch batch) {
+        var type = batch.type();
+        var state = batch.state();
+        var epoch = batch.epoch();
+        var plan = batch.plan();
+        var domains = batch.domains();
+        var affected = batch.affected();
+        var waiting = batch.waiting();
+        var next = batch.next();
+        var candidates = batch.candidates();
+        var cleanupFailures = batch.cleanupFailures();
+        ScriptEventBridge.ListenerBatch listenerBatch = null;
+        var phase = com.tkisor.nekojs.core.lifecycle.ReloadPhase.DOMAIN_PLAN;
+        try {
+            assertEpoch(epoch, candidates);
             if (!candidates.isEmpty()) {
                 phase = com.tkisor.nekojs.core.lifecycle.ReloadPhase.DOMAIN_PLAN;
                 CandidateDomainCollector.Handle merged = mergedHandle(type, candidates);
@@ -260,6 +383,7 @@ public final class PackActivationCoordinator implements AutoCloseable {
             state.active.clear(); state.active.putAll(next);
             state.dependencies = plan.dependencies(); state.waiting = Map.copyOf(waiting);
             state.initialized = true;
+            globals.forEach(GenerationGlobals::finishPublishedPlans);
             for (int index = candidates.size() - 1; index >= 0; index--) closeResource(candidates.get(index), cleanupFailures);
             for (int index = previous.size() - 1; index >= 0; index--) {
                 Unit unit = previous.get(index);
@@ -271,16 +395,27 @@ public final class PackActivationCoordinator implements AutoCloseable {
             if (listenerBatch != null) {
                 try { listenerBatch.rollback(); } catch (Throwable cleanup) { failure.addSuppressed(cleanup); }
             }
-            preparedBindings.forEach(PackCapabilityBridge::invalidate);
-            for (int index = candidates.size() - 1; index >= 0; index--) closeResource(candidates.get(index), cleanupFailures);
-            for (int index = newManagers.size() - 1; index >= 0; index--) closeResource(newManagers.get(index), cleanupFailures);
-            String domain = failure instanceof com.tkisor.nekojs.core.state.GlobalStateException stateFailure
-                    ? stateFailure.domain() + ": " : "";
-            var report = failure instanceof com.tkisor.nekojs.core.lifecycle.NekoReloadException reloadFailure ? reloadFailure.report()
-                    : new com.tkisor.nekojs.core.lifecycle.ReloadFailureReport(type, nextActivation, phase, null,
-                            "PackActivation[" + type.name + "]", domain.isEmpty() ? "package-activation" : domain.substring(0, domain.length() - 2), failure);
-            return new Result(type, false, affected, state.waiting, domain + failure, report, cleanupFailures);
+            abortPreparation(candidates, batch.preparedBindings(), batch.newManagers(), batch.managers(), cleanupFailures);
+            return failed(type, state, affected, cleanupFailures, phase, failure);
         }
+    }
+
+    private void abortPreparation(List<ScriptManager.PreparedPack> candidates, List<PackCapabilityBridge> bindings,
+            List<ScriptManager> newManagers, List<ScriptManager> managers, List<String> failures) {
+        bindings.forEach(PackCapabilityBridge::invalidate);
+        for (int index = candidates.size() - 1; index >= 0; index--) closeResource(candidates.get(index), failures);
+        for (int index = newManagers.size() - 1; index >= 0; index--) closeResource(newManagers.get(index), failures);
+        inFlight.removeAll(managers);
+    }
+
+    private Result failed(ScriptType type, TypeState state, Map<String, String> affected,
+            List<String> cleanupFailures, com.tkisor.nekojs.core.lifecycle.ReloadPhase phase, Throwable failure) {
+        String domain = failure instanceof com.tkisor.nekojs.core.state.GlobalStateException stateFailure
+                ? stateFailure.domain() + ": " : "";
+        var report = failure instanceof com.tkisor.nekojs.core.lifecycle.NekoReloadException reloadFailure ? reloadFailure.report()
+                : new com.tkisor.nekojs.core.lifecycle.ReloadFailureReport(type, nextActivation, phase, null,
+                        "PackActivation[" + type.name + "]", domain.isEmpty() ? "package-activation" : domain.substring(0, domain.length() - 2), failure);
+        return new Result(type, false, affected, state.waiting, domain + failure, report, cleanupFailures);
     }
 
     private static void closeResource(AutoCloseable resource, List<String> failures) {
@@ -476,6 +611,7 @@ public final class PackActivationCoordinator implements AutoCloseable {
                 if (closing || epoch != sourceEpoch.get()) throw new IllegalStateException("[NEKO-1017] Domain reconciliation was preempted by source teardown");
                 for (var plan : plans) plan.publish();
             }
+            GenerationGlobals.finishPlans(plans);
         } finally {
             List<String> failures = new ArrayList<>();
             for (int index = plans.size() - 1; index >= 0; index--) closeResource(plans.get(index)::discard, failures);
@@ -488,6 +624,7 @@ public final class PackActivationCoordinator implements AutoCloseable {
         if (isOwnerOperation()) return;
         synchronized (this) {
             List<String> failures = new ArrayList<>();
+            for (var pending : List.copyOf(deferredReloads)) closeResource(pending, failures);
             for (var state : types.values()) {
                 List<Unit> units = new ArrayList<>(state.active.values());
                 units.forEach(unit -> unit.capabilities().invalidate());

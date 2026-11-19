@@ -96,8 +96,19 @@ public final class RecipeSchemaAutoDiscovery {
      * Platform-specific recipe type scanner result.
      */
     public record DiscoveredRecipeTypes(Map<String, List<DiscoveredRecipeKey>> types) {
+        public DiscoveredRecipeTypes {
+            if (types == null) {
+                types = Map.of();
+            } else {
+                Map<String, List<DiscoveredRecipeKey>> copy = new LinkedHashMap<>();
+                for (var entry : types.entrySet()) {
+                    copy.put(entry.getKey(), entry.getValue() == null ? List.of() : List.copyOf(entry.getValue()));
+                }
+                types = java.util.Collections.unmodifiableMap(copy);
+            }
+        }
         public static DiscoveredRecipeTypes of(Map<String, List<DiscoveredRecipeKey>> types) {
-            return new DiscoveredRecipeTypes(Map.copyOf(types));
+            return new DiscoveredRecipeTypes(types);
         }
     }
 

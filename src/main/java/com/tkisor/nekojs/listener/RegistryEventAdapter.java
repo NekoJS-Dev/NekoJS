@@ -53,7 +53,7 @@ public final class RegistryEventAdapter {
         StartupRegistryRuntime previous = runtime;
         if (previous != null && !previous.isFullyDrained()) {
             previous.reportUndelivered(message -> NekoJS.LOGGER.error(
-                    "[registry-startup] stale staging from a previous boot discarded: {}", message));
+                    "[NEKO-4079] Discarded undelivered STARTUP staging from a previous boot: {}", message));
         }
         runtime = new StartupRegistryRuntime(nodeLabel());
     }
@@ -64,15 +64,14 @@ public final class RegistryEventAdapter {
         current.collectOnce();
         current.drainFor(key, (registry, id, supplier) -> registerInto(event, registry, id, supplier))
                 .errors().forEach(error -> NekoJS.LOGGER.error(
-                        "[registry-startup] {} in registry '{}' (node {}, source {}): {}",
+                        "[NEKO-4078] STARTUP registry entry '{}' was rejected by registry '{}' (node {}, source {}): {}",
                                 error.definition(), error.registry() == null ? "?" : error.registry().identifier(),
                                 error.node(), error.source(), error.message()));
     }
 
-    /** Load-complete diagnostics: entries that were collected but no pass consumed, because a registry
-     * name is misspelled or the target pass runs before the source. */
+    /** Reports staged entries whose native registration pass never consumed them. */
     public static void onLoadComplete() {
-        runtime.reportUndelivered(message -> NekoJS.LOGGER.error("{}", message));
+        runtime.reportUndelivered(message -> NekoJS.LOGGER.error("[NEKO-4079] {}", message));
     }
 
     /** Entity attribute table: recorded while the builder is built and attached here in one go, after

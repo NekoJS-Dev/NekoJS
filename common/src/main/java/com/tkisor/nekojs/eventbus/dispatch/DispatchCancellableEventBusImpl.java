@@ -7,6 +7,7 @@ import com.tkisor.nekojs.api.event.DispatchKey;
 import com.tkisor.nekojs.eventbus.CancellableEventBusImpl;
 
 import java.util.Map;
+import java.util.Set;
 import java.util.function.Predicate;
 
 /**
@@ -57,6 +58,20 @@ public final class DispatchCancellableEventBusImpl<E, K> extends DispatchEventBu
         super(eventType, dispatchKey, dispatched);
     }
 
+    @org.jetbrains.annotations.ApiStatus.Internal
+    public boolean postSelected(E event, K key, Set<EventListenerToken<E>> selected) {
+        if (mainBus.postSelected(event, selected)) return true;
+        var keyedBus = key == null ? null : dispatched.get(key);
+        return keyedBus != null && keyedBus.postSelected(event, selected);
+    }
+
+    @org.jetbrains.annotations.ApiStatus.Internal
+    public void postIgnoringCancellation(E event, K key) {
+        mainBus.postWithCancellationFrom(event, Set.of());
+        var keyedBus = key == null ? null : dispatched.get(key);
+        if (keyedBus != null) keyedBus.postWithCancellationFrom(event, Set.of());
+    }
+
     @Override
     protected CancellableEventBusImpl<E> createBus(Class<E> eventType, K key) {
         return new CancellableEventBusImpl<>(eventType, key);
@@ -69,9 +84,16 @@ public final class DispatchCancellableEventBusImpl<E, K> extends DispatchEventBu
         if (key == null) {
             return mainBus.listen(priority, listener);
         }
-        return this.dispatched
-            .computeIfAbsent(key, k -> this.createBus(this.eventType(), k))
-            .listen(priority, listener);
+        @SuppressWarnings("unchecked")
+        var holder = (EventListenerToken<E>[]) new EventListenerToken<?>[1];
+        this.dispatched.compute(key, (k, bus) -> {
+            if (bus == null) {
+                bus = this.createBus(this.eventType(), k);
+            }
+            holder[0] = bus.listen(priority, listener);
+            return bus;
+        });
+        return holder[0];
     }
 
     // suppress overloads: intentional dual Consumer/Predicate overloads; see class javadoc

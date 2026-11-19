@@ -11,10 +11,13 @@ import com.tkisor.nekojs.core.fs.NekoJSPaths;
 import com.tkisor.nekojs.core.lifecycle.NekoRuntimeRoot;
 import com.tkisor.nekojs.core.pack.ScriptPackRegistry;
 import com.tkisor.nekojs.core.plugin.PluginGenerationHooks;
+import com.tkisor.nekojs.core.stage.ClientStageMirror;
+import com.tkisor.nekojs.core.stage.gate.StageWireProtocol;
 import com.tkisor.nekojs.wrapper.DataGeneratorJS;
 import com.tkisor.nekojs.wrapper.LangGeneratorJS;
 import com.tkisor.nekojs.wrapper.clientdata.ClientDataStore;
 import com.tkisor.nekojs.wrapper.registry.gen.EntityTypeBuilder;
+import net.minecraft.client.Minecraft;
 import net.minecraft.commands.Commands;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.packs.resources.ResourceManagerReloadListener;
@@ -30,8 +33,10 @@ import net.neoforged.neoforge.client.event.EntityRenderersEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import java.nio.file.Path;
 
+/** Client-side mod setup registering renderers, resource reload listeners, and client event handlers. */
 public class NekoJSClient {
 
+    /** Registers client mod-bus listeners, reload hooks, and rendering integrations on the given event bus. */
     public static void register(IEventBus modEventBus, NekoRuntimeRoot root) {
         com.tkisor.nekojs.client.gui.ErrorDashboardScreens.install(
                 () -> root.openBuiltinUiSession(net.minecraft.client.Minecraft.getInstance()::schedule),
@@ -45,6 +50,10 @@ public class NekoJSClient {
         NeoForge.EVENT_BUS.addListener((ClientTickEvent.Post event) -> onClientTickPost(event, root));
         NeoForge.EVENT_BUS.addListener((ClientPlayerNetworkEvent.LoggingIn event) -> onClientLoggingIn(event, root));
         NeoForge.EVENT_BUS.addListener(NekoJSClient::onLevelUnload);
+        NeoForge.EVENT_BUS.addListener((ClientPlayerNetworkEvent.LoggingOut event) -> {
+            ClientStageMirror.SHARED.clear();
+            StageWireProtocol.clearCachedSummary(ClientStageMirror.SHARED);
+        });
         ClientEvents.bindModBus(modEventBus);
     }
 
@@ -82,6 +91,10 @@ public class NekoJSClient {
     }
 
     private static void onClientLoggingIn(ClientPlayerNetworkEvent.LoggingIn event, NekoRuntimeRoot root) {
+        var player = event.getPlayer();
+        if (player != null) {
+            ClientStageMirror.SHARED.setLocalPlayer(player.getStringUUID(), player.getScoreboardName());
+        }
         // Login runs on the client thread after the integrated server publishes WORLD sources.
         // Remote sources already activate during configuration; do not reload them again here.
         if (!event.getConnection().isMemoryConnection() || ScriptPackRegistry.get().worldPacks().isEmpty()) {
@@ -96,6 +109,11 @@ public class NekoJSClient {
     }
 
     private static void onClientTickPost(ClientTickEvent.Post event, NekoRuntimeRoot root) {
+        var player = Minecraft.getInstance().player;
+        if (player != null) {
+            ClientStageMirror.SHARED.setLocalPlayer(player.getStringUUID(), player.getScoreboardName());
+        }
+        ClientStageMirror.SHARED.tickClient();
         root.flushReadyNodeTimers(ScriptType.CLIENT);
     }
 

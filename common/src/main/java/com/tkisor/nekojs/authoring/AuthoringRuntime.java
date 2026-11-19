@@ -43,6 +43,7 @@ public final class AuthoringRuntime implements AutoCloseable {
         this.shutdownHook = new Thread(this::close, "NekoJS authoring shutdown");
     }
 
+    /** Opens and initializes an {@link AuthoringRuntime} for the given workspace paths and probe config. */
     public static AuthoringRuntime open(NekoJSPaths paths, ProbeConfig probe) throws IOException {
         AuthoringRuntime runtime = new AuthoringRuntime(paths, probe);
         try {
@@ -71,6 +72,7 @@ public final class AuthoringRuntime implements AutoCloseable {
         }
     }
 
+    /** Dispatches an authoring operation request to the query or control handler. */
     public JsonObject execute(String operation, JsonObject request) {
         if (closed) throw new AuthoringException(503, "SERVICE_CLOSED", "/", "Authoring service is closed.");
         if (operation.equals("errors")) return errors(request);
@@ -230,11 +232,13 @@ public final class AuthoringRuntime implements AutoCloseable {
             matches++;
             if (rows.size() >= limit) continue;
             String message = bounded(record.message(), 1024);
-            JsonObject row = AuthoringJson.obj("errorId", bounded(record.errorId(), 512), "scriptType", record.scriptType().name(),
-                    "phase", record.phase().name(), "owner", bounded(record.owner(), 128), "generation", record.generation(),
+            JsonObject row = AuthoringJson.obj("errorId", bounded(record.errorId(), 512),
+                    "scriptType", record.scriptType() == null ? null : record.scriptType().name(),
+                    "phase", record.phase() == null ? null : record.phase().name(),
+                    "owner", bounded(record.owner(), 128), "generation", record.generation(),
                     "recordedDuringCandidate", record.recordedDuringCandidate(), "sourcePath", relativeDiagnosticPath(record.sourcePath()),
                     "line", record.line(), "column", record.column(), "message", message,
-                    "messageTruncated", !message.equals(record.message()));
+                    "messageTruncated", !Objects.equals(message, record.message()));
             int size = row.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8).length + 1;
             if (bytes + size > 19 * 1024) continue;
             rows.add(row);
@@ -247,6 +251,7 @@ public final class AuthoringRuntime implements AutoCloseable {
     }
 
     private static String bounded(String value, int limit) {
+        if (value == null) return null;
         return value.length() <= limit ? value : value.substring(0, limit);
     }
 

@@ -8,6 +8,7 @@ import net.minecraft.resources.Identifier;
 
 import java.util.Map;
 
+/** Script-facing wrapper around an existing recipe JSON entry, supporting in-place edits, copying, and removal. */
 public class RecipeEntryJS {
     private final RecipeEventJS event;
     private Identifier id;
@@ -28,10 +29,14 @@ public class RecipeEntryJS {
         if (parsedId == null) {
             throw new IllegalArgumentException("Invalid recipe ID: " + newId);
         }
-        event.getFinalJsons().remove(id);
-        RecipeCreationContext context = event.getRecipeContext(id);
-        event.removeRecipeContext(id);
+        Identifier oldId = id;
+        event.getFinalJsons().remove(oldId);
+        RecipeCreationContext context = event.getRecipeContext(oldId);
+        event.removeRecipeContext(oldId);
         id = parsedId;
+//? if >=26 {
+        IngredientActionRegistry.rekey(oldId, id);
+//?}
         event.getFinalJsons().put(id, json);
         event.setRecipeContext(id, context);
         return this;

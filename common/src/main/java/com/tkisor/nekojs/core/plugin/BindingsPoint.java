@@ -65,19 +65,23 @@ public final class BindingsPoint {
      * registers it. */
     public static NekoPluginExtensionPoint<NekoJSPlugin, ScriptTypedValue<BindingRegistry>, Map<ScriptType, Map<String, Binding>>> point(
             boolean client) {
-        return point(client, plugin -> null);
+        return point(client, plugin -> PluginOwnerIds.resolve(null, plugin));
     }
 
     static NekoPluginExtensionPoint<NekoJSPlugin, ScriptTypedValue<BindingRegistry>, Map<ScriptType, Map<String, Binding>>> point(
-            boolean client, java.util.function.Function<NekoJSPlugin, String> owners) {
+            boolean client, java.util.function.Function<NekoJSPlugin, String> ownerResolver) {
         var predicate = NekoPluginBootstrap.bindingPredicate(client);
         return NekoPluginExtensionPoint.<NekoJSPlugin, ScriptTypedValue<BindingRegistry>, Map<ScriptType, Map<String, Binding>>>builder(ID, NekoJSPlugin.class)
                 .merge(MergePolicy.append())
                 .initializer(context -> ScriptTypedValue.of(BindingRegistry.BindingRegistryImpl::new))
-                .collector((plugin, registries) -> predicate.streamMatched()
-                        .map(registries::at)
-                        .map(registry -> ((BindingRegistry.BindingRegistryImpl) registry).scopedTo(owners.apply(plugin)))
-                        .forEach(plugin::registerBinding))
+                .collector((plugin, registries) -> {
+                    String owner = PluginOwnerIds.resolve(
+                            ownerResolver != null ? ownerResolver.apply(plugin) : null, plugin);
+                    predicate.streamMatched()
+                            .map(registries::at)
+                            .map(registry -> ((BindingRegistry.BindingRegistryImpl) registry).scopedTo(owner))
+                            .forEach(plugin::registerBinding);
+                })
                 .finish(NekoPluginBootstrap::freezeBindings)
                 .build();
     }

@@ -2,7 +2,10 @@ package com.tkisor.nekojs.fabric.event;
 
 import com.tkisor.nekojs.api.ScriptType;
 import com.tkisor.nekojs.api.event.EventBusJS;
+import com.tkisor.nekojs.api.event.StableExplosionEvent;
+import com.tkisor.nekojs.api.event.StableLevelEvent;
 import com.tkisor.nekojs.bindings.event.LevelEvents;
+import com.tkisor.nekojs.bindings.event.ServerLevelEventThread;
 import com.tkisor.nekojs.wrapper.event.level.LevelExplosionEventJS;
 import com.tkisor.nekojs.wrapper.event.level.LevelSavedEventJS;
 import net.minecraft.server.level.ServerLevel;
@@ -38,12 +41,25 @@ public final class FabricLevelEventBindingsV2 {
 
     /** Level save complete (server script, uncancellable). Payload {@link LevelSavedEventJS}. */
     public static final EventBusJS<LevelSavedEventJS, Void> SAVED =
-            LevelEvents.GROUP.server("saved", LevelSavedEventJS.class, api -> api.versioned());
+            LevelEvents.GROUP.server("saved", LevelSavedEventJS.class, api -> {
+                api.versioned();
+                api.stable()
+                        .when(event -> ServerLevelEventThread.isCurrent(event.getLevel()))
+                        .view(StableLevelEvent.class, FabricStableEventProjections::levelEvent)
+                        .scriptTypes(ScriptType.SERVER);
+            });
 
     /** Before explosion (server script; cancellable—if cancelled, the entire explosion is not processed). */
     public static final EventBusJS<LevelExplosionEventJS, Void> EXPLOSION_START =
             LevelEvents.GROUP.add("explosionStart", ScriptType.SERVER,
-                    EventBusJS.of(LevelExplosionEventJS.class, true), api -> api.versioned());
+                    EventBusJS.of(LevelExplosionEventJS.class, true), api -> {
+                        api.versioned().when(event -> !(event instanceof StableExplosionStart));
+                        api.stable()
+                                .when(event -> event instanceof StableExplosionStart && ServerLevelEventThread.isCurrent(event.getLevel()))
+                                .view(StableExplosionEvent.class, FabricStableEventProjections::explosionStart)
+                                .cancellable()
+                                .scriptTypes(ScriptType.SERVER);
+                    });
 
     /** beforeExplosion: historical alias for explosionStart (same deprecated status as NeoForge side). */
     @Deprecated
@@ -53,7 +69,13 @@ public final class FabricLevelEventBindingsV2 {
 
     /** Explosion detonation complete (server script, informational). */
     public static final EventBusJS<LevelExplosionEventJS, Void> EXPLOSION_DETONATE =
-            LevelEvents.GROUP.server("explosionDetonate", LevelExplosionEventJS.class, api -> api.versioned());
+            LevelEvents.GROUP.server("explosionDetonate", LevelExplosionEventJS.class, api -> {
+                api.versioned().when(event -> !(event instanceof ExplosionDetonation));
+                api.stable()
+                        .when(event -> event instanceof ExplosionDetonation && ServerLevelEventThread.isCurrent(event.getLevel()))
+                        .view(StableExplosionEvent.class, FabricStableEventProjections::explosionDetonate)
+                        .scriptTypes(ScriptType.SERVER);
+            });
 
     /** afterExplosion: historical alias for explosionDetonate (same deprecated status as NeoForge side). */
     @Deprecated
@@ -92,8 +114,18 @@ public final class FabricLevelEventBindingsV2 {
         }
         LevelExplosionEventJS payload = new LevelExplosionEventJS(explosion.level(), explosion);
         boolean cancelled = EXPLOSION_START.post(payload);
-        cancelled |= BEFORE_EXPLOSION.post(payload);
-        return cancelled;
+        return BEFORE_EXPLOSION.post(payload) || cancelled;
+    }
+
+    public static boolean postStableExplosionStart(Explosion explosion) {
+        return EXPLOSION_START.hasStableModuleListeners(ScriptType.SERVER)
+                && EXPLOSION_START.postStableModuleCancellable(new StableExplosionStart(explosion), ScriptType.SERVER);
+    }
+
+    private static final class StableExplosionStart extends LevelExplosionEventJS {
+        private StableExplosionStart(Explosion explosion) {
+            super(explosion.level(), explosion);
+        }
     }
 
     /**
@@ -101,12 +133,28 @@ public final class FabricLevelEventBindingsV2 {
      * {@code ServerExplosion#explode()}, after explosion damage, block breaking and fire are done;
      * the client explosion packet is sent afterwards by {@code ServerLevel.explode}.
      */
-    public static void postExplosionDetonate(Explosion explosion) {
-        if (!EXPLOSION_DETONATE.hasListeners() && !AFTER_EXPLOSION.hasListeners()) {
-            return;
-        }
-        LevelExplosionEventJS payload = new LevelExplosionEventJS(explosion.level(), explosion);
+    public static void postAfterExplosion(Explosion explosion) {
+        if (!EXPLOSION_DETONATE.hasListeners() && !AFTER_EXPLOSION.hasListeners()) return;
+        var payload = new LevelExplosionEventJS(explosion.level(), explosion);
         EXPLOSION_DETONATE.post(payload);
         AFTER_EXPLOSION.post(payload);
+    }
+
+    public static void postStableExplosionDetonate(Explosion explosion, int blockCount, int entityCount) {
+        if (EXPLOSION_DETONATE.hasStableModuleListeners(ScriptType.SERVER)) {
+            EXPLOSION_DETONATE.postStableModuleNotification(
+                    new ExplosionDetonation(explosion, blockCount, entityCount), ScriptType.SERVER);
+        }
+    }
+
+    static final class ExplosionDetonation extends LevelExplosionEventJS {
+        final int blockCount;
+        final int entityCount;
+
+        ExplosionDetonation(Explosion explosion, int blockCount, int entityCount) {
+            super(explosion.level(), explosion);
+            this.blockCount = blockCount;
+            this.entityCount = entityCount;
+        }
     }
 }

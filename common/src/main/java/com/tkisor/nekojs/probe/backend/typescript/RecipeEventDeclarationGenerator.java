@@ -120,6 +120,7 @@ public final class RecipeEventDeclarationGenerator {
         return Collections.unmodifiableSet(result);
     }
 
+    /** Generates TypeScript declarations for recipe event namespaces visible to {@code scriptType}. */
     public String generate(List<RecipeNamespaceCatalogEntry> namespaces, ScriptType scriptType) {
         if (!hasDeclarations(namespaces, scriptType)) return "";
         Set<TypeScriptImportNames.Symbol> imports = new LinkedHashSet<>();
@@ -136,7 +137,8 @@ public final class RecipeEventDeclarationGenerator {
         RecipeEventDeclarationGenerator renderer = new RecipeEventDeclarationGenerator(moduleAliases, inputs);
         Map<String, Set<String>> importsByPkg = new TreeMap<>();
         for (var symbol : imports) {
-            String pkg = symbol.fqn().substring(0, symbol.fqn().lastIndexOf('.'));
+            int dot = symbol.fqn().lastIndexOf('.');
+            String pkg = dot >= 0 ? symbol.fqn().substring(0, dot) : "";
             String local = names.reference(symbol.fqn(), symbol.exportedName());
             String binding = symbol.exportedName().equals(local) ? local : symbol.exportedName() + " as " + local;
             importsByPkg.computeIfAbsent(pkg, ignored -> new TreeSet<>()).add(binding);
@@ -557,8 +559,9 @@ public final class RecipeEventDeclarationGenerator {
             return ApiTypeRef.array(parseLegacyType(component));
         }
         int generic = type.indexOf('<');
-        if (generic >= 0) return ApiTypeRef.symbol(new ApiSymbolId("java", type.substring(0, generic)),
-                splitTopLevel(type.substring(generic + 1, type.lastIndexOf('>'))).stream()
+        int genericEnd = generic >= 0 ? type.lastIndexOf('>') : -1;
+        if (generic >= 0 && genericEnd > generic) return ApiTypeRef.symbol(new ApiSymbolId("java", type.substring(0, generic)),
+                splitTopLevel(type.substring(generic + 1, genericEnd)).stream()
                         .map(RecipeEventDeclarationGenerator::parseLegacyType).toList());
         return switch (type) {
             case "void", "java.lang.Void" -> ApiTypeRef.voidType();

@@ -43,7 +43,7 @@ console.info('Hello, NekoJS!')
 | 想做的事 | 用什么 | 详细说明 |
 |---|---|---|
 | 添加、删除、修改配方 | `ServerEvents.recipes` | [配方系统](recipe-system_cn) |
-| 添加新物品、方块、实体 | `RegistryEvents.register`（启动脚本） | [注册新内容](registering-new-content_cn) |
+| 添加新物品、方块、实体 | `StartupEvents.registry`（启动脚本） | [注册新内容](registering-new-content_cn) |
 | 在玩家行为、方块破坏等时机执行代码 | `PlayerEvents`、`BlockEvents` 等事件 | [事件参考](event-reference_cn) |
 | 添加自定义命令 | `CommandEvents.register` | [事件参考](event-reference_cn#wiki-command-events) |
 | 在屏幕上画 HUD、做界面 | `ClientEvents`、JSX 界面 | [客户端绘制](client-rendering_cn)、[JSX 客户端 UI](jsx-client-ui_cn) |

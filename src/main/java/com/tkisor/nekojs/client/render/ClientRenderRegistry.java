@@ -281,10 +281,16 @@ public final class ClientRenderRegistry {
     }
 
     private static boolean hasListener(Map<String, Entry> map, int layerOrdinal) {
-        for (Entry entry : map.values()) {
-            if (entry.layer() == layerOrdinal && !ScriptManager.isContextDead(entry.context())) {
-                return true;
+        for (Map.Entry<String, Entry> e : map.entrySet()) {
+            Entry entry = e.getValue();
+            if (entry.layer() != layerOrdinal) {
+                continue;
             }
+            if (ScriptManager.isContextDead(entry.context())) {
+                map.remove(e.getKey(), entry);
+                continue;
+            }
+            return true;
         }
         return false;
     }

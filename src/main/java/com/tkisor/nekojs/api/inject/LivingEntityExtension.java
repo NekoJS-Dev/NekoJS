@@ -24,7 +24,10 @@ public interface LivingEntityExtension extends LivingEntitySpec {
             return null;
         }
 //? if >=26 {
-        Identifier loc = Identifier.parse(effectId.contains(":") ? effectId : "minecraft:" + effectId);
+        Identifier loc = Identifier.tryParse(effectId.contains(":") ? effectId : "minecraft:" + effectId);
+        if (loc == null) {
+            return null;
+        }
 //?} else {
         /*Identifier loc = effectId.contains(":")
             ? Identifier.tryParse(effectId)

@@ -1,10 +1,10 @@
 package com.tkisor.nekojs.probe;
 
+import com.google.gson.JsonPrimitive;
 import com.tkisor.nekojs.api.catalog.EventCatalogEntry;
 import com.tkisor.nekojs.api.catalog.RegistryBuilderSurfaceEntry;
 import com.tkisor.nekojs.api.catalog.RegistryBuilderSurfaceEntry.EventPayload;
 
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -34,26 +34,39 @@ public final class EventPayloadDeclarations {
                 continue;
             }
             payloads.merge(payload.eventType(), payload, (previous, next) -> {
-                List<RegistryBuilderSurfaceEntry.Member> members = new ArrayList<>(previous.members());
-                for (RegistryBuilderSurfaceEntry.Member member : next.members()) {
-                    if (!members.contains(member)) {
-                        members.add(member);
-                    }
+                if (previous.equals(next)) {
+                    return previous;
                 }
-                return new EventPayload(previous.eventType(), previous.name(), members, previous.typescriptBuilderNamespace());
+                var members = new LinkedHashSet<>(previous.members());
+                members.addAll(next.members());
+                var variants = new LinkedHashSet<>(previous.variants());
+                variants.addAll(next.variants());
+                return new EventPayload(previous.eventType(), previous.name(), List.copyOf(members),
+                        previous.typescriptBuilderNamespace(), List.copyOf(variants));
             });
         }
         return payloads;
     }
 
+    public static String quoteSelector(String selector) {
+        return new JsonPrimitive(selector).toString();
+    }
+
     public static List<String> builderNames(Map<Class<?>, EventPayload> payloads,
                                              List<RegistryBuilderSurfaceEntry> builders) {
+        return associatedBuilders(payloads, builders).stream()
+                .map(RegistryBuilderSurfaceEntry::builderName).distinct().sorted().toList();
+    }
+
+    public static List<RegistryBuilderSurfaceEntry> associatedBuilders(Map<Class<?>, EventPayload> payloads,
+                                                                       List<RegistryBuilderSurfaceEntry> builders) {
         if (payloads.isEmpty()) {
             return List.of();
         }
         return builders.stream()
+                .filter(RegistryBuilderSurfaceEntry::hasBuilder)
                 .filter(builder -> builder.eventPayload() != null
                         && payloads.containsKey(builder.eventPayload().eventType()))
-                .map(RegistryBuilderSurfaceEntry::builderName).distinct().sorted().toList();
+                .toList();
     }
 }

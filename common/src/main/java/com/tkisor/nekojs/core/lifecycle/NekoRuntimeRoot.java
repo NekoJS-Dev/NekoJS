@@ -18,6 +18,7 @@ import com.tkisor.nekojs.script.prop.ScriptPropertyRegistry;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
@@ -66,7 +67,8 @@ public final class NekoRuntimeRoot implements AutoCloseable {
     private final NekoTrustContext trustContext;
     private final com.tkisor.nekojs.core.pack.PackActivationCoordinator packs;
     private volatile boolean packClosePending;
-    private boolean closeInProgress;
+    private volatile boolean closed;
+    private final java.util.concurrent.atomic.AtomicBoolean closeInProgress = new java.util.concurrent.atomic.AtomicBoolean();
     private final java.util.Set<ScriptType> packTypes = java.util.concurrent.ConcurrentHashMap.newKeySet();
     /**
      * Root-owned managed global and shared state: a private backing store per {@link ScriptType} plus
@@ -142,7 +144,7 @@ public final class NekoRuntimeRoot implements AutoCloseable {
         this.eventBridge = mixins.wrap(eventBridge);
         this.scriptProperties = scriptProperties;
         this.environmentFactory = new ScriptEnvironmentFactory(this.eventBridge, pluginRuntime, sandboxFactory, globalState);
-        this.scriptManagers = new EnumMap<>(ScriptType.class);
+        this.scriptManagers = Collections.synchronizedMap(new EnumMap<>(ScriptType.class));
         this.resources = new ResourceTracker();
         this.preparationCache = preparationCache;
         this.trustContext = trustContext;
@@ -161,14 +163,22 @@ public final class NekoRuntimeRoot implements AutoCloseable {
 
     /** Starts optional authoring access once; ordinary script reloads retain the same root-owned service. */
     public synchronized void initializeAuthoring() {
-        if (authoringInitialized) return;
+        if (authoringInitialized || closed || authoringStopping) return;
         authoringInitialized = true;
         try {
             var runtime = com.tkisor.nekojs.authoring.AuthoringRuntime.open(
                     com.tkisor.nekojs.core.fs.NekoJSPaths.get(), com.tkisor.nekojs.probe.ProbeCoordinator.config());
+            if (closed || authoringStopping) {
+                closeQuietly(runtime);
+                return;
+            }
             runtime.installDiagnostics(() -> errors().records(), this::latestTestRunReport);
-            authoringRuntime = runtime;
             resources.track("authoring", runtime);
+            if (closed || authoringStopping) {
+                closeQuietly(runtime);
+                return;
+            }
+            authoringRuntime = runtime;
         } catch (java.io.IOException | RuntimeException | LinkageError failure) {
             com.tkisor.nekojs.NekoJS.LOGGER.warn("[NEKO-1019] Authoring initialization failed; game startup continues", failure);
         }
@@ -177,11 +187,29 @@ public final class NekoRuntimeRoot implements AutoCloseable {
     /** Opens bundled diagnostic UI without joining a user CLIENT reload transaction. */
     public synchronized com.tkisor.nekojs.core.ui.BuiltinUiRuntime.Session openBuiltinUiSession(
             java.util.function.Consumer<Runnable> ownerQueue) {
-        if (authoringStopping) throw new IllegalStateException("[NEKO-7015] Runtime shutdown rejected built-in UI creation");
+        if (closed || authoringStopping) throw new IllegalStateException("[NEKO-7015] Runtime shutdown rejected built-in UI creation");
         if (builtinUi == null) {
-            builtinUi = resources.track("builtin-ui", environmentFactory.createBuiltinUiRuntime());
+            var created = environmentFactory.createBuiltinUiRuntime();
+            if (closed || authoringStopping) {
+                closeQuietly(created);
+                throw new IllegalStateException("[NEKO-7015] Runtime shutdown rejected built-in UI creation");
+            }
+            resources.track("builtin-ui", created);
+            if (closed || authoringStopping) {
+                closeQuietly(created);
+                throw new IllegalStateException("[NEKO-7015] Runtime shutdown rejected built-in UI creation");
+            }
+            builtinUi = created;
         }
         return builtinUi.open(ownerQueue);
+    }
+
+    private static void closeQuietly(AutoCloseable closeable) {
+        if (closeable == null) return;
+        try {
+            closeable.close();
+        } catch (Throwable ignored) {
+        }
     }
 
     /** Binds the platform live adapter only when optional authoring initialization succeeded. */
@@ -257,6 +285,7 @@ public final class NekoRuntimeRoot implements AutoCloseable {
         return null;
     }
 
+    /** Returns the registered {@link ScriptManager} for {@code type}, throwing if absent. */
     public ScriptManager scriptManagerOf(ScriptType type) {
         ScriptManager manager = scriptManagers.get(type);
         if (manager == null) {
@@ -265,6 +294,7 @@ public final class NekoRuntimeRoot implements AutoCloseable {
         return manager;
     }
 
+    /** Returns the registered {@link ScriptManager} for {@code type}, or {@code null} if absent. */
     public ScriptManager scriptManagerOrNull(ScriptType type) {
         return scriptManagers.get(type);
     }
@@ -289,11 +319,13 @@ public final class NekoRuntimeRoot implements AutoCloseable {
         return scriptManagerOf(type).packExecutionPlan();
     }
 
+    /** Returns whether the active generation for {@code type} was terminated and isolated. */
     public boolean isActiveFailed(ScriptType type) {
         ScriptManager manager = scriptManagers.get(type);
         return manager != null && manager.isActiveFailed();
     }
 
+    /** Creates, wires, and registers a {@link ScriptManager} for {@code type}. */
     public ScriptManager createScriptManager(ScriptType type) {
         ScriptManager[] owner = new ScriptManager[1];
         ScriptEventBridge partition = new ScriptEventBridge() {
@@ -369,6 +401,24 @@ public final class NekoRuntimeRoot implements AutoCloseable {
         finally { if (packClosePending) closeSilently(); }
     }
 
+    public com.tkisor.nekojs.core.pack.PackActivationCoordinator.PreparedReload prepareServerResourceScripts() {
+        packTypes.add(ScriptType.SERVER);
+        try {
+            return packs.prepareReload(ScriptType.SERVER, null);
+        } finally {
+            if (packClosePending && !packs.isOwnerOperation()) closeSilently();
+        }
+    }
+
+    public com.tkisor.nekojs.core.pack.PackActivationCoordinator.Result commitServerResourceScripts(
+            com.tkisor.nekojs.core.pack.PackActivationCoordinator.PreparedReload pending) {
+        try {
+            return pending.commit();
+        } finally {
+            if (packClosePending && !packs.isOwnerOperation()) closeSilently();
+        }
+    }
+
     public List<com.tkisor.nekojs.core.pack.PackActivationCoordinator.View> packActivations(ScriptType type) {
         return packs.views(type);
     }
@@ -378,6 +428,8 @@ public final class NekoRuntimeRoot implements AutoCloseable {
             ScriptType type, String loader, String minecraft) {
         try {
             if (globalState.isClosed()) throw new IllegalStateException("[NEKO-1018] Package author operation rejected: runtime is closed");
+            if (action == null) return new com.tkisor.nekojs.core.pack.PackToolResult(false, selector, null, "Unknown author operation: null");
+            if (selector == null) return new com.tkisor.nekojs.core.pack.PackToolResult(false, null, null, "source selector is missing or ambiguous");
             var registry = com.tkisor.nekojs.core.pack.ScriptPackRegistry.get(); registry.refreshLocalPacks();
             if (action.equals("create")) {
                 Path created = com.tkisor.nekojs.core.pack.tool.PackTools.create(NekoJSPaths.get().packsRoot(), selector, List.of(type));
@@ -404,6 +456,7 @@ public final class NekoRuntimeRoot implements AutoCloseable {
         }
     }
 
+    /** Drains ready Node-style timers for {@code type} across the base manager and active packs. */
     public void flushReadyNodeTimers(ScriptType type) {
         try {
             scriptManagerOf(type).flushReadyNodeTimers();
@@ -411,6 +464,7 @@ public final class NekoRuntimeRoot implements AutoCloseable {
         } finally { if (packClosePending && !packs.isOwnerOperation()) closeSilently(); }
     }
 
+    /** Revokes world-scoped packs and clears their registered listeners for {@code type}. */
     public void clearWorldPackListeners(ScriptType type, List<com.tkisor.nekojs.core.pack.ScriptPack> removed) {
         try {
             packs.sourcesRevoked(com.tkisor.nekojs.core.pack.ScriptPackScope.WORLD);
@@ -448,6 +502,7 @@ public final class NekoRuntimeRoot implements AutoCloseable {
                 : ReloadResult.success(type, manager.generationId());
     }
 
+    /** Reloads a single non-pack script file in the active environment for {@code type}. */
     public ReloadResult reloadFile(ScriptType type, Path file) {
         Objects.requireNonNull(file, "file");
         var source = com.tkisor.nekojs.core.pack.ScriptPackRegistry.get().allPacks().stream()
@@ -495,6 +550,7 @@ public final class NekoRuntimeRoot implements AutoCloseable {
         return latestTestRunReport;
     }
 
+    /** Executes configured {@link ScriptType#TEST} scripts and captures assertion counts. */
     public synchronized TestRunResult runTests() {
         boolean packageRun = packs.handles(ScriptType.TEST);
         ScriptManager testManager = scriptManagers.get(ScriptType.TEST);
@@ -528,12 +584,14 @@ public final class NekoRuntimeRoot implements AutoCloseable {
         return value instanceof com.tkisor.nekojs.bindings.static_access.TestJS assertions ? assertions : null;
     }
 
+    /** Returns an immutable snapshot of all errors from the core tracker and active packs. */
     public ErrorSnapshot errors() {
         List<ScriptError> errors = new ArrayList<>(core.errorTracker().getAllErrors());
         errors.addAll(packs.errors());
         return new ErrorSnapshot(errors, errors.size());
     }
 
+    /** Returns the core {@link ErrorTracker} shared across base script managers. */
     public ErrorTracker errorTracker() {
         return core.errorTracker();
     }
@@ -543,36 +601,45 @@ public final class NekoRuntimeRoot implements AutoCloseable {
         closeSilently();
     }
 
+    /** Stops authoring controls, revokes packs, and tears down all script managers without throwing. */
     public void closeSilently() {
         authoringStopping = true;
         var authoring = authoringRuntime;
         if (authoring != null) authoring.stopControls();
         packs.requestClose();
-        if (closeInProgress) return;
+        if (closed || closeInProgress.get()) return;
         if (ScriptLifecycleGate.isInCallback()) {
             if (!packClosePending) ScriptLifecycleGate.afterCallback(this::closeSilently);
             packClosePending = true;
             return;
         }
         if (packs.isOwnerOperation()) { packClosePending = true; return; }
+        if (!closeInProgress.compareAndSet(false, true)) return;
+        if (closed) {
+            closeInProgress.set(false);
+            return;
+        }
         packClosePending = false;
-        closeInProgress = true;
+        closed = true;
         try {
             Throwable first = null;
             try { mixins.close(); } catch (Throwable failure) { first = failure; }
             try { packs.close(); } catch (Throwable failure) {
                 if (first == null) first = failure; else first.addSuppressed(failure);
             }
-            for (ScriptType type : scriptManagers.keySet()) {
-                ScriptManager manager = scriptManagers.get(type);
+            List<Map.Entry<ScriptType, ScriptManager>> managersToClose;
+            synchronized (scriptManagers) {
+                managersToClose = new ArrayList<>(scriptManagers.entrySet());
+                scriptManagers.clear();
+            }
+            for (var entry : managersToClose) {
                 try {
-                    flushAndCloseManager(type, manager);
+                    flushAndCloseManager(entry.getKey(), entry.getValue());
                 } catch (Throwable t) {
                     if (first == null) first = t;
                     else first.addSuppressed(t);
                 }
             }
-            scriptManagers.clear();
             for (ScriptType type : ScriptType.values()) {
                 try {
                     eventBridge.clearListeners(type);
@@ -622,7 +689,7 @@ public final class NekoRuntimeRoot implements AutoCloseable {
                 throw new RuntimeException("[NEKO-1017] Runtime root teardown failed after releasing remaining resources", first);
             }
         } finally {
-            closeInProgress = false;
+            closeInProgress.set(false);
         }
     }
 
@@ -700,6 +767,7 @@ public final class NekoRuntimeRoot implements AutoCloseable {
         }
     }
 
+    /** Outcome of a {@link #runTests()} invocation, including optional assertion statistics. */
     public record TestRunResult(boolean isConfigured, boolean isCompleted,
                                 com.tkisor.nekojs.api.testing.TestRunReport testRunReport) {
         public TestRunResult(boolean isConfigured, boolean isCompleted) {
@@ -715,6 +783,7 @@ public final class NekoRuntimeRoot implements AutoCloseable {
         }
     }
 
+    /** Immutable point-in-time snapshot of recorded script errors. */
     public record ErrorSnapshot(Collection<ScriptError> errors, int count) {
         public ErrorSnapshot {
             errors = List.copyOf(errors == null ? List.of() : errors);

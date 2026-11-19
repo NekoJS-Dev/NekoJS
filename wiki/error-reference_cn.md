@@ -151,6 +151,15 @@ NekoJS 不会因为脚本运行太久而中断它。死循环或永远不会完�
 | `NEKO-4064` | Script output declaration rejected | 方法声明的 TypeScript 返回类型为空 |
 | `NEKO-4065` | Script output view rejected | 输出视图必须是真正实现了的、公开的非泛型接口 |
 | `NEKO-4066` | Probe declaration retained with incomplete public members | 缺少可选的公共签名，无法反射完整的方法列表。其他成员仍保留；详见 `incompleteMembers` |
+| `NEKO-4070` | Stage identifier, player reference or handle mutation rejected | 阶段名、玩家 UUID 或通知选项为空或无效，或在只读的客户端阶段句柄上调用了修改方法 |
+| `NEKO-4071` | Stage customization or gate declaration rejected | 阶段定制或门禁规则 ID 重复、临时阶段 tick 非正数、作用域或目标未知、目标集合为空、区域/生长阶段/等级范围无效，或构建器已关闭 |
+| `NEKO-4072` | Stage persistence read or write failed | `<world>/nekojs/stages/` 下的阶段存档 JSON 损坏、结构无效或读写失败 |
+| `NEKO-4074` | STARTUP registry selector rejected | 选择器无效，或注册表在当前 Minecraft 版本和加载器组合中未开放 |
+| `NEKO-4075` | STARTUP registry event operation rejected | 检查条目 ID、类型名、末尾构建回调或 supplier。事件对象只读 |
+| `NEKO-4076` | STARTUP registry builder factory missing | 所选表没有默认构建器，或指定的命名构建器不属于此表 |
+| `NEKO-4077` | Native registry missing in the Fabric registration window | Fabric 提交时找不到已声明的注册表。检查原生注册表的创建与加载器时序 |
+| `NEKO-4078` | STARTUP registry entry rejected during native registration | 查看日志中的表键、条目 ID 和原因。使用 `createCustom` 时检查 supplier 返回值 |
+| `NEKO-4079` | Staged STARTUP registry entries left undelivered | 加载器未提交暂存条目。上一次启动留下的暂存数据会被丢弃 |
 | `NEKO-4090` | Mixin preparation/restart required or declaration/library rejected | 先检查引擎配置 `[mixinjs] enabled`（默认关闭），修改后完整重启；准备成功后也要完整重启。其他情况检查缓存、加载器是否接受、目标环境、方法描述符和选项。见 [MixinJS 故障排查](mixinjs_cn#wiki-mixinjs-troubleshooting) |
 | `NEKO-4091` | Mixin callback authority or bridge ownership rejected | 使用本地可信的候选和回调文件；其他运行中的实例不能接管桥接 |
 | `NEKO-4092` | Native hook bypassed or callback decision discarded | 检查线程、同步返回值、控制对象的有效期和类型转换 |

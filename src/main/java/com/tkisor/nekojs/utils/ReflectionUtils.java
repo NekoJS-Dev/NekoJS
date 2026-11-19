@@ -44,20 +44,26 @@ import java.util.function.Predicate;
 @UtilityClass
 public final class ReflectionUtils {
 
+    /** Resolves the raw {@link Class} for a reflective {@link Type}, returning {@code fallback} if unknown. */
     public static Class<?> getRawType(Type type, Class<?> fallback) {
         var rawType = getRawType(type);
         return rawType != null ? rawType : fallback;
     }
 
+    /** Resolves the raw {@link Class} for a reflective {@link Type}, defaulting to {@code Object.class}. */
     public static Class<?> getRawType(Type type) {
         return switch (type) {
             case Class<?> aClass -> aClass;
-            case GenericArrayType genericArrayType -> getRawType(genericArrayType.getGenericComponentType());
+            case GenericArrayType genericArrayType -> {
+                var componentRaw = getRawType(genericArrayType.getGenericComponentType());
+                yield componentRaw == null ? null : Array.newInstance(componentRaw, 0).getClass();
+            }
             case ParameterizedType parameterizedType -> getRawType(parameterizedType.getRawType());
             case null, default -> null;
         };
     }
 
+    /** Scans NeoForge mod annotation data for classes annotated with {@code annotationClass}. */
     public static <A extends Annotation> void findAnnotationClasses(Class<A> annotationClass,
                                                                     @Nullable Predicate<Map<String, Object>> annotationPredicate,
                                                                     Consumer<Class<?>> consumer,
@@ -79,6 +85,7 @@ public final class ReflectionUtils {
         onFinished.run();
     }
 
+    /** Scans NeoForge mod annotation data for static fields annotated with {@code annotationClass}. */
     public static <A extends Annotation> void findAnnotationStaticField(Class<A> annotationClass,
                                                                         @Nullable Predicate<Map<String, Object>> annotationPredicate,
                                                                         BiConsumer<Field, Object> consumer,
@@ -93,6 +100,7 @@ public final class ReflectionUtils {
                         try {
                             var field = Class.forName(annotation.clazz().getClassName()).getDeclaredField(fieldName);
                             if (Modifier.isStatic(field.getModifiers())) {
+                                field.setAccessible(true);
                                 consumer.accept(field, field.get(null));
                             } else {
                                 NekoJS.LOGGER.error("Field is not static for notation: {} in {}", fieldName, clazz);
@@ -107,6 +115,7 @@ public final class ReflectionUtils {
         onFinished.run();
     }
 
+    /** Scans NeoForge mod annotation data for static methods annotated with {@code annotationClass}. */
     public static <A extends Annotation> void findAnnotationStaticMethod(Class<A> annotationClass,
                                                                          @Nullable Predicate<Map<String, Object>> annotationPredicate,
                                                                          Consumer<Method> consumer,

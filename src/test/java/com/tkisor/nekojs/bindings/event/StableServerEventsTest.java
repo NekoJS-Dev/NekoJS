@@ -3,6 +3,7 @@ package com.tkisor.nekojs.bindings.event;
 import com.tkisor.nekojs.api.ScriptType;
 import com.tkisor.nekojs.api.data.BindingExposure;
 import com.tkisor.nekojs.api.event.EventGroupRegistry;
+import com.tkisor.nekojs.api.event.ModuleEventGroup;
 import com.tkisor.nekojs.api.event.StableServerTickEvent;
 import com.tkisor.nekojs.core.api.ModuleEventGroupProxy;
 import com.tkisor.nekojs.script.ScriptContextRegistry;
@@ -12,7 +13,9 @@ import net.minecraft.server.dedicated.DedicatedServer;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 import static org.junit.jupiter.api.Assertions.*;
 
 // Native server initialization must not share the ordinary suite's partial vanilla bootstrap.
@@ -26,12 +29,14 @@ class StableServerEventsTest {
         new com.tkisor.nekojs.core.NekoJSCorePlugin().registerEvents(registry);
         var pre = ServerEvents.TICK_PRE;
         var post = ServerEvents.TICK_POST;
+        var starting = ServerEvents.STARTING;
         var prePayload = new net.neoforged.neoforge.event.tick.ServerTickEvent.Pre(() -> true, server);
         var postPayload = new net.neoforged.neoforge.event.tick.ServerTickEvent.Post(() -> true, server);
 //?} else {
         /*new com.tkisor.nekojs.fabric.FabricCorePlugin().registerEvents(registry);
         var pre = com.tkisor.nekojs.fabric.event.FabricServerEventBindings.TICK_PRE;
         var post = com.tkisor.nekojs.fabric.event.FabricServerEventBindings.TICK_POST;
+        var starting = com.tkisor.nekojs.fabric.event.FabricServerEventBindings.STARTING;
         var prePayload = new com.tkisor.nekojs.wrapper.event.server.ServerTickEventJS(server);
         var postPayload = new com.tkisor.nekojs.wrapper.event.server.ServerTickEventJS(server);
 *///?}
@@ -52,9 +57,22 @@ class StableServerEventsTest {
                     .filter(group -> group.category() == BindingExposure.Category.VERSION
                             && group.group().name().equals(source.name()))
                     .findFirst().orElseThrow();
+            var stablePublication = registry.moduleGroups().stream()
+                    .filter(group -> group.category() == BindingExposure.Category.STABLE
+                            && group.group().name().equals(source.name()))
+                    .findFirst();
+            assertTrue(source.viewBuses().keySet().containsAll(nativePublication.events()), source.name());
+            LinkedHashSet<String> publishedEvents = new LinkedHashSet<>(nativePublication.events());
+            publishedEvents.addAll(stablePublication.map(ModuleEventGroup::events).orElse(Set.of()));
+            assertEquals(source.viewBuses().keySet(), publishedEvents, source.name());
+//? if neoforge {
             assertEquals(source.viewBuses().keySet(), nativePublication.events(), source.name());
+//?}
         }
-        assertEquals(java.util.Set.of("tickPre", "tickPost"), publication.events());
+        assertEquals(java.util.Set.of(
+                "tickPre", "tickPost",
+                "aboutToStart", "starting", "started", "stopping", "stopped",
+                "datapackSync", "tagsUpdated", "lootTableLoad"), publication.events());
         assertTrue(publication.available(ScriptType.SERVER));
         assertFalse(publication.available(ScriptType.CLIENT));
         assertFalse(publication.available(ScriptType.STARTUP));
@@ -91,7 +109,16 @@ class StableServerEventsTest {
                 post.post(postPayload);
                 assertEquals("[37,\"undefined\",\"undefined\",37,37,91]", context.eval("js", "JSON.stringify(seen)").asString());
                 assertEquals(37, context.eval("js", "retained.tick").asInt());
-                assertEquals("undefined", context.eval("js", "typeof stable.starting").asString());
+                assertEquals("function", context.eval("js", "typeof stable.starting").asString());
+                context.eval("js", "stable.starting(e => seen.push(e.stage, e.tick));");
+//? if neoforge {
+                starting.post(new net.neoforged.neoforge.event.server.ServerStartingEvent(server));
+//?} else {
+                /*starting.post(new com.tkisor.nekojs.wrapper.event.server.ServerLifecycleEventJS(server));
+*///?}
+                assertEquals("[37,\"undefined\",\"undefined\",37,37,91,\"starting\",91]",
+                        context.eval("js", "JSON.stringify(seen)").asString());
+                assertEquals("undefined", context.eval("js", "typeof stable.recipes").asString());
             } finally {
                 publication.group().clearListeners(ScriptType.SERVER);
                 ScriptContextRegistry.unbind(context);
@@ -99,6 +126,7 @@ class StableServerEventsTest {
         }
         assertFalse(pre.hasListeners());
         assertFalse(post.hasListeners());
+        assertFalse(starting.hasListeners());
     }
 
     private static MinecraftServer nativeServer(int tick) throws Exception {

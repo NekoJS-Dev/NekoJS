@@ -78,6 +78,7 @@ public final class PostEffectCandidatePlan implements CandidateStatePlan {
         if (declaration.kind() != PostEffectDeclaration.Kind.INSTALL) {
             throw new IllegalArgumentException("install() requires an INSTALL declaration: " + declaration.id());
         }
+        explicitlyRetired.remove(declaration.id());
         installs.put(declaration.id(), declaration);
     }
 
@@ -118,7 +119,9 @@ public final class PostEffectCandidatePlan implements CandidateStatePlan {
         // Explicit unregister entries come first, then the implicit retire of ids the old generation no
         // longer declares; the union drops duplicates.
         for (String explicit : explicitlyRetired) {
-            result.add(PostEffectDeclaration.retire(explicit));
+            if (!installs.containsKey(explicit)) {
+                result.add(PostEffectDeclaration.retire(explicit));
+            }
         }
         for (String previous : previousIds) {
             if (!installs.containsKey(previous) && !explicitlyRetired.contains(previous)) {

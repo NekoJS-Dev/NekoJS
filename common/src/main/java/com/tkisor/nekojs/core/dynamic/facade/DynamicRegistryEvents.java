@@ -5,7 +5,7 @@ import com.tkisor.nekojs.api.event.EventGroup;
 
 /**
  * Event facade for dynamic registration at server runtime. Its lifetime and semantics are fully
- * separate from the startup-time {@code RegistryEvents.register}: this bus fires when the server
+ * separate from the startup-time {@code StartupEvents.registry}: this bus fires when the server
  * registry first becomes ready and during the candidate phase of every transactional script/data
  * reload. Script callbacks only submit inert candidate plans; they never perform a registry
  * mutation right away on the script thread.
@@ -27,7 +27,7 @@ import com.tkisor.nekojs.api.event.EventGroup;
  * lives in the NeoForge-only tree, and the fabric side is another file with the same FQCN, so
  * attaching the runtime facade there would tie its separate lifetime to a loader-specific group
  * and would keep the common layer from hosting or testing it. A separate group mirrors the
- * startup {@code RegistryEvents}, which is also its own group, and expresses the two lifetimes.
+ * startup {@code StartupEvents.registry}, which is also its own group, and expresses the two lifetimes.
  * The typed entry points keep the frozen names {@code event.item/soundEvent/mobEffect}. This
  * decision feeds the group's declaration/contract derivation and the migration table
  * (baseline MIGRATION.md).

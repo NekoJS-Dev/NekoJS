@@ -11,6 +11,9 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * Host bridge backing the Node.js {@code os} built-in module.
+ */
 public final class NekoNodeOS {
     public String arch() {
         return System.getProperty("os.arch", "x64");
@@ -83,7 +86,8 @@ public final class NekoNodeOS {
         Map<String, List<NetworkAddress>> result = new LinkedHashMap<>();
         try {
             var interfaces = NetworkInterface.getNetworkInterfaces();
-            while (interfaces.hasMoreElements()) {
+            if (interfaces != null) {
+                while (interfaces.hasMoreElements()) {
                 var ni = interfaces.nextElement();
                 List<NetworkAddress> addresses = new ArrayList<>();
                 var inetAddresses = ni.getInetAddresses();
@@ -102,6 +106,7 @@ public final class NekoNodeOS {
                 if (!addresses.isEmpty()) {
                     result.put(ni.getName(), addresses);
                 }
+                }
             }
         } catch (SocketException ignored) {}
         return result;
@@ -115,8 +120,12 @@ public final class NekoNodeOS {
     public double loadavg5() { return -1; }
     public double loadavg15() { return -1; }
 
+    /** Logical CPU core description returned by {@code os.cpus()}. */
     public record CpuInfo(String model, long speed, CpuTimes times) {}
+    /** CPU time breakdown in milliseconds for a single core. */
     public record CpuTimes(long user, long nice, long sys, long idle) {}
+    /** Current user account details returned by {@code os.userInfo()}. */
     public record UserInfo(String username, String homedir, String shell) {}
+    /** Network interface address entry returned by {@code os.networkInterfaces()}. */
     public record NetworkAddress(String address, String family, String type, int prefixLength, String ip) {}
 }

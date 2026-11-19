@@ -12,10 +12,12 @@ import net.neoforged.fml.loading.FMLPaths;
 import net.neoforged.neoforge.common.NeoForge;
 import java.nio.file.Path;
 import java.util.LinkedHashMap;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+/** NeoForge 1.21.1 {@link IPlatform} implementation backed by FML and NeoForge APIs. */
 public class NeoForgePlatform implements IPlatform {
     @Override
     public Map<String, Path> loadedPackRoots() {
@@ -64,23 +66,30 @@ public class NeoForgePlatform implements IPlatform {
         return FMLPaths.GAMEDIR.get().normalize().toAbsolutePath();
     }
 
-    private Map<String, IModInfo> modCache;
+    private volatile Map<String, IModInfo> modCache;
     @Override
     public Map<String, IModInfo> getMods() {
-        if (modCache == null) {
-            modCache = new LinkedHashMap<>();
-            for (var mod : ModList.get().getMods()) {
-                String id = mod.getModId();
-                // Builds our own ModInfo implementation.
-                IModInfo info = new ModInfo(
-                        id,
-                        mod.getDisplayName(),
-                        mod.getVersion().toString()
-                );
-                modCache.put(id, info);
+        Map<String, IModInfo> cache = modCache;
+        if (cache == null) {
+            synchronized (this) {
+                cache = modCache;
+                if (cache == null) {
+                    cache = new ConcurrentHashMap<>();
+                    for (var mod : ModList.get().getMods()) {
+                        String id = mod.getModId();
+                        // Builds our own ModInfo implementation.
+                        IModInfo info = new ModInfo(
+                                id,
+                                mod.getDisplayName(),
+                                mod.getVersion().toString()
+                        );
+                        cache.put(id, info);
+                    }
+                    modCache = cache;
+                }
             }
         }
-        return modCache;
+        return cache;
     }
 
     @Override

@@ -5,7 +5,7 @@
 <a id="wiki-section-1"></a>
 # Registering new content
 
-New items, blocks, entities and other content go in `startup_scripts/` and are registered with `RegistryEvents.register`. Registration only happens while the game starts, so you must **restart the game** after adding or changing registered content. `/nekojs reload startup` is rejected.
+Register items, blocks and entities in `startup_scripts/` with `StartupEvents.registry(selector, callback)`. Import `StartupEvents` from `nekojs:event/versioned` in STARTUP scripts. **Fully restart the game or dedicated server** after adding, removing or changing entries. `/nekojs reload startup` is rejected.
 
 <a id="wiki-section-2"></a>
 ## Quick start
@@ -13,20 +13,22 @@ New items, blocks, entities and other content go in `startup_scripts/` and are r
 Create `nekojs/startup_scripts/content.js`:
 
 ```javascript
-import { RegistryEvents } from "nekojs:event/versioned";
+import { StartupEvents } from "nekojs:event/versioned";
 
-RegistryEvents.register(event => {
-  event.item('mymod:cool_gem', item => {
-    item.maxStackSize = 16
-    item.rarity = 'rare'
-    item.fireResistant = true
+StartupEvents.registry('item', event => {
+  event.create('mymod:cool_gem', build => {
+    build.maxStackSize = 16
+    build.rarity = 'rare'
+    build.fireResistant = true
   })
+})
 
-  event.block('mymod:gem_block', block => {
-    block.hardness = 3.0
-    block.sound = 'stone'
-    block.requiresTool = true
-    block.lightLevel = 7
+StartupEvents.registry('block', event => {
+  event.create('mymod:gem_block', build => {
+    build.hardness = 3.0
+    build.sound = 'stone'
+    build.requiresTool = true
+    build.lightLevel = 7
   })
 })
 ```
@@ -40,40 +42,40 @@ At this point both show up as purple-and-black squares named `item.mymod.cool_ge
 <a id="wiki-section-3"></a>
 ## The basic pattern
 
-The methods on `event` are named after registries, such as `event.item`, `event.block` and `event.entityType`. Each takes two arguments: an ID and a function that configures the content.
+Pass one required selector per subscription. Each event object works with one registry. Use Minecraft’s original resource path for vanilla selectors such as `item`, `block`, or `entity_type`. `item` and `minecraft:item` select the same registry. If you subscribe with both, each listener runs once. Use the full key for a modded registry, such as `example:machines`. The entry ID uses its own namespace. To set a listener priority, use `StartupEvents.registry(priority, selector, callback)`.
 
 ```javascript
-import { RegistryEvents } from "nekojs:event/versioned";
+import { StartupEvents } from "nekojs:event/versioned";
 
-RegistryEvents.register(event => {
-  event.item('mymod:ruby', item => {
-    item.maxStackSize = 16   // a plain setting: assign it
-    item.tag('c:gems')       // an action: call a method
+StartupEvents.registry('item', event => {
+  event.create('mymod:ruby', build => {
+    build.maxStackSize = 16   // a plain setting: assign it
+    build.tag('c:gems')       // an action: call a method
   })
 })
 ```
 
-- Assign plain settings, for example `item.maxStackSize = 16`.
-- Call methods for actions and nested configuration, for example `item.food(...)`, `item.tag(...)` and `block.noItem()`.
-- Setting nothing is fine too. `event.item('mymod:x', item => {})` registers a working item with default values. The tables below list the defaults.
+- `event.create(id, build)` uses the default builder. An empty configuration callback keeps the defaults.
+- `event.create(id, typeName, build)` selects a named builder in this registry. In the `item` listener, `event.create('mymod:sapphire', 'basic', build => { build.rarity = 'rare' })` explicitly selects `basic`. Supply a type name if there is no default.
+- Assign properties such as `build.maxStackSize = 16`. Use methods such as `build.tag(...)` or `build.noItem()` for actions and nested configuration.
+- `event.createCustom(id, supplier)` queues a function that returns a valid native entry. The loader calls it when committing the entry. This works for registries without a builder and follows script access and loader registration rules.
 
-Built-in methods:
+Built-in selectors
 
-| Method | Registers |
+| Selector | Registers |
 |---|---|
-| `event.item` | Items |
-| `event.block` | Blocks, with a matching item by default |
-| `event.fluid` | Fluids (NeoForge only) |
-| `event.entityType` | Entities |
-| `event.creativeModeTab` | Creative tabs |
-| `event.mobEffect` | Status effects |
-| `event.potion` | Potions |
-| `event.soundEvent` | Sounds |
-| `event.particleType` | Particle types |
-| `event.villagerType` | Villager types |
-| `event.enchantment` | Enchantments (NeoForge 1.21.1 only) |
+| `item` | Items |
+| `block` | Blocks, with a matching item by default |
+| `fluid` | Fluids (NeoForge only) |
+| `entity_type` | Entities |
+| `creative_mode_tab` | Creative tabs |
+| `mob_effect` | Status effects |
+| `potion` | Potions |
+| `sound_event` | Sounds |
+| `particle_type` | Particle types |
+| `villager_type` | Villager types |
 
-Other mods or plugins can add more methods. If you misspell a method name, the error lists every method available right now.
+You can subscribe to static registries explicitly opened for your Minecraft version and loader. NekoJS does not auto-discover writable registries. To open a modded registry, the host mod creates the native static registry through the loader and a NekoJS plugin declares its full key and supported versions and loaders. Plugins can also add named builders to a registry that is already open.
 
 <a id="wiki-section-4"></a>
 ## Items
@@ -98,11 +100,11 @@ Other mods or plugins can add more methods. If you misspell a method name, the e
 ### Food
 
 ```javascript
-import { RegistryEvents } from "nekojs:event/versioned";
+import { StartupEvents } from "nekojs:event/versioned";
 
-RegistryEvents.register(event => {
-  event.item('mymod:cheese', item => {
-    item.food(food => {
+StartupEvents.registry('item', event => {
+  event.create('mymod:cheese', build => {
+    build.food(food => {
       food.nutrition(4)
       food.saturation(0.6)
       food.fastEat()
@@ -125,16 +127,16 @@ RegistryEvents.register(event => {
 For properties not listed above, set item components directly. Values use the same format as component JSON in vanilla data packs:
 
 ```javascript
-import { RegistryEvents } from "nekojs:event/versioned";
+import { StartupEvents } from "nekojs:event/versioned";
 
-RegistryEvents.register(event => {
-  event.item('mymod:gem', item => {
-    item.component('minecraft:rarity', 'epic')
+StartupEvents.registry('item', event => {
+  event.create('mymod:gem', build => {
+    build.component('minecraft:rarity', 'epic')
   })
 })
 ```
 
-`item.components = { ... }` replaces every component set before it; `item.component(id, value)` changes one. Components apply after the plain properties. A wrong value makes the game report an error at startup.
+`build.components = { ... }` replaces every component set before it; `build.component(id, value)` changes one. Components apply after the plain properties. A wrong value makes the game report an error at startup.
 
 Item tooltips are not set here. Use the client event `ItemEvents.tooltip`; see [Event reference](event-reference_us).
 
@@ -156,17 +158,17 @@ Item tooltips are not set here. Use the client event `ItemEvents.tooltip`; see [
 | `tag(...)` | — | Adds the **block** to tags |
 
 ```javascript
-import { RegistryEvents } from "nekojs:event/versioned";
+import { StartupEvents } from "nekojs:event/versioned";
 
-RegistryEvents.register(event => {
-  event.block('mymod:ruby_ore', block => {
-    block.hardness = 3.0
-    block.requiresTool = true
-    block.tag('minecraft:mineable/pickaxe', 'minecraft:needs_iron_tool')
+StartupEvents.registry('block', event => {
+  event.create('mymod:ruby_ore', build => {
+    build.hardness = 3.0
+    build.requiresTool = true
+    build.tag('minecraft:mineable/pickaxe', 'minecraft:needs_iron_tool')
 
     // Configure the matching item
-    block.item.maxStackSize = 16
-    block.item.tag('c:ores')
+    build.item.maxStackSize = 16
+    build.item.tag('c:ores')
   })
 })
 ```
@@ -180,19 +182,19 @@ About `renderType`: on 1.21.1 it works directly. On 26.x, transparency comes fro
 <a id="wiki-section-8"></a>
 ## Fluids (NeoForge only)
 
-One `event.fluid` call registers a complete fluid that can be placed, flows and fits in a bucket:
+One `event.create` call in a `fluid` listener registers a complete fluid that can be placed, flows and fits in a bucket.
 
 ```javascript
-import { RegistryEvents } from "nekojs:event/versioned";
+import { StartupEvents } from "nekojs:event/versioned";
 
-RegistryEvents.register(event => {
-  event.fluid('mymod:molten_iron', fluid => {
-    fluid.density = 3000
-    fluid.viscosity = 2000
-    fluid.temperature = 1500
-    fluid.lightLevel = 12
-    // fluid.noBucket()   // no bucket
-    // fluid.noBlock()    // no liquid block
+StartupEvents.registry('fluid', event => {
+  event.create('mymod:molten_iron', build => {
+    build.density = 3000
+    build.viscosity = 2000
+    build.temperature = 1500
+    build.lightLevel = 12
+    // build.noBucket()   // no bucket
+    // build.noBlock()    // no liquid block
   })
 })
 ```
@@ -217,15 +219,15 @@ You provide the fluid's textures and models in a resource pack.
 ## Entities
 
 ```javascript
-import { RegistryEvents } from "nekojs:event/versioned";
+import { StartupEvents } from "nekojs:event/versioned";
 
-RegistryEvents.register(event => {
-  event.entityType('mymod:test_mob', mob => {
-    mob.category = 'monster'
-    mob.size(0.6, 1.8)
-    mob.spawnEgg(0x8a6f4d, 0xffe2b3)
-    mob.attributes(attr => attr.maxHealth(18).movementSpeed(0.3).attackDamage(4))
-    mob.goals(goals => goals
+StartupEvents.registry('entity_type', event => {
+  event.create('mymod:test_mob', build => {
+    build.category = 'monster'
+    build.size(0.6, 1.8)
+    build.spawnEgg(0x8a6f4d, 0xffe2b3)
+    build.attributes(attr => attr.maxHealth(18).movementSpeed(0.3).attackDamage(4))
+    build.goals(goals => goals
       .floatInWater(0)
       .meleeAttack(2, 1.2, false)
       .target(4, 'minecraft:player', true))
@@ -256,14 +258,14 @@ Spawn egg colors only apply on NeoForge 1.21.1. On 26.x, change the egg's look b
 To reuse the behavior and look of an existing mob, set its Java class and renderer:
 
 ```javascript
-import { RegistryEvents } from "nekojs:event/versioned";
+import { StartupEvents } from "nekojs:event/versioned";
 
 const Zombie = Java.type('net.minecraft.world.entity.monster.zombie.Zombie')
 
-RegistryEvents.register(event => {
-  event.entityType('mymod:my_zombie', mob => {
-    mob.entityClass(Zombie)
-    mob.renderer = 'net.minecraft.client.renderer.entity.ZombieRenderer'
+StartupEvents.registry('entity_type', event => {
+  event.create('mymod:my_zombie', build => {
+    build.entityClass(Zombie)
+    build.renderer = 'net.minecraft.client.renderer.entity.ZombieRenderer'
   })
 })
 ```
@@ -312,108 +314,102 @@ GoalEvents.register(event => {
 ## Creative tabs
 
 ```javascript
-import { RegistryEvents } from "nekojs:event/versioned";
+import { StartupEvents } from "nekojs:event/versioned";
 
-RegistryEvents.register(event => {
-  event.creativeModeTab('mymod:main', tab => {
-    tab.title = 'My Mod'
-    tab.icon = 'mymod:cool_gem'
-    tab.add('mymod:cool_gem')
-    tab.add('mymod:gem_block')
+StartupEvents.registry('creative_mode_tab', event => {
+  event.create('mymod:main', build => {
+    build.title = 'My Mod'
+    build.icon = 'mymod:cool_gem'
+    build.add('mymod:cool_gem')
+    build.add('mymod:gem_block')
   })
 })
 ```
 
-`icon` and `add` accept an item ID or `Item.of(...)`. Without an icon, the tab shows a barrier. You can also put an item into the tab with `item.groupTab = 'mymod:main'`.
+`icon` and `add` accept an item ID or `Item.of(...)`. Without an icon, the tab shows a barrier. You can also put an item into the tab with `build.groupTab = 'mymod:main'`.
 
 <a id="wiki-section-14"></a>
 ## Other content
 
 ```javascript
-import { RegistryEvents } from "nekojs:event/versioned";
+import { StartupEvents } from "nekojs:event/versioned";
 
-RegistryEvents.register(event => {
+StartupEvents.registry('mob_effect', event => {
   // Status effect: category is 'beneficial', 'harmful' or 'neutral' (default)
-  event.mobEffect('mymod:shock', effect => {
-    effect.category = 'harmful'
-    effect.color = 0x00FF00
+  event.create('mymod:shock', build => {
+    build.category = 'harmful'
+    build.color = 0x00FF00
   })
+})
 
+StartupEvents.registry('potion', event => {
   // Potion: effect(effect, duration in ticks, amplifier); call it as often as you like
-  event.potion('mymod:shock_potion', potion => {
-    potion.effect('minecraft:poison', 600, 0)
-    potion.effect('minecraft:speed', 3600, 1, false, true)   // plus: ambient (beacon-style), show particles
+  event.create('mymod:shock_potion', build => {
+    build.effect('minecraft:poison', 600, 0)
+    build.effect('minecraft:speed', 3600, 1, false, true)   // plus: ambient (beacon-style), show particles
   })
+})
 
+StartupEvents.registry('sound_event', event => {
   // Sound: without fixedRange, the sound definition decides
-  event.soundEvent('mymod:thunder_clap', sound => {
-    sound.fixedRange = 64
+  event.create('mymod:thunder_clap', build => {
+    build.fixedRange = 64
   })
+})
 
+StartupEvents.registry('particle_type', event => {
   // Particle type
-  event.particleType('mymod:sparkle', particle => {
-    particle.overrideLimiter = true
+  event.create('mymod:sparkle', build => {
+    build.overrideLimiter = true
   })
+})
 
+StartupEvents.registry('villager_type', event => {
   // Villager type: nothing to configure
-  event.villagerType('mymod:miner', villager => {})
+  event.create('mymod:miner', build => {})
 })
 ```
 
 Potions can only use effects that already exist in the game. A misspelled effect ID is silently skipped. An effect registered in the same script does not exist yet at that point, which is why the example uses vanilla effects.
 
 <a id="wiki-section-15"></a>
-### Enchantments (NeoForge 1.21.1 only)
+### Enchantments and data-pack registries
 
-```javascript
-import { RegistryEvents } from "nekojs:event/versioned";
-
-RegistryEvents.register(event => {
-  event.enchantment('mymod:ice_bane', ench => {
-    ench.supportedItems = 'minecraft:enchantable/weapon'
-    ench.weight = 5
-    ench.maxLevel = 3
-    ench.minCostBase = 5
-    ench.minCostPerLevel = 5
-    ench.maxCostBase = 20
-    ench.maxCostPerLevel = 5
-    ench.anvilCost = 2
-    ench.slots = 'mainhand'
-  })
-})
-```
-
-An enchantment registered this way shows up in enchanting tables and on books, but **does nothing by itself**; implement its effect with events. On Minecraft 26.x enchantments are defined by data packs, so put the enchantment JSON under `nekojs/data/`.
+Enchantments and other data-pack registry entries load through data packs. Put the JSON under `nekojs/data/` in the format for your Minecraft version.
 
 <a id="wiki-builder-tags"></a>
 <a id="wiki-section-16"></a>
 ## Adding tags at registration
 
-Items, blocks, fluids, entities and enchantments can join tags right where you register them, with no separate data pack JSON:
+Items, blocks, fluids and entities can join tags right where you register them, with no separate data pack JSON:
 
 ```javascript
-import { RegistryEvents } from "nekojs:event/versioned";
+import { StartupEvents } from "nekojs:event/versioned";
 
-RegistryEvents.register(event => {
-  event.item('mymod:ruby_pickaxe', item => {
-    item.maxDamage = 500
-    item.tag('minecraft:pickaxes', 'c:tools/mining_tool')
+StartupEvents.registry('item', event => {
+  event.create('mymod:ruby_pickaxe', build => {
+    build.maxDamage = 500
+    build.tag('minecraft:pickaxes', 'c:tools/mining_tool')
   })
+})
 
-  event.block('mymod:ruby_ore', block => {
-    block.requiresTool = true
-    block.tag('minecraft:mineable/pickaxe', 'minecraft:needs_iron_tool')
+StartupEvents.registry('block', event => {
+  event.create('mymod:ruby_ore', build => {
+    build.requiresTool = true
+    build.tag('minecraft:mineable/pickaxe', 'minecraft:needs_iron_tool')
   })
+})
 
-  event.entityType('mymod:raider_golem', mob => {
-    mob.tag('minecraft:raiders')
+StartupEvents.registry('entity_type', event => {
+  event.create('mymod:raider_golem', build => {
+    build.tag('minecraft:raiders')
   })
 })
 ```
 
 - Pass several tags at once or call `tag` several times.
 - A bare name means `minecraft:`. A leading `#` is fine.
-- A block's `tag` adds block tags. For item tags on the matching item, use `block.item.tag(...)`.
+- A block's `tag` adds block tags. For item tags on the matching item, use `build.item.tag(...)`.
 - A fluid's tags go on both the source and the flowing fluid.
 - The tags are applied again every time the server starts and on `/reload`. They are added before `ServerEvents.tags` runs, so your scripts can still add or remove entries.
 
@@ -449,11 +445,11 @@ Press F3+T after changing resources.
 If you have an item texture and do not want to write a model by hand, NekoJS can generate it:
 
 ```javascript
-import { RegistryEvents } from "nekojs:event/versioned";
+import { StartupEvents } from "nekojs:event/versioned";
 
-RegistryEvents.register(event => {
-  event.item('mymod:cool_gem', item => {
-    item.texture('mymod:item/cool_gem')
+StartupEvents.registry('item', event => {
+  event.create('mymod:cool_gem', build => {
+    build.texture('mymod:item/cool_gem')
   })
 })
 ```
@@ -505,22 +501,16 @@ Limits:
 <a id="wiki-section-20"></a>
 ## Migrating from the old style
 
-Older versions had one entry point per registry and set properties with chained methods. Now everything goes through `RegistryEvents.register` and properties are assigned:
+`RegistryEvents` was removed without an alias. Import `StartupEvents` and split multi-registry callbacks into one listener per registry. Keep the original entry IDs and avoid depending on the order of callbacks for different registries.
 
 | Old | New |
 |---|---|
-| `RegistryEvents.item(e => e.create(id, b => ...))` | `RegistryEvents.register(e => e.item(id, b => ...))` |
-| `RegistryEvents.block(...)` and one entry point per registry | `event.block(id, b => ...)` and so on |
-| `b.maxStackSize(16)` | `b.maxStackSize = 16` |
-| `b.fireResistant()` / `b.glowing()` | `b.fireResistant = true` / `b.glowing = true` |
-| `b.group('tab_id')` | `b.groupTab = 'tab_id'` |
-| `b.hardness(3).resistance(6)` | `b.hardness = 3`, `b.resistance = 6` |
-| `b.requiresTool()` | `b.requiresTool = true` |
-| `fluid.bucket(false)` / `fluid.block(false)` | `b.noBucket()` / `b.noBlock()` |
-| `entity.fireImmune()` | `b.fireImmune = true` |
-| `enchantment.minCost(5, 5)` | `b.minCostBase = 5`, `b.minCostPerLevel = 5` |
+| `event.item(id, build)` or `event.block(id, build)` in `RegistryEvents.register(...)` | Subscribe to `StartupEvents.registry('item', ...)` or `StartupEvents.registry('block', ...)` and call `event.create(id, build)` in that listener |
+| `event.item(id, typeName, build)` | Call `event.create(id, typeName, build)` in the `item` listener |
+| `event.custom(id, typeName, build)` | Subscribe to the registry that owns the builder, then call `event.create(id, typeName, build)` |
+| `event.register(registry, id, supplier)` | Subscribe to the registry, then call `event.createCustom(id, supplier)` |
 
-Actions such as `food(...)`, `tag(...)`, `unbreakable()`, `noItem()`, `size(...)`, `spawnEgg(...)`, `attributes(...)`, `goals(...)` and `potion.effect(...)` are still methods and work as before.
+Builder properties and action methods keep their existing form.
 
 <a id="wiki-section-21"></a>
 ## Common errors
@@ -529,14 +519,11 @@ Errors in registration scripts are written to `logs/nekojs/startup.log`; `/nekoj
 
 | Error | Cause |
 |---|---|
-| `Duplicate registration '...'` | The same ID was registered twice. The second one does not replace the first; it throws |
-| `RegistryEvent has no member '...'` | The method name is misspelled, or this platform lacks that registry. The error lists the available methods |
-| `unknown registry '...'` | The registry name in `event.register` is wrong |
-| `... expects a builder callback as the last argument` | The configuration function is missing |
-| `... expects an id string like 'mymod:thing'` | The ID is not a string |
-| `maxStackSize must be in [1, 99] ...` | A property value is out of range; other properties have similar checks |
-
-> Advanced: `event.register('item', 'mymod:raw', () => ...)` takes a function that creates the object directly; the registry can be written as `'item'` or `'minecraft:item'`. `event.<registry>(id, typeName, configure)` and `event.custom(id, typeName, configure)` use other builder types provided by plugins.
+| Duplicate entry ID in one registry | The later registration does not replace the first |
+| Invalid or unopened selector | Check the original registry key and support for your loader and Minecraft version |
+| Missing builder | Check for a default builder or specify a named builder for the selected registry |
+| Missing configuration callback | Pass the configuration callback last in `event.create(...)` |
+| Native registration failed | Check loader support and whether the `createCustom` supplier returns a valid entry |
 
 <a id="wiki-section-22"></a>
 ## Platform differences
@@ -545,7 +532,6 @@ Errors in registration scripts are written to `logs/nekojs/startup.log`; `/nekoj
 |---|---|---|---|
 | Items, blocks, entities, creative tabs, effects, potions, sounds, particles, villager types | ✅ | ✅ | ✅ |
 | Fluids | ✅ | ✅ | ❌ |
-| Enchantments | ❌ (use a data pack) | ✅ | ❌ |
 | Adding tags at registration | ✅ | ❌ | ❌ |
 | Generating item models | ✅ | ✅ | ✅ |
 | Registering while the server runs | ✅ (experimental) | ❌ | ❌ |
@@ -555,7 +541,7 @@ See [Platform compatibility](platform-compatibility_us) for more platform differ
 <a id="wiki-section-23"></a>
 ## Next steps
 
-- [Event reference](event-reference_us): `RegistryEvents`, `GoalEvents`, `ServerEvents.tags`.
+- [Event reference](event-reference_us): `StartupEvents.registry`, `GoalEvents`, `ServerEvents.tags`.
 - [Quick start](quick-start_us)
 
 <!-- wiki-nav -->

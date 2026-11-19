@@ -24,6 +24,8 @@ import static org.junit.jupiter.api.Assertions.*;
  */
 class TypeScriptClassRendererTest {
 
+    private static final TypeReflector REFLECTOR = new TypeReflector();
+
     private static final List<Class<?>> SAMPLES = List.of(
             java.util.ArrayList.class,        // generic class
             java.lang.String.class,           // final class with many methods
@@ -49,7 +51,7 @@ class TypeScriptClassRendererTest {
             aliases.clear();
             assertEquals(name, TypeScriptClassRenderer.renderTypeRef(symbol(fqn), aliases, true));
         }
-        String file = new TypeScriptClassRenderer(aliases).render(new TypeReflector().reflect(java.io.File.class));
+        String file = new TypeScriptClassRenderer(aliases).render(REFLECTOR.reflect(java.io.File.class));
         assertTrue(file.contains("implements $Serializable, $Comparable<$File>"), file);
         assertTrue(file.contains("compareTo(arg0: $File): number;"), file);
         assertFalse(file.contains("compareTo(arg0: string)"), file);
@@ -58,8 +60,7 @@ class TypeScriptClassRendererTest {
     @Test
     void rendererOutputIsStableForAllSamples() {
         for (Class<?> cls : SAMPLES) {
-            TypeReflector reflector = new TypeReflector();
-            TypeDecl decl = reflector.reflect(cls);
+                TypeDecl decl = REFLECTOR.reflect(cls);
 
             TypeAliasRegistry aliases1 = new TypeAliasRegistry();
             TypeScriptClassRenderer renderer1 = new TypeScriptClassRenderer(aliases1);
@@ -84,7 +85,7 @@ class TypeScriptClassRendererTest {
         new FunctionalInterfaceAliasGenerator(aliases).prepare(
                 Set.of(Iterable.class.getName(), java.util.function.Consumer.class.getName()), Set.of());
 
-        TypeDecl iterable = new TypeReflector().reflect(Iterable.class);
+        TypeDecl iterable = REFLECTOR.reflect(Iterable.class);
         String output = new TypeScriptClassRenderer(aliases).render(iterable);
 
         assertTrue(output.contains("forEach(arg0: $Consumer_<T, T>): void;"), output);
@@ -97,7 +98,7 @@ class TypeScriptClassRendererTest {
                 Set.of(java.util.function.Function.class.getName()), Set.of());
 
         String output = new TypeScriptClassRenderer(aliases)
-                .render(new TypeReflector().reflect(java.util.function.Function.class));
+                .render(REFLECTOR.reflect(java.util.function.Function.class));
 
         assertTrue(output.contains("andThen<V>("), output);
         assertTrue(output.contains("$Function_<R, V, R, V>"), output);
@@ -120,7 +121,7 @@ class TypeScriptClassRendererTest {
 
     @Test
     void covariantGetterWinsOverItsBridge() {
-        TypeDecl decl = new TypeReflector().reflect(CovariantGetterSub.class);
+        TypeDecl decl = REFLECTOR.reflect(CovariantGetterSub.class);
 
         List<MethodDecl> getters = decl.methods.stream().filter(m -> m.isGetter && "value".equals(m.property)).toList();
         assertEquals(1, getters.size(), "duplicate getter candidates must be deduped to one");
@@ -143,7 +144,7 @@ class TypeScriptClassRendererTest {
 
     @Test
     void coexistingGetAndIsFormsPickDeterministically() {
-        TypeDecl decl = new TypeReflector().reflect(GetIsCoexistence.class);
+        TypeDecl decl = REFLECTOR.reflect(GetIsCoexistence.class);
 
         List<MethodDecl> getters = decl.methods.stream().filter(m -> m.isGetter && "active".equals(m.property)).toList();
         assertEquals(1, getters.size(), "duplicate getter candidates must be deduped to one");
@@ -164,7 +165,7 @@ class TypeScriptClassRendererTest {
 
     @Test
     void overloadedSetterParamSlotIsDeterministic() {
-        TypeDecl decl = new TypeReflector().reflect(OverloadedSetter.class);
+        TypeDecl decl = REFLECTOR.reflect(OverloadedSetter.class);
 
         MethodDecl getter = decl.methods.stream()
                 .filter(m -> m.isGetter && "level".equals(m.property)).findFirst().orElseThrow();
@@ -183,7 +184,7 @@ class TypeScriptClassRendererTest {
 
     @Test
     void superClassMappingToTsPrimitiveOmitsExtends() {
-        TypeDecl decl = new TypeReflector().reflect(MyNumber.class);
+        TypeDecl decl = REFLECTOR.reflect(MyNumber.class);
         String out = render(decl);
         assertTrue(out.contains("export class $TypeScriptClassRendererTest$MyNumber {"),
                 "extends clause must be omitted entirely:\n" + out);
@@ -192,7 +193,7 @@ class TypeScriptClassRendererTest {
 
     @Test
     void nonPrimitiveSuperClassStillRendersExtends() {
-        TypeDecl decl = new TypeReflector().reflect(java.util.ArrayList.class);
+        TypeDecl decl = REFLECTOR.reflect(java.util.ArrayList.class);
         String out = render(decl);
         // Preserve superclass arguments instead of reducing ArrayList's parent to raw AbstractList.
         assertTrue(out.contains("export class $ArrayList<E> extends $AbstractList<E> implements"),
@@ -339,7 +340,7 @@ class TypeScriptClassRendererTest {
         // get2DigitYearStart maps to the property "2DigitYearStart", which starts with a digit and is not a
         // legal TypeScript getter name: the getter part is skipped and the plain method is declared, so
         // scripts can still call get2DigitYearStart()
-        TypeDecl d = new TypeReflector().reflect(IdentifierSample.class);
+        TypeDecl d = REFLECTOR.reflect(IdentifierSample.class);
         String out = render(d);
         assertFalse(out.contains("get 2DigitYearStart"), "numeric-leading getter must be skipped:\n" + out);
         assertTrue(out.contains("get2DigitYearStart(): $Date"), "method fallback must remain:\n" + out);
@@ -347,7 +348,7 @@ class TypeScriptClassRendererTest {
 
     @Test
     void reservedWordParameterNamesAreEscaped() {
-        TypeDecl d = new TypeReflector().reflect(IdentifierSample.class);
+        TypeDecl d = REFLECTOR.reflect(IdentifierSample.class);
         String out = render(d);
         assertTrue(out.contains("apply(function_: string, class_: number): void"),
                 "reserved-word params must be escaped with _ suffix:\n" + out);
@@ -357,7 +358,7 @@ class TypeScriptClassRendererTest {
     void genericArrayArgumentsRenderWithoutParameterLeak() {
         // Regression: the TypeScript rendering of Pair<MemoryModuleType<?>[], MemoryModuleType<?>[]> must be
         // complete and must not pull the following parameter name into a type
-        TypeDecl d = new TypeReflector().reflect(IdentifierSample.class);
+        TypeDecl d = REFLECTOR.reflect(IdentifierSample.class);
         String out = render(d);
         // The nested class name prefix is not hardcoded: each wildcard array argument is checked in place,
         // including the separating comma and the closing bracket, with no parameter name leaking
@@ -370,7 +371,7 @@ class TypeScriptClassRendererTest {
         // Reproduces the shape of Brain.addActivityAndRemoveMemoriesWhenStopped: generic array arguments
         // followed by varargs. Varargs must keep the generic argument <any>; rendering
         // MemoryModuleType<?>... as a raw type drops it
-        TypeDecl d = new TypeReflector().reflect(VarargsSample.class);
+        TypeDecl d = REFLECTOR.reflect(VarargsSample.class);
         String out = render(d);
         // The nested class name prefix is not hardcoded: checks the argument chain and the varargs, including
         // the generic argument <any> instead of a raw type, plus the separator after the first array
@@ -410,7 +411,7 @@ class TypeScriptClassRendererTest {
 
     @Test
     void overloadsRenderAsAdditionalDeclarationsAfterPrimarySignature() {
-        TypeDecl d = new TypeReflector().reflect(OverloadDeprecatedSample.class);
+        TypeDecl d = REFLECTOR.reflect(OverloadDeprecatedSample.class);
         String out = render(d);
 
         // The main declaration is still there (the reflected signature)
@@ -427,7 +428,7 @@ class TypeScriptClassRendererTest {
 
     @Test
     void constructorOverloadsRenderWithoutReturnType() {
-        TypeDecl d = new TypeReflector().reflect(OverloadDeprecatedSample.class);
+        TypeDecl d = REFLECTOR.reflect(OverloadDeprecatedSample.class);
         String out = render(d);
         assertTrue(out.contains("constructor(id: string, extra: number);"), out);
         assertTrue(out.contains("constructor(count?: number);"), out);
@@ -435,7 +436,7 @@ class TypeScriptClassRendererTest {
 
     @Test
     void deprecatedMembersRenderJsDocTag() {
-        TypeDecl d = new TypeReflector().reflect(OverloadDeprecatedSample.class);
+        TypeDecl d = REFLECTOR.reflect(OverloadDeprecatedSample.class);
         String out = render(d);
 
         // Method: reason plus replacement
@@ -450,7 +451,7 @@ class TypeScriptClassRendererTest {
     void unannotatedMembersRenderNoDeprecationOrOverloadLines() {
         // Guards the regression: unannotated members render with no change, which is what keeps the
         // golden files byte-identical
-        TypeDecl d = new TypeReflector().reflect(IdentifierSample.class);
+        TypeDecl d = REFLECTOR.reflect(IdentifierSample.class);
         String out = render(d);
         assertFalse(out.contains("@deprecated"), out);
         // This sample has no @Overload, so the method name must appear only once (a single declaration)

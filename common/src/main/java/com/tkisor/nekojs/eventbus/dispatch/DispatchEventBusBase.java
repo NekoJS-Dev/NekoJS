@@ -38,6 +38,11 @@ abstract class DispatchEventBusBase<EVENT, KEY, BUS extends EventBusBase<EVENT, 
         return dispatchKey;
     }
 
+    @org.jetbrains.annotations.ApiStatus.Internal
+    public final boolean isEmpty() {
+        return mainBus.isEmpty() && dispatched.isEmpty();
+    }
+
     public final Set<KEY> registeredKeys() {
         return Set.copyOf(dispatched.keySet());
     }
@@ -48,9 +53,16 @@ abstract class DispatchEventBusBase<EVENT, KEY, BUS extends EventBusBase<EVENT, 
         if (key == null) {
             return mainBus.listen(priority, listener);
         }
-        return this.dispatched
-            .computeIfAbsent(key, k -> createBus(this.eventType(), k))
-            .listen(priority, listener);
+        @SuppressWarnings("unchecked")
+        var holder = (EventListenerToken<EVENT>[]) new EventListenerToken<?>[1];
+        this.dispatched.compute(key, (k, bus) -> {
+            if (bus == null) {
+                bus = createBus(this.eventType(), k);
+            }
+            holder[0] = bus.listen(priority, listener);
+            return bus;
+        });
+        return holder[0];
     }
 
     public final EventListenerToken<EVENT> listen(KEY key, Consumer<EVENT> listener) {
@@ -66,6 +78,9 @@ abstract class DispatchEventBusBase<EVENT, KEY, BUS extends EventBusBase<EVENT, 
     }
 
     public final boolean unregister(EventListenerToken<EVENT> token) {
+        if (token == null) {
+            return false;
+        }
         var impl = (EventListenerTokenImpl<EVENT, ?>) token;
         Object tokenKey = impl.key();
         if (tokenKey == null) {
@@ -75,12 +90,15 @@ abstract class DispatchEventBusBase<EVENT, KEY, BUS extends EventBusBase<EVENT, 
         @SuppressWarnings("unchecked")
         var key = (KEY) tokenKey;
 
-        var bus = this.dispatched.get(key);
-        var result = bus != null && bus.unregister(token);
-        if (result && bus.isEmpty()) {
-            this.dispatched.remove(key);
-        }
-        return result;
+        var removed = new boolean[1];
+        this.dispatched.computeIfPresent(key, (k, bus) -> {
+            if (bus.unregister(token)) {
+                removed[0] = true;
+                return bus.isEmpty() ? null : bus;
+            }
+            return bus;
+        });
+        return removed[0];
     }
 
     /**

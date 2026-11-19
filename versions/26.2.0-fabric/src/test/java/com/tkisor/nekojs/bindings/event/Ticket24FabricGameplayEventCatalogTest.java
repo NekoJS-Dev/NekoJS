@@ -1,7 +1,7 @@
-// Fabric node-local catalog snapshot. The `//? if fabric` guard is a lazy comment for the active
-// node (26.1.2 NeoForge, which compiles the shared tree from disk), so it would compile and run on
-// the wrong platform; the test therefore lives in the node-local test tree, following the
-// FabricNetworkRegistrationOnceTest precedent. Both fabric nodes carry one copy of the same test.
+// Fabric node-local catalog snapshot. A `//? if fabric` guard is an inert comment for the active
+// node (26.1.2 NeoForge, which compiles the shared tree from disk), so the code would compile and
+// run on the wrong platform; hence this test lives in the node-local test tree. Both Fabric nodes
+// carry a copy with the same name and body.
 package com.tkisor.nekojs.bindings.event;
 
 import com.tkisor.nekojs.api.ScriptType;
@@ -10,12 +10,11 @@ import com.tkisor.nekojs.api.catalog.NekoScriptCatalog;
 import com.tkisor.nekojs.api.data.Binding;
 import com.tkisor.nekojs.api.event.EventGroup;
 import com.tkisor.nekojs.api.event.EventGroupRegistry;
+import com.tkisor.nekojs.api.event.StableBlockEvent;
+import com.tkisor.nekojs.api.event.StableCommandExecuteEvent;
+import com.tkisor.nekojs.api.event.StableEntityEvent;
 import com.tkisor.nekojs.api.plugin.IPluginRuntime;
 import com.tkisor.nekojs.fabric.FabricCorePlugin;
-import net.minecraft.world.entity.EntityType;
-import net.minecraft.world.item.Item;
-import net.minecraft.world.level.block.Block;
-import net.minecraft.world.level.block.entity.BlockEntityType;
 import com.tkisor.nekojs.wrapper.event.block.BlockBrokenEventJS;
 import com.tkisor.nekojs.wrapper.event.block.BlockEntityTickEventJS;
 import com.tkisor.nekojs.wrapper.event.block.BlockFarmlandTrampleEventJS;
@@ -29,34 +28,38 @@ import com.tkisor.nekojs.wrapper.event.block.BlockRightClickEventJS;
 import com.tkisor.nekojs.wrapper.event.entity.EntityJoinLevelEventJS;
 import com.tkisor.nekojs.wrapper.event.entity.EntityLeaveLevelEventJS;
 import com.tkisor.nekojs.wrapper.event.entity.EntityTickEventJS;
+import com.tkisor.nekojs.wrapper.event.entity.GoalRegisterEventJS;
 import com.tkisor.nekojs.wrapper.event.entity.LivingDamageEventJS;
 import com.tkisor.nekojs.wrapper.event.entity.LivingDeathEventJS;
 import com.tkisor.nekojs.wrapper.event.entity.LivingDropsEventJS;
 import com.tkisor.nekojs.wrapper.event.entity.MobFinalizeSpawnEventJS;
-import com.tkisor.nekojs.wrapper.event.entity.GoalRegisterEventJS;
+import com.tkisor.nekojs.wrapper.event.item.ItemDroppedEventJS;
+import com.tkisor.nekojs.wrapper.event.item.ItemEntityPickupEventJS;
+import com.tkisor.nekojs.wrapper.event.item.ItemRightClickEventJS;
+import com.tkisor.nekojs.wrapper.event.item.ItemTooltipEventJS;
+import com.tkisor.nekojs.wrapper.event.item.ItemUseFinishedEventJS;
 import com.tkisor.nekojs.wrapper.event.level.LevelEventJS;
 import com.tkisor.nekojs.wrapper.event.level.LevelExplosionEventJS;
 import com.tkisor.nekojs.wrapper.event.level.LevelSavedEventJS;
 import com.tkisor.nekojs.wrapper.event.player.InventoryChangedEventJS;
 import com.tkisor.nekojs.wrapper.event.player.PlayerAdvancementEventJS;
 import com.tkisor.nekojs.wrapper.event.player.PlayerChangedDimensionEventJS;
+import com.tkisor.nekojs.wrapper.event.player.PlayerCloneEventJS;
 import com.tkisor.nekojs.wrapper.event.player.PlayerContainerEventJS;
 import com.tkisor.nekojs.wrapper.event.player.PlayerCraftedEventJS;
 import com.tkisor.nekojs.wrapper.event.player.PlayerDestroyItemEventJS;
 import com.tkisor.nekojs.wrapper.event.player.PlayerEntityInteractEventJS;
 import com.tkisor.nekojs.wrapper.event.player.PlayerLifecycleEventJS;
-import com.tkisor.nekojs.wrapper.event.player.PlayerTickEventJS;
-import com.tkisor.nekojs.wrapper.event.player.PlayerCloneEventJS;
 import com.tkisor.nekojs.wrapper.event.player.PlayerRespawnEventJS;
+import com.tkisor.nekojs.wrapper.event.player.PlayerTickEventJS;
 import com.tkisor.nekojs.wrapper.event.player.ServerChatEventJS;
-import com.tkisor.nekojs.wrapper.event.item.ItemDroppedEventJS;
-import com.tkisor.nekojs.wrapper.event.item.ItemEntityPickupEventJS;
-import com.tkisor.nekojs.wrapper.event.item.ItemRightClickEventJS;
-import com.tkisor.nekojs.wrapper.event.item.ItemTooltipEventJS;
-import com.tkisor.nekojs.wrapper.event.item.ItemUseFinishedEventJS;
 import com.tkisor.nekojs.wrapper.event.server.BlockModificationEventJS;
 import com.tkisor.nekojs.wrapper.event.server.CommandRegistryEventJS;
 import com.tkisor.nekojs.wrapper.event.server.ItemModificationEventJS;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.entity.BlockEntityType;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
@@ -66,59 +69,44 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Catalog snapshot fixture for the fabric side. It follows production initialization order: first
- * it triggers class initialization of {@code FabricBlockEventBindings},
- * {@code FabricBlockEventBindingsV2} and {@code FabricLevelEventBindingsV2}, whose bus fields add
- * members with {@code GROUP.add} to the shared group before the plugin bootstrap freezes it; then
- * it runs the same-name combination from {@link FabricCorePlugin#registerEvents} and derives the
- * real catalog. That freezes the public member shape of the eight event families on the fabric
- * node.
+ * Catalog snapshot fixture for the Fabric runtime event surface.
  *
- * <p>Input difference from the recorded baseline (intentional, not a contradiction):
- * {@code EventSurfaceDomainGateTest} only drives the {@code registerEvents} hook, so it cannot see
- * the members appended by the Adapter class initialization above. Its baseline records fabric
- * {@code BlockEvents} as {@code broken,modification} and {@code LevelEvents} as 4 members, while
- * the real runtime set also has the 10+5 members from the v1/v2 Adapters. This test freezes the
- * real runtime set; regenerating the baseline is up to its owners, and this test does not change
- * the read-only baseline file.
+ * <p>{@link FabricCorePlugin#registerEvents(EventGroupRegistry)} directly bootstraps
+ * {@code FabricBlockEventBindings} (including v2) and {@code FabricLevelEventBindingsV2} before
+ * merging same-named groups into the registry, so driving {@link FabricCorePlugin} directly
+ * reproduces the complete runtime event catalog without manual {@code Class.forName} hooks.
  *
- * <p>Capability difference, recorded explicitly: CapabilityEvents is not registered on fabric.
- * {@code RegisterCapabilitiesEvent} is NeoForge-only and the baseline marks it not-verified, so it
- * is absent on purpose rather than a silent no-op. Cancellability comes from the explicit
- * {@code EventBusJS.of(type, true, ...)} in the twin/Adapter sources.
+ * <p>Cancellability on Fabric comes from explicit {@code EventBusJS.of(type, true, ...)} bus
+ * declarations across the Fabric event twins and adapter bindings, and {@code CapabilityEvents}
+ * is explicitly registered for Fabric API lookup capability providers.
  */
 class Ticket24FabricGameplayEventCatalogTest {
 
-    /** Expected shape of one public member: a {@code null} dispatchKey means a non-directed dispatch bus. */
-    private record Expected(String name, Class<?> payload, ScriptType side, Class<?> dispatchKey, boolean cancellable) {}
+    /**
+     * Expected shape of one public catalog member; a {@code null} {@code dispatchKey} means a
+     * non-dispatched event bus.
+     */
+    private record Expected(
+            String name,
+            Class<?> payload,
+            ScriptType side,
+            Class<?> dispatchKey,
+            boolean cancellable) {}
 
     private static Map<String, EventGroup> registeredGroups() {
-        // Production order: the mod entry's register() calls first run the Adapter class initialization,
-        // whose members call GROUP.add into the shared group before it is frozen. Only the class
-        // initialization runs here; no fabric-api callbacks are attached, because the catalog does not
-        // depend on callback mounting. For the callback source trace see Ticket24GameplayEventPhaseTraceTest
-        // in the shared tree.
-        for (String adapter : List.of(
-                "com.tkisor.nekojs.fabric.event.FabricBlockEventBindings",
-                "com.tkisor.nekojs.fabric.event.FabricBlockEventBindingsV2",
-                "com.tkisor.nekojs.fabric.event.FabricLevelEventBindingsV2")) {
-            try {
-                Class.forName(adapter, true, Ticket24FabricGameplayEventCatalogTest.class.getClassLoader());
-            } catch (ReflectiveOperationException e) {
-                throw new IllegalStateException("cannot initialize fabric adapter " + adapter, e);
-            }
-        }
         EventGroupRegistry registry = new EventGroupRegistry.Impl().scopedTo("nekojs");
-        new FabricCorePlugin().registerEvents(registry);
-        new FabricCorePlugin().registerClientEvents(registry);
-        return registry.view().values().stream().collect(java.util.stream.Collectors.toMap(
-                EventGroup::name, java.util.function.Function.identity()));
+        FabricCorePlugin plugin = new FabricCorePlugin();
+        plugin.registerEvents(registry);
+        plugin.registerClientEvents(registry);
+        return registry.view().values().stream()
+                .collect(Collectors.toMap(EventGroup::name, Function.identity()));
     }
 
     @BeforeAll
@@ -137,7 +125,7 @@ class Ticket24FabricGameplayEventCatalogTest {
                 @Override public String getLoaderVersion() { return "0"; }
             });
         } catch (IllegalStateException alreadyInitialized) {
-            // same-JVM reuse of an already initialized platform stub is fine
+            // Same-JVM reuse of an already initialized platform stub is fine.
         }
     }
 
@@ -155,8 +143,8 @@ class Ticket24FabricGameplayEventCatalogTest {
         Map<String, Map<String, EventCatalogEntry>> catalog = entries.stream()
                 .filter(e -> expected.containsKey(e.group()))
                 .collect(Collectors.groupingBy(EventCatalogEntry::group,
-                        java.util.TreeMap::new,
-                        Collectors.toMap(EventCatalogEntry::name, e -> e, (a, b) -> a, java.util.TreeMap::new)));
+                        TreeMap::new,
+                        Collectors.toMap(EventCatalogEntry::name, e -> e, (a, b) -> a, TreeMap::new)));
 
         List<String> failures = new ArrayList<>();
         for (String family : expected.keySet()) {
@@ -220,6 +208,8 @@ class Ticket24FabricGameplayEventCatalogTest {
                 new Expected("farmlandTrample", BlockFarmlandTrampleEventJS.class, ScriptType.SERVER, Block.class, true),
                 new Expected("placed", BlockPlacedEventJS.class, ScriptType.SERVER, Block.class, true),
                 new Expected("entityPlaced", BlockPlacedEventJS.class, ScriptType.SERVER, Block.class, true),
+                new Expected("entityMultiPlaced", StableBlockEvent.class, ScriptType.SERVER, Block.class, true),
+                new Expected("toolModification", StableBlockEvent.class, ScriptType.SERVER, Block.class, true),
                 new Expected("fluidPlaced", BlockFluidPlacedEventJS.class, ScriptType.SERVER, Block.class, true),
                 new Expected("randomTick", BlockRandomTickEventJS.class, ScriptType.SERVER, Block.class, false),
                 new Expected("blockEntityTick", BlockEntityTickEventJS.class, ScriptType.SERVER, BlockEntityType.class, false),
@@ -232,7 +222,7 @@ class Ticket24FabricGameplayEventCatalogTest {
                 new Expected("canPickUp", ItemEntityPickupEventJS.class, ScriptType.SERVER, Item.class, true),
                 new Expected("pickedUpPre", ItemEntityPickupEventJS.class, ScriptType.SERVER, Item.class, true),
                 new Expected("pickedUp", ItemEntityPickupEventJS.class, ScriptType.SERVER, Item.class, false),
-                new Expected("dropped", ItemDroppedEventJS.class, ScriptType.SERVER, Item.class, false),
+                new Expected("dropped", ItemDroppedEventJS.class, ScriptType.SERVER, Item.class, true),
                 new Expected("entityInteracted",
                         com.tkisor.nekojs.wrapper.event.item.PlayerEntityInteractEventJS.class,
                         ScriptType.SERVER, Item.class, true),
@@ -255,7 +245,7 @@ class Ticket24FabricGameplayEventCatalogTest {
         put(families, "PlayerEvents",
                 new Expected("loggedIn", PlayerLifecycleEventJS.class, ScriptType.SERVER, null, false),
                 new Expected("loggedOut", PlayerLifecycleEventJS.class, ScriptType.SERVER, null, false),
-                new Expected("chat", ServerChatEventJS.class, ScriptType.SERVER, null, false),
+                new Expected("chat", ServerChatEventJS.class, ScriptType.SERVER, null, true),
                 new Expected("tickPre", PlayerTickEventJS.class, ScriptType.SERVER, null, false),
                 new Expected("tickPost", PlayerTickEventJS.class, ScriptType.SERVER, null, false),
                 new Expected("cloned", PlayerCloneEventJS.class, ScriptType.SERVER, null, false),
@@ -274,7 +264,8 @@ class Ticket24FabricGameplayEventCatalogTest {
         );
 
         put(families, "CommandEvents",
-                new Expected("register", CommandRegistryEventJS.class, ScriptType.SERVER, null, false)
+                new Expected("register", CommandRegistryEventJS.class, ScriptType.SERVER, null, false),
+                new Expected("command", StableCommandExecuteEvent.class, ScriptType.SERVER, null, true)
         );
 
         put(families, "GoalEvents",
@@ -282,15 +273,19 @@ class Ticket24FabricGameplayEventCatalogTest {
         );
 
         put(families, "EntityEvents",
-                new Expected("joinLevel", EntityJoinLevelEventJS.class, ScriptType.SERVER, EntityType.class, false),
-                new Expected("death", LivingDeathEventJS.class, ScriptType.SERVER, EntityType.class, false),
+                new Expected("joinLevel", EntityJoinLevelEventJS.class, ScriptType.SERVER, EntityType.class, true),
+                new Expected("death", LivingDeathEventJS.class, ScriptType.SERVER, EntityType.class, true),
                 new Expected("damagePre", LivingDamageEventJS.class, ScriptType.SERVER, EntityType.class, true),
                 new Expected("damagePost", LivingDamageEventJS.class, ScriptType.SERVER, EntityType.class, false),
                 new Expected("drops", LivingDropsEventJS.class, ScriptType.SERVER, EntityType.class, true),
                 new Expected("finalizeSpawn", MobFinalizeSpawnEventJS.class, ScriptType.SERVER, EntityType.class, false),
                 new Expected("tickPre", EntityTickEventJS.class, ScriptType.SERVER, EntityType.class, false),
                 new Expected("tickPost", EntityTickEventJS.class, ScriptType.SERVER, EntityType.class, false),
-                new Expected("leaveLevel", EntityLeaveLevelEventJS.class, ScriptType.SERVER, EntityType.class, false)
+                new Expected("leaveLevel", EntityLeaveLevelEventJS.class, ScriptType.SERVER, EntityType.class, false),
+                new Expected("useItemStarted", StableEntityEvent.class, ScriptType.SERVER, Item.class, true),
+                new Expected("useItemStopped", StableEntityEvent.class, ScriptType.SERVER, Item.class, true),
+                new Expected("useItemFinished", StableEntityEvent.class, ScriptType.SERVER, Item.class, false),
+                new Expected("useItemTick", StableEntityEvent.class, ScriptType.SERVER, Item.class, true)
         );
         return families;
     }

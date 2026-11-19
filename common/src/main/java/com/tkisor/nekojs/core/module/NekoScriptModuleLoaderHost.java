@@ -323,6 +323,7 @@ public final class NekoScriptModuleLoaderHost {
 
     @CalledByDynamicCode
     public String resolveNativeImport(String parentPath, String specifier) throws IOException {
+        boundaryFailure.remove();
         try {
             if (isResolvedNativeModuleUri(specifier)) {
                 return specifier;
@@ -548,6 +549,8 @@ public final class NekoScriptModuleLoaderHost {
                         authored[0], authored[1], syntaxDiagnostic.getMessage(), syntaxDiagnostic);
             }
             throw executionError(resolved, prepared, failure, cjsBodyLineOffset);
+        } finally {
+            boundaryFailure.remove();
         }
     }
 
@@ -923,6 +926,8 @@ public final class NekoScriptModuleLoaderHost {
             throw nestedOrExecute(resolved, prepared, failure);
         } catch (RuntimeException failure) {
             throw nestedOrExecute(resolved, prepared, failure);
+        } finally {
+            boundaryFailure.remove();
         }
     }
 
@@ -980,6 +985,8 @@ public final class NekoScriptModuleLoaderHost {
             throw nestedOrExecute(resolved, prepared, failure);
         } catch (RuntimeException failure) {
             throw nestedOrExecute(resolved, prepared, failure);
+        } finally {
+            boundaryFailure.remove();
         }
     }
 
@@ -1018,7 +1025,13 @@ public final class NekoScriptModuleLoaderHost {
         modulePaths.put(moduleId, path);
         String previous = modulePreparedKeys.put(moduleId, executionKey);
         if (previous != null && !previous.equals(executionKey)) {
-            invalidateModules(dependencyGraph.affectedModules(moduleId), false);
+            reloadCoordinator.invalidateModules(List.of(moduleId), false);
+            List<String> dependents = dependencyGraph.affectedModules(moduleId).stream()
+                    .filter(id -> !id.equals(moduleId))
+                    .toList();
+            if (!dependents.isEmpty()) {
+                invalidateModules(dependents, false);
+            }
         }
     }
 

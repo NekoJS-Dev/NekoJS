@@ -22,6 +22,10 @@ public record AdapterCatalogEntry(
         ConversionPrecedence precedence,
         Optional<String> syntaxDoc
 ) {
+    public AdapterCatalogEntry {
+        shapes = shapes == null ? List.of() : List.copyOf(shapes);
+        syntaxDoc = syntaxDoc == null ? Optional.empty() : syntaxDoc;
+    }
     public static AdapterCatalogEntry of(Class<?> targetType, ConversionPrecedence precedence) {
         return new AdapterCatalogEntry(targetType, List.of(), precedence, Optional.empty());
     }

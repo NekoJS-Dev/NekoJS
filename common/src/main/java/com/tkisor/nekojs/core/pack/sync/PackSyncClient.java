@@ -295,10 +295,10 @@ public final class PackSyncClient {
                     return Outcome.disconnect("NekoJS remote script pack integrity check failed: "
                         + expected.getKey() + " hash mismatch after write");
                 }
+                var manifest = JsonParser.parseString(cached.manifestJson()).getAsJsonObject();
                 var descriptor = com.tkisor.nekojs.core.pack.ScriptPackManifest.parse(
-                        JsonParser.parseString(cached.manifestJson()).getAsJsonObject(), expected.getKey()).descriptor();
+                        manifest, expected.getKey()).descriptor();
                 if (descriptor != null) {
-                    var manifest = JsonParser.parseString(cached.manifestJson()).getAsJsonObject();
                     String id = manifest.get("id").getAsString();
                     if (!expected.getKey().equals("packs:" + id) && !expected.getKey().equals("worldpacks:" + id)) {
                         throw new IllegalArgumentException("[NEKO-1016] Versioned remote package identity differs from its sync identity: " + expected.getKey());

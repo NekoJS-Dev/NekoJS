@@ -3,9 +3,16 @@ package com.tkisor.nekojs.fabric;
 import com.tkisor.nekojs.api.NekoJSPlugin;
 import com.tkisor.nekojs.api.data.JSTypeAdapterRegistry;
 import com.tkisor.nekojs.api.event.EventGroupRegistry;
+import com.tkisor.nekojs.api.stage.StageEvents;
+import com.tkisor.nekojs.api.stage.StagePlayerRef;
+import com.tkisor.nekojs.api.stage.StagesFacade;
 import com.tkisor.nekojs.bindings.event.BlockEvents;
 import com.tkisor.nekojs.core.plugin.AdaptersPoint;
 import com.tkisor.nekojs.core.plugin.EventsPoint;
+import com.tkisor.nekojs.core.stage.NekoIdAdapter;
+import com.tkisor.nekojs.core.stage.StageNotifyOptionsAdapter;
+import com.tkisor.nekojs.core.stage.StagePlayerRefAdapter;
+import com.tkisor.nekojs.core.stage.StagesBinding;
 import com.tkisor.nekojs.fabric.event.FabricEntityEventBindings;
 import com.tkisor.nekojs.fabric.event.FabricItemEventBindings;
 import com.tkisor.nekojs.fabric.event.FabricServerEventBindings;
@@ -30,26 +37,34 @@ import com.tkisor.nekojs.js.type_adapter.Vec3Adapter;
 import java.util.List;
 
 /**
- * Fabric-side core plugin v1: registers the Fabric bridge event groups that exist and the
+ * Fabric-side core plugin: registers the Fabric bridge event groups, core bindings, and
  * platform-independent type adapters.
  *
- * <p>Compared with the NeoForge-side {@code NekoJSCorePlugin}: in that plugin core groups like
- * ServerEvents / PlayerEvents and the payload classes are NeoForge-specific (whole-file guards).
- * On the Fabric side, each group is added here as its Fabric event bridge lands. Scripts can only
- * use the same API on both loaders while the event bus and payloads stay neutral
- * ({@code BlockEvents.BROKEN} is the model). Server lifecycle, tick, join/leave, chat and entity
- * joinLevel/death are already wired by the Fabric bridges with the same group names and neutral
- * payloads.
+ * <p>Compared with {@code NekoJSCorePlugin} in the shared tree, each Fabric event group is
+ * registered here and merged by group name in {@link EventGroupRegistry} while keeping neutral
+ * payloads across loaders.
  *
- * <p>Only the platform-independent adapters are registered. The ItemStack/Ingredient adapters for
- * recipes and fluids are NeoForge crafting types, and the Fabric equivalents follow with the
- * recipe port. Adapters map dispatch string keys, such as
- * {@code EntityEvents.joinLevel('minecraft:zombie', ...)}, onto registry types; without the
- * matching adapter the dispatch reports "Unsupported target type".
+ * <p>Adapters map dispatch string keys and script inputs onto registry and stage types; without
+ * the matching adapter, dispatch or conversion reports an unsupported target type.
  */
 public final class FabricCorePlugin implements NekoJSPlugin, EventsPoint.Contributor,
         com.tkisor.nekojs.core.plugin.ClientEventsPoint.Contributor,
         com.tkisor.nekojs.core.plugin.BindingsPoint.Contributor, AdaptersPoint.Contributor {
+
+    static {
+        StagePlayerRefAdapter.registerHostResolver(host -> {
+            if (host instanceof net.minecraft.world.entity.player.Player player) {
+                if (player.getClass().getName().contains("FakePlayer")) {
+                    return StagePlayerRef.fake(player.getScoreboardName());
+                }
+                boolean client = player.level() != null && player.level().isClientSide();
+                return client
+                        ? StagePlayerRef.client(player.getStringUUID(), player.getScoreboardName())
+                        : StagePlayerRef.of(player.getStringUUID(), player.getScoreboardName());
+            }
+            return null;
+        });
+    }
 
     @Override
     public void registerBinding(com.tkisor.nekojs.api.data.BindingRegistry registry) {
@@ -57,12 +72,17 @@ public final class FabricCorePlugin implements NekoJSPlugin, EventsPoint.Contrib
                 new com.tkisor.nekojs.bindings.static_access.NativeBridgeJS()), expose -> expose.stable());
         registry.register(com.tkisor.nekojs.api.data.Binding.of("Item",
                 new com.tkisor.nekojs.bindings.static_access.ItemJS()), expose -> expose.versioned());
+        var stages = com.tkisor.nekojs.api.data.Binding.of("Stages",
+                new StagesBinding(registry.scriptType()),
+                StagesFacade.class);
+        registry.register(stages);
+        registry.register(stages, expose -> expose.stable());
         // Server-to-client key-value push (the read-only clientData side is registered by the common
         // built-in plugin)
         registry.register("Capabilities", new com.tkisor.nekojs.bindings.static_access.CapabilitiesJS());
         registry.register("ClientData", com.tkisor.nekojs.wrapper.clientdata.ClientDataSyncJS.class);
-        // Recipe side (same layout as NeoForge NekoJSCorePlugin): the Ingredient factory, the same-named
-        // vanilla class with its static members delegated, and the RecipeSchema viewer binding
+        // Recipe side: the Ingredient factory, the same-named vanilla class with its static members
+        // delegated, and the RecipeSchema viewer binding
         registry.register(com.tkisor.nekojs.api.data.Binding.of("Ingredient",
                 new com.tkisor.nekojs.js.DelegatingBinding(new com.tkisor.nekojs.bindings.static_access.IngredientFactory(),
                         net.minecraft.world.item.crafting.Ingredient.class,
@@ -72,16 +92,14 @@ public final class FabricCorePlugin implements NekoJSPlugin, EventsPoint.Contrib
         // Script-defined network channel (Network.sendToServer/sendToPlayer/sendToAll; the payload types
         // and the receivers are registered in FabricPlayNetwork)
         registry.register("Network", com.tkisor.nekojs.wrapper.network.NetworkJS.class);
-        // ---- Basic static bindings: same names and values as NeoForge NekoJSCorePlugin, plain vanilla or
-        // neutral ----
+        // ---- Basic static bindings: plain vanilla or neutral helpers ----
         // Engine-side helpers (common/static_access)
         registry.register("Color", new com.tkisor.nekojs.bindings.static_access.ColorJS());
         registry.register("UUID", new com.tkisor.nekojs.bindings.static_access.UUIDJS());
         registry.register("StringUtils", new com.tkisor.nekojs.bindings.static_access.StringUtilsJS());
         registry.register("Time", new com.tkisor.nekojs.bindings.static_access.TimeJS());
         registry.register("Utils", new com.tkisor.nekojs.bindings.static_access.UtilsJS());
-        // Math, icons, damage and particles (same names and values as NeoForge; DataMap is NeoForge-only
-        // and is not registered on Fabric)
+        // Math, icons, damage and particles
         registry.register("JavaMath", Math.class);
         registry.register("KMath", com.tkisor.nekojs.bindings.static_access.KMathJS.class);
         registry.register("TextIcons", com.tkisor.nekojs.bindings.static_access.TextIcons.class);
@@ -101,7 +119,7 @@ public final class FabricCorePlugin implements NekoJSPlugin, EventsPoint.Contrib
         registry.register(com.tkisor.nekojs.api.ScriptType.TEST, "Test",
                 new com.tkisor.nekojs.bindings.static_access.TestJS());
         // global/shared are not registered here: ScriptEnvironmentFactory installs a root-owned view per
-        // generation (a private store per ScriptType plus an explicit shared entry, same as NeoForge)
+        // generation (a private store per ScriptType plus an explicit shared entry)
         // Vanilla types and constant classes
         registry.register("ItemStack", net.minecraft.world.item.ItemStack.class);
         registry.register("Items", net.minecraft.world.item.Items.class);
@@ -132,8 +150,7 @@ public final class FabricCorePlugin implements NekoJSPlugin, EventsPoint.Contrib
         registry.register("MobEffectInstance", net.minecraft.world.effect.MobEffectInstance.class);
         registry.register("DamageTypes", net.minecraft.world.damagesource.DamageTypes.class);
         registry.register("TriState", net.minecraft.util.TriState.class);
-        // Client class bindings (same per-ScriptType condition as NeoForge; not registered on a dedicated
-        // server)
+        // Client class bindings (not registered on a dedicated server)
         if (registry.scriptType() == com.tkisor.nekojs.api.ScriptType.CLIENT) {
             var i18n = com.tkisor.nekojs.api.data.Binding.of("I18n", new com.tkisor.nekojs.bindings.static_access.I18nJS(),
                     com.tkisor.nekojs.api.facade.I18nFacade.class);
@@ -149,8 +166,7 @@ public final class FabricCorePlugin implements NekoJSPlugin, EventsPoint.Contrib
 
     @Override
     public void registerRecipeNamespaces(com.tkisor.nekojs.core.plugin.RecipeNamespaceRegister registry) {
-        // minecraft namespace recipe types (the shaped/shapeless/smelting and other handlers, same as
-        // NeoForge)
+        // minecraft namespace recipe types (shaped/shapeless/smelting and related handlers)
         registry.register(new com.tkisor.nekojs.api.recipe.RecipeNamespaceEntry("minecraft",
                 e -> new com.tkisor.nekojs.bindings.recipe.MinecraftRecipeHandler(
                         (com.tkisor.nekojs.wrapper.event.server.RecipeEventJS) e),
@@ -159,11 +175,17 @@ public final class FabricCorePlugin implements NekoJSPlugin, EventsPoint.Contrib
 
     @Override
     public void registerEvents(EventGroupRegistry registry) {
-        // broken: FabricBlockEventBindings already hooks PlayerBlockBreakEvents.BEFORE
+        // Ensure Fabric block and level v2 event bindings initialize their EventHandler fields on
+        // BlockEvents.GROUP and LevelEvents.GROUP even when registerEvents runs standalone in tests or catalogs.
+        com.tkisor.nekojs.fabric.event.FabricBlockEventBindings.bootstrap();
+        com.tkisor.nekojs.fabric.event.FabricLevelEventBindingsV2.bootstrap();
+        // broken / rightClicked / leftClicked / block v2: FabricBlockEventBindings hooks PlayerBlockBreakEvents.BEFORE and bootstraps v2
         registry.register(BlockEvents.GROUP);
         // Declaration side of custom script events (ScriptEvents.server/client from STARTUP, platform
         // independent)
         registry.register(com.tkisor.nekojs.api.event.ScriptEvents.GROUP);
+        // Built-in portable StageEvents group (server customize/gates/added/removed/expired and clientAdded/clientRemoved)
+        registry.register(StageEvents.GROUP);
         // Server lifecycle, tick, player join/leave and chat: the neutral payload subset
         registry.register(FabricServerEventBindings.SERVER_EVENTS);
         registry.register(FabricServerEventBindings.PLAYER_EVENTS);
@@ -182,7 +204,7 @@ public final class FabricCorePlugin implements NekoJSPlugin, EventsPoint.Contrib
         // Script-defined network channel: the server/client buses dispatch by channel (the receivers live in
         // FabricPlayNetwork, the send side is NetworkJS to PlayPacketDispatchers)
         registry.register(com.tkisor.nekojs.bindings.event.NetworkEvents.GROUP);
-        // Dimension loaded/unloaded/tickPre/tickPost (FabricLevelEventBindings, neutral payloads)
+        // Dimension loaded/unloaded/tickPre/tickPost and v2 save/explosion events (FabricLevelEventBindings + V2, neutral payloads)
         registry.register(com.tkisor.nekojs.bindings.event.LevelEvents.GROUP);
         // Command registration (FabricCommandEventBindings: scripts register commands on event.dispatcher)
         registry.register(com.tkisor.nekojs.bindings.event.CommandEvents.GROUP);
@@ -210,6 +232,9 @@ public final class FabricCorePlugin implements NekoJSPlugin, EventsPoint.Contrib
     @Override
     public void registerAdapters(JSTypeAdapterRegistry registry) {
         registry.register(new IdentifierAdapter());
+        registry.register(new NekoIdAdapter());
+        registry.register(new StagePlayerRefAdapter());
+        registry.register(new StageNotifyOptionsAdapter());
         registry.register(new HolderAdapter());
         registry.register(new ComponentAdapter());
         registry.register(new EntityTypeAdapter());
@@ -230,7 +255,7 @@ public final class FabricCorePlugin implements NekoJSPlugin, EventsPoint.Contrib
         registry.register(new ParticleTypeAdapter());
         registry.register(new BlockEntityTypeAdapter());
         registry.register(new CreativeModeTabAdapter());
-        // Recipe-side (shared tree ported with recipe side to guard): ItemStack/Ingredient/Filter/Recipe JSON values
+        // Recipe-side: ItemStack/Ingredient/Filter/Recipe JSON values
         registry.register(new com.tkisor.nekojs.js.type_adapter.ItemStackAdapter());
         registry.register(new com.tkisor.nekojs.js.type_adapter.IngredientAdapter());
         registry.register(new com.tkisor.nekojs.js.type_adapter.RecipeFilterAdapter());

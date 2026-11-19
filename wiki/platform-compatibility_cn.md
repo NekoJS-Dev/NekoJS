@@ -50,7 +50,7 @@ NekoJS 支持 NeoForge 和 Fabric 两种加载器。NeoForge 版本功能最完�
 <a id="wiki-section-5"></a>
 ### 附魔
 
-在 Minecraft 26.x 上，附魔改成了由数据包定义，不能再用脚本注册。请用数据包添加附魔（文件放在 `nekojs/data/` 下）。NeoForge 1.21.1 仍可以用脚本注册附魔。
+请使用目标 Minecraft 版本的数据包格式，在 `nekojs/data/` 下定义附魔。`StartupEvents.registry` 只开放受支持的静态注册表。
 
 <a id="wiki-section-6"></a>
 ### 能力系统（Capabilities）

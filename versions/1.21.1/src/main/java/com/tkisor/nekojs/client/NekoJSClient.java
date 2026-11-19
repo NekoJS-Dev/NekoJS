@@ -10,10 +10,13 @@ import com.tkisor.nekojs.core.fs.NekoJSPaths;
 import com.tkisor.nekojs.core.lifecycle.NekoRuntimeRoot;
 import com.tkisor.nekojs.core.pack.ScriptPackRegistry;
 import com.tkisor.nekojs.core.plugin.PluginGenerationHooks;
+import com.tkisor.nekojs.core.stage.ClientStageMirror;
+import com.tkisor.nekojs.core.stage.gate.StageWireProtocol;
 import com.tkisor.nekojs.wrapper.DataGeneratorJS;
 import com.tkisor.nekojs.wrapper.LangGeneratorJS;
 import com.tkisor.nekojs.wrapper.clientdata.ClientDataStore;
 import com.tkisor.nekojs.wrapper.registry.gen.EntityTypeBuilder;
+import net.minecraft.client.Minecraft;
 import net.minecraft.commands.Commands;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.packs.resources.ResourceManagerReloadListener;
@@ -29,8 +32,10 @@ import net.neoforged.neoforge.common.NeoForge;
 import java.nio.file.Path;
 import net.neoforged.neoforge.client.event.RegisterClientReloadListenersEvent;
 
+/** Client-side initialization and NeoForge event wiring for NekoJS on 1.21.1. */
 public class NekoJSClient {
 
+    /** Registers client commands, lifecycle hooks, reload listeners, and entity renderers. */
     public static void register(IEventBus modEventBus, NekoRuntimeRoot root) {
         NeoForge.EVENT_BUS.addListener((RegisterClientCommandsEvent event) ->
                 event.getDispatcher().register(Commands.literal("nekojs")
@@ -41,6 +46,11 @@ public class NekoJSClient {
         NeoForge.EVENT_BUS.addListener((ClientTickEvent.Post event) -> onClientTickPost(event, root));
         NeoForge.EVENT_BUS.addListener((ClientPlayerNetworkEvent.LoggingIn event) -> onClientLoggingIn(event, root));
         NeoForge.EVENT_BUS.addListener(NekoJSClient::onLevelUnload);
+        NeoForge.EVENT_BUS.addListener((ClientPlayerNetworkEvent.LoggingOut event) -> {
+            ClientStageMirror.SHARED.clear();
+            StageWireProtocol.clearCachedSummary(ClientStageMirror.SHARED);
+            LegacyStageNotificationClient.clear();
+        });
         ClientEvents.bindModBus(modEventBus);
     }
 
@@ -59,6 +69,10 @@ public class NekoJSClient {
     }
 
     private static void onClientLoggingIn(ClientPlayerNetworkEvent.LoggingIn event, NekoRuntimeRoot root) {
+        var player = event.getPlayer();
+        if (player != null) {
+            ClientStageMirror.SHARED.setLocalPlayer(player.getStringUUID(), player.getScoreboardName());
+        }
         // Login runs on the client thread after the integrated server publishes WORLD sources.
         // Remote sources already activate during configuration; do not reload them again here.
         if (!event.getConnection().isMemoryConnection() || ScriptPackRegistry.get().worldPacks().isEmpty()) {
@@ -73,6 +87,11 @@ public class NekoJSClient {
     }
 
     private static void onClientTickPost(ClientTickEvent.Post event, NekoRuntimeRoot root) {
+        var player = Minecraft.getInstance().player;
+        if (player != null) {
+            ClientStageMirror.SHARED.setLocalPlayer(player.getStringUUID(), player.getScoreboardName());
+        }
+        ClientStageMirror.SHARED.tickClient();
         root.flushReadyNodeTimers(ScriptType.CLIENT);
     }
 
@@ -89,6 +108,7 @@ public class NekoJSClient {
         // 1.21.1: NeoForge does not need an explicit id when registering a reload listener, so
         // calling registerReloadListener is enough
         event.registerReloadListener((ResourceManagerReloadListener) resourceManager -> {
+            LegacyStageNotificationClient.invalidateTextures();
             NekoJS.LOGGER.debug("Detected client resource reload (F3 + T), reloading CLIENT scripts...");
             try {
                 root.reload(ScriptType.CLIENT);

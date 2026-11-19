@@ -151,7 +151,7 @@ class DynamicBuilderSurfaceParityTest {
         assertTrue(categorySetter.contains("Unknown mob effect category 'scary'"), categorySetter);
 
         String globalMode = errorOf("b.setMode('global')");
-        assertTrue(globalMode.contains("RegistryEvents"), "运行期 global 指回启动期入口: " + globalMode);
+        assertTrue(globalMode.contains("StartupEvents.registry"), "运行期 global 指回启动期入口: " + globalMode);
     }
 
     @Test

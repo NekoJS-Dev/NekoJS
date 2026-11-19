@@ -11,13 +11,16 @@ import static com.tkisor.nekojs.client.gui.dashboard.DashboardLayout.Rect;
 
 /** Shared presentation only. Search, identity and selection belong to ErrorDashboardModel. */
 public final class DashboardView {
+    /** Minimal 2D drawing surface abstraction used to render the error dashboard independently of MC versions. */
     public interface Canvas {
         void fill(Rect rect, int color);
         void text(String text, int x, int y, int color);
         void clip(Rect rect);
         void unclip();
     }
+    /** Localization lookup callback for dashboard UI strings. */
     public interface Labels { String get(String key, Object... args); }
+    /** Interactive regions and toolbar actions within the error dashboard. */
     public enum Action { NONE, TOGGLE, SEARCH, CLEAR, LIST, DETAILS, COPY_PATH, COPY_DETAILS, OPEN_SOURCE, RAW, STACK }
     private enum Kind { PATH, META, ID, TEXT, MUTED, ERROR, RAW, RAW_BODY, STACK, STACK_BODY, EMPTY, EMPTY_NOTE }
     private record Row(String text, Kind kind) {}
@@ -345,10 +348,14 @@ public final class DashboardView {
         button(g, Action.CLEAR, mx, my);
         Rect list = layout.list(); int content = listHeight(), offset = listScroll.offset(content, list.height());
         g.clip(list);
-        int first = Math.max(0, offset / (layout.cardHeight() + 4));
-        int last = Math.min(cards.size(), first + list.height() / (layout.cardHeight() + 4) + 2);
-        for (int i = first; i < last; i++) paintCard(g, list, i, list.y() + i * (layout.cardHeight() + 4) - offset, mx, my);
-        scrollbar(g, list, content, offset); g.unclip();
+        try {
+            int first = Math.max(0, offset / (layout.cardHeight() + 4));
+            int last = Math.min(cards.size(), first + list.height() / (layout.cardHeight() + 4) + 2);
+            for (int i = first; i < last; i++) paintCard(g, list, i, list.y() + i * (layout.cardHeight() + 4) - offset, mx, my);
+            scrollbar(g, list, content, offset);
+        } finally {
+            g.unclip();
+        }
     }
 
     private void paintDetailHeader(Canvas g, int mx, int my) {
@@ -429,9 +436,13 @@ public final class DashboardView {
         if (displayed == null) { paintEmpty(g, details); return; }
         int offset = detailState().scroll.offset(detailHeight(), details.height());
         g.clip(details);
-        int first = Math.max(0, offset / lineStep), last = Math.min(rows.size(), first + details.height() / lineStep + 2);
-        for (int i = first; i < last; i++) paintRow(g, details, rows.get(i), details.y() + i * lineStep - offset, i);
-        scrollbar(g, details, detailHeight(), offset); g.unclip();
+        try {
+            int first = Math.max(0, offset / lineStep), last = Math.min(rows.size(), first + details.height() / lineStep + 2);
+            for (int i = first; i < last; i++) paintRow(g, details, rows.get(i), details.y() + i * lineStep - offset, i);
+            scrollbar(g, details, detailHeight(), offset);
+        } finally {
+            g.unclip();
+        }
     }
 
     public void paint(Canvas g, int mx, int my) {
@@ -467,9 +478,13 @@ public final class DashboardView {
         Rect area = dialogContent(); int content = dialogLines.size() * lineStep;
         int offset = dialogScroll.offset(content, area.height());
         g.clip(area);
-        int first = offset / lineStep, last = Math.min(dialogLines.size(), first + area.height() / lineStep + 2);
-        for (int i = first; i < last; i++) g.text(dialogLines.get(i), area.x(), textY(area.y() + i * lineStep - offset), TEXT);
-        scrollbar(g, area, content, offset); g.unclip();
+        try {
+            int first = offset / lineStep, last = Math.min(dialogLines.size(), first + area.height() / lineStep + 2);
+            for (int i = first; i < last; i++) g.text(dialogLines.get(i), area.x(), textY(area.y() + i * lineStep - offset), TEXT);
+            scrollbar(g, area, content, offset);
+        } finally {
+            g.unclip();
+        }
         Rect close = dialogClose(); g.fill(close, BUTTON); border(g, close, BLUE);
         String label = fit(t("dismiss"), close.width() - 8);
         g.text(label, close.x() + Math.max(4, (close.width() - measure.applyAsInt(label)) / 2), centerTextY(close.y(), close.height()), TEXT);

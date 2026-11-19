@@ -18,7 +18,11 @@ import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 /**
@@ -31,9 +35,17 @@ import java.util.stream.Collectors;
  */
 public final class TypeScriptClassRenderer {
     private final TypeAliasRegistry aliases;
+    private record BeanExclusionKey(String getterName, String propertyName) {}
+    private static final Set<String> PRESERVED_DECLARED_PAYLOAD_TYPES = Set.of(
+            "net.minecraft.core.Holder", "net.minecraft.core.HolderSet",
+            "net.minecraft.tags.TagKey", "net.minecraft.resources.ResourceKey");
+
     private Set<String> interfaceClassBindings = Set.of();
     private Set<BeanAliasExclusionCatalogEntry> beanAliasExclusions = Set.of();
+    private Map<Class<?>, Set<BeanExclusionKey>> beanAliasExclusionsByTarget = Map.of();
     private Set<BeanMethodProjectionCatalogEntry> beanMethodProjections = Set.of();
+    private ConcurrentHashMap<TypeDecl, Set<String>> beanPropertyConflictsCache = new ConcurrentHashMap<>();
+    private ConcurrentHashMap<String, Optional<Class<?>>> classCache = new ConcurrentHashMap<>();
     private Map<String, Set<String>> covariantTypeParameters = Map.of();
     private TypeScriptStaticInheritance staticInheritance = new TypeScriptStaticInheritance(Map.of());
     private TypeScriptMethodSelectors methodSelectors = new TypeScriptMethodSelectors(Map.of());
@@ -55,6 +67,7 @@ public final class TypeScriptClassRenderer {
         captureViews = new TypeScriptCaptureViews(selectorDeclarations, this);
         declarationsPrepared = true;
         captureViewMarks.clear();
+        beanPropertyConflictsCache.clear();
         Set<String> selectorTypes = methodSelectors.affectedTypes();
         Set<String> captureTypes = captureReturns.affectedTypes();
         return declarations.values().stream().filter(declaration -> staticInheritance.project(declaration) != null
@@ -70,9 +83,25 @@ public final class TypeScriptClassRenderer {
                 Map.Entry::getKey, entry -> Set.copyOf(entry.getValue())));
     }
 
+    /** Shares a run-scoped Class.forName cache across renderers and closure expansion. */
+    public void setClassCache(ConcurrentHashMap<String, Optional<Class<?>>> classCache) {
+        this.classCache = classCache != null ? classCache : new ConcurrentHashMap<>();
+    }
+
     /** Replaces the per-snapshot rules; matching never expands to subclasses or same-name properties. */
     public void setBeanAliasExclusions(List<BeanAliasExclusionCatalogEntry> exclusions) {
         beanAliasExclusions = Set.copyOf(exclusions);
+        if (exclusions.isEmpty()) {
+            beanAliasExclusionsByTarget = Map.of();
+        } else {
+            Map<Class<?>, Set<BeanExclusionKey>> grouped = new HashMap<>();
+            for (BeanAliasExclusionCatalogEntry entry : exclusions) {
+                grouped.computeIfAbsent(entry.targetType(), k -> new HashSet<>())
+                        .add(new BeanExclusionKey(entry.getterName(), entry.propertyName()));
+            }
+            grouped.replaceAll((k, v) -> Set.copyOf(v));
+            beanAliasExclusionsByTarget = Map.copyOf(grouped);
+        }
         refreshMethodSelectors();
     }
 
@@ -87,8 +116,9 @@ public final class TypeScriptClassRenderer {
     }
 
     private boolean excludesBeanAlias(TypeDecl declaration, MethodDecl getter) {
-        return beanAliasExclusions.stream().anyMatch(entry -> entry.targetType() == declaration.sourceClass
-                && entry.getterName().equals(getter.name) && entry.propertyName().equals(getter.property));
+        if (beanAliasExclusionsByTarget.isEmpty() || declaration.sourceClass == null) return false;
+        Set<BeanExclusionKey> keys = beanAliasExclusionsByTarget.get(declaration.sourceClass);
+        return keys != null && keys.contains(new BeanExclusionKey(getter.name, getter.property));
     }
 
     private boolean emitsInstanceMethod(TypeDecl declaration, MethodDecl method) {
@@ -192,6 +222,7 @@ public final class TypeScriptClassRenderer {
         return imports;
     }
 
+    /** Renders a {@link TypeDecl} IR node into TypeScript {@code .d.ts} declarations. */
     public String render(TypeDecl decl) {
         if (decl.hidden) return "";
         return switch (decl.kind) {
@@ -223,7 +254,10 @@ public final class TypeScriptClassRenderer {
         scoped.getterOverrides.putAll(getterOverrides);
         scoped.interfaceClassBindings = interfaceClassBindings;
         scoped.beanAliasExclusions = beanAliasExclusions;
+        scoped.beanAliasExclusionsByTarget = beanAliasExclusionsByTarget;
         scoped.beanMethodProjections = beanMethodProjections;
+        scoped.beanPropertyConflictsCache = beanPropertyConflictsCache;
+        scoped.classCache = classCache;
         scoped.covariantTypeParameters = covariantTypeParameters;
         scoped.staticInheritance = staticInheritance;
         scoped.methodSelectors = methodSelectors;
@@ -479,7 +513,7 @@ public final class TypeScriptClassRenderer {
                 MethodDecl method = overload.method();
                 ApiTypeRef owner = methodSelectors.inheritedOwner(method);
                 return !method.overloads.isEmpty() && owner != null
-                        ? renderTypeRef(owner, aliases, false) + "[" + new JsonPrimitive(methodSelectors.inheritedName(method)) + "]"
+                        ? renderTypeRef(owner, aliases, false, this.classCache) + "[" + new JsonPrimitive(methodSelectors.inheritedName(method)) + "]"
                         : "{\n" + formatMethod(method, false, null) + "        }";
             })
                     .distinct().collect(Collectors.joining(" & "))).append(";\n");
@@ -490,7 +524,11 @@ public final class TypeScriptClassRenderer {
         for (String name : methodSelectors.names(declaration, method)) sb.append(formatMethod(method, false, name));
     }
 
-    private static Set<String> beanPropertyConflicts(TypeDecl declaration) {
+    private Set<String> beanPropertyConflicts(TypeDecl declaration) {
+        return beanPropertyConflictsCache.computeIfAbsent(declaration, TypeScriptClassRenderer::computeBeanPropertyConflicts);
+    }
+
+    private static Set<String> computeBeanPropertyConflicts(TypeDecl declaration) {
         Set<String> names = new LinkedHashSet<>();
         for (FieldDecl field : declaration.fields) {
             if (!field.hidden && !field.isStatic) names.add(field.effectiveName());
@@ -498,7 +536,7 @@ public final class TypeScriptClassRenderer {
         for (MethodDecl method : declaration.methods) {
             if (!method.hidden && !method.isConstructor && !method.isStatic) names.add(method.effectiveName());
         }
-        return names;
+        return Set.copyOf(names);
     }
 
     private String renderInterface(TypeDecl d) {
@@ -802,7 +840,7 @@ public final class TypeScriptClassRenderer {
                         aliases.reference(container, captureViews.name(container)) + "<" + bound + ">");
             }
         }
-        String rendered = renderTypeRef(projectedRef(slot), slot.overridden ? aliases.withRawValueReferences() : aliases, input);
+        String rendered = renderTypeRef(projectedRef(slot), slot.overridden ? aliases.withRawValueReferences() : aliases, input, this.classCache);
         return input ? rendered : appendCaptureReturnFacets(slot, rendered);
     }
 
@@ -813,7 +851,7 @@ public final class TypeScriptClassRenderer {
             // Keep the concrete return first: direct callers retain their narrower element type.
             String facets = captureReturns.bounds(slot).stream().map(bound ->
                     aliases.reference(container, captureViews.name(container)) + "<"
-                            + renderTypeRef(bound, aliases, false) + ">")
+                            + renderTypeRef(bound, aliases, false, this.classCache) + ">")
                     .collect(Collectors.joining(" & "));
             return rendered + " & " + facets;
         }
@@ -832,7 +870,7 @@ public final class TypeScriptClassRenderer {
         var wildcard = (WildcardType) parameterized.getActualTypeArguments()[0];
         Type bound = wildcard.getUpperBounds()[0];
         return renderTypeRef(JavaTypeScriptProjection.project(bound,
-                reference), aliases, false);
+                reference), aliases, false, this.classCache);
     }
 
     /** True when a declaration references one of the complete capture views. */
@@ -874,7 +912,7 @@ public final class TypeScriptClassRenderer {
             // Inheritance names the host itself; its generic arguments are still value positions.
             return renderHostSymbol(reference, names, new LinkedHashSet<>());
         }
-        return renderTypeRef(reference, names, false);
+        return renderTypeRef(reference, names, false, this.classCache);
     }
 
     /** Simple ApiTypeRef → TS (no alias registry; used for declarations like probe.add_global). */
@@ -926,18 +964,24 @@ public final class TypeScriptClassRenderer {
     private enum InputProjection { NATIVE_PARAMETER, DECLARED_INPUT }
 
     /** Converter-owned declarations recursively project inputs; erased Java adapters retain host arguments. */
+    private static String renderTypeRef(ApiTypeRef ref, TypeAliasRegistry aliases, boolean input,
+                                        ConcurrentHashMap<String, Optional<Class<?>>> classCache) {
+        return renderTypeRef(ref, aliases, input, new LinkedHashSet<>(), InputProjection.NATIVE_PARAMETER, classCache);
+    }
+
     public static String renderDeclaredInputType(ApiTypeRef ref, TypeAliasRegistry aliases) {
-        return renderTypeRef(ref, aliases, true, new LinkedHashSet<>(), InputProjection.DECLARED_INPUT);
+        return renderTypeRef(ref, aliases, true, new LinkedHashSet<>(), InputProjection.DECLARED_INPUT, null);
     }
 
     /** Internal recursive renderer carrying functional-alias recursion state. */
     public static String renderTypeRef(ApiTypeRef ref, TypeAliasRegistry aliases, boolean input,
                                       Set<String> expandingFunctionalAliases) {
-        return renderTypeRef(ref, aliases, input, expandingFunctionalAliases, InputProjection.NATIVE_PARAMETER);
+        return renderTypeRef(ref, aliases, input, expandingFunctionalAliases, InputProjection.NATIVE_PARAMETER, null);
     }
 
     private static String renderTypeRef(ApiTypeRef ref, TypeAliasRegistry aliases, boolean input,
-                                       Set<String> expandingFunctionalAliases, InputProjection projection) {
+                                       Set<String> expandingFunctionalAliases, InputProjection projection,
+                                       ConcurrentHashMap<String, Optional<Class<?>>> classCache) {
         if (ref == null) return "any";
         return switch (ref.kind()) {
             case VOID -> "void";
@@ -945,28 +989,29 @@ public final class TypeScriptClassRenderer {
             case TYPE_VARIABLE -> aliases == null ? ref.name() : aliases.typeVariable(ref.name());
             case ARRAY -> {
                 ApiTypeRef element = ref.arguments().getFirst();
-                String rendered = renderTypeRef(element, aliases, input, expandingFunctionalAliases, projection);
+                String rendered = renderTypeRef(element, aliases, input, expandingFunctionalAliases, projection, classCache);
                 yield TypeScriptTypeExpressions.arrayOf(rendered);
             }
             case UNION -> ref.arguments().stream()
-                    .map(a -> renderTypeRef(a, aliases, input, expandingFunctionalAliases, projection))
+                    .map(a -> renderTypeRef(a, aliases, input, expandingFunctionalAliases, projection, classCache))
                     .collect(Collectors.joining(" | "));
-            case SYMBOL -> renderSymbol(ref, aliases, input, expandingFunctionalAliases, projection);
+            case SYMBOL -> renderSymbol(ref, aliases, input, expandingFunctionalAliases, projection, classCache);
             case CALLBACK -> "(...args: any[]) => any";
         };
     }
 
     private static String renderSymbol(ApiTypeRef ref, TypeAliasRegistry aliases, boolean input,
-                                       Set<String> expandingFunctionalAliases, InputProjection projection) {
+                                       Set<String> expandingFunctionalAliases, InputProjection projection,
+                                       ConcurrentHashMap<String, Optional<Class<?>>> classCache) {
         String fqn = fqnOfSymbol(ref.name());
         boolean projectArguments = input && projection == InputProjection.DECLARED_INPUT
-                && !ref.arguments().isEmpty() && !preservesDeclaredPayload(fqn, aliases);
+                && !ref.arguments().isEmpty() && !preservesDeclaredPayload(fqn, aliases, classCache);
         if (input && aliases != null) {
             String registeredAlias = aliases.getRegisteredAlias(fqn);
             if (registeredAlias != null) {
                 return aliases.renderRegisteredAlias(fqn, ref.arguments().stream()
                         .map(argument -> renderTypeRef(argument, aliases, projectArguments,
-                                expandingFunctionalAliases, projection)).toList());
+                                expandingFunctionalAliases, projection, classCache)).toList());
             }
         }
         List<ApiTypeRef> scalarValues = ref.arguments().isEmpty() && (aliases == null || aliases.projectsScalarValues())
@@ -976,7 +1021,7 @@ public final class TypeScriptClassRenderer {
                     ? aliases.getFunctionalInterfaceAlias(fqn) : null;
             String host = functionalAlias == null ? renderHostSymbol(ref, aliases, expandingFunctionalAliases)
                     : FunctionalInterfaceAliasGenerator.renderInputType(ref, functionalAlias, aliases, expandingFunctionalAliases);
-            return "(" + scalarValues.stream().map(value -> renderTypeRef(value, aliases, false, expandingFunctionalAliases))
+            return "(" + scalarValues.stream().map(value -> renderTypeRef(value, aliases, false, expandingFunctionalAliases, InputProjection.NATIVE_PARAMETER, classCache))
                     .collect(Collectors.joining(" | ")) + " | " + host + ")";
         }
         if (input && aliases != null) {
@@ -986,10 +1031,10 @@ public final class TypeScriptClassRenderer {
             }
             if (!ref.arguments().isEmpty()) {
                 String[] hostArgs = ref.arguments().stream()
-                        .map(a -> renderTypeRef(a, aliases, false, expandingFunctionalAliases)).toArray(String[]::new);
+                        .map(a -> renderTypeRef(a, aliases, false, expandingFunctionalAliases, InputProjection.NATIVE_PARAMETER, classCache)).toArray(String[]::new);
                 String[] inputArgs = ref.arguments().stream()
                         .map(a -> renderTypeRef(a, aliases, projection == InputProjection.NATIVE_PARAMETER || projectArguments,
-                                expandingFunctionalAliases, projection)).toArray(String[]::new);
+                                expandingFunctionalAliases, projection, classCache)).toArray(String[]::new);
                 String declaredAlias = TypeAliasRegistry.collectionInputAlias(fqn);
                 if (projection == InputProjection.DECLARED_INPUT && declaredAlias != null) {
                     return aliases.reference(fqn, declaredAlias) + "<" + String.join(", ", inputArgs) + ">";
@@ -1004,23 +1049,39 @@ public final class TypeScriptClassRenderer {
         if (projectArguments) {
             ApiTypeRef raw = new ApiTypeRef(ApiTypeRef.Kind.SYMBOL, ref.name(), List.of(), null);
             return renderHostSymbol(raw, aliases, expandingFunctionalAliases) + "<" + ref.arguments().stream()
-                    .map(argument -> renderTypeRef(argument, aliases, true, expandingFunctionalAliases, projection))
+                    .map(argument -> renderTypeRef(argument, aliases, true, expandingFunctionalAliases, projection, classCache))
                     .collect(Collectors.joining(", ")) + ">";
         }
         return renderHostSymbol(ref, aliases, expandingFunctionalAliases);
     }
 
-    private static boolean preservesDeclaredPayload(String fqn, TypeAliasRegistry aliases) {
-        if (Set.of("net.minecraft.core.Holder", "net.minecraft.core.HolderSet", "net.minecraft.tags.TagKey",
-                "net.minecraft.resources.ResourceKey").contains(fqn)
+    private static boolean preservesDeclaredPayload(String fqn, TypeAliasRegistry aliases,
+                                                    ConcurrentHashMap<String, Optional<Class<?>>> cache) {
+        if (PRESERVED_DECLARED_PAYLOAD_TYPES.contains(fqn)
                 || (aliases != null && aliases.getFunctionalInterfaceAlias(fqn) != null)) return true;
-        try {
-            Class<?> raw = Class.forName(fqn, false, Thread.currentThread().getContextClassLoader());
-            return com.tkisor.nekojs.core.reflect.FunctionalInterfaceResolver.resolve(raw) != null;
-        } catch (ClassNotFoundException | LinkageError unavailable) {
-            // Missing metadata must not broaden a callback payload into an input value domain.
-            return true;
+        Class<?> raw;
+        if (cache != null) {
+            Optional<Class<?>> resolved = cache.computeIfAbsent(fqn, name -> {
+                try {
+                    return Optional.of(Class.forName(name, false, Thread.currentThread().getContextClassLoader()));
+                } catch (ClassNotFoundException | LinkageError unavailable) {
+                    return Optional.empty();
+                }
+            });
+            if (resolved.isEmpty()) {
+                // Missing metadata must not broaden a callback payload into an input value domain.
+                return true;
+            }
+            raw = resolved.get();
+        } else {
+            try {
+                raw = Class.forName(fqn, false, Thread.currentThread().getContextClassLoader());
+            } catch (ClassNotFoundException | LinkageError unavailable) {
+                // Missing metadata must not broaden a callback payload into an input value domain.
+                return true;
+            }
         }
+        return com.tkisor.nekojs.core.reflect.FunctionalInterfaceResolver.resolve(raw) != null;
     }
 
     private static String renderHostSymbol(ApiTypeRef ref, TypeAliasRegistry aliases, Set<String> expandingFunctionalAliases) {

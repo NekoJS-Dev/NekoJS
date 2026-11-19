@@ -101,6 +101,7 @@ public final class KeyBindEvents {
         try {
             net.minecraft.client.Minecraft minecraft = net.minecraft.client.Minecraft.getInstance();
             if (minecraft == null || minecraft.options == null) {
+                net.fabricmc.fabric.api.client.keymapping.v1.KeyMappingHelper.registerKeyMapping(mapping);
                 return;   // stay pending and retry on the next tick (dispatchStateTransitions flushes it along the way)
             }
             net.minecraft.client.KeyMapping[] current = minecraft.options.keyMappings;
@@ -109,7 +110,7 @@ public final class KeyBindEvents {
             minecraft.options.keyMappings = grown;
         } catch (Throwable t) {
             NekoJS.LOGGER.error(
-                    "KeyBindEvents: failed to append '{}' to options.keyMappings; it stays script-pollable"
+                    "KeyBindEvents: failed to install '{}'; it stays script-pollable"
                             + " but will not appear in the controls screen", id, t);
         }
     }

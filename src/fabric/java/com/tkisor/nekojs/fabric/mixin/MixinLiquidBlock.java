@@ -1,5 +1,7 @@
 package com.tkisor.nekojs.fabric.mixin;
 
+import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
+import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import com.tkisor.nekojs.fabric.event.FabricBlockEventBindingsV2;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.Level;
@@ -35,9 +37,8 @@ public abstract class MixinLiquidBlock {
     private static final String SET_BLOCK = "Lnet/minecraft/world/level/Level;setBlockAndUpdate"
             + "(Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/level/block/state/BlockState;)Z";
 
-    @Inject(method = HOST,
-            at = @At(value = "INVOKE", target = SET_BLOCK, ordinal = 0),
-            cancellable = true)
+    @Inject(method = HOST, at = @At(value = "INVOKE", target = SET_BLOCK, ordinal = 0),
+            cancellable = true, require = 1, allow = 1)
     private void nekojs$onFluidConvertObsidianCobble(Level level, BlockPos pos, BlockState state,
                                                      CallbackInfoReturnable<Boolean> cir) {
         if (level.isClientSide()) {
@@ -51,17 +52,19 @@ public abstract class MixinLiquidBlock {
         }
     }
 
-    @Inject(method = HOST,
-            at = @At(value = "INVOKE", target = SET_BLOCK, ordinal = 1),
-            cancellable = true)
+    @Inject(method = HOST, at = @At(value = "INVOKE", target = SET_BLOCK, ordinal = 1),
+            cancellable = true, require = 1, allow = 1)
     private void nekojs$onFluidConvertBasalt(Level level, BlockPos pos, BlockState state,
                                              CallbackInfoReturnable<Boolean> cir) {
-        if (level.isClientSide()) {
-            return;
-        }
-        if (FabricBlockEventBindingsV2.postFluidPlaced(level, pos,
+        if (!level.isClientSide() && FabricBlockEventBindingsV2.postFluidPlaced(level, pos,
                 Blocks.BASALT.defaultBlockState(), state)) {
             cir.setReturnValue(true);
         }
+    }
+
+    @WrapOperation(method = HOST, at = @At(value = "INVOKE", target = SET_BLOCK), require = 2, allow = 2)
+    private boolean nekojs$onFluidHardening(Level level, BlockPos pos, BlockState state,
+                                           Operation<Boolean> original) {
+        return original.call(level, pos, FabricBlockEventBindingsV2.stableFluidPlacementState(level, pos, state));
     }
 }

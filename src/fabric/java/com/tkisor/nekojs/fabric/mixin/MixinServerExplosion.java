@@ -1,12 +1,18 @@
 package com.tkisor.nekojs.fabric.mixin;
 
+import com.llamalad7.mixinextras.injector.ModifyExpressionValue;
 import com.tkisor.nekojs.fabric.event.FabricLevelEventBindingsV2;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.Explosion;
 import net.minecraft.world.level.ServerExplosion;
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
+
+import java.util.List;
 
 /**
  * Fabric hook for {@code LevelEvents.explosionStart} and {@code LevelEvents.explosionDetonate}
@@ -45,15 +51,34 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 @Mixin(ServerExplosion.class)
 public abstract class MixinServerExplosion {
 
-    @Inject(method = "explode()I", at = @At("HEAD"))
+    @Unique
+    private int nekojs$affectedBlockCount;
+
+    @Inject(method = "explode()I", at = @At("HEAD"), cancellable = true, require = 1, allow = 1)
     private void nekojs$onExplosionStart(CallbackInfoReturnable<Integer> cir) {
         if (FabricLevelEventBindingsV2.postExplosionStart((Explosion) (Object) this)) {
             cir.setReturnValue(0);
         }
     }
 
+    @ModifyExpressionValue(method = "explode()I", at = @At(value = "INVOKE",
+            target = "Lnet/minecraft/world/level/ServerExplosion;calculateExplodedPositions()Ljava/util/List;"), require = 1, allow = 1)
+    private List<BlockPos> nekojs$captureExplosionBlocks(List<BlockPos> blocks) {
+        nekojs$affectedBlockCount = blocks.size();
+        return blocks;
+    }
+
+    @ModifyExpressionValue(method = "hurtEntities()V", at = @At(value = "INVOKE",
+            target = "Lnet/minecraft/server/level/ServerLevel;getEntities(Lnet/minecraft/world/entity/Entity;Lnet/minecraft/world/phys/AABB;)Ljava/util/List;"),
+            require = 1, allow = 1)
+    private List<Entity> nekojs$onExplosionDetonate(List<Entity> entities) {
+        FabricLevelEventBindingsV2.postStableExplosionDetonate((Explosion) (Object) this,
+                nekojs$affectedBlockCount, entities.size());
+        return entities;
+    }
+
     @Inject(method = "explode()I", at = @At("TAIL"))
-    private void nekojs$onExplosionDetonate(CallbackInfoReturnable<Integer> cir) {
-        FabricLevelEventBindingsV2.postExplosionDetonate((Explosion) (Object) this);
+    private void nekojs$onAfterExplosion(CallbackInfoReturnable<Integer> cir) {
+        FabricLevelEventBindingsV2.postAfterExplosion((Explosion) (Object) this);
     }
 }

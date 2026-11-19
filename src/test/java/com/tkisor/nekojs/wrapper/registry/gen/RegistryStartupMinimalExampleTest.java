@@ -1,10 +1,6 @@
 package com.tkisor.nekojs.wrapper.registry.gen;
 //~ mc_legacy_api
 
-import com.tkisor.nekojs.api.ScriptType;
-import com.tkisor.nekojs.api.event.EventGroupJS;
-import com.tkisor.nekojs.script.ScriptContextRegistry;
-import graal.graalvm.polyglot.Context;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
@@ -28,32 +24,25 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * listener, collection runs exactly once before the first registry pass, and each
  * registry is drained into the node sink.
  *
- * <p>All five entry points are covered: the default type sugar method, an explicit named
- * type, {@code custom}, a bare Supplier {@code register(registry, id, supplier)}, and
- * setter/property parity. Co-registration is observed through the drain result on the
- * supplier channel; a real Block to BlockItem conversion needs vanilla/FML. The example
- * only uses startup registration that already passed the gate and leaves the server-side
- * Dynamic Registry alone, since that one has its own lifecycle.
+ * <p>The example covers default and named builders, a deferred supplier, and Bean property and
+ * setter parity. It does not use Minecraft's native registration passes.
  */
 class RegistryStartupMinimalExampleTest {
 
     private static final String NODE = "example-node";
 
-    /** Matches the STARTUP section of the baseline examples/registry-startup.js. */
-    static final String STARTUP_EXAMPLE = """
-            // startup_scripts/registry.js —— 启动期声明注册（票 15 示例）
-            RegistryEvents.register(event => {
-              // 1) default 类型糖方法（免类型名）
-              event.soundEvent('mymod:boom', b => { b.fixedRange = 16 });
-              // 2) 命名类型显式传入
-              event.soundEvent('mymod:ping', 'basic', b => { b.setFixedRange(32) });
-              // 3) custom：按全局唯一类型名解析注册表
-              event.custom('mymod:scholar_variant', 'art', b => { });
-              // 4) 裸 Supplier：高级入口，Runtime 校验返回值/实际类型/重复 ID
-              event.register('minecraft:villager_type', 'mymod:scholar', () => 'raw-scholar');
-              // 5) setter/property parity：两种写法同一个 setter、同一指纹
-              event.item('mymod:via_property', b => { b.maxStackSize = 16; b.rarity = 'EPIC' });
-              event.item('mymod:via_setter', b => { b.setMaxStackSize(16); b.setRarity('epic') });
+    private static final String STARTUP_EXAMPLE = """
+            StartupEvents.registry('sound_event', event => {
+                event.create('mymod:boom', build => { build.fixedRange = 16 });
+                event.create('mymod:ping', 'basic', build => { build.setFixedRange(32) });
+            });
+            StartupEvents.registry('villager_type', event => {
+                event.create('mymod:scholar_variant', 'art', build => {});
+                event.createCustom('mymod:scholar', () => 'raw-scholar');
+            });
+            StartupEvents.registry('item', event => {
+                event.create('mymod:via_property', build => { build.maxStackSize = 16; build.rarity = 'EPIC'; });
+                event.create('mymod:via_setter', build => { build.setMaxStackSize(16); build.setRarity('epic'); });
             });
             """;
 
@@ -85,40 +74,23 @@ class RegistryStartupMinimalExampleTest {
         }
     }
 
-    private static RegistryInfosPoint.RegistryInfos exampleInfos() {
-        return RegistryInfosPoint.scan(new RegistryInfosPoint.RegistryInfosCollector());
+    private static final class ExampleTypes implements RegistryTypesPoint.Contributor {
+        @Override
+        public void registerRegistryTypes(RegistryTypesPoint.RegistryTypesCollector collector) {
+            collector.registerType(Registries.VILLAGER_TYPE, "art", VillagerTypeBuilder.class, VillagerTypeBuilder::new);
+        }
     }
 
-    private static RegistryTypesPoint.RegistryTypes exampleTypes() {
-        RegistryTypesPoint.RegistryTypesCollector collector = new RegistryTypesPoint.RegistryTypesCollector();
-        collector.registerType(Registries.SOUND_EVENT, "basic", SoundEventBuilder.class, SoundEventBuilder::new);
-        collector.setDefault(Registries.SOUND_EVENT, "basic");
-        collector.registerType(Registries.VILLAGER_TYPE, "art", VillagerTypeBuilder.class, VillagerTypeBuilder::new);
-        collector.registerType(Registries.VILLAGER_TYPE, "basic", VillagerTypeBuilder.class, VillagerTypeBuilder::new);
-        collector.setDefault(Registries.VILLAGER_TYPE, "basic");
-        collector.registerType(Registries.ITEM, "basic", ItemBuilder.class, ItemBuilder::new);
-        collector.setDefault(Registries.ITEM, "basic");
-        return new RegistryTypesPoint.RegistryTypes(collector.byRegistry, collector.defaults, collector.builderClasses);
-    }
-
-    /** Installs a source-bus listener directly in a bare STARTUP context, then collects once
-     * before the first pass. Runtime module imports are covered by the lifecycle fixtures. */
     private static StartupRegistryRuntime runExample() {
         StartupRegistryRuntime runtime = new StartupRegistryRuntime(NODE);
-        try (Context context = Context.newBuilder("js").allowAllAccess(true).build()) {
-            ScriptContextRegistry.bind(context, ScriptType.STARTUP);
-            try {
-                context.getBindings("js").putMember("RegistryEvents", new EventGroupJS(RegistryEvents.GROUP, ScriptType.STARTUP));
-                context.eval("js", STARTUP_EXAMPLE);
-                runtime.collectOnce(new RegistryEventJS(runtime.repository(), NODE, exampleInfos(), exampleTypes()));
-                RecordingSink sink = new RecordingSink(java.util.Set.of(Registries.ITEM, Registries.VILLAGER_TYPE));
-                StartupRegistryRuntime.DrainResult items = runtime.drainFor(Registries.ITEM, sink);
-                StartupRegistryRuntime.DrainResult sounds = runtime.drainFor(Registries.SOUND_EVENT, sink);
-                StartupRegistryRuntime.DrainResult villagers = runtime.drainFor(Registries.VILLAGER_TYPE, sink);
-                verify(items, sounds, villagers, sink);
-            } finally {
-                ScriptContextRegistry.unbind(context);
-            }
+        try (var script = new StartupRegistryScriptFixture(new NekoRegistryPointsPlugin(), new ExampleTypes())) {
+            script.context.eval("js", STARTUP_EXAMPLE);
+            runtime.collectOnce();
+            RecordingSink sink = new RecordingSink(java.util.Set.of(Registries.ITEM, Registries.VILLAGER_TYPE));
+            StartupRegistryRuntime.DrainResult items = runtime.drainFor(Registries.ITEM, sink);
+            StartupRegistryRuntime.DrainResult sounds = runtime.drainFor(Registries.SOUND_EVENT, sink);
+            StartupRegistryRuntime.DrainResult villagers = runtime.drainFor(Registries.VILLAGER_TYPE, sink);
+            verify(items, sounds, villagers, sink);
         }
         return runtime;
     }

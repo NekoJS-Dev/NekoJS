@@ -42,9 +42,10 @@ final class FStringParser {
             if (c == '{') {
                 flush(parts, lit);
                 i++; // skip '{'
-                int depth = 1;
+                int braceDepth = 1;
+                int subDepth = 0;
                 int start = i;
-                // read the expression until depth-0 '}', or ':'/'!' (format/conversion) at depth 1,
+                // read the expression until depth-0 '}', or ':'/'!' (format/conversion) at braceDepth 1 and subDepth 0,
                 // skipping over quoted string literals so a ':' or '}' inside one doesn't terminate.
                 while (i < len) {
                     char ch = raw.charAt(i);
@@ -59,10 +60,15 @@ final class FStringParser {
                         }
                         continue;
                     }
-                    if (ch == '{') { depth++; i++; }
-                    else if (ch == '}') { depth--; if (depth == 0) break; i++; }
-                    else if (ch == ':' && depth == 1) break;
-                    else if (ch == '!' && depth == 1 && i + 2 < len && raw.charAt(i + 2) == '}') break; // conversion
+                    if (ch == '{') { braceDepth++; i++; }
+                    else if (ch == '}') { braceDepth--; if (braceDepth == 0) break; i++; }
+                    else if (ch == '(' || ch == '[') { subDepth++; i++; }
+                    else if (ch == ')' || ch == ']') { if (subDepth > 0) subDepth--; i++; }
+                    else if (ch == ':' && braceDepth == 1 && subDepth == 0) break;
+                    else if (ch == '!' && braceDepth == 1 && subDepth == 0
+                            && i + 1 < len
+                            && (raw.charAt(i + 1) == 'r' || raw.charAt(i + 1) == 's' || raw.charAt(i + 1) == 'a')
+                            && (i + 2 >= len || raw.charAt(i + 2) == '}' || raw.charAt(i + 2) == ':')) break;
                     else i++;
                 }
                 String exprText = raw.substring(start, i).trim();
@@ -79,7 +85,12 @@ final class FStringParser {
                     while (i < len && raw.charAt(i) != '}') i++;   // spec is a literal (no nested fields in v1)
                     spec = raw.substring(specStart, i);
                 }
-                if (i < len && raw.charAt(i) == '}') i++; // consume '}'
+                if (i >= len || raw.charAt(i) != '}') {
+                    throw new NekoCompileException(
+                            "python f-string: unclosed '{' in interpolation (line " + baseLine + ", col " + (baseCol + start - 1) + ")",
+                            baseLine, baseCol + start - 1);
+                }
+                i++; // consume '}'
                 PythonNode expr = parseInterpolation(exprText, baseLine, baseCol, start);
                 parts.add((spec != null || conv != null)
                         ? new PythonNode.Formatted(expr, spec, conv)

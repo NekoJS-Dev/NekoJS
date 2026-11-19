@@ -123,7 +123,7 @@ public class LootTableEventJS {
     /** Modifies known block loot tables whose block id (such as {@code 'mymod:ore'}) matches {@code filter}. */
     public void modifyBlockLoot(Predicate<String> filter, Consumer<LootTableJS> consumer) {
         for (String tableId : knownTableIds("blocks/")) {
-            if (filter.test(tableId.replace("/blocks/", ":"))) {
+            if (filter.test(tableId.replace(":blocks/", ":"))) {
                 modify(tableId, consumer);
             }
         }
@@ -143,7 +143,7 @@ public class LootTableEventJS {
     /** Modifies known entity loot tables whose entity id (such as {@code 'minecraft:zombie'}) matches {@code filter}. */
     public void modifyEntityLoot(Predicate<String> filter, Consumer<LootTableJS> consumer) {
         for (String tableId : knownTableIds("entities/")) {
-            if (filter.test(tableId.replace("/entities/", ":"))) {
+            if (filter.test(tableId.replace(":entities/", ":"))) {
                 modify(tableId, consumer);
             }
         }

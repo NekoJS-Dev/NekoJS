@@ -25,6 +25,8 @@ import com.tkisor.nekojs.platform.NeoForgePlatform;
 import com.tkisor.nekojs.platform.Platform;
 import com.tkisor.nekojs.script.ScriptBootstrap;
 import com.tkisor.nekojs.script.WorkspaceGenerator;
+import com.tkisor.nekojs.stage.NeoForgeStageGateSubscriber;
+import com.tkisor.nekojs.stage.StageDomainOwner;
 import com.tkisor.nekojs.wrapper.entity.GoalRegistry;
 import com.tkisor.nekojs.wrapper.event.registry.CapabilityRegistryEventJS;
 import net.neoforged.neoforge.event.entity.EntityJoinLevelEvent;
@@ -38,6 +40,7 @@ import net.neoforged.neoforge.capabilities.RegisterCapabilitiesEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
 
+/** NeoForge mod entrypoint for NekoJS, wiring lifecycle events, registries, and platform services. */
 @Mod(NekoJS.MODID)
 public class NekoJSMod extends NekoJS {
     public static IEventBus modEventBus;
@@ -82,6 +85,7 @@ public class NekoJSMod extends NekoJS {
         PDataSyncListener.bind(root);
         ServerEventListener.bind(root);
         PackSyncClientConnections.bind(root);
+        NeoForgeStageGateSubscriber.register();
         registerClient(modEventBus, root);
     }
 
@@ -196,6 +200,10 @@ public class NekoJSMod extends NekoJS {
                 McPlatformCompat.get().isClientDist()
                         ? com.tkisor.nekojs.authoring.AuthoringClientPlatform.create(root) : null));
         root.registerDomainCollector(new com.tkisor.nekojs.wrapper.event.server.ModificationDomainOwner());
+        StageDomainOwner stageDomainOwner = new StageDomainOwner();
+        stageDomainOwner.bindReloadRoot(root);
+        root.registerDomainCollector(stageDomainOwner);
+        ServerEventListener.bindStageDomain(stageDomainOwner);
         // Registers the candidate domain collector of the dynamic registration facade (a process-level
         // singleton) on the same root: the reload DOMAIN_PLAN phase collects the inert definition
         // plans together. The facade is a 26.x NeoForge surface that has not been ported to Fabric,

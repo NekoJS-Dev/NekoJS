@@ -14,6 +14,9 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+/**
+ * Resolves capability definitions against plugin-contributed providers for a target {@link EnvironmentKey}.
+ */
 public final class CapabilityResolver {
 
     /**
@@ -29,6 +32,7 @@ public final class CapabilityResolver {
     private CapabilityResolver() {
     }
 
+    /** Resolves capability definitions against contributed providers for {@code environmentKey}. */
     public static CapabilityResolution resolve(
             EnvironmentKey environmentKey,
             List<CapabilityDefinition> definitions,
@@ -153,8 +157,7 @@ public final class CapabilityResolver {
         // Narrower means: provider can require MORE mods, restrict to FEWER loaders, etc.
 
         // If definition restricts to a script type, provider must also restrict to the same or a subset
-        if (defScope.scriptType() != null && provScope.scriptType() != null
-                && defScope.scriptType() != provScope.scriptType()) {
+        if (defScope.scriptType() != null && defScope.scriptType() != provScope.scriptType()) {
             throw new ApiResolutionException("SCOPE_NOT_CONTAINED",
                     "Provider scriptType " + provScope.scriptType()
                             + " is not contained in definition scope " + defScope.scriptType(),
@@ -162,8 +165,7 @@ public final class CapabilityResolver {
         }
 
         // If definition restricts to a dist, provider must also restrict to the same or a subset
-        if (defScope.dist() != null && provScope.dist() != null
-                && defScope.dist() != provScope.dist()) {
+        if (defScope.dist() != null && defScope.dist() != provScope.dist()) {
             throw new ApiResolutionException("SCOPE_NOT_CONTAINED",
                     "Provider dist " + provScope.dist()
                             + " is not contained in definition scope " + defScope.dist(),
@@ -178,9 +180,9 @@ public final class CapabilityResolver {
                     Map.of("definitionScope", defScope.toString(), "providerScope", provScope.toString()));
         }
 
-        // If definition restricts allowedLoaderIds, provider must be a subset
-        if (!defScope.allowedLoaderIds().isEmpty() && !provScope.allowedLoaderIds().isEmpty()
-                && !defScope.allowedLoaderIds().containsAll(provScope.allowedLoaderIds())) {
+        // If definition restricts allowedLoaderIds, provider must be a non-empty subset
+        if (!defScope.allowedLoaderIds().isEmpty() && (provScope.allowedLoaderIds().isEmpty()
+                || !defScope.allowedLoaderIds().containsAll(provScope.allowedLoaderIds()))) {
             throw new ApiResolutionException("SCOPE_NOT_CONTAINED",
                     "Provider allowedLoaderIds " + provScope.allowedLoaderIds()
                             + " is not a subset of definition allowedLoaderIds " + defScope.allowedLoaderIds(),
@@ -208,7 +210,8 @@ public final class CapabilityResolver {
             }
             case ALLOWLIST -> {
                 if (!def.allowedProviderOwners().contains(identity.ownerId())
-                        && !"nekojs".equals(identity.ownerId())) {
+                        && !CORE_MODID.equals(identity.ownerId())
+                        && !CORE_OWNER_ID.equals(identity.ownerId())) {
                     throw new ApiResolutionException("PROVIDER_NOT_ALLOWED",
                             "Provider '" + identity.ownerId() + "' not in allowlist for capability '"
                                     + def.name() + "'",
@@ -220,7 +223,7 @@ public final class CapabilityResolver {
     }
 
     /**
-     * The deciding gate is the conditions the contract declares ({@code def.environmentScope()}).
+     * The deciding criterion is the environment scope declared by the contract ({@code def.environmentScope()}).
      * When they do not match the current environment, the capability is unavailable in that
      * environment, even if the provider declares no scope or a wider one: a provider scope may
      * only be narrower than the contract (the containment check), never wider. The provider scope

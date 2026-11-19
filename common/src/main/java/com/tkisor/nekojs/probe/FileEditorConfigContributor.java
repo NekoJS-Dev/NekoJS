@@ -163,6 +163,8 @@ public final class FileEditorConfigContributor implements EditorConfigContributo
                 changed |= applyVscodeSetting(root, setting);
             }
             if (changed) writeJson(settingsFile, root);
+        } catch (IllegalArgumentException ex) {
+            throw ex;
         } catch (Exception ex) {
             com.tkisor.nekojs.core.error.Diagnostics.report("probe-editor-config", com.tkisor.nekojs.core.error.Diagnostics.Severity.WARN,
                     "vscode settings 合并失败（" + settingsFile + "）", ex);
@@ -367,7 +369,7 @@ public final class FileEditorConfigContributor implements EditorConfigContributo
         try (var reader = Files.newBufferedReader(file)) {
             JsonElement el = JsonParser.parseReader(reader);
             return (el != null && el.isJsonObject()) ? el.getAsJsonObject() : new JsonObject();
-        } catch (Exception e) {
+        } catch (com.google.gson.JsonParseException | IllegalStateException e) {
             // Corrupt configuration file: rebuild from empty instead of throwing, so one bad edit
             // does not permanently block probe
             return new JsonObject();

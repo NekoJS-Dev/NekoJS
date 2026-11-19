@@ -5,6 +5,7 @@ import com.tkisor.nekojs.core.fs.NekoJSPaths;
 import com.tkisor.nekojs.core.pack.ScriptPackManifest;
 
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -59,6 +60,9 @@ public final class ServerPackCache {
             replacement.commit();
             return target;
         } catch (Throwable failure) {
+            if (replacement == null && failure instanceof ReplacementFailure rf) {
+                replacement = rf.replacement();
+            }
             try {
                 if (replacement != null) replacement.restore();
                 else deleteRecursivelyStrict(stage);
@@ -74,7 +78,7 @@ public final class ServerPackCache {
         try {
             Files.createDirectories(dir);
         } catch (IOException e) {
-            NekoJS.LOGGER.warn("Failed to create server pack cache bucket {}: {}", dir, e.toString());
+            throw new UncheckedIOException("Failed to create server pack cache bucket: " + dir, e);
         }
         return dir;
     }
@@ -82,12 +86,13 @@ public final class ServerPackCache {
     /** Writes one pack to disk: delete the old directory, write the raw manifest, then write the
      * content files by relative path with the traversal check. */
     public static void persistPack(Path bucketDir, String syncId, String manifestJson, List<PackContentFile> files) {
-        Path packDir = bucketDir.resolve(SyncedPack.encodeSyncId(syncId));
-        deleteRecursively(packDir);
+        Path packDir = null;
         try {
+            packDir = resolvePackDir(bucketDir, syncId);
+            deleteRecursively(packDir);
             writePack(packDir, manifestJson, files);
         } catch (IOException e) {
-            NekoJS.LOGGER.warn("Failed to persist server pack {} to {}: {}", syncId, packDir, e.toString());
+            NekoJS.LOGGER.warn("Failed to persist server pack {} to {}: {}", syncId, packDir != null ? packDir : bucketDir, e.toString());
         }
     }
 
@@ -130,8 +135,16 @@ public final class ServerPackCache {
     }
 
     private static Path resolvePackDir(Path root, String syncId) throws IOException {
-        Path packDir = root.resolve(SyncedPack.encodeSyncId(syncId)).normalize();
-        if (!packDir.startsWith(root.normalize())) {
+        if (syncId == null || syncId.isBlank()) {
+            throw new IOException("Invalid server pack id: " + syncId);
+        }
+        String encoded = SyncedPack.encodeSyncId(syncId);
+        if (encoded.isEmpty() || ".".equals(encoded) || "..".equals(encoded)) {
+            throw new IOException("Invalid server pack id: " + syncId);
+        }
+        Path normalizedRoot = root.normalize();
+        Path packDir = normalizedRoot.resolve(encoded).normalize();
+        if (!packDir.startsWith(normalizedRoot) || packDir.equals(normalizedRoot)) {
             throw new IOException("Invalid server pack id: " + syncId);
         }
         return packDir;
@@ -159,15 +172,16 @@ public final class ServerPackCache {
     /** Rescans a cached pack from disk: returns the raw manifest, the content files and the
      * recomputed hash. Returns null when the directory is missing or has no manifest. */
     public static CachedPack loadPack(Path bucketDir, String syncId) {
-        Path packDir = bucketDir.resolve(SyncedPack.encodeSyncId(syncId));
-        if (!Files.isDirectory(packDir)) return null;
+        Path packDir = null;
         try {
+            packDir = resolvePackDir(bucketDir, syncId);
+            if (!Files.isDirectory(packDir)) return null;
             byte[] manifestBytes = PackHasher.readManifestBytes(packDir);
             List<PackContentFile> files = PackHasher.readContentFiles(packDir);
             String manifestJson = new String(manifestBytes, StandardCharsets.UTF_8);
             return new CachedPack(manifestJson, files, PackHasher.hash(manifestBytes, files));
-        } catch (Exception e) {
-            NekoJS.LOGGER.warn("Failed to load cached server pack {}: {}", packDir, e.toString());
+        } catch (IOException | IllegalArgumentException | IllegalStateException e) {
+            NekoJS.LOGGER.warn("Failed to load cached server pack {}: {}", packDir != null ? packDir : syncId, e.toString());
             return null;
         }
     }

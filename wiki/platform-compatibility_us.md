@@ -50,7 +50,7 @@ This table only lists features that differ between platforms or need a note. Com
 <a id="wiki-section-5"></a>
 ### Enchantments
 
-In Minecraft 26.x, enchantments are defined by data packs and can no longer be registered from scripts. Add enchantments with a data pack (put the files under `nekojs/data/`). NeoForge 1.21.1 can still register enchantments from scripts.
+Define enchantments through data packs under `nekojs/data/` using the format for your Minecraft version. `StartupEvents.registry` exposes supported static registries only.
 
 <a id="wiki-section-6"></a>
 ### Capabilities

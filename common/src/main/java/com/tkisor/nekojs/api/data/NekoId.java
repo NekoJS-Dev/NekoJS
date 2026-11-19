@@ -28,6 +28,9 @@ public record NekoId(String namespace, String path) {
     /** Parses a string; uses the default namespace {@link #DEFAULT_NAMESPACE} when there is no
      *  {@code ':'} separator. */
     public static NekoId of(String value) {
+        if (value == null) {
+            throw new IllegalArgumentException("ID cannot be null");
+        }
         int separator = value.indexOf(':');
         if (separator >= 0) {
             return new NekoId(value.substring(0, separator), value.substring(separator + 1));

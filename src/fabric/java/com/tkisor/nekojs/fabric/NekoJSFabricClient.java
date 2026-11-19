@@ -48,12 +48,11 @@ public final class NekoJSFabricClient implements ClientModInitializer {
             // not finished, skip as before.
             var root = NekoJSFabricMod.runtimeRootOrNull();
             if (root == null) {
-                LOGGER.error("CLIENT_STARTED: runtime root not assembled yet, skipping CLIENT script load");
-                return;
+                throw new IllegalStateException("[NEKO-1017] Fabric CLIENT runtime root is not assembled");
             }
             root.load(ScriptType.CLIENT);
         });
-        LOGGER.info("NekoJS fabric client bindings registered (CLIENT scripts load at CLIENT_STARTED).");
+        LOGGER.info("NekoJS Fabric client bindings registered.");
     }
 
     /** Registers the configured visible renderer for every startup entity type. */

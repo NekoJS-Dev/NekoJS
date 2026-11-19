@@ -1,10 +1,12 @@
 package com.example.addon;
 
-import com.tkisor.nekojs.api.NekoJSPlugin;
 import com.tkisor.nekojs.api.ScriptType;
 import com.tkisor.nekojs.api.annotation.RegisterNekoJSPlugin;
 import com.tkisor.nekojs.api.data.Binding;
 import com.tkisor.nekojs.api.data.BindingRegistry;
+import com.tkisor.nekojs.api.event.EventBusJS;
+import com.tkisor.nekojs.api.event.EventGroup;
+import com.tkisor.nekojs.api.event.EventGroupRegistry;
 import com.tkisor.nekojs.core.plugin.MergePolicy;
 import com.tkisor.nekojs.core.plugin.NekoPluginExtensionContext;
 import com.tkisor.nekojs.core.plugin.NekoPluginExtensionHandle;
@@ -25,7 +27,8 @@ import java.util.concurrent.atomic.AtomicReference;
  *
  * <ul>
  *   <li>hook projection: {@code registerBinding} contributes the
- *       {@code ExampleAddon} global binding;</li>
+ *       {@code ExampleAddon} global binding, and {@code registerEvents}
+ *       contributes {@code AddonEvents} across versioned and stable event modules;</li>
  *   <li>provider channel: registers the custom extension point
  *       {@code exampleaddon:greetings}, which depends on {@code nekojs:bindings}
  *       and derives its frozen product from that point's result;</li>
@@ -40,6 +43,15 @@ public final class ExampleAddonPlugin implements NekoPluginExtensionProvider, Gr
 
     /** Global binding name contributed through the hook projection. */
     public static final String BINDING_NAME = "ExampleAddon";
+
+    /** Event group contributed by this fixture addon across versioned and stable event modules. */
+    public static final EventGroup ADDON_EVENTS = EventGroup.of("AddonEvents");
+
+    /** Server event bus published to both the versioned and SERVER-scoped stable addon event modules. */
+    public static final EventBusJS<String, Void> PINGED = ADDON_EVENTS.server("pinged", String.class, api -> {
+        api.versioned();
+        api.stable().scriptTypes(ScriptType.SERVER);
+    });
 
     /** Handle of {@link #POINT_ID}, captured at registration (readable after finish). */
     public static final AtomicReference<NekoPluginExtensionHandle<Greetings>> GREETINGS_HANDLE =
@@ -118,6 +130,11 @@ public final class ExampleAddonPlugin implements NekoPluginExtensionProvider, Gr
     @SuppressWarnings("unchecked")
     private static Class<Map<ScriptType, Map<String, Binding>>> mapType() {
         return (Class<Map<ScriptType, Map<String, Binding>>>) (Class<?>) Map.class;
+    }
+
+    @Override
+    public void registerEvents(EventGroupRegistry registry) {
+        registry.register(ADDON_EVENTS);
     }
 
     @Override

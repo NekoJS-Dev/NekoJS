@@ -50,8 +50,12 @@ final class PythonImports {
         for (var entry : imports.entrySet()) {
             Symbol symbol = entry.getValue();
             int dot = symbol.fqn().lastIndexOf('.');
-            output.append("from nekojs._java.").append(symbol.fqn(), 0, dot).append(" import ")
-                    .append(symbol.exportedName());
+            if (dot >= 0) {
+                output.append("from nekojs._java.").append(symbol.fqn(), 0, dot).append(" import ")
+                        .append(symbol.exportedName());
+            } else {
+                output.append("from nekojs._java import ").append(symbol.exportedName());
+            }
             if (!symbol.exportedName().equals(entry.getKey())) output.append(" as ").append(entry.getKey());
             output.append('\n');
         }

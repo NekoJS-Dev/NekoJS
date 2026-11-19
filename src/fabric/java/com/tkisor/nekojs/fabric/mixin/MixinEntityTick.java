@@ -1,11 +1,12 @@
 package com.tkisor.nekojs.fabric.mixin;
 
+import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
+import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import com.tkisor.nekojs.fabric.event.FabricEntityEventBindingsV2;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
-import org.spongepowered.asm.mixin.injection.Inject;
-import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 /**
  * Fabric hook for {@code EntityEvents.tickPre} and {@code EntityEvents.tickPost}: the HEAD and TAIL
@@ -33,25 +34,22 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
  * created without listeners. This is still a high-frequency path: keep script listeners light
  * and register them only while needed.
  */
-@Mixin(Entity.class)
+@Mixin(ServerLevel.class)
 public abstract class MixinEntityTick {
 
-    @Inject(method = "tick()V", at = @At("HEAD"))
-    private void nekojs$onTickPre(CallbackInfo ci) {
-        if (((Entity) (Object) this).level().isClientSide()) {
-            return;
-        }
-        // Lazy registration (idempotent): the first server-side entity tick always comes before any
-        // leaveLevel case
-        FabricEntityEventBindingsV2.ensureRegistered();
-        FabricEntityEventBindingsV2.postTickPre((Entity) (Object) this);
+    // Lazy registration (idempotent): the first server-side entity tick always comes before any
+    // leaveLevel case
+    @WrapOperation(method = "tickNonPassenger", at = @At(value = "INVOKE",
+            target = "Lnet/minecraft/world/entity/Entity;tick()V"))
+    private void nekojs$tickEntity(Entity entity, Operation<Void> original) {
+        FabricEntityEventBindingsV2.postTickPre(entity);
+        original.call(entity);
+        FabricEntityEventBindingsV2.postTickPost(entity);
     }
 
-    @Inject(method = "tick()V", at = @At("TAIL"))
-    private void nekojs$onTickPost(CallbackInfo ci) {
-        if (((Entity) (Object) this).level().isClientSide()) {
-            return;
-        }
-        FabricEntityEventBindingsV2.postTickPost((Entity) (Object) this);
+    @WrapOperation(method = "tickPassenger", at = @At(value = "INVOKE",
+            target = "Lnet/minecraft/world/entity/Entity;rideTick()V"))
+    private void nekojs$tickPassenger(Entity entity, Operation<Void> original) {
+        FabricEntityEventBindingsV2.wrapVersionedPassengerTick(entity, original);
     }
 }

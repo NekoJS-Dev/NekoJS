@@ -1,6 +1,7 @@
+import { $StableClientEvent, $StableClientInputEvent, $StablePlayerEvent } from "java:com/tkisor/nekojs/api/event";
 import { $KeyBindEvents$KeyBindEventJS } from "java:com/tkisor/nekojs/bindings/event/client";
 import { $PainterJS, $ScreenRenderEventJS } from "java:com/tkisor/nekojs/wrapper/client";
-import { $ClientTickEventJS } from "java:com/tkisor/nekojs/wrapper/event/client";
+import { $ClientCommandRegistryEventJS, $ClientPlayerNetworkEventJS, $ClientTickEventJS } from "java:com/tkisor/nekojs/wrapper/event/client";
 import { $ItemTooltipEventJS } from "java:com/tkisor/nekojs/wrapper/event/item";
 import { $RecipeViewerCategoryListJS, $RecipeViewerEntryListJS, $RecipeViewerInformationJS, $RecipeViewerRecipeListJS } from "java:com/tkisor/nekojs/wrapper/viewer";
 import { $String } from "java:java/lang";
@@ -18,6 +19,17 @@ declare global {
         function tick(handler: ((event: $ClientTickEventJS) => void)): void;
         function hud(handler: ((event: $PainterJS) => void)): void;
         function screenRender(handler: ((event: $ScreenRenderEventJS) => void)): void;
+        function loggedIn(handler: ((event: $ClientPlayerNetworkEventJS) => void)): void;
+        function loggedOut(handler: ((event: $ClientPlayerNetworkEventJS) => void)): void;
+        function commandRegistry(handler: ((event: $ClientCommandRegistryEventJS) => void)): void;
+        function playerTickPre(handler: ((event: $StablePlayerEvent) => void)): void;
+        function playerTickPost(handler: ((event: $StablePlayerEvent) => void)): void;
+        function interactionKey(handler: ((event: $StableClientInputEvent) => void)): void;
+        function cloned(handler: ((event: $StablePlayerEvent) => void)): void;
+        function registerKeyMappings(handler: ((event: $StableClientEvent) => void)): void;
+        function registerMenuScreens(handler: ((event: $StableClientEvent) => void)): void;
+        function registerRenderers(handler: ((event: $StableClientEvent) => void)): void;
+        function registerParticleProviders(handler: ((event: $StableClientEvent) => void)): void;
     }
 
     namespace ItemEvents {

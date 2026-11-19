@@ -27,6 +27,7 @@ public final class AuthoringQuery implements AutoCloseable {
         new SecureRandom().nextBytes(cursorKey);
     }
 
+    /** Publishes a new {@link AuthoringSnapshot} for subsequent authoring queries. */
     public synchronized void publish(AuthoringSnapshot snapshot) {
         if (closed) throw new IllegalStateException("[NEKO-4055] Authoring query is closed.");
         if (!environmentId.equals(snapshot.environmentId())) throw AuthoringJson.invalid("/environmentId", "Snapshot belongs to another environment.");
@@ -39,6 +40,7 @@ public final class AuthoringQuery implements AutoCloseable {
         while (snapshots.size() > 3) snapshots.remove(snapshots.keySet().iterator().next());
     }
 
+    /** Returns the current authoring context summary as JSON. */
     public JsonObject context() {
         AuthoringSnapshot snapshot = current;
         return AuthoringJson.obj("schemaVersion", "1", "environmentId", environmentId,
@@ -47,6 +49,7 @@ public final class AuthoringQuery implements AutoCloseable {
                 "readOnly", true);
     }
 
+    /** Returns the supported authoring operations and capability metadata as JSON. */
     public JsonObject capabilities() {
         return AuthoringJson.obj("schemaVersion", "1", "operations", List.of("context", "capabilities", "schema", "resolve", "members", "query", "batch"),
                 "languages", List.of("typescript"), "memberViews", List.of("declared"),
@@ -55,6 +58,7 @@ public final class AuthoringQuery implements AutoCloseable {
                 "unsupported", List.of("effective-inherited-generic-view", "assignableTo", "python-members", "runtime-evaluation", "reload", "script-writes"));
     }
 
+    /** Executes a named authoring query operation against the latest published snapshot. */
     public JsonObject execute(String operation, JsonObject request) {
         return switch (operation) {
             case "context" -> { AuthoringJson.keys(request, ""); yield context(); }
@@ -195,7 +199,9 @@ public final class AuthoringQuery implements AutoCloseable {
         JsonArray items = new JsonArray();
         int end = Math.min(matches.size(), offset + size);
         for (JsonObject match : matches.subList(offset, end)) items.add(project(match, select));
-        boolean complete = snapshot.complete() && unresolved == 0 && (ownerRecord == null || "complete".equals(ownerRecord.get("coverage").getAsString()));
+        JsonElement ownerCoverage = ownerRecord == null ? null : ownerRecord.get("coverage");
+        boolean complete = snapshot.complete() && unresolved == 0
+                && (ownerRecord == null || (ownerCoverage != null && ownerCoverage.isJsonPrimitive() && "complete".equals(ownerCoverage.getAsString())));
         JsonObject response = AuthoringJson.obj("schemaVersion", "1", "requestId", UUID.randomUUID().toString(),
                 "environmentId", environmentId, "snapshotId", snapshot.id(), "status", "ok",
                 "coverage", AuthoringJson.obj("state", complete ? "complete" : "incomplete", "scope", "emitted-declared-typescript-surface", "unresolvedRecords", unresolved),
@@ -361,8 +367,10 @@ public final class AuthoringQuery implements AutoCloseable {
             }
             parent.add(path[path.length - 1], value.deepCopy());
         }
-        result.add("symbolId", record.get("symbolId").deepCopy());
-        result.add("coverage", record.get("coverage").deepCopy());
+        JsonElement symbolId = record.get("symbolId");
+        if (symbolId != null) result.add("symbolId", symbolId.deepCopy());
+        JsonElement coverage = record.get("coverage");
+        if (coverage != null) result.add("coverage", coverage.deepCopy());
         return result;
     }
 

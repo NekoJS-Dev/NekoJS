@@ -5,6 +5,7 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -22,8 +23,8 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.material.Fluid;
 
 /**
- * Registry runtime for startup. STARTUP scripts declare their registrations through the sole
- * {@link RegistryEvents#REGISTER} caller interface. This class handles <b>collection (exactly
+ * Registry runtime for startup. STARTUP scripts declare registrations through
+ * {@link StartupEvents#REGISTRY}. This class handles <b>collection (exactly
  * once), supplier validation (return value and actual type), definition fingerprinting,
  * per-registry pass draining, and relayed derivation delivery</b>. The node adapters (NeoForge
  * {@code RegistryEventAdapter} / Fabric {@code FabricRegistryAdapter}) only call
@@ -115,30 +116,25 @@ public final class StartupRegistryRuntime {
         return node;
     }
 
-    /**
-     * Delivers the collection event exactly once, before the first registry pass. A second call does
-     * nothing. {@code EventBusJS.post} catches and records listener exceptions, so one failing
-     * listener does not stop the others.
-     */
+    /** Delivers each opened registry's collection event once, before the first native registration pass. */
     public void collectOnce() {
-        collectOnce(RegistryEventJS.create(repository, node));
+        if (!collected) {
+            collectOnce(NekoRegistryPointsPlugin.registryInfos(), NekoRegistryPointsPlugin.registryTypes());
+        }
     }
 
-    /**
-     * Collection entry point that takes an injected event payload, used by adapters and by end-to-end
-     * tests. The payload is still an object of the only {@link RegistryEvents#REGISTER} caller
-     * interface; tests use it to inject infos/types input that does not come from bootstrap, without
-     * bypassing the bus.
-     */
-    public void collectOnce(RegistryEventJS event) {
+    /** Accepts fixture catalog and factory metadata while keeping the real keyed dispatch path. */
+    void collectOnce(RegistryInfosPoint.RegistryInfos infos, RegistryTypesPoint.RegistryTypes types) {
         if (collected) {
             return;
         }
         collected = true;
-        RegistryEvents.REGISTER.post(event);
+        infos.startupRegistries().stream()
+                .sorted(Comparator.comparing(key -> key.identifier().toString()))
+                .forEach(key -> StartupEvents.REGISTRY.post(new RegistryEventJS(repository, node, key, types)));
     }
 
-    /** Whether the collection event has been delivered in this epoch. */
+    /** Whether collection has started in this epoch. */
     public boolean isCollected() {
         return collected;
     }
@@ -295,8 +291,7 @@ public final class StartupRegistryRuntime {
     }
 
     /**
-     * Load-complete diagnostic: reports content that was collected but no pass consumed, because the
-     * registry name is wrong or the target pass ran before the source pass.
+     * Reports collected content that the loader did not consume during native registration.
      */
     public void reportUndelivered(Consumer<String> logger) {
         repository.undrained().forEach((registry, entries) -> entries.forEach(entry -> logger.accept(

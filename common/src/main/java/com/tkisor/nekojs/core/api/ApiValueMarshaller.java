@@ -2,9 +2,11 @@ package com.tkisor.nekojs.core.api;
 
 import com.tkisor.nekojs.api.error.ApiErrorCodes;
 import com.tkisor.nekojs.api.surface.ApiCallback;
+import com.tkisor.nekojs.api.data.CompoundBuilder;
 import com.tkisor.nekojs.api.data.JsNumber;
 import com.tkisor.nekojs.api.data.JsonValue;
 import com.tkisor.nekojs.api.data.NbtValue;
+import com.tkisor.nekojs.api.facade.PerfStat;
 import com.tkisor.nekojs.api.surface.ApiParameter;
 import com.tkisor.nekojs.api.surface.ApiSignature;
 import com.tkisor.nekojs.api.surface.ApiSymbol;
@@ -13,6 +15,7 @@ import com.tkisor.nekojs.api.surface.ApiTypeRef;
 import com.tkisor.nekojs.api.surface.ApiRuntimeView;
 import graal.graalvm.polyglot.Value;
 import graal.graalvm.polyglot.proxy.ProxyArray;
+import graal.graalvm.polyglot.proxy.ProxyObject;
 
 import java.lang.reflect.Array;
 import java.util.ArrayList;
@@ -215,6 +218,9 @@ public final class ApiValueMarshaller {
             if ("null".equals(typeName) && graalValue.isNull()) {
                 return null;
             }
+            if ("object".equals(typeName)) {
+                return convertObjectValue(graalValue, symbolIdStr, new HashSet<>());
+            }
             throw new ApiRuntimeException(
                     ApiErrorCodes.TYPE_MISMATCH,
                     "Argument does not match primitive type " + typeName + " (received " + describeValue(graalValue) + ")",
@@ -323,6 +329,9 @@ public final class ApiValueMarshaller {
             Object proxy = value.asProxyObject();
             if (proxy instanceof ApiFacadeProxy facade && facade.implementation() instanceof NbtValue nbt) return nbt;
             throw typeMismatch(symbolIdStr, "NBT input must not contain unsupported proxy values");
+        }
+        if (value.isHostObject() && value.asHostObject() instanceof NbtValue nbt) {
+            return nbt;
         }
         if (value.isString()) {
             try {
@@ -445,6 +454,51 @@ public final class ApiValueMarshaller {
                     marshalled.add(marshalReturn(Array.get(rawReturn, i), elementType, false, symbolIdStr));
                 }
                 return ProxyArray.fromList(marshalled);
+            }
+        }
+
+        if (returnType.kind() == ApiTypeRef.Kind.PRIMITIVE && "object".equals(returnType.name())) {
+            if (rawReturn instanceof Map<?, ?> map) {
+                Map<String, Object> marshalled = new LinkedHashMap<>();
+                for (Map.Entry<?, ?> entry : map.entrySet()) {
+                    marshalled.put(String.valueOf(entry.getKey()),
+                            marshalReturn(entry.getValue(), returnType, false, symbolIdStr));
+                }
+                return ProxyObject.fromMap(marshalled);
+            }
+            if (rawReturn instanceof Iterable<?> values) {
+                List<Object> marshalled = new ArrayList<>();
+                for (Object value : values) {
+                    marshalled.add(marshalReturn(value, returnType, false, symbolIdStr));
+                }
+                return ProxyArray.fromList(marshalled);
+            }
+            if (rawReturn.getClass().isArray()) {
+                List<Object> marshalled = new ArrayList<>();
+                for (int i = 0; i < Array.getLength(rawReturn); i++) {
+                    marshalled.add(marshalReturn(Array.get(rawReturn, i), returnType, false, symbolIdStr));
+                }
+                return ProxyArray.fromList(marshalled);
+            }
+            if (rawReturn instanceof PerfStat stat) {
+                Map<String, Object> map = new LinkedHashMap<>();
+                map.put("runs", stat.runs());
+                map.put("total", stat.total());
+                map.put("mean", stat.mean());
+                map.put("min", stat.min());
+                map.put("max", stat.max());
+                return ProxyObject.fromMap(map);
+            }
+            if (rawReturn instanceof CompoundBuilder) {
+                return rawReturn;
+            }
+            if (rawReturn instanceof NbtValue) {
+                return ApiFacadeProxy.value(
+                        runtimeView, ApiSymbolId.parse("type:NbtValue"), rawReturn, guestErrorFactory);
+            }
+            if (rawReturn instanceof JsonValue) {
+                return ApiFacadeProxy.value(
+                        runtimeView, ApiSymbolId.parse("type:JsonValue"), rawReturn, guestErrorFactory);
             }
         }
 
@@ -595,7 +649,7 @@ public final class ApiValueMarshaller {
             case "number" -> value.isNumber() ? 4 : -1;
             case "boolean" -> value.isBoolean() ? 4 : -1;
             case "null" -> value.isNull() ? 4 : -1;
-            case "object" -> value.hasMembers() || value.hasArrayElements() ? 1 : -1;
+            case "object" -> 1;
             case "json" -> jsonScore(value);
             case "nbt" -> nbtScore(value);
             default -> -1;
@@ -647,6 +701,70 @@ public final class ApiValueMarshaller {
 
     private static boolean isNbtPrimitiveArraySymbol(String symbolId) {
         return "member:NBT.byteArray".equals(symbolId) || "member:NBT.intArray".equals(symbolId);
+    }
+
+    private Object convertObjectValue(Value value, String symbolIdStr, Set<Value> active) {
+        if (value == null || value.isNull()) {
+            return null;
+        }
+        if (value.canExecute()) {
+            return value;
+        }
+        if (value.isProxyObject()) {
+            Object proxy = value.asProxyObject();
+            return proxy instanceof ApiFacadeProxy facade ? facade.implementation() : proxy;
+        }
+        if (value.isHostObject()) {
+            return value.asHostObject();
+        }
+        if (value.isString()) {
+            return value.asString();
+        }
+        if (value.isBoolean()) {
+            return value.asBoolean();
+        }
+        if (value.isNumber()) {
+            double number = value.asDouble();
+            if (!Double.isFinite(number)) {
+                return number;
+            }
+            if (value.fitsInInt()) {
+                return value.asInt();
+            }
+            if (value.fitsInLong()) {
+                return value.asLong();
+            }
+            return number;
+        }
+        if (value.hasArrayElements()) {
+            if (!active.add(value)) {
+                throw typeMismatch(symbolIdStr, "Object input must not contain cycles");
+            }
+            try {
+                List<Object> list = new ArrayList<>();
+                for (long i = 0; i < value.getArraySize(); i++) {
+                    list.add(convertObjectValue(value.getArrayElement(i), symbolIdStr, active));
+                }
+                return Collections.unmodifiableList(list);
+            } finally {
+                active.remove(value);
+            }
+        }
+        if (value.hasMembers()) {
+            if (!active.add(value)) {
+                throw typeMismatch(symbolIdStr, "Object input must not contain cycles");
+            }
+            try {
+                Map<String, Object> map = new LinkedHashMap<>();
+                for (String key : value.getMemberKeys()) {
+                    map.put(key, convertObjectValue(value.getMember(key), symbolIdStr, active));
+                }
+                return Collections.unmodifiableMap(map);
+            } finally {
+                active.remove(value);
+            }
+        }
+        return value;
     }
 
     private static ApiRuntimeException typeMismatch(String symbolId, String message) {

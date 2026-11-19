@@ -22,8 +22,7 @@ public final class ScriptBindingSchema {
     public record View(Map<String, BindingMembers> schemas, Set<String> globals,
                        Consumer<Diagnostic> reporter) {
         public View(Map<String, BindingMembers> schemas, Set<String> globals) {
-            this(schemas == null ? Map.of() : Map.copyOf(schemas),
-                    globals == null ? Set.of() : Set.copyOf(globals), null);
+            this(schemas, globals, null);
         }
 
         public View {

@@ -17,6 +17,7 @@ import graal.graalvm.polyglot.Context;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -235,7 +236,8 @@ public final class DefaultErrorTracker implements ErrorTracker {
         Map<ScriptId, ScriptError> errorStore = errorStore(context);
         String pathStr = callbackKind == null || callbackKind.isBlank() ? "Unknown" : callbackKind;
 
-        if (throwable instanceof PolyglotException polyglotException) {
+        PolyglotException polyglotException = findPolyglotException(throwable);
+        if (polyglotException != null) {
             SourceSection loc = getBestSourceLocation(polyglotException);
             if (loc != null) {
                 Source source = loc.getSource();
@@ -244,7 +246,9 @@ public final class DefaultErrorTracker implements ErrorTracker {
                 }
             }
         } else {
-            pathStr = pathStr + "/" + Integer.toHexString(Objects.hash(throwable.getClass().getName(), throwable.getMessage()));
+            pathStr = pathStr + "/" + Integer.toHexString(Objects.hash(
+                    throwable != null ? throwable.getClass().getName() : "null",
+                    throwable != null ? throwable.getMessage() : null));
         }
 
         String eventPath = pathStr;
@@ -417,6 +421,18 @@ public final class DefaultErrorTracker implements ErrorTracker {
     }
 
     /* ================= Source location formatting helpers (instance methods, using injected paths) ================= */
+
+    private static PolyglotException findPolyglotException(Throwable throwable) {
+        Throwable current = throwable;
+        Set<Throwable> seen = new HashSet<>();
+        while (current != null && seen.add(current)) {
+            if (current instanceof PolyglotException polyglotException) {
+                return polyglotException;
+            }
+            current = current.getCause();
+        }
+        return null;
+    }
 
     public SourceSection getBestSourceLocation(PolyglotException e) {
         if (e.getSourceLocation() != null) {

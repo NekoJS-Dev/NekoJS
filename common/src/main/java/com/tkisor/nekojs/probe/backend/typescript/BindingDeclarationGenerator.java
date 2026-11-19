@@ -5,6 +5,7 @@ import com.tkisor.nekojs.api.ScriptType;
 
 import java.lang.reflect.*;
 import java.util.*;
+import java.util.regex.Pattern;
 
 /**
  * Generates TypeScript global binding declarations from BindingCatalogEntry.
@@ -23,6 +24,7 @@ import java.util.*;
  * </pre>
  */
 public final class BindingDeclarationGenerator {
+    private static final Pattern IDENTIFIER_PATTERN = Pattern.compile("[\\p{javaLetter}_$][\\p{javaLetterOrDigit}_$]*");
     /**
      * Generates the binding declarations for the given ScriptType.
      */
@@ -36,8 +38,9 @@ public final class BindingDeclarationGenerator {
         // Emit the imports
         Map<String, List<String>> importsByPackage = new TreeMap<>();
         for (String fqn : imports) {
-            String pkg = fqn.substring(0, fqn.lastIndexOf('.'));
-            String simple = fqn.substring(fqn.lastIndexOf('.') + 1);
+            int dot = fqn.lastIndexOf('.');
+            String pkg = dot >= 0 ? fqn.substring(0, dot) : "";
+            String simple = dot >= 0 ? fqn.substring(dot + 1) : fqn;
             importsByPackage.computeIfAbsent(pkg, k -> new ArrayList<>()).add("$" + simple);
         }
         for (var entry : importsByPackage.entrySet()) {
@@ -57,7 +60,7 @@ public final class BindingDeclarationGenerator {
         Set<String> emittedAlias = new LinkedHashSet<>();
         for (BindingCatalogEntry binding : bindings) {
             String override = binding.typeOverride();
-            if (override != null && override.matches("[\\p{javaLetter}_$][\\p{javaLetterOrDigit}_$]*")
+            if (override != null && IDENTIFIER_PATTERN.matcher(override).matches()
                     && binding.javaType() != null && emittedAlias.add(override)) {
                 sb.append("type ").append(override).append(" = $")
                         .append(getTsClassName(binding.javaType())).append(";\n");
@@ -80,6 +83,7 @@ public final class BindingDeclarationGenerator {
         return generateModules(modules, Map.of());
     }
 
+    /** Generates TypeScript {@code declare module} blocks for all registered module bindings and events. */
     public String generateModules(Map<String, List<BindingCatalogEntry>> modules, Map<String, String> events) {
         StringBuilder output = new StringBuilder("// API modules for the selected script environment.\n");
         for (var module : new TreeMap<>(modules).entrySet()) {

@@ -22,8 +22,8 @@ import net.minecraft.resources.ResourceKey;
  * <p>This point {@code dependsOn(nekojs:registry_infos)} for <b>ordering</b>, and its initializer
  * reads that output; data dependencies need no declaration. The types are then checked at
  * registration. Type-level conflicts merge with {@link MergePolicy#overrideWarn}, so a third party
- * may override a built-in type and gets a warning, matching how addons usually work. Script sugar
- * methods such as {@code event.item(id, cb)} are derived from the default type.
+ * may override a built-in type and gets a warning. The default factory is used by
+ * {@code event.create(id, callback)} for the selected registry.
  */
 public final class RegistryTypesPoint {
 
@@ -85,7 +85,7 @@ public final class RegistryTypesPoint {
             }
         }
 
-        /** Sets the registry's default type name, which the script sugar method uses without naming a type. */
+        /** Sets the default type for calls to {@code event.create} that omit an explicit type name. */
         public void setDefault(ResourceKey<? extends Registry<?>> registry, String name) {
             defaults.put(registry, name);
         }
@@ -119,17 +119,6 @@ public final class RegistryTypesPoint {
         public java.util.Set<String> typeNames(ResourceKey<? extends Registry<?>> registry) {
             Map<String, Function<Identifier, ?>> names = byRegistry.get(registry);
             return names == null ? java.util.Set.of() : java.util.Collections.unmodifiableSet(names.keySet());
-        }
-
-        /**
-         * Looks up the registries that own a type name. More than one registry can own it;
-         * {@code event.custom} uses this to resolve global names.
-         */
-        public java.util.List<ResourceKey<? extends Registry<?>>> registriesOf(String typeName) {
-            return byRegistry.entrySet().stream()
-                    .filter(entry -> entry.getValue().containsKey(typeName))
-                    .map(Map.Entry::getKey)
-                    .toList();
         }
 
         /**

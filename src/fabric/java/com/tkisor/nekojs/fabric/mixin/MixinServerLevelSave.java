@@ -29,6 +29,8 @@ public abstract class MixinServerLevelSave {
     @Inject(method = "save(Lnet/minecraft/util/ProgressListener;ZZ)V", at = @At("TAIL"))
     private void nekojs$onSave(ProgressListener progressListener, boolean flush, boolean skipSave,
                                CallbackInfo ci) {
-        FabricLevelEventBindingsV2.postSaved((ServerLevel) (Object) this);
+        if (!skipSave) {
+            FabricLevelEventBindingsV2.postSaved((ServerLevel) (Object) this);
+        }
     }
 }

@@ -316,7 +316,7 @@ public final class ScriptManager implements AutoCloseable {
 
     private String packInstance;
     private Path packModuleRoot;
-    private java.util.function.BooleanSupplier packActivationAllowed = () -> true;
+    private volatile java.util.function.BooleanSupplier packActivationAllowed = () -> true;
     private java.util.function.Supplier<List<ScriptContainer>> packDiscovery;
 
     public java.util.Collection<ScriptError> packErrors() { return errorTracker.getAllErrors(); }
@@ -369,8 +369,8 @@ public final class ScriptManager implements AutoCloseable {
         private final RuntimeEnvironment candidate;
         private final RuntimeEnvironment previous;
         private final List<ScriptContainer> entries;
-        private final ScriptBindingSchema.Snapshot previousSchema;
-        private final java.util.Map<com.tkisor.nekojs.api.data.ScriptId, ScriptError> previousErrors;
+        private ScriptBindingSchema.Snapshot previousSchema;
+        private java.util.Map<com.tkisor.nekojs.api.data.ScriptId, ScriptError> previousErrors;
         private boolean metadataPublished;
         private boolean committed;
         private boolean finished;
@@ -380,8 +380,6 @@ public final class ScriptManager implements AutoCloseable {
             this.candidate = candidate;
             this.previous = previous;
             this.entries = entries;
-            previousSchema = candidate.moduleSession().snapshotBindingSchema(scriptType);
-            previousErrors = defaultErrorTracker() == null ? java.util.Map.of() : defaultErrorTracker().snapshotType(scriptType);
         }
 
         public Context context() { return candidate.context(); }
@@ -400,6 +398,8 @@ public final class ScriptManager implements AutoCloseable {
         /** Publishes the metadata that can still be rolled back before the state that cannot. */
         public void publishMetadata() {
             assertCanCommit();
+            previousSchema = candidate.moduleSession().snapshotBindingSchema(scriptType);
+            previousErrors = defaultErrorTracker() == null ? java.util.Map.of() : defaultErrorTracker().snapshotType(scriptType);
             metadataPublished = true;
             environmentFactory.publishEnvironmentBindings(context(), candidate.moduleSession());
             if (defaultErrorTracker() != null) defaultErrorTracker().publishCandidateErrors(scriptType, context());
@@ -408,6 +408,8 @@ public final class ScriptManager implements AutoCloseable {
 
         /** No guest code runs in this route switch. Old resources are released after every unit switches. */
         public void commitRoute() {
+            packActivationAllowed = activationAllowed;
+            contextKilled = false;
             runtime = candidate;
             scripts = entries;
             generation++;
@@ -416,8 +418,6 @@ public final class ScriptManager implements AutoCloseable {
                 var view = com.tkisor.nekojs.core.pack.PackScriptView.of(script, true);
                 executionEntries.put(view.scriptId(), view);
             }
-            contextKilled = false;
-            packActivationAllowed = activationAllowed;
             candidateContext = null;
             candidateEnvironment = null;
             candidateKilled = false;
@@ -1377,6 +1377,7 @@ public final class ScriptManager implements AutoCloseable {
             if (!oldEnvironment.isEmpty()) {
                 closeRuntimeResources(oldEnvironment);
             }
+            candidateEnvironment.globals().finishPublishedPlans();
         }
 
         /**
@@ -1565,7 +1566,7 @@ public final class ScriptManager implements AutoCloseable {
 
             currentModuleSession().invalidate(target);
             Context ctx = getOrCreateContext();
-            String modulePath = "./" + paths.root().relativize(target).toString().replace('\\', '/');
+            String modulePath = "./" + rootRelativePath(target);
 
             // A single-file reload always takes the "invalidate the affected modules, then re-run
             // the affected entries" path. A ModuleSliceRelinker shortcut once tried to relink
@@ -1583,7 +1584,7 @@ public final class ScriptManager implements AutoCloseable {
             try {
                 synchronized (ctx) {
                     for (ScriptContainer script : targets) {
-                        String entryPath = "./" + paths.root().relativize(script.path).toString().replace('\\', '/');
+                        String entryPath = "./" + rootRelativePath(script.path);
                         ctx.eval("js", "globalThis.__nekoScriptLoader.invalidateModuleTree").execute(entryPath);
                     }
                     ctx.eval("js", "globalThis.__nekoScriptLoader.invalidateAffectedModules").execute(modulePath);
@@ -1616,7 +1617,7 @@ public final class ScriptManager implements AutoCloseable {
                     .filter(script -> script.path.normalize().toAbsolutePath().equals(target))
                     .findFirst();
             Context ctx = getOrCreateContext();
-            String modulePath = "./" + paths.root().relativize(target).toString().replace('\\', '/');
+            String modulePath = "./" + rootRelativePath(target);
             List<String> affectedIds = new ArrayList<>();
             synchronized (ctx) {
                 Value affected = ctx.eval("js", "globalThis.__nekoScriptLoader.affectedEntries").execute(modulePath);
@@ -1631,7 +1632,7 @@ public final class ScriptManager implements AutoCloseable {
             // module URI, so re-running only the target module does not let the import bindings of
             // already loaded entries see the new exports.
             List<ScriptContainer> affectedEntries = scripts.stream()
-                    .filter(script -> affectedIds.contains(paths.root().relativize(script.path).toString().replace('\\', '/')))
+                    .filter(script -> affectedIds.contains(rootRelativePath(script.path)))
                     .toList();
             if (!affectedEntries.isEmpty()) {
                 return affectedEntries;
@@ -1661,7 +1662,7 @@ public final class ScriptManager implements AutoCloseable {
                 nodeRuntime.timers().cancelScript(script.id.toString());
             }
             errorTracker.clear(script.id);
-            errorTracker.clearByScriptPath(scriptType, paths.root().relativize(script.path).toString().replace('\\', '/'));
+            errorTracker.clearByScriptPath(scriptType, rootRelativePath(script.path));
         }
 
         private void fullReloadCleanup () {
@@ -1739,6 +1740,12 @@ public final class ScriptManager implements AutoCloseable {
                 throw new IOException("Unsupported or missing script file: " + filePath);
             }
             return target;
+        }
+
+        private String rootRelativePath(Path path) {
+            Path root = paths.root().toAbsolutePath().normalize();
+            Path normalized = path.toAbsolutePath().normalize();
+            return root.relativize(normalized).toString().replace('\\', '/');
         }
 
         private String displayScriptPath (Path path){

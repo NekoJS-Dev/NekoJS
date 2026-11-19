@@ -11,34 +11,29 @@ import com.tkisor.nekojs.api.catalog.RegistryTypeCatalogEntry;
 import com.tkisor.nekojs.api.surface.ApiTypeRef;
 import com.tkisor.nekojs.api.surface.ApiSymbolId;
 import com.tkisor.nekojs.probe.EditorConfigContributor;
-import com.tkisor.nekojs.probe.FileEditorConfigContributor;
 import com.tkisor.nekojs.probe.events.GlobalDecl;
 import com.tkisor.nekojs.probe.ProbeBackend;
 import com.tkisor.nekojs.probe.ProbeContext;
-import com.tkisor.nekojs.probe.ProbeOutputCommitter;
 import com.tkisor.nekojs.probe.ir.MethodDecl;
 import com.tkisor.nekojs.probe.ir.FieldDecl;
 import com.tkisor.nekojs.probe.ir.TypeDecl;
 import com.tkisor.nekojs.probe.ir.TypeSlot;
 
-import java.io.IOException;
-import java.nio.file.FileVisitResult;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.SimpleFileVisitor;
-import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Comparator;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 /**
  * Built-in Python probe backend: Renders the shared IR into PEP 484/561 compliant {@code .pyi} stub packages,
@@ -56,6 +51,9 @@ import java.util.TreeSet;
  *   _events/         # Event declarations (organized by script side)
  *     __init__.pyi
  *     server/__init__.pyi
+ *   _modules/        # Scoped API module declarations (organized by script side and module path)
+ *     __init__.pyi
+ *     server/.../__init__.pyi
  * </pre>
  *
  * <p>Usage: Include {@code from nekojs import *} at the top of scripts; the transpiler strips this line
@@ -127,13 +125,13 @@ public final class PythonProbeBackend implements ProbeBackend {
                     + entry.getKey() + "; entire public method set unavailable; omissions="
                     + String.join("; ", entry.getValue()));
         }
-        return renderFiles(ir, ctx.snapshot(), ctx.overrides().globals());
+        return renderFiles(ir, ctx.snapshot(), ctx.overrides().globals(), ctx.sharedPool());
     }
 
     // ============================== Generation Main Body ==============================
 
     private Map<String, String> renderFiles(List<TypeDecl> ir, NekoScriptCatalogSnapshot snapshot,
-                                            List<GlobalDecl> globals) {
+                                            List<GlobalDecl> globals, ExecutorService sharedPool) {
         Map<String, String> files = new LinkedHashMap<>();
 
         // 1. Group by Java package + set of available FQNs
@@ -171,8 +169,10 @@ public final class PythonProbeBackend implements ProbeBackend {
                 registries.put(r.typeName(), r);
             }
         }
+        PrecomputedLiteral namespaceInput = precomputeNamespaceInput(snapshot.modIds(), registries);
+        Map<String, List<AdapterCatalogEntry>> adaptersByPkg = groupAdaptersByPackage(snapshot.adapters());
         Map<String, PyAdapterAlias> adapterAliases = buildAdapterAliases(snapshot.adapters(), availableFqns,
-                registries, snapshot.modIds(), typeR);
+                registries, namespaceInput, typeR);
         // Enum literal aliases: Color_ = Color | Literal["RED", ...] (mirrors $Color_ input alias on TS side)
         Map<String, PyAdapterAlias> enumAliases = buildEnumAliases(ir, availableFqns);
         reserveInputAliasNames(byPkg, adapterAliases, enumAliases);
@@ -181,9 +181,12 @@ public final class PythonProbeBackend implements ProbeBackend {
         wideningAliases.putAll(enumAliases);
 
         // Reserve every module's public imports and aliases before allocating cross-package helpers.
+        Map<String, PythonImports> cachedImports = new LinkedHashMap<>();
         for (var entry : byPkg.entrySet()) {
-            Set<String> names = new LinkedHashSet<>(packageImports(entry.getKey(), entry.getValue(),
-                    availableFqns, adapterAliases, enumAliases, classR, typeR).localNames());
+            PythonImports imports = packageImports(entry.getKey(), entry.getValue(),
+                    availableFqns, adapterAliases, enumAliases, classR, typeR);
+            cachedImports.put(entry.getKey(), imports);
+            Set<String> names = new LinkedHashSet<>(imports.localNames());
             for (TypeDecl declaration : entry.getValue()) {
                 PyAdapterAlias adapter = adapterAliases.get(declaration.fqn);
                 PyAdapterAlias enumAlias = enumAliases.get(declaration.fqn);
@@ -193,17 +196,36 @@ public final class PythonProbeBackend implements ProbeBackend {
             classR.reservePackageNames(entry.getKey(), names);
         }
 
-        // _java/__init__.pyi（namespace marker）
+        // _java/__init__.pyi (namespace marker)
         files.put("nekojs/_java/__init__.pyi", "# Auto-generated namespace marker.\n");
 
-        // 2. Each package module
-        for (String pkg : allPkgs) {
-            String pkgModule = "nekojs/_java/" + pkg.replace('.', '/') + "/__init__.pyi";
-            List<TypeDecl> classes = byPkg.getOrDefault(pkg, List.of());
-            files.put(pkgModule, classes.isEmpty()
-                    ? "# Auto-generated namespace marker.\n"
-                    : renderPackageModule(pkg, classes, classR, typeR, availableFqns, adapterAliases, enumAliases,
-                            snapshot, registries));
+        // 2. Each package module (parallelized across packages after reservation completes; deterministic file order)
+        ExecutorService pool = sharedPool != null
+                ? sharedPool
+                : Executors.newFixedThreadPool(Math.min(Runtime.getRuntime().availableProcessors(), 8));
+        try {
+            Map<String, Future<String>> pendingModules = new LinkedHashMap<>();
+            for (String pkg : allPkgs) {
+                String pkgModule = "nekojs/_java/" + pkg.replace('.', '/') + "/__init__.pyi";
+                List<TypeDecl> classes = byPkg.getOrDefault(pkg, List.of());
+                if (classes.isEmpty()) {
+                    pendingModules.put(pkgModule, null);
+                } else {
+                    PythonImports importByName = cachedImports.get(pkg);
+                    List<AdapterCatalogEntry> pkgAdapters = adaptersByPkg.getOrDefault(pkg, List.of());
+                    pendingModules.put(pkgModule, pool.submit(() -> renderPackageModule(
+                            pkg, classes, importByName, classR, typeR, availableFqns,
+                            adapterAliases, enumAliases, pkgAdapters, registries, namespaceInput)));
+                }
+            }
+            for (var entry : pendingModules.entrySet()) {
+                Future<String> future = entry.getValue();
+                files.put(entry.getKey(), future == null ? "# Auto-generated namespace marker.\n" : awaitModule(future));
+            }
+        } finally {
+            if (sharedPool == null) {
+                pool.shutdown();
+            }
         }
 
         // 3. Event declarations: nekojs/_events/<side>/__init__.pyi
@@ -211,6 +233,9 @@ public final class PythonProbeBackend implements ProbeBackend {
 
         // 3b. Typed Builder contract declarations: the same structured contract input as the TS backend
         writeRegistryBuilderStubs(files, snapshot);
+
+        // 3c. Scoped API module declarations: nekojs/_modules/<side>/.../__init__.pyi
+        PythonApiModuleRenderer.writeModuleStubs(files, snapshot, typeR, availableFqns, wideningAliases);
 
         // 4. nekojs/__init__.pyi (Global bindings + event group entry + probe.add_global global declarations)
         writeBindingsInit(files, snapshot, availableFqns, typeR, globals);
@@ -220,6 +245,20 @@ public final class PythonProbeBackend implements ProbeBackend {
         files.put("nekojs/README.md", README_TEXT);
 
         return files;
+    }
+
+    private static String awaitModule(Future<String> future) {
+        try {
+            return future.get();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new IllegalStateException("Python probe package rendering interrupted", e);
+        } catch (ExecutionException e) {
+            Throwable cause = e.getCause();
+            if (cause instanceof RuntimeException runtime) throw runtime;
+            if (cause instanceof Error error) throw error;
+            throw new IllegalStateException("Python probe package rendering failed", cause);
+        }
     }
 
     /**
@@ -234,37 +273,43 @@ public final class PythonProbeBackend implements ProbeBackend {
         if (entries == null || entries.isEmpty()) {
             return;
         }
-        files.put("nekojs/_registry_builders/__init__.pyi", RegistryBuilderPyRenderer.render(entries));
+        String declaration = RegistryBuilderPyRenderer.render(entries);
+        if (!declaration.isEmpty()) {
+            files.put("nekojs/_registry_builders/__init__.pyi", declaration);
+        }
     }
 
     /** Renders the __init__.pyi for a single Java package: cross-package imports + all classes in this package + adapter/enum input aliases for this package. */
     private String renderPackageModule(String javaPkg, List<TypeDecl> classes,
-                                       PythonClassRenderer classR, ApiTypeRefPyRenderer typeR,
+                                       PythonImports importByName,
+                                       PythonClassRenderer classR, ApiTypeRefPyRenderer baseTypeR,
                                        Set<String> availableFqns, Map<String, PyAdapterAlias> adapterAliases,
                                        Map<String, PyAdapterAlias> enumAliases,
-                                       NekoScriptCatalogSnapshot snapshot,
-                                       Map<String, RegistryTypeCatalogEntry> registries) {
-        PythonImports importByName = packageImports(javaPkg, classes, availableFqns, adapterAliases,
-                enumAliases, classR, typeR);
+                                       List<AdapterCatalogEntry> pkgAdapters,
+                                       Map<String, RegistryTypeCatalogEntry> registries,
+                                       PrecomputedLiteral namespaceInput) {
         Map<String, String> symbols = new LinkedHashMap<>();
         for (TypeDecl declaration : classes) symbols.put(declaration.fqn, effectivePyName(declaration));
         symbols.putAll(importByName.typeNames());
-        typeR = typeR.withSymbolNames(symbols);
-        if (classes.stream().anyMatch(declaration -> !declaration.hidden
-                && effectivePyName(declaration).equals("Callable"))) {
-            typeR = typeR.withCallableName(classR.typingCallableName(javaPkg));
+        ApiTypeRefPyRenderer typeR = baseTypeR.withSymbolNames(symbols);
+        boolean callableRenamed = false;
+        for (TypeDecl declaration : classes) {
+            if (!declaration.hidden && effectivePyName(declaration).equals("Callable")) {
+                typeR = typeR.withCallableName(classR.typingCallableName(javaPkg));
+                callableRenamed = true;
+                break;
+            }
         }
         classR = classR.withTypeRenderer(typeR);
-        Set<String> localTypes = classes.stream().map(declaration -> declaration.fqn)
-                .collect(java.util.stream.Collectors.toSet());
-        Map<String, PyAdapterAlias> scopedAliases = buildAdapterAliases(snapshot.adapters() == null ? List.of() : snapshot.adapters().stream()
-                        .filter(adapter -> adapter.targetType() != null && localTypes.contains(adapter.targetType().getName())).toList(),
-                availableFqns, registries, snapshot.modIds(), typeR);
-        for (var entry : scopedAliases.entrySet()) {
-            PyAdapterAlias allocated = adapterAliases.get(entry.getKey());
-            if (allocated != null) entry.setValue(withAliasName(entry.getValue(), allocated.aliasName()));
+        if (!pkgAdapters.isEmpty() && needsAdapterReRender(pkgAdapters, adapterAliases, baseTypeR, typeR, callableRenamed)) {
+            Map<String, PyAdapterAlias> scopedAliases = buildAdapterAliases(
+                    pkgAdapters, availableFqns, registries, namespaceInput, typeR);
+            for (var entry : scopedAliases.entrySet()) {
+                PyAdapterAlias allocated = adapterAliases.get(entry.getKey());
+                if (allocated != null) entry.setValue(withAliasName(entry.getValue(), allocated.aliasName()));
+            }
+            adapterAliases = scopedAliases;
         }
-        adapterAliases = scopedAliases;
         // Adapter input aliases: Cross-package host input types require imports; alias lines are output after classes.
         List<String> aliasLines = new ArrayList<>();
         for (TypeDecl d : classes) {
@@ -322,6 +367,39 @@ public final class PythonProbeBackend implements ProbeBackend {
         }
         for (String line : aliasLines) sb.append(line).append("\n");
         return sb.toString();
+    }
+
+    private static boolean needsAdapterReRender(List<AdapterCatalogEntry> pkgAdapters,
+                                                Map<String, PyAdapterAlias> adapterAliases,
+                                                ApiTypeRefPyRenderer baseTypeR,
+                                                ApiTypeRefPyRenderer localTypeR,
+                                                boolean callableRenamed) {
+        if (callableRenamed) return true;
+        for (AdapterCatalogEntry entry : pkgAdapters) {
+            Class<?> target = entry.targetType();
+            if (target == null) continue;
+            PyAdapterAlias alias = adapterAliases.get(target.getName());
+            if (alias == null) continue;
+            for (String fqn : alias.importFqns()) {
+                if (!localTypeR.symbolName(fqn).equals(baseTypeR.symbolName(fqn))) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    private static Map<String, List<AdapterCatalogEntry>> groupAdaptersByPackage(List<AdapterCatalogEntry> adapters) {
+        if (adapters == null || adapters.isEmpty()) return Map.of();
+        Map<String, List<AdapterCatalogEntry>> byPkg = new HashMap<>();
+        for (AdapterCatalogEntry entry : adapters) {
+            Class<?> target = entry.targetType();
+            if (target == null) continue;
+            String pkg = pkgOf(target.getName());
+            if (pkg.isEmpty()) continue;
+            byPkg.computeIfAbsent(pkg, ignored -> new ArrayList<>()).add(entry);
+        }
+        return byPkg;
     }
 
     private PythonImports packageImports(String javaPkg, List<TypeDecl> classes,
@@ -392,6 +470,7 @@ public final class PythonProbeBackend implements ProbeBackend {
 
         // Event group name (by side); when binding name hits group name, binding type points to <Group>Type class in nekojs._events/<side>
         Map<ScriptType, List<String>> groupsBySide = eventGroupsBySide(snapshot.events().stream().filter(EventCatalogEntry::scriptDefined).toList());
+        Map<String, String> fqnBySimpleName = buildFqnBySimpleName(availableFqns);
 
         Set<String> reserved = new LinkedHashSet<>(List.of("Any"));
         for (BindingCatalogEntry binding : bindings) {
@@ -408,7 +487,7 @@ public final class PythonProbeBackend implements ProbeBackend {
         PythonImports importByName = new PythonImports(reserved, typeR);
         Set<String> eventImports = new LinkedHashSet<>();   // "from nekojs._events.<side> import <TypeName>"
         List<String[]> lines = new ArrayList<>();            // [name, typeExpr]
-        List<String> allNames = new ArrayList<>();
+        Set<String> allNames = new LinkedHashSet<>();
 
         for (BindingCatalogEntry b : bindings) {
             String type = "Any";
@@ -421,7 +500,7 @@ public final class PythonProbeBackend implements ProbeBackend {
             } else if (b.typeOverride() != null && !b.typeOverride().isEmpty()) {
                 // typeOverride (e.g., "NekoItemHelper"): If a collected FQN simple name equals this,
                 // use this class's simple name as binding type and import (preferred over javaType)
-                String fqn = findFqnBySimpleName(availableFqns, b.typeOverride());
+                String fqn = fqnBySimpleName.get(b.typeOverride());
                 if (fqn != null) {
                     type = importByName.type(fqn);
                 }
@@ -448,7 +527,7 @@ public final class PythonProbeBackend implements ProbeBackend {
             }
         }
         // probe.add_global global declaration: type follows py renderer; SYMBOL type imported by availability
-        if (globals != null) {
+        if (globals != null && !globals.isEmpty()) {
             for (GlobalDecl g : globals) {
                 Set<String> fqns = new LinkedHashSet<>();
                 ApiTypeRefPyRenderer.collectSymbolFqns(g.type(), fqns);
@@ -457,7 +536,10 @@ public final class PythonProbeBackend implements ProbeBackend {
                         importByName.type(fqn);
                     }
                 }
-                lines.add(new String[]{g.name(), typeR.withSymbolNames(importByName.typeNames()).render(g.type())});
+            }
+            ApiTypeRefPyRenderer globalTypeR = typeR.withSymbolNames(importByName.typeNames());
+            for (GlobalDecl g : globals) {
+                lines.add(new String[]{g.name(), globalTypeR.render(g.type())});
                 allNames.add(g.name());
             }
         }
@@ -472,9 +554,11 @@ public final class PythonProbeBackend implements ProbeBackend {
         sb.append("\n");
         for (String[] l : lines) sb.append(l[0]).append(": ").append(l[1]).append("\n");
         sb.append("\n__all__ = [");
-        for (int i = 0; i < allNames.size(); i++) {
-            if (i > 0) sb.append(", ");
-            sb.append("\"").append(allNames.get(i)).append("\"");
+        boolean first = true;
+        for (String name : allNames) {
+            if (!first) sb.append(", ");
+            first = false;
+            sb.append("\"").append(name).append("\"");
         }
         sb.append("]\n");
         files.put("nekojs/__init__.pyi", sb.toString());
@@ -495,12 +579,14 @@ public final class PythonProbeBackend implements ProbeBackend {
         return out;
     }
 
-    /** Finds the class with simple name equal to {@code simpleName} in the set of available FQNs (determinism: sorted by FQN, takes the first). */
-    private static String findFqnBySimpleName(Set<String> availableFqns, String simpleName) {
-        for (String fqn : new TreeSet<>(availableFqns)) {
-            if (ApiTypeRefPyRenderer.simplePyName(fqn).equals(simpleName)) return fqn;
+    /** Builds a simple-name -> FQN lookup map (determinism: sorted by FQN, takes the first). */
+    static Map<String, String> buildFqnBySimpleName(Set<String> availableFqns) {
+        Map<String, String> map = new HashMap<>(availableFqns.size());
+        for (String fqn : availableFqns) {
+            String simple = ApiTypeRefPyRenderer.simplePyName(fqn);
+            map.merge(simple, fqn, (existing, candidate) -> existing.compareTo(candidate) <= 0 ? existing : candidate);
         }
-        return null;
+        return map;
     }
 
     // ============================== Event Declarations ==============================
@@ -509,8 +595,13 @@ public final class PythonProbeBackend implements ProbeBackend {
     private void writeEventStubs(Map<String, String> files, NekoScriptCatalogSnapshot snapshot,
                                  ApiTypeRefPyRenderer typeR, Set<String> availableFqns,
                                  Map<String, PyAdapterAlias> adapterAliases) {
-        List<EventCatalogEntry> events = snapshot.events();
-        if (events == null || events.isEmpty()) return;
+        var eventPayloads = com.tkisor.nekojs.probe.EventPayloadDeclarations.resolve(
+                snapshot.events(), snapshot.registryBuilderSurfaces());
+        List<EventCatalogEntry> events = snapshot.events().stream()
+                .filter(event -> !eventPayloads.containsKey(event.eventType())
+                        || !eventPayloads.get(event.eventType()).selectorScoped())
+                .toList();
+        if (events.isEmpty()) return;
 
         PythonEventRenderer eventR = new PythonEventRenderer(typeR, availableFqns);
         int count = 0;
@@ -535,17 +626,20 @@ public final class PythonProbeBackend implements ProbeBackend {
      */
     record PyAdapterAlias(String aliasName, List<String> inputTypes, Set<String> importFqns, String note) {}
 
+    private record PrecomputedLiteral(String type, String largeRegistryName) {}
+
     /**
      * Builds input aliases (target FQN -> alias) from adapter directory. Only handles collected target classes (declared in IR),
      * avoiding dangling aliases; shapes unmappable to Python (uncollected host/RawValue/missing registry in snapshot) are skipped and logged at debug level.
      *
-     * @param registries Registry literal lookup (typeName -> entries), for RegistryValue shape to render Literal unions
-     * @param modIds     Loaded mod IDs, for NamespaceValue shape to render Literal unions (takes union with registry namespace)
+     * @param registries     Registry literal lookup (typeName -> entries), for RegistryValue shape to render Literal unions
+     * @param namespaceInput Precomputed NamespaceValue literal union
      */
     private Map<String, PyAdapterAlias> buildAdapterAliases(List<AdapterCatalogEntry> adapters,
                                                             Set<String> availableFqns,
                                                             Map<String, RegistryTypeCatalogEntry> registries,
-                                                            List<String> modIds, ApiTypeRefPyRenderer typeR) {
+                                                            PrecomputedLiteral namespaceInput,
+                                                            ApiTypeRefPyRenderer typeR) {
         Map<String, PyAdapterAlias> out = new LinkedHashMap<>();
         if (adapters == null) return out;
         for (AdapterCatalogEntry entry : adapters) {
@@ -562,7 +656,7 @@ public final class PythonProbeBackend implements ProbeBackend {
                 if (shape instanceof AdapterInputShape.SelfValue
                         || shape instanceof AdapterInputShape.HostValue host && target.equals(host.cls())) continue;
                 String rendered = renderInputShape(shape, fqn, inputFqns, availableFqns, registries,
-                        modIds, largeRegistries, typeR);
+                        namespaceInput, largeRegistries, typeR);
                 if (rendered != null) inputs.add(rendered);
             }
             if (inputs.isEmpty()) continue;
@@ -641,8 +735,8 @@ public final class PythonProbeBackend implements ProbeBackend {
      * - takes the union of loader mod list ({@code snapshot.modIds()}) and {@code ':'} prefixes of registry entry IDs.
      * If both are empty (snapshot from platform-less unit test), falls back to {@code str}, consistent with TS.
      */
-    private String renderNamespaceInput(List<String> modIds, Map<String, RegistryTypeCatalogEntry> registries,
-                                        List<String> largeRegistries) {
+    private PrecomputedLiteral precomputeNamespaceInput(List<String> modIds,
+                                                          Map<String, RegistryTypeCatalogEntry> registries) {
         Set<String> namespaces = new java.util.TreeSet<>(modIds);
         for (RegistryTypeCatalogEntry entry : registries.values()) {
             for (String id : entry.entries()) {
@@ -652,7 +746,9 @@ public final class PythonProbeBackend implements ProbeBackend {
             }
         }
         namespaces.remove("");
-        return renderLiteralUnion("Namespace", List.copyOf(namespaces), largeRegistries);
+        List<String> large = new ArrayList<>(1);
+        String rendered = renderLiteralUnion("Namespace", List.copyOf(namespaces), large);
+        return new PrecomputedLiteral(rendered, large.isEmpty() ? null : large.get(0));
     }
 
     private String renderLiteralUnion(String typeName, List<String> rawEntries, List<String> largeRegistries) {
@@ -675,7 +771,8 @@ public final class PythonProbeBackend implements ProbeBackend {
     private String renderInputShape(AdapterInputShape shape, String selfFqn,
                                     Set<String> inputFqns, Set<String> availableFqns,
                                     Map<String, RegistryTypeCatalogEntry> registries,
-                                    List<String> modIds, List<String> largeRegistries, ApiTypeRefPyRenderer typeR) {
+                                    PrecomputedLiteral namespaceInput, List<String> largeRegistries,
+                                    ApiTypeRefPyRenderer typeR) {
         return switch (shape) {
             case AdapterInputShape.StringValue v -> "str";
             case AdapterInputShape.LiteralValue v ->
@@ -696,7 +793,7 @@ public final class PythonProbeBackend implements ProbeBackend {
             }
             case AdapterInputShape.ArrayOfValue v -> {
                 String elem = renderInputShape(v.element(), selfFqn, inputFqns, availableFqns, registries,
-                        modIds, largeRegistries, typeR);
+                        namespaceInput, largeRegistries, typeR);
                 yield elem == null ? null : "list[" + elem + "]";
             }
             case AdapterInputShape.ObjectValue v -> "dict[str, Any]";
@@ -704,7 +801,7 @@ public final class PythonProbeBackend implements ProbeBackend {
                 List<String> members = new ArrayList<>();
                 for (AdapterInputShape member : v.members()) {
                     String rendered = renderInputShape(member, selfFqn, inputFqns, availableFqns,
-                            registries, modIds, largeRegistries, typeR);
+                            registries, namespaceInput, largeRegistries, typeR);
                     if (rendered != null) members.add(rendered);
                 }
                 yield members.isEmpty() ? null : "(" + String.join(" | ", members) + ")";
@@ -713,22 +810,27 @@ public final class PythonProbeBackend implements ProbeBackend {
                     renderRegistryInput(v.typeName(), registries, largeRegistries);
             case AdapterInputShape.RegistryTagValue v ->
                     renderRegistryTagInput(v.typeName(), registries, largeRegistries);
-            case AdapterInputShape.NamespaceValue v -> renderNamespaceInput(modIds, registries, largeRegistries);
+            case AdapterInputShape.NamespaceValue v -> {
+                if (namespaceInput.largeRegistryName() != null) {
+                    largeRegistries.add(namespaceInput.largeRegistryName());
+                }
+                yield namespaceInput.type();
+            }
             // Python lacks template literal types: Whole template degrades to str (prefix/suffix syntax cannot be expressed, field semantics already covered by doc)
             case AdapterInputShape.TemplateValue v -> "str";
             case AdapterInputShape.NamedValue v -> renderInputShape(v.shape(), selfFqn, inputFqns, availableFqns,
-                    registries, modIds, largeRegistries, typeR);
+                    registries, namespaceInput, largeRegistries, typeR);
             case AdapterInputShape.CallableValue v -> {
                 List<String> parameters = new ArrayList<>();
                 boolean complete = true;
                 for (AdapterInputShape.Slot parameter : v.parameters()) {
                     String rendered = renderInputShape(parameter.shape(), selfFqn, inputFqns, availableFqns,
-                            registries, modIds, largeRegistries, typeR);
+                            registries, namespaceInput, largeRegistries, typeR);
                     if (rendered == null) { complete = false; break; }
                     parameters.add(rendered);
                 }
                 String result = renderInputShape(v.result(), selfFqn, inputFqns, availableFqns,
-                        registries, modIds, largeRegistries, typeR);
+                        registries, namespaceInput, largeRegistries, typeR);
                 yield !complete || result == null ? null : typeR.callableName() + "[[" + String.join(", ", parameters) + "], " + result + "]";
             }
             case AdapterInputShape.RawValue v -> {

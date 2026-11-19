@@ -1,8 +1,11 @@
 package com.tkisor.nekojs.fabric.mixin;
 
+import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
+import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import com.tkisor.nekojs.fabric.event.FabricBlockEventBindingsV2;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.LevelAccessor;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
@@ -30,21 +33,36 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Mixin(LavaFluid.class)
 public abstract class MixinLavaFluid {
 
-    @Inject(method = "spreadTo(Lnet/minecraft/world/level/LevelAccessor;Lnet/minecraft/core/BlockPos;"
-            + "Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/core/Direction;"
-            + "Lnet/minecraft/world/level/material/FluidState;)V",
-            at = @At(value = "INVOKE",
-                    target = "Lnet/minecraft/world/level/LevelAccessor;setBlock"
-                            + "(Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/level/block/state/BlockState;I)Z"),
-            cancellable = true)
-    private void nekojs$onLavaSpreadToStone(LevelAccessor level, BlockPos pos, BlockState state,
-                                            Direction direction, FluidState target, CallbackInfo ci) {
-        if (level.isClientSide()) {
-            return;
-        }
-        if (FabricBlockEventBindingsV2.postFluidPlaced(level, pos,
+    private static final String SPREAD_TO = "spreadTo(Lnet/minecraft/world/level/LevelAccessor;"
+            + "Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/level/block/state/BlockState;"
+            + "Lnet/minecraft/core/Direction;Lnet/minecraft/world/level/material/FluidState;)V";
+    private static final String SET_BLOCK = "Lnet/minecraft/world/level/LevelAccessor;setBlock"
+            + "(Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/level/block/state/BlockState;I)Z";
+
+    @Inject(method = SPREAD_TO, at = @At(value = "INVOKE", target = SET_BLOCK),
+            cancellable = true, require = 1, allow = 1)
+    private void nekojs$beforeLavaSpreadToStone(LevelAccessor level, BlockPos pos, BlockState state,
+                                                Direction direction, FluidState target, CallbackInfo ci) {
+        if (!level.isClientSide() && FabricBlockEventBindingsV2.postFluidPlaced(level, pos,
                 Blocks.STONE.defaultBlockState(), state)) {
             ci.cancel();
         }
+    }
+
+    @WrapOperation(method = SPREAD_TO, at = @At(value = "INVOKE", target = SET_BLOCK), require = 1, allow = 1)
+    private boolean nekojs$onLavaSpreadToStone(LevelAccessor level, BlockPos pos, BlockState state, int flags,
+                                              Operation<Boolean> original) {
+        return original.call(level, pos, FabricBlockEventBindingsV2.stableFluidPlacementState(level, pos, state), flags);
+    }
+
+    @WrapOperation(method = "randomTick(Lnet/minecraft/server/level/ServerLevel;Lnet/minecraft/core/BlockPos;"
+            + "Lnet/minecraft/world/level/material/FluidState;Lnet/minecraft/util/RandomSource;)V",
+            at = @At(value = "INVOKE",
+                    target = "Lnet/minecraft/server/level/ServerLevel;setBlockAndUpdate"
+                            + "(Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/level/block/state/BlockState;)Z"),
+            require = 2, allow = 2)
+    private boolean nekojs$onLavaSpreadFire(ServerLevel level, BlockPos pos, BlockState state,
+                                           Operation<Boolean> original) {
+        return original.call(level, pos, FabricBlockEventBindingsV2.stableFluidPlacementState(level, pos, state));
     }
 }

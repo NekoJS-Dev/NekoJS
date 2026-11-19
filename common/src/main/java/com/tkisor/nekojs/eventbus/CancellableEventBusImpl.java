@@ -5,6 +5,7 @@ import com.tkisor.nekojs.eventbus.CommonPriority;
 import com.tkisor.nekojs.api.event.EventListenerToken;
 
 import java.util.Arrays;
+import java.util.Set;
 import java.util.function.Consumer;
 import java.util.function.IntFunction;
 import java.util.function.Predicate;
@@ -61,6 +62,21 @@ public final class CancellableEventBusImpl<E>
     @Override
     public EventListenerToken<E> listen(Consumer<E> listener) {
         return listen(CommonPriority.NORMAL, new NeverCancelListener<>(listener));
+    }
+
+    @org.jetbrains.annotations.ApiStatus.Internal
+    public boolean postSelected(E event, Set<EventListenerToken<E>> selected) {
+        return compile(orderedListeners(selected::contains)).test(event);
+    }
+
+    @org.jetbrains.annotations.ApiStatus.Internal
+    public boolean postWithCancellationFrom(E event, Set<EventListenerToken<E>> cancellers) {
+        var listeners = orderedTokens().iterator();
+        while (listeners.hasNext()) {
+            var token = listeners.next();
+            if (token.listener().test(event) && cancellers.contains(token)) return true;
+        }
+        return false;
     }
 
     @Override

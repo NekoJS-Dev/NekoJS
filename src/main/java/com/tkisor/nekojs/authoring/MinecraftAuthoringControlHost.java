@@ -196,7 +196,9 @@ public final class MinecraftAuthoringControlHost implements AuthoringControlHost
         long expectedEpoch = epoch();
         requireCurrent(server, expectedEpoch);
         NekoRuntimeRoot.ReloadResult candidate;
+        IRecipeManagerExtension.ReplayObservation scriptReplay;
         try {
+            scriptReplay = observeRecipes(server);
             candidate = root.reload(ScriptType.SERVER);
         } catch (RuntimeException failure) {
             NekoJS.LOGGER.warn("[NEKO-1008] SERVER candidate did not commit", failure);
@@ -210,7 +212,7 @@ public final class MinecraftAuthoringControlHost implements AuthoringControlHost
         output.accept("NekoJS SERVER reload committed: generation=" + candidate.generation());
         try {
             requireCurrent(server, expectedEpoch);
-            boolean recipesApplied = applyRecipes(server);
+            boolean recipesApplied = scriptReplay.succeeded();
             if (!recipesApplied) {
                 output.accept("[NEKO-1022] SERVER committed, but recipe replay is unavailable on this runtime.");
             }
@@ -254,11 +256,11 @@ public final class MinecraftAuthoringControlHost implements AuthoringControlHost
         }
     }
 
-    private boolean applyRecipes(MinecraftServer server) {
+    private static IRecipeManagerExtension.ReplayObservation observeRecipes(MinecraftServer server) {
         if (server.getRecipeManager() instanceof IRecipeManagerExtension extension) {
-            return extension.nekojs$applyScriptsChecked();
+            return extension.nekojs$observeScriptReplays();
         }
-        return false;
+        return () -> false;
     }
 
     private MinecraftServer requireOwnerServer(boolean ownerRequired) {

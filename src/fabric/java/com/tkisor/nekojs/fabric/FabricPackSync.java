@@ -191,7 +191,7 @@ public final class FabricPackSync {
         }
         try {
             return root.reload(ScriptType.CLIENT).success();
-        } catch (Throwable failure) {
+        } catch (Exception failure) {
             LOGGER.error("CLIENT script reload after server pack sync failed", failure);
             return false;
         }

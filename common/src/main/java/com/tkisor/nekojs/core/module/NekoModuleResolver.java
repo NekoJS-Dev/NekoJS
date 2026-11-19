@@ -174,9 +174,6 @@ public final class NekoModuleResolver {
     }
 
     private void verifyResolvedPath(Path canonical, ResolutionRoots roots) throws IOException {
-        if (!canonical.startsWith(roots.gameDir())) {
-            throw new IOException("Symlink escape detected: " + canonical);
-        }
         if (roots.containment() != null && !canonical.startsWith(roots.containment())) {
             throw new IOException("Bare module path escapes node_modules: " + loaderPath(canonical));
         }

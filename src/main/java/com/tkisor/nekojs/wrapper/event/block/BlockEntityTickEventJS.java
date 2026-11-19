@@ -2,6 +2,8 @@ package com.tkisor.nekojs.wrapper.event.block;
 
 import com.tkisor.nekojs.api.annotation.Doc;
 import lombok.Getter;
+import net.minecraft.core.BlockPos;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 
@@ -31,5 +33,19 @@ public class BlockEntityTickEventJS {
     @Doc("The block entity's type (dispatch key).")
     public BlockEntityType<?> getType() {
         return blockEntity.getType();
+    }
+
+    public static final class Actual extends BlockEntityTickEventJS {
+        private final ServerLevel level;
+        private final BlockPos pos;
+
+        public Actual(BlockEntity blockEntity, ServerLevel level, BlockPos pos) {
+            super(blockEntity);
+            this.level = level;
+            this.pos = pos;
+        }
+
+        public ServerLevel level() { return level; }
+        public BlockPos pos() { return pos; }
     }
 }

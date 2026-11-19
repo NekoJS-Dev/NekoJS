@@ -151,6 +151,15 @@ NekoJS does not stop a script for running too long. An infinite loop or an `awai
 | `NEKO-4064` | Script output declaration rejected | A method's declared TypeScript return type is blank |
 | `NEKO-4065` | Script output view rejected | The view must be an implemented public non-generic interface |
 | `NEKO-4066` | Probe declaration retained with incomplete public members | A missing optional public signature prevents reflecting the full method list. Other members stay; see `incompleteMembers` |
+| `NEKO-4070` | Stage identifier, player reference or handle mutation rejected | Blank or invalid stage name, player UUID or notification option, or a write was called on a read-only client stage handle |
+| `NEKO-4071` | Stage customization or gate declaration rejected | Duplicate customization or gate rule ID, non-positive temporary ticks, unknown scope or target, empty target set, invalid region/age/level bounds, or a closed builder |
+| `NEKO-4072` | Stage persistence read or write failed | Corrupt JSON, invalid stage file schema or I/O failure under `<world>/nekojs/stages/` |
+| `NEKO-4074` | STARTUP registry selector rejected | The selector is invalid or the registry is not open on this Minecraft version and loader |
+| `NEKO-4075` | STARTUP registry event operation rejected | Check the entry ID, type name, final builder callback or supplier. The Event Object is read-only |
+| `NEKO-4076` | STARTUP registry builder factory missing | The selected registry has no default builder, or the named builder is unavailable for that registry |
+| `NEKO-4077` | Native registry missing in the Fabric registration window | A declared registry was unavailable when Fabric tried to commit. Check its native creation and loader timing |
+| `NEKO-4078` | STARTUP registry entry rejected during native registration | Check the registry, entry ID and cause in the log. For `createCustom`, check what the supplier returns |
+| `NEKO-4079` | Staged STARTUP registry entries left undelivered | The loader did not deliver the staged entries. Staging from a previous boot is discarded |
 | `NEKO-4090` | Mixin preparation/restart required or declaration/library rejected | First check `[mixinjs] enabled` in the engine config (off by default) and fully restart after changing it; also restart after a successful preparation. Otherwise check the cache, loader acceptance, target environment, method descriptor and options. See [MixinJS troubleshooting](mixinjs_us#wiki-mixinjs-troubleshooting) |
 | `NEKO-4091` | Mixin callback authority or bridge ownership rejected | Use a locally trusted candidate and callback file; another running instance cannot take over the bridge |
 | `NEKO-4092` | Native hook bypassed or callback decision discarded | Check the thread, synchronous return value, control object lifetime and type conversion |

@@ -121,7 +121,7 @@ class DynamicRegistryEventFacadeTest {
         assertFalse(holder.canApplyOn(ScriptType.CLIENT), "CLIENT 侧不可见");
         // STARTUP sees the SERVER bus, which follows the existing side rule (the same shape as
         // ServerEvents.recipes: startup scripts can attach server-side listeners ahead of time).
-        // A separate group with its own lifecycle keeps it apart from the startup RegistryEvents.
+        // A separate group with its own lifecycle keeps it apart from the startup StartupEvents.registry.
         assertTrue(holder.canApplyOn(ScriptType.STARTUP), "STARTUP 侧沿用 SERVER 总线可见性语义");
     }
 

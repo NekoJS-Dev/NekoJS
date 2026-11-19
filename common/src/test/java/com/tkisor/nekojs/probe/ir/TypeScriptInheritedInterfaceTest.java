@@ -24,6 +24,8 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 class TypeScriptInheritedInterfaceTest {
+
+    private static final TypeReflector REFLECTOR = new TypeReflector();
     public interface Values<T> {
         T value();
         default T echo(T input) { return input; }
@@ -228,19 +230,19 @@ class TypeScriptInheritedInterfaceTest {
         generator.prepare(Set.of(SelfComparable.class.getName(), Comparable.class.getName()), Set.of());
         String alias = generator.declaration(SelfComparable.class.getName());
         assertTrue(alias.contains("Host0 extends ($Comparable<Host0> | string | number | boolean) = any"), alias);
-        String output = new TypeScriptClassRenderer(registry).render(new TypeReflector().reflect(SelfComparable.class));
+        String output = new TypeScriptClassRenderer(registry).render(REFLECTOR.reflect(SelfComparable.class));
         assertTrue(output.contains("T extends ($Comparable<T> | string | number | boolean)"), output);
         String otherBound = new TypeScriptClassRenderer(registry)
-                .render(new TypeReflector().reflect(OtherComparable.class));
+                .render(REFLECTOR.reflect(OtherComparable.class));
         assertTrue(otherBound.contains("T extends $Comparable<string>"), otherBound);
         assertTrue(!otherBound.contains("| number"), otherBound);
-        String numeric = new TypeScriptClassRenderer(registry).render(new TypeReflector().reflect(NumericBounds.class));
+        String numeric = new TypeScriptClassRenderer(registry).render(REFLECTOR.reflect(NumericBounds.class));
         assertTrue(numeric.contains("T extends (number) & (($Comparable<T> | string | number | boolean))"), numeric);
     }
 
     @Test
     void interfaceObjectContractsRetainTheActualInheritedOperations() {
-        var declaration = new TypeReflector().reflect(ObjectValue.class);
+        var declaration = REFLECTOR.reflect(ObjectValue.class);
         assertTrue(declaration.methods.stream().anyMatch(method -> method.name.equals("equals")));
         assertTrue(declaration.methods.stream().anyMatch(method -> method.name.equals("hashCode")));
         assertTrue(declaration.methods.stream().noneMatch(method -> method.name.equals("getClass")));
@@ -253,7 +255,7 @@ class TypeScriptInheritedInterfaceTest {
 
     @Test
     void superclassInterfaceContractsRetainObjectOverloads() {
-        var declaration = new TypeReflector().reflect(ObjectChild.class);
+        var declaration = REFLECTOR.reflect(ObjectChild.class);
         assertEquals(2, declaration.methods.stream().filter(method -> method.name.equals("equals")).count());
         assertTrue(declaration.methods.stream().anyMatch(method -> method.name.equals("hashCode")));
         assertTrue(declaration.methods.stream().noneMatch(method -> method.name.equals("getClass")));
@@ -271,10 +273,9 @@ class TypeScriptInheritedInterfaceTest {
             assertEquals("parent", context.eval("js", "operationChild.operation()").asString());
             assertTrue(context.eval("js", "operationChild.equals(operationChild)").asBoolean());
         }
-        var reflector = new TypeReflector();
-        var parent = reflector.reflect(OperationParent.class);
+        var parent = REFLECTOR.reflect(OperationParent.class);
         assertTrue(parent.methods.stream().anyMatch(method -> method.name.equals("operation")));
-        var child = reflector.reflect(OperationChild.class);
+        var child = REFLECTOR.reflect(OperationChild.class);
         assertEquals(2, child.methods.stream().filter(method -> method.name.equals("equals")).count());
         assertTrue(child.methods.stream().anyMatch(method -> method.name.equals("hashCode")));
         assertTrue(child.methods.stream().noneMatch(method -> method.name.equals("operation")),
@@ -291,7 +292,7 @@ class TypeScriptInheritedInterfaceTest {
             context.eval("js", "bean.setValue('explicit');");
             assertEquals("explicit", bean.getValue());
         }
-        var declaration = new TypeReflector().reflect(BeanChild.class);
+        var declaration = REFLECTOR.reflect(BeanChild.class);
         var getter = declaration.methods.stream().filter(method -> method.isGetter).findFirst().orElseThrow();
         assertNotNull(getter.setterParamType, "overriding a getter does not remove the inherited write operation");
         assertEquals(String.class, getter.setterParamType.sourceType);
@@ -302,7 +303,7 @@ class TypeScriptInheritedInterfaceTest {
 
     @Test
     void alternateBeanGetterNamesRetainBothRealCallableMethods() {
-        var declaration = new TypeReflector().reflect(ReadyValue.class);
+        var declaration = REFLECTOR.reflect(ReadyValue.class);
         assertTrue(declaration.methods.stream().anyMatch(method -> method.name.equals("getReady")));
         assertTrue(declaration.methods.stream().anyMatch(method -> method.name.equals("isReady")));
         assertEquals(1, declaration.methods.stream().filter(method -> method.isGetter).count());
@@ -344,7 +345,7 @@ class TypeScriptInheritedInterfaceTest {
     @Test
     void inheritedRealNamesTakePrecedenceOverBeanAliases() {
         String output = new TypeScriptClassRenderer(new TypeAliasRegistry())
-                .render(new TypeReflector().reflect(MethodChild.class));
+                .render(REFLECTOR.reflect(MethodChild.class));
         assertTrue(output.contains("level(): string;"), output);
         assertTrue(!output.contains("get level()"), output);
         try (Context context = context()) {
@@ -365,7 +366,7 @@ class TypeScriptInheritedInterfaceTest {
 
     @Test
     void beanReadsAndFieldWritesRetainTheirDifferentRuntimeTypes() {
-        var declaration = new TypeReflector().reflect(DifferentLevelField.class);
+        var declaration = REFLECTOR.reflect(DifferentLevelField.class);
         String output = new TypeScriptClassRenderer(new TypeAliasRegistry()).render(declaration);
         assertTrue(output.contains("get level(): string;"), output);
         assertTrue(output.contains("set level(value: number);"), output);
@@ -382,7 +383,7 @@ class TypeScriptInheritedInterfaceTest {
     void fieldBackedBeanReadRetainsExplicitGetterOverride() {
         var renderer = new TypeScriptClassRenderer(new TypeAliasRegistry());
         renderer.overrideGetter(DifferentLevelField.class, "level", "CustomLevel", null);
-        String output = renderer.render(new TypeReflector().reflect(DifferentLevelField.class));
+        String output = renderer.render(REFLECTOR.reflect(DifferentLevelField.class));
         assertTrue(output.contains("get level(): CustomLevel;"), output);
         assertTrue(output.contains("set level(value: number);"), output);
         assertEquals(1, output.split("get level\\(\\)", -1).length - 1, output);
@@ -391,7 +392,7 @@ class TypeScriptInheritedInterfaceTest {
     @Test
     void explicitSetterNamesOwnTheirBeanAliasNamespace() {
         String output = new TypeScriptClassRenderer(new TypeAliasRegistry())
-                .render(new TypeReflector().reflect(SetterNameCollision.class));
+                .render(REFLECTOR.reflect(SetterNameCollision.class));
         assertTrue(output.contains("setName(input: string): void;"), output);
         assertTrue(!output.contains("readonly setName:") && !output.contains("get setName()"), output);
     }
@@ -406,7 +407,7 @@ class TypeScriptInheritedInterfaceTest {
             context.eval("js", "target.setValue('explicit')");
             assertEquals("explicit", context.eval("js", "target.getValue()").asString());
         }
-        var declaration = new TypeReflector().reflect(NestedGetterChild.class);
+        var declaration = REFLECTOR.reflect(NestedGetterChild.class);
         var getter = declaration.methods.stream()
                 .filter(method -> method.isGetter && "value".equals(method.property)).findFirst().orElseThrow();
         assertNotNull(getter.setterParamType, "Selected nested getters retain their real inherited setters");
@@ -419,22 +420,21 @@ class TypeScriptInheritedInterfaceTest {
 
     @Test
     void beanAliasesPreserveRealMethodsAndFieldsWhenNamesCollide() throws Exception {
-        var reflector = new TypeReflector();
         var renderer = new TypeScriptClassRenderer(new TypeAliasRegistry());
-        String methods = renderer.render(reflector.reflect(LevelMethods.class));
+        String methods = renderer.render(REFLECTOR.reflect(LevelMethods.class));
         assertTrue(methods.contains("level(): string;"), methods);
         assertTrue(methods.contains("getLevel(): string;"), methods);
         assertTrue(methods.contains("setLevel(input: string): void;"), methods);
         assertTrue(!methods.contains("get level()"), methods);
-        String parent = renderer.render(reflector.reflect(LevelParent.class));
+        String parent = renderer.render(REFLECTOR.reflect(LevelParent.class));
         assertTrue(parent.contains("get level(): string;"), parent);
-        String field = renderer.render(reflector.reflect(LevelField.class));
+        String field = renderer.render(REFLECTOR.reflect(LevelField.class));
         assertTrue(field.contains("get level(): string;"), field);
         Path declaration = Path.of("build", "probe-ts-bean-inheritance", "index.d.ts");
         Files.createDirectories(declaration.getParent());
-        Files.writeString(declaration, renderer.render(reflector.reflect(LevelSource.class)) + methods + parent + field
-                + renderer.render(reflector.reflect(DifferentLevelField.class))
-                + renderer.render(reflector.reflect(SetterNameCollision.class)));
+        Files.writeString(declaration, renderer.render(REFLECTOR.reflect(LevelSource.class)) + methods + parent + field
+                + renderer.render(REFLECTOR.reflect(DifferentLevelField.class))
+                + renderer.render(REFLECTOR.reflect(SetterNameCollision.class)));
         try (Context context = context()) {
             context.getBindings("js").putMember("methods", new LevelMethods());
             context.getBindings("js").putMember("field", new LevelField());
@@ -446,7 +446,6 @@ class TypeScriptInheritedInterfaceTest {
 
     @Test
     void inheritedInterfaceMembersRemainCallableAndProduceRealDeclarations() throws Exception {
-        var reflector = new TypeReflector();
         var aliases = new TypeAliasRegistry();
         var functional = new FunctionalInterfaceAliasGenerator(aliases);
         functional.prepare(Set.of(BoundedCallback.class.getName(), RootValue.class.getName(),
@@ -461,7 +460,7 @@ class TypeScriptInheritedInterfaceTest {
                 Comparable.class, SelfComparable.class, ComparableReceiver.class, OtherComparable.class,
                 NumericBounds.class, ParentOperation.class, OperationParent.class, OperationChild.class,
                 BeanValue.class, BeanParent.class, BeanChild.class, NestedGetterParent.class, NestedGetterChild.class)) {
-            output.append(renderer.render(reflector.reflect(type)));
+            output.append(renderer.render(REFLECTOR.reflect(type)));
         }
         output.append(functional.declaration(BoundedCallback.class.getName()));
         output.append(functional.declaration(SelfComparable.class.getName()));
@@ -474,9 +473,9 @@ class TypeScriptInheritedInterfaceTest {
                     + " && value.echo('y') === 'y' && value.echo() === 7"
                     + " && value.identity(3) === 3 && value.size() === 1").asBoolean());
         }
-        String value = renderer.render(reflector.reflect(Value.class));
+        String value = renderer.render(REFLECTOR.reflect(Value.class));
         assertTrue(value.contains("echo(input: T): T;"), value);
-        String text = renderer.render(reflector.reflect(TextValue.class));
+        String text = renderer.render(REFLECTOR.reflect(TextValue.class));
         assertTrue(text.contains("echo(input: string): string;"), text);
     }
 
@@ -489,8 +488,7 @@ class TypeScriptInheritedInterfaceTest {
             context.getBindings("js").putMember("remapped", new RemappedChild());
             assertTrue(context.eval("js", "remapped.base('x') === 'x' && remapped.local(7) === 7").asBoolean());
         }
-        var reflector = new TypeReflector();
-        var declaration = reflector.reflect(RemappedChild.class);
+        var declaration = REFLECTOR.reflect(RemappedChild.class);
         var calls = declaration.methods.stream().filter(method -> "call".equals(method.effectiveName())).toList();
         assertEquals(2, calls.size(), "Both actual remapped overloads must remain available");
         assertTrue(calls.stream().anyMatch(method -> method.params.get(0).type.sourceType == String.class));
@@ -499,7 +497,7 @@ class TypeScriptInheritedInterfaceTest {
 
     @Test
     void declaredSetterRetainsItsBeanWriteType() {
-        var declaration = new TypeReflector().reflect(OwnSetter.class);
+        var declaration = REFLECTOR.reflect(OwnSetter.class);
         var getter = declaration.methods.stream().filter(method -> method.isGetter && "value".equals(method.property))
                 .findFirst().orElseThrow();
         assertEquals(String.class, getter.setterParamType.sourceType);
@@ -516,7 +514,7 @@ class TypeScriptInheritedInterfaceTest {
 
     @Test
     void staticSetterDoesNotMakeInheritedInstanceGetterWritable() {
-        var declaration = new TypeReflector().reflect(StaticSetter.class);
+        var declaration = REFLECTOR.reflect(StaticSetter.class);
         var getter = declaration.methods.stream().filter(method -> method.isGetter && "value".equals(method.property))
                 .findFirst().orElseThrow();
         assertNull(getter.setterParamType);
@@ -529,14 +527,14 @@ class TypeScriptInheritedInterfaceTest {
     @Test
     void inheritedMethodVariablesRemainDistinctFromClassVariables() {
         String output = new TypeScriptClassRenderer(new TypeAliasRegistry())
-                .render(new TypeReflector().reflect(GenericValue.class));
+                .render(REFLECTOR.reflect(GenericValue.class));
         assertTrue(output.contains("transform<T1>(input: T, result: T1): T1;"), output);
     }
 
     @Test
     void inheritedMethodBoundsRetainTheirActualConstraint() {
         String output = new TypeScriptClassRenderer(new TypeAliasRegistry())
-                .render(new TypeReflector().reflect(GenericValue.class));
+                .render(REFLECTOR.reflect(GenericValue.class));
         assertTrue(output.contains("bounded<T1 extends $TypeScriptInheritedInterfaceTest$RootValue>"), output);
     }
 
@@ -544,7 +542,7 @@ class TypeScriptInheritedInterfaceTest {
     void contextualMethodVariablesRemainUsableInFunctionalAliases() {
         var aliases = new TypeAliasRegistry();
         new FunctionalInterfaceAliasGenerator(aliases).prepare(Set.of(Function.class.getName()), Set.of());
-        String output = new TypeScriptClassRenderer(aliases).render(new TypeReflector().reflect(FunctionalValue.class));
+        String output = new TypeScriptClassRenderer(aliases).render(REFLECTOR.reflect(FunctionalValue.class));
         assertTrue(output.contains("$Function_<T, T1, T, T1>"), output);
         try (Context context = context()) {
             context.getBindings("js").putMember("functional", new FunctionalValue<String>());
@@ -558,7 +556,7 @@ class TypeScriptInheritedInterfaceTest {
         var aliases = new TypeAliasRegistry();
         new FunctionalInterfaceAliasGenerator(aliases).prepare(Set.of(Function.class.getName(), Box.class.getName(),
                 Map.class.getName()), Set.of());
-        String output = new TypeScriptClassRenderer(aliases).render(new TypeReflector().reflect(MapContainer.class));
+        String output = new TypeScriptClassRenderer(aliases).render(REFLECTOR.reflect(MapContainer.class));
         assertTrue(output.replaceAll("\\s+", "").contains("pass(input:$TypeScriptInheritedInterfaceTest$Box<$Map<K,V>>)"), output);
         assertTrue(output.contains("$Function_<string, $TypeScriptInheritedInterfaceTest$Box<$Map<K, V>>, string, "
                 + "$TypeScriptInheritedInterfaceTest$Box<$Map<K, V>>>"), output);

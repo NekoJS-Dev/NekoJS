@@ -100,7 +100,11 @@ public sealed interface AdapterInputShape permits
     /** Array of element shapes. */
     record ArrayOfValue(AdapterInputShape element) implements AdapterInputShape {}
     /** Object literal consisting of multiple {@link Slot} entries. */
-    record ObjectValue(List<Slot> slots) implements AdapterInputShape {}
+    record ObjectValue(List<Slot> slots) implements AdapterInputShape {
+        public ObjectValue {
+            slots = slots == null ? List.of() : List.copyOf(slots);
+        }
+    }
     /**
      * Union of several shapes, rendered with parentheses as {@code (A | B)}.
      *

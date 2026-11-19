@@ -18,6 +18,9 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
 
+/**
+ * Sandboxed GraalVM {@link FileSystem} backed by {@link SandboxPolicy} and virtual module resolution.
+ */
 public class NekoJSFileSystem implements FileSystem {
     private final java.nio.file.FileSystem delegate = FileSystems.getDefault();
     private final NekoJSPaths paths;
@@ -41,15 +44,24 @@ public class NekoJSFileSystem implements FileSystem {
 
     @Override
     public Path parsePath(URI uri) {
-        if (uri != null && "file".equalsIgnoreCase(uri.getScheme())) {
+        if (uri == null) {
+            throw new IllegalArgumentException("URI must not be null");
+        }
+        if ("file".equalsIgnoreCase(uri.getScheme())) {
             return Path.of(uri);
+        }
+        if (uri.isOpaque() || uri.getPath() == null) {
+            throw new IllegalArgumentException("Opaque or pathless URI is not supported: " + uri);
         }
         return delegate.getPath(uri.getPath());
     }
 
     @Override
     public Path parsePath(String path) {
-        if (path != null && path.startsWith("file:")) {
+        if (path == null) {
+            throw new IllegalArgumentException("Path must not be null");
+        }
+        if (path.startsWith("file:")) {
             return Path.of(URI.create(path));
         }
         Path parsedPath = delegate.getPath(path);
@@ -115,7 +127,9 @@ public class NekoJSFileSystem implements FileSystem {
         boolean writing = options.contains(StandardOpenOption.WRITE)
                 || options.contains(StandardOpenOption.APPEND)
                 || options.contains(StandardOpenOption.CREATE)
-                || options.contains(StandardOpenOption.CREATE_NEW);
+                || options.contains(StandardOpenOption.CREATE_NEW)
+                || options.contains(StandardOpenOption.DELETE_ON_CLOSE)
+                || options.contains(StandardOpenOption.TRUNCATE_EXISTING);
         Path verifiedPath = virtualModules.isVirtualPath(path)
                 ? path.normalize().toAbsolutePath()
                 : writing ? policy.resolveWrite(path) : paths.verifyInsideGameDir(path);
@@ -231,14 +245,14 @@ public class NekoJSFileSystem implements FileSystem {
 
     @Override
     public void createLink(Path link, Path existing) throws IOException {
-        Path verifiedLink = paths.verifyInsideGameDirForCreate(link);
-        Path verifiedExisting = paths.verifyInsideGameDir(existing);
+        Path verifiedLink = policy.resolveWrite(link);
+        Path verifiedExisting = policy.resolveWriteExisting(existing);
         Files.createLink(verifiedLink, verifiedExisting);
     }
 
     @Override
     public void setAttribute(Path path, String attribute, Object value, LinkOption... options) throws IOException {
-        Path verifiedPath = paths.verifyInsideGameDir(path);
+        Path verifiedPath = policy.resolveWriteExisting(path);
         Files.setAttribute(verifiedPath, attribute, value, options);
     }
 

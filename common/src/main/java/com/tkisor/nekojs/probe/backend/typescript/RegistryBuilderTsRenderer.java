@@ -28,11 +28,13 @@ public final class RegistryBuilderTsRenderer {
                 output.append(declaration);
             } else {
                 output.append("declare namespace ").append(namespace).append(" {\n");
-                var sugarNames = builders.stream().flatMap(builder -> builder.eventPayload().members().stream())
-                        .map(member -> member.name()).filter(name -> !name.equals("custom") && !name.equals("register"))
-                        .distinct().sorted().map(name -> "\"" + name + "\"").toList();
-                output.append("    type RegistrySugar = ")
-                        .append(sugarNames.isEmpty() ? "never" : String.join(" | ", sugarNames)).append(";\n\n");
+                if (builders.stream().anyMatch(builder -> !builder.eventPayload().selectorScoped())) {
+                    var sugarNames = builders.stream().flatMap(builder -> builder.eventPayload().members().stream())
+                            .map(member -> member.name()).filter(name -> !name.equals("custom") && !name.equals("register"))
+                            .distinct().sorted().map(name -> "\"" + name + "\"").toList();
+                    output.append("    type RegistrySugar = ")
+                            .append(sugarNames.isEmpty() ? "never" : String.join(" | ", sugarNames)).append(";\n\n");
+                }
                 declaration.lines().forEach(line -> output.append(line.isEmpty() ? "" : "    " + line).append('\n'));
                 output.append("}\n\n");
             }
@@ -45,6 +47,10 @@ public final class RegistryBuilderTsRenderer {
      */
     public static String render(List<RegistryBuilderSurfaceEntry> entries) {
         if (entries == null || entries.isEmpty()) {
+            return "";
+        }
+        entries = entries.stream().filter(RegistryBuilderSurfaceEntry::hasBuilder).toList();
+        if (entries.isEmpty()) {
             return "";
         }
         StringBuilder sb = new StringBuilder();

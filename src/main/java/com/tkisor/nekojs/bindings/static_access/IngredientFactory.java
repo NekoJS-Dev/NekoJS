@@ -54,8 +54,12 @@ public class IngredientFactory {
     @Return("an IngredientJS matching any of the given ingredients")
     public com.tkisor.nekojs.wrapper.item.IngredientJS any(Ingredient... ingredients) {
         com.tkisor.nekojs.wrapper.item.IngredientJS wrapper = new com.tkisor.nekojs.wrapper.item.IngredientJS();
-        for (Ingredient ingredient : ingredients) {
-            wrapper.or(ingredient);
+        if (ingredients != null) {
+            for (Ingredient ingredient : ingredients) {
+                if (ingredient != null) {
+                    wrapper.or(ingredient);
+                }
+            }
         }
         return wrapper;
     }

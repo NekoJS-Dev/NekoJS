@@ -14,7 +14,7 @@ NekoJS 的脚本 API 只有几种固定写法。认识这几种写法之后，�
 |---|---|---|
 | 事件组 | `ServerEvents.recipes(event => { ... })` | 订阅一个游戏事件 |
 | 绑定 | `Item.of('minecraft:stone')` | 直接调用的通用工具 |
-| 配置回调 | `event.item(id, build => { ... })` | 创建新内容并设置它的属性 |
+| 配置回调 | `event.create(id, build => { ... })` | 创建新内容并设置它的属性 |
 | 属性 | `event.player`、`build.maxStackSize = 16` | 读取或修改对象上的值 |
 
 <a id="wiki-section-3"></a>
@@ -52,11 +52,11 @@ PlayerEvents.loggedIn(event => {
 创建新内容时，先传 ID 等必要参数，**最后**传一个配置回调。回调收到的 `build` 用来设置这个新内容的属性：
 
 ```javascript
-import { RegistryEvents } from "nekojs:event/versioned";
+import { StartupEvents } from "nekojs:event/versioned";
 
 // startup_scripts/content.js
-RegistryEvents.register(event => {
-  event.item('nekojs_example:ruby', build => {
+StartupEvents.registry('item', event => {
+  event.create('nekojs_example:ruby', build => {
     build.maxStackSize = 16
     build.rarity = 'rare'
   })

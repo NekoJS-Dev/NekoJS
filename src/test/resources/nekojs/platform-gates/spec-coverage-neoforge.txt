@@ -80,6 +80,7 @@ MutableComponentSpec | scope=NF_ONLY | required=true | impl=MutableComponentExte
 PlayerSpec#neko$addXpLevels(1) | impl=PlayerExtension | declared-by-impl
 PlayerSpec#neko$addXpPoints(1) | impl=PlayerExtension | declared-by-impl
 PlayerSpec#neko$getGamemode(0) | impl=PlayerExtension | declared-by-impl
+PlayerSpec#neko$getStages(0) | impl=PlayerExtension | declared-by-impl
 PlayerSpec#neko$getXpLevel(0) | impl=PlayerExtension | declared-by-impl
 PlayerSpec#neko$give(1) | impl=PlayerExtension | declared-by-impl
 PlayerSpec#neko$isOp(0) | impl=PlayerExtension | declared-by-impl
@@ -88,5 +89,7 @@ PlayerSpec#neko$setGamemode(1) | impl=PlayerExtension | declared-by-impl
 PlayerSpec#neko$setXpLevel(1) | impl=PlayerExtension | declared-by-impl
 PlayerSpec | scope=ALL | required=true | impl=PlayerExtension | extends=PlayerSpec
 ServerSpec#neko$data(0) | impl=ServerExtension | declared-by-impl
+ServerSpec#neko$getStages(0) | impl=ServerExtension | declared-by-impl
 ServerSpec | scope=NF_ONLY | required=true | impl=ServerExtension | extends=ServerSpec
+
 

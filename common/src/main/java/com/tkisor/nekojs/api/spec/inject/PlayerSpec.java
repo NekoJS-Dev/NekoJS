@@ -2,6 +2,7 @@ package com.tkisor.nekojs.api.spec.inject;
 
 import com.tkisor.nekojs.api.annotation.RemapByPrefix;
 import com.tkisor.nekojs.api.spec.PlatformAvailability;
+import com.tkisor.nekojs.api.stage.StageHandle;
 
 /**
  * Cross-platform extension specification for Player.
@@ -82,5 +83,10 @@ public interface PlayerSpec {
     /** Kicks the player. 'reason' accepts a String or a platform-native Component. */
     default void neko$kick(Object reason) {
         throw new UnsupportedOperationException("PlayerSpec.neko$kick not implemented");
+    }
+
+    /** Returns the stage handle attached to this player. */
+    default StageHandle neko$getStages() {
+        throw new UnsupportedOperationException("PlayerSpec.neko$getStages not implemented");
     }
 }

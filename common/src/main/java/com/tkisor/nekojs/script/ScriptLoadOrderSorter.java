@@ -144,7 +144,7 @@ final class ScriptLoadOrderSorter {
         for (int index = 0; index < scripts.size(); index++) {
             ScriptContainer script = scripts.get(index);
             runnable[index] = shouldRun.test(script);
-            selectors[index] = script.packId == null ? null : script.packScope.name() + ":" + script.packId;
+            selectors[index] = (script.packId == null || script.packScope == null) ? null : script.packScope.name() + ":" + script.packId;
             if (runnable[index] && selectors[index] != null) outstanding.merge(selectors[index], 1, Integer::sum);
         }
         int[] waiting = new int[scripts.size()];

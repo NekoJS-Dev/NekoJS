@@ -27,6 +27,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 
+/** Rewrites ESM module sources and their specifiers into virtual {@code .mjs} modules for GraalJS native ESM execution. */
 public final class NekoNativeEsmSourceRewriter {
     private final NekoModuleResolver resolver;
     private final NekoEsmVirtualModuleRegistry virtualModules;
@@ -64,6 +65,7 @@ public final class NekoNativeEsmSourceRewriter {
             return virtualModules.uri(moduleId);
         }
         visiting.add(moduleId);
+        boolean completed = false;
         try {
             RewriteResult rewritten = rewrite(file, moduleId, prepared, visiting);
             String source = rewritten.code();
@@ -74,9 +76,13 @@ public final class NekoNativeEsmSourceRewriter {
                 sourceMaps.register(virtualPath.toString(), withGeneratedFile(sourceMap, virtualPath),
                         source.equals(prepared.code()) ? prepared.prependedLineCount() : 0);
             }
+            completed = true;
             return uri;
         } finally {
             visiting.remove(moduleId);
+            if (!completed) {
+                virtualModules.invalidate(moduleId);
+            }
         }
     }
 
@@ -214,10 +220,14 @@ public final class NekoNativeEsmSourceRewriter {
             }
             StringBuilder source = new StringBuilder();
             source.append("const __neko_module = globalThis.__nekoNodeResolve(").append(jsString(specifier)).append(");\n")
-                    .append("if (__neko_module === globalThis.__nekoNodeNoModule) throw new Error('Cannot resolve module: ").append(escapeForSingleQuoted(specifier)).append("');\n")
-                    .append("export default __neko_module;\n");
+                    .append("if (__neko_module === globalThis.__nekoNodeNoModule) throw new Error('Cannot resolve module: ").append(escapeForSingleQuoted(specifier)).append("');\n");
+            if (!namedExports.contains("default")) {
+                source.append("export default __neko_module;\n");
+            }
             for (String name : namedExports) {
-                if (isIdentifier(name)) {
+                if ("default".equals(name)) {
+                    source.append("const __neko_default = __neko_module;\nexport { __neko_default as default };\n");
+                } else if (isIdentifier(name)) {
                     source.append("export const ").append(name).append(" = __neko_module[").append(jsString(name)).append("];\n");
                 }
             }

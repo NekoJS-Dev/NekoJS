@@ -3,6 +3,12 @@ package com.tkisor.nekojs.api.recipe;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.tkisor.nekojs.NekoJS;
+import com.tkisor.nekojs.api.annotation.Doc;
+import com.tkisor.nekojs.api.annotation.Param;
+import com.tkisor.nekojs.api.annotation.Return;
+import com.tkisor.nekojs.api.data.NekoId;
+import com.tkisor.nekojs.api.stage.StageScope;
+import com.tkisor.nekojs.core.stage.gate.InlineRecipeStageRegistry;
 import com.tkisor.nekojs.wrapper.event.server.RecipeEventJS;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.ItemStack;
@@ -14,6 +20,7 @@ import net.neoforged.neoforge.fluids.crafting.SizedFluidIngredient;
 //?}
 import java.util.Map;
 
+/** Fluent builder for constructing or modifying recipe JSON payloads in {@link RecipeEventJS}. */
 public class RecipeJsonBuilder implements RecipeBuilder {
     private final JsonObject json;
     private final RecipeEventJS event;
@@ -62,24 +69,36 @@ public class RecipeJsonBuilder implements RecipeBuilder {
     }
 
     public static Identifier parseId(String id) {
+        if (id == null) {
+            return null;
+        }
         if (id.contains(":")) {
             return Identifier.tryParse(id);
         }
-        return Identifier.fromNamespaceAndPath("nekojs", id);
+        return Identifier.tryParse("nekojs:" + id);
     }
 
     public RecipeJsonBuilder id(String newId) {
-        event.getFinalJsons().remove(this.currentId);
-        event.removeRecipeContext(this.currentId);
+        Identifier oldId = this.currentId;
+        event.getFinalJsons().remove(oldId);
+        event.removeRecipeContext(oldId);
 
         Identifier parsedId = parseId(newId);
 
         if (parsedId == null) {
             NekoJS.LOGGER.debug("Invalid recipe ID: {}", newId);
-            parsedId = this.currentId;
+            parsedId = oldId;
         }
 
         this.currentId = parsedId;
+//? if >=26 {
+        IngredientActionRegistry.rekey(oldId, this.currentId);
+//?}
+        if (oldId != null && this.currentId != null) {
+            InlineRecipeStageRegistry.current().rekey(
+                    NekoId.resource(oldId.getNamespace(), oldId.getPath()),
+                    NekoId.resource(this.currentId.getNamespace(), this.currentId.getPath()));
+        }
         event.getFinalJsons().put(this.currentId, this.json);
         event.setRecipeContext(this.currentId, this.context);
 
@@ -251,6 +270,43 @@ public class RecipeJsonBuilder implements RecipeBuilder {
                 new IngredientActionRegistry.Action(IngredientActionRegistry.Kind.REPLACE, ingredient, 1,
                         with == null ? ItemStack.EMPTY : with));
 //?}
+        return this;
+    }
+
+    // ---- Inline recipe stage gates: pure in-memory script state, never written to recipe JSON ----
+
+    /**
+     * Gates this recipe behind the given player progression stage without mutating the recipe JSON.
+     * Example: {@code event.shapeless('minecraft:stick', ['minecraft:oak_planks']).stage('chapter_1')}.
+     */
+    @Doc("Gates this recipe behind the given player progression stage without modifying the underlying recipe JSON.")
+    @Param(name = "stage", value = "required non-blank stage name")
+    @Return("this builder for fluent chaining")
+    public RecipeJsonBuilder stage(String stage) {
+        return stage(stage, "player");
+    }
+
+    /**
+     * Gates this recipe behind the given progression stage and evaluation scope without mutating
+     * the recipe JSON. Example: {@code builder.stage('nether_unlocked', 'server')}.
+     */
+    @Doc("Gates this recipe behind the given progression stage in the specified evaluation scope without modifying the underlying recipe JSON.")
+    @Param(name = "stage", value = "required non-blank stage name")
+    @Param(name = "scope", value = "stage evaluation scope ('player', 'server', 'either', or 'both')")
+    @Return("this builder for fluent chaining")
+    public RecipeJsonBuilder stage(String stage, String scope) {
+        if (stage == null || stage.isBlank()) {
+            throw new IllegalArgumentException("[NEKO-4070] Recipe stage must not be blank");
+        }
+        StageScope parsedScope = StageScope.fromString(scope);
+        if (parsedScope == null) {
+            throw new IllegalArgumentException("[NEKO-4070] Unknown recipe stage scope: " + scope);
+        }
+        if (this.currentId == null) {
+            throw new IllegalStateException("[NEKO-4070] Cannot assign recipe stage before a recipe ID is bound");
+        }
+        NekoId nekoId = NekoId.resource(this.currentId.getNamespace(), this.currentId.getPath());
+        InlineRecipeStageRegistry.current().put(nekoId, stage.trim(), parsedScope);
         return this;
     }
 

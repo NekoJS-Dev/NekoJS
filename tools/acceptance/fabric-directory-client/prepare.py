@@ -42,8 +42,10 @@ document('nekojs/packs/global_marker/assets/neko_acceptance/lang/en_us.json', {
     'neko.acceptance.global': 'GLOBAL', 'neko.acceptance.shared': 'GLOBAL',
 })
 write('nekojs/startup_scripts/client_assets.js', '''
-RegistryEvents.register(event => {
-    event.item('neko_acceptance:auto_item', build => {
+import { StartupEvents } from 'nekojs:event/versioned';
+
+StartupEvents.registry('item', event => {
+    event.create('neko_acceptance:auto_item', build => {
         build.parentModel = 'minecraft:item/generated';
         build.texture('layer0', 'minecraft:item/diamond');
     });

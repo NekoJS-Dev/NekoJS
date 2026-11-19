@@ -12,6 +12,7 @@ import java.util.LinkedHashMap;
 import java.util.Set;
 import java.util.regex.Pattern;
 
+/** Registry mapping file extensions and language IDs to {@link NekoLanguagePlugin} and legacy {@link IScriptCompiler} frontends. */
 public final class ScriptCompilerRegistry {
     private static final List<String> NATIVE_EXTENSIONS_IN_ORDER = List.of(".js", ".mjs", ".cjs");
     private static final Set<String> NATIVE_EXTENSIONS = Set.copyOf(NATIVE_EXTENSIONS_IN_ORDER);
@@ -170,7 +171,7 @@ public final class ScriptCompilerRegistry {
      * by owner id (see {@code NekoJSBasePluginManager.ORDER}); that order is fixed on one classpath
      * but depends on your class names, so do not rely on it.
      */
-    public IScriptCompiler getCompiler(String extension) {
+    public synchronized IScriptCompiler getCompiler(String extension) {
         String dotted = normalizeExtension(extension);
         String bare = dotted.substring(1);
         for (int i = compilers.size() - 1; i >= 0; i--) {
@@ -237,7 +238,7 @@ public final class ScriptCompilerRegistry {
     }
 
     /** Uses the same last-wins rule as {@link #getCompiler(String)} and returns the whole language plugin entry. */
-    public NekoScriptLanguage getLanguage(String extension) {
+    public synchronized NekoScriptLanguage getLanguage(String extension) {
         String dotted = normalizeExtension(extension);
         String bare = dotted.substring(1);
         for (int i = languages.size() - 1; i >= 0; i--) {
@@ -253,24 +254,24 @@ public final class ScriptCompilerRegistry {
         return null;
     }
 
-    public NekoLanguagePlugin getLanguagePlugin(String extension) {
+    public synchronized NekoLanguagePlugin getLanguagePlugin(String extension) {
         NekoScriptLanguage language = getLanguage(extension);
         return language == null ? null : language.plugin();
     }
 
-    public Set<String> supportedExtensions() {
+    public synchronized Set<String> supportedExtensions() {
         return Set.copyOf(registeredExtensionsInOrder());
     }
 
-    public List<String> supportedExtensionsInOrder() {
+    public synchronized List<String> supportedExtensionsInOrder() {
         return List.copyOf(registeredExtensionsInOrder());
     }
 
-    public List<NekoScriptLanguage> languages() {
+    public synchronized List<NekoScriptLanguage> languages() {
         return languages.stream().map(Candidate::language).toList();
     }
 
-    public boolean isSupportedScriptExtension(String extension) {
+    public synchronized boolean isSupportedScriptExtension(String extension) {
         String normalized = normalizeExtension(extension);
         return NATIVE_EXTENSIONS.contains(normalized) || getLanguage(normalized) != null || getCompiler(normalized) != null || registeredExtensionsInOrder().contains(normalized);
     }

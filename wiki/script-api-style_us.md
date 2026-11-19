@@ -14,7 +14,7 @@ The NekoJS script API uses only a few fixed patterns. Once you know them, you ca
 |---|---|---|
 | Event Group | `ServerEvents.recipes(event => { ... })` | Subscribing to a game event |
 | Binding | `Item.of('minecraft:stone')` | General helpers you call directly |
-| Configuration callback | `event.item(id, build => { ... })` | Creating new content and setting its properties |
+| Configuration callback | `event.create(id, build => { ... })` | Creating new content and setting its properties |
 | Property | `event.player`, `build.maxStackSize = 16` | Reading or changing a value on an object |
 
 <a id="wiki-section-3"></a>
@@ -52,11 +52,11 @@ See [Global bindings](global-bindings_us) for the full list.
 To create something new, pass the required arguments such as the ID first, and a configuration callback **last**. The `build` object the callback receives sets the new content's properties:
 
 ```javascript
-import { RegistryEvents } from "nekojs:event/versioned";
+import { StartupEvents } from "nekojs:event/versioned";
 
 // startup_scripts/content.js
-RegistryEvents.register(event => {
-  event.item('nekojs_example:ruby', build => {
+StartupEvents.registry('item', event => {
+  event.create('nekojs_example:ruby', build => {
     build.maxStackSize = 16
     build.rarity = 'rare'
   })

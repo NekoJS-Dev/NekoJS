@@ -1,5 +1,6 @@
 package com.tkisor.nekojs.core.compiler;
 
+/** Shared lexical helpers for scanning identifiers, strings, comments, and ESM headers. */
 public final class NekoSourceLexerBase {
     private NekoSourceLexerBase() {}
 
@@ -26,6 +27,41 @@ public final class NekoSourceLexerBase {
                 continue;
             }
             if (c == '`') return i + 1;
+            if (c == '$' && i + 1 < length && source.charAt(i + 1) == '{') {
+                i = skipTemplateExpression(source, length, i + 2);
+                continue;
+            }
+            i++;
+        }
+        return length;
+    }
+
+    private static int skipTemplateExpression(String source, int length, int start) {
+        int i = start;
+        int braceDepth = 1;
+        while (i < length) {
+            char c = source.charAt(i);
+            if (c == '\'' || c == '"') {
+                i = skipString(source, length, i, c);
+                continue;
+            }
+            if (c == '`') {
+                i = skipTemplate(source, length, i);
+                continue;
+            }
+            if (c == '/') {
+                int skipped = skipSlash(source, length, i);
+                if (skipped != i) {
+                    i = skipped;
+                    continue;
+                }
+            }
+            if (c == '{') {
+                braceDepth++;
+            } else if (c == '}') {
+                braceDepth--;
+                if (braceDepth == 0) return i + 1;
+            }
             i++;
         }
         return length;

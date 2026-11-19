@@ -20,7 +20,12 @@ import java.io.IOException;
  * <p>Extracted from {@link NekoScriptModuleLoaderHost} to handle ESM-specific record
  * creation, dependency linking, and TLA propagation.
  */
+import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
@@ -43,6 +48,7 @@ public final class EsmModuleLifecycle {
     private final Function<String, Long> revision;
     private final ModulePreparation prepare;
 
+    /** Callback that prepares a resolved module into compiled/rewritten form. */
     @FunctionalInterface
     public interface ModulePreparation {
         NekoPreparedModule prepare(NekoResolvedModule resolved) throws IOException;
@@ -105,10 +111,8 @@ public final class EsmModuleLifecycle {
         }
 
         NekoEsmModuleRecord record = cached == null ? esmRecordCache.getOrCreate(resolved.id(), rev, resolved.path(), prepared) : cached;
+        linkRecord(record, resolved, rev, prepared);
         try {
-            record.beginLinking();
-            record.linked(esmLinkCache.link(resolved.id(), rev, resolved.path(), prepared));
-            recordStaticDependencies(resolved.id(), record.linkMetadata());
             markAsyncDescendant(record, new HashSet<>());
             return record;
         } catch (IOException | RuntimeException | Error e) {
@@ -138,19 +142,31 @@ public final class EsmModuleLifecycle {
             }
         }
         NekoEsmModuleRecord record = cached == null ? esmRecordCache.getOrCreate(resolved.id(), rev, resolved.path(), prepared) : cached;
-        try {
-            record.beginLinking();
-            record.linked(esmLinkCache.link(resolved.id(), rev, resolved.path(), prepared));
-            recordStaticDependencies(resolved.id(), record.linkMetadata());
-            return record;
-        } catch (IOException | RuntimeException | Error e) {
-            record.failure(e);
-            esmRecordCache.removeAll(resolved.id());
-            throw e;
-        } catch (Throwable throwable) {
-            record.failure(throwable);
-            esmRecordCache.removeAll(resolved.id());
-            throw new IOException("Failed to link native ESM module: " + resolved.id(), throwable);
+        linkRecord(record, resolved, rev, prepared);
+        return record;
+    }
+
+    private void linkRecord(NekoEsmModuleRecord record, NekoResolvedModule resolved, long rev, NekoPreparedModule prepared) throws IOException {
+        synchronized (record) {
+            if (record.state() == NekoEsmModuleState.FAILED) {
+                throw new IOException("Native ESM module failed earlier: " + resolved.id(), record.failure());
+            }
+            if (record.linkMetadata() != null) {
+                return;
+            }
+            try {
+                record.beginLinking();
+                record.linked(esmLinkCache.link(resolved.id(), rev, resolved.path(), prepared));
+                recordStaticDependencies(resolved.id(), record.linkMetadata());
+            } catch (IOException | RuntimeException | Error e) {
+                record.failure(e);
+                esmRecordCache.removeAll(resolved.id());
+                throw e;
+            } catch (Throwable throwable) {
+                record.failure(throwable);
+                esmRecordCache.removeAll(resolved.id());
+                throw new IOException("Failed to link native ESM module: " + resolved.id(), throwable);
+            }
         }
     }
 
@@ -207,18 +223,22 @@ public final class EsmModuleLifecycle {
         }
     }
 
-    private void markAsyncDescendant(NekoEsmModuleRecord record, Set<String> visiting) throws IOException {
-        if (!visiting.add(record.id())) {
-            return;
+    private void markAsyncDescendant(NekoEsmModuleRecord root, Set<String> visited) throws IOException {
+        Map<String, List<NekoEsmModuleRecord>> parentsByChild = new HashMap<>();
+        ArrayDeque<NekoEsmModuleRecord> queue = new ArrayDeque<>();
+        ArrayDeque<NekoEsmModuleRecord> asyncQueue = new ArrayDeque<>();
+        if (visited.add(root.id())) {
+            queue.add(root);
         }
-        try {
-            if (record.topLevelAwait()) {
-                record.markAsyncEvaluation();
-                return;
+        while (!queue.isEmpty()) {
+            NekoEsmModuleRecord current = queue.removeFirst();
+            if (current.topLevelAwait() || current.asyncEvaluation()) {
+                current.markAsyncEvaluation();
+                asyncQueue.add(current);
             }
-            NekoEsmLinkMetadata metadata = record.linkMetadata();
+            NekoEsmLinkMetadata metadata = current.linkMetadata();
             if (metadata == null) {
-                return;
+                continue;
             }
             for (var dependency : metadata.dependencies()) {
                 NekoResolvedModule resolved = dependency.resolved();
@@ -230,14 +250,20 @@ public final class EsmModuleLifecycle {
                     continue;
                 }
                 NekoEsmModuleRecord child = linkedEsmRecord(resolved, childPrepared);
-                markAsyncDescendant(child, visiting);
-                if (child.asyncEvaluation()) {
-                    record.markAsyncEvaluation();
-                    return;
+                parentsByChild.computeIfAbsent(child.id(), ignored -> new ArrayList<>()).add(current);
+                if (visited.add(child.id())) {
+                    queue.add(child);
                 }
             }
-        } finally {
-            visiting.remove(record.id());
+        }
+        while (!asyncQueue.isEmpty()) {
+            NekoEsmModuleRecord asyncNode = asyncQueue.removeFirst();
+            for (NekoEsmModuleRecord parent : parentsByChild.getOrDefault(asyncNode.id(), List.of())) {
+                if (!parent.asyncEvaluation()) {
+                    parent.markAsyncEvaluation();
+                    asyncQueue.add(parent);
+                }
+            }
         }
     }
 
