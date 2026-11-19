@@ -142,28 +142,8 @@ class StageCrossNodeWiringSourceTraceTest {
     }
 
     @Test
-    void allThreeSharedMixinManifestsIncludeAllSevenStageGateMixins() {
+    void allThreeSharedMixinManifestsIncludeEverySharedStageGateMixin() {
         Path root = repoRoot();
-        Path legacyManifest = root.resolve("src/main/resources-legacy/nekojs.mixins.json");
-        Path modernManifest = root.resolve("src/main/resources-modern/nekojs.mixins.json");
-        Path fabricSharedManifest = root.resolve("src/fabric/resources/nekojs-fabric-shared.mixins.json");
-
-        Set<String> legacyEntries = extractStageGateMixins(legacyManifest);
-        Set<String> modernEntries = extractStageGateMixins(modernManifest);
-        Set<String> fabricEntries = extractStageGateMixins(fabricSharedManifest);
-
-        assertEquals(7, legacyEntries.size(),
-                "Legacy Mixin manifest must include all 7 stage.Mixin*StageGate entries, found: " + legacyEntries);
-        assertEquals(7, modernEntries.size(),
-                "Modern Mixin manifest must include all 7 stage.Mixin*StageGate entries, found: " + modernEntries);
-        assertEquals(7, fabricEntries.size(),
-                "Fabric shared Mixin manifest must include all 7 stage.Mixin*StageGate entries, found: " + fabricEntries);
-
-        assertEquals(legacyEntries, modernEntries,
-                "Legacy and modern NeoForge Mixin manifests must declare identical stage.Mixin*StageGate entries");
-        assertEquals(modernEntries, fabricEntries,
-                "Modern NeoForge and Fabric shared Mixin manifests must declare identical stage.Mixin*StageGate entries");
-
         Path stageMixinDir = root.resolve("src/main/java/com/tkisor/nekojs/mixin/stage");
         assertTrue(Files.isDirectory(stageMixinDir),
                 "Shared stage gate mixin package directory must exist: " + stageMixinDir);
@@ -180,10 +160,13 @@ class StageCrossNodeWiringSourceTraceTest {
             throw new IllegalStateException("cannot list " + stageMixinDir, e);
         }
 
-        assertEquals(7, sourceMixins.size(),
-                "Expected exactly 7 Mixin*StageGate.java source files under mixin/stage, found: " + sourceMixins);
-        assertEquals(sourceMixins, modernEntries,
-                "Shared Mixin manifests must include all 7 stage.Mixin*StageGate classes from mixin/stage");
+        assertEquals(27, sourceMixins.size(), "Expected all shared stage gate mixins under " + stageMixinDir);
+        for (Path manifest : List.of(root.resolve("src/main/resources-legacy/nekojs.mixins.json"),
+                root.resolve("src/main/resources-modern/nekojs.mixins.json"),
+                root.resolve("src/fabric/resources/nekojs-fabric-shared.mixins.json"))) {
+            assertEquals(sourceMixins, extractStageGateMixins(manifest),
+                    manifest + " must register every shared stage gate mixin");
+        }
     }
 
     @Test

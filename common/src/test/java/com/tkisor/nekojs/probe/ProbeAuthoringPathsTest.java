@@ -14,6 +14,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 
@@ -62,7 +63,7 @@ class ProbeAuthoringPathsTest {
         AutoCloseable old = ProbeCoordinator.bindAuthoringPaths(first);
         AtomicReference<AutoCloseable> replacement = new AtomicReference<>();
         List<AuthoringPaths> artifactRoots = new ArrayList<>();
-        List<ProbeContext> seen = new ArrayList<>();
+        List<ProbeContext> seen = new CopyOnWriteArrayList<>();
         ProbeExternalArtifacts artifacts = new ProbeExternalArtifacts() {
             @Override public void generate(Path output) { fail("The captured-path overload must be used."); }
             @Override public void generate(Path output, AuthoringPaths selected) throws Exception {

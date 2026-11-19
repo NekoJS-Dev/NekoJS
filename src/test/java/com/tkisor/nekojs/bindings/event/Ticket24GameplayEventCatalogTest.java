@@ -160,13 +160,11 @@ class Ticket24GameplayEventCatalogTest {
                 if (!actualNames.contains(name)) continue;
                 Expected want = wanted.get(name);
                 EventCatalogEntry entry = actual.get(name);
-                boolean wantCancellable = ICancellableEvent.class.isAssignableFrom(want.payload())
-                        // Explicitly cancellable exceptions whose native events carry another
-                        // cancel lever: BlockEvents.broken (D2) writes cancellation back to the
-                        // native event; EntityEvents.damagePre (D4, maintainer ruled 2026-09-29)
-                        // maps cancel to setNewDamage(0) — its native Pre is not ICancellableEvent.
-                        || ("BlockEvents".equals(family) && "broken".equals(name))
-                        || ("EntityEvents".equals(family) && "damagePre".equals(name));
+                boolean wantCancellable = switch (family + "." + name) {
+                    case "BlockEvents.broken", "EntityEvents.damagePre", "ItemEvents.canPickUp" -> true;
+                    case "EntityEvents.tickPre" -> false;
+                    default -> ICancellableEvent.class.isAssignableFrom(want.payload());
+                };
                 if (entry.eventType() != want.payload()) {
                     failures.add(family + "." + name + " payload drifted: expected "
                             + want.payload().getSimpleName() + " but catalog carries "

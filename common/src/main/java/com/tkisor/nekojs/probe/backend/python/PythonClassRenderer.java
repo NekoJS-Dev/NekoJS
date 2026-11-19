@@ -28,6 +28,7 @@ import java.util.stream.Collectors;
 public final class PythonClassRenderer {
     private final ApiTypeRefPyRenderer typeRenderer;
     private final Map<String, TypeDecl> declarations;
+    // Renderer views use the shared helperNames map as the lock for both name maps.
     private final Map<String, Set<String>> reservedNames;
     private final Map<String, String> helperNames;
 
@@ -364,7 +365,9 @@ public final class PythonClassRenderer {
 
     /** Reserves imports and aliases before any local or imported helper name is allocated. */
     void reservePackageNames(String javaPackage, Set<String> names) {
-        reservedNames.computeIfAbsent(javaPackage, ignored -> new LinkedHashSet<>()).addAll(names);
+        synchronized (helperNames) {
+            reservedNames.computeIfAbsent(javaPackage, ignored -> new LinkedHashSet<>()).addAll(names);
+        }
     }
 
     String metaclassReference(TypeDecl ancestor, String javaPackage) {
@@ -387,12 +390,14 @@ public final class PythonClassRenderer {
     }
 
     private String helperName(String javaPackage, String role, String base) {
-        return helperNames.computeIfAbsent(javaPackage + "#" + role, key -> {
-            Set<String> used = reservedNames.computeIfAbsent(javaPackage, ignored -> new LinkedHashSet<>());
-            String name = base;
-            for (int suffix = 1; !used.add(name); suffix++) name = base + suffix;
-            return name;
-        });
+        synchronized (helperNames) {
+            return helperNames.computeIfAbsent(javaPackage + "#" + role, key -> {
+                Set<String> used = reservedNames.computeIfAbsent(javaPackage, ignored -> new LinkedHashSet<>());
+                String name = base;
+                for (int suffix = 1; !used.add(name); suffix++) name = base + suffix;
+                return name;
+            });
+        }
     }
 
     private static String packageName(String fqn) {

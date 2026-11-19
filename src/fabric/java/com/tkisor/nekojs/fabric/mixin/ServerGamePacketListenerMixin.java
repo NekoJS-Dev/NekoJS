@@ -73,7 +73,7 @@ public abstract class ServerGamePacketListenerMixin {
 
     @Inject(method = "handleUseItem(Lnet/minecraft/network/protocol/game/ServerboundUseItemPacket;)V",
             at = @At(value = "INVOKE", shift = At.Shift.AFTER,
-                    target = "Lnet/minecraft/network/protocol/PacketUtils;ensureRunningOnSameThread(Lnet/minecraft/network/protocol/Packet;Lnet/minecraft/network/protocol/PacketListener;Lnet/minecraft/server/level/ServerLevel;)V"),
+                    target = "Lnet/minecraft/network/protocol/PacketUtils;ensureRunningOnSameThread(Lnet/minecraft/network/protocol/Packet;Lnet/minecraft/network/PacketListener;Lnet/minecraft/server/level/ServerLevel;)V"),
             cancellable = true, require = 1, allow = 1)
     private void nekojs$postVersionedUseItem(ServerboundUseItemPacket packet, CallbackInfo ci) {
         if (FabricItemEventBindings.postRightClicked(player, packet.getHand())) ci.cancel();

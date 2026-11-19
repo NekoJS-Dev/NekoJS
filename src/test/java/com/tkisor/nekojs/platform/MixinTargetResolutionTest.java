@@ -15,6 +15,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -31,9 +32,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  *   <li>the {@code @Mixin} target class exists on the classpath;</li>
  *   <li>the {@code method} target of every injection annotation
  *       (@Inject/@Redirect/@ModifyArg/@ModifyArgs/@ModifyVariable/@ModifyConstant) exists on the
- *       target class; when a descriptor is present it must match exactly;</li>
- *   <li>the member referenced by {@code @At("INVOKE"/"FIELD")} exists — a mistyped At target is
- *       the most common cause of silent mixin failure;</li>
+ *       target class; when a descriptor is present it must match exactly. Explicit single-injection
+ *       alternatives and bounded injector groups are checked against their available members;</li>
+ *   <li>the member referenced by {@code @At("INVOKE"/"FIELD")} exists, including invocation
+ *       targets inherited through the bytecode owner's supertypes;</li>
  *   <li>{@code @Shadow} (fields/methods, aliases included) and {@code @Overwrite} exist by name on
  *       the target class (descriptors are compared by name only because generics are erased,
  *       which avoids false reports).</li>
@@ -53,6 +55,7 @@ class MixinTargetResolutionTest {
     private static final String OVERWRITE = "Lorg/spongepowered/asm/mixin/Overwrite;";
     private static final String ACCESSOR = "Lorg/spongepowered/asm/mixin/gen/Accessor;";
     private static final String INVOKER = "Lorg/spongepowered/asm/mixin/gen/Invoker;";
+    private static final String GROUP = "Lorg/spongepowered/asm/mixin/injection/Group;";
     private static final String INJECT = "Lorg/spongepowered/asm/mixin/injection/Inject;";
     private static final String REDIRECT = "Lorg/spongepowered/asm/mixin/injection/Redirect;";
     private static final String MODIFY_ARG = "Lorg/spongepowered/asm/mixin/injection/ModifyArg;";
@@ -135,26 +138,11 @@ class MixinTargetResolutionTest {
         String context = internalName.substring(internalName.lastIndexOf('/') + 1)
                 + " -> " + String.join(",", targets);
 
+        Map<String, InjectorGroupTargets> groups = new LinkedHashMap<>();
         for (ClassFileAnnotations.MemberData method : data.methods()) {
+            var group = ofType(method.annotations(), GROUP).stream().findFirst().orElse(null);
             for (ClassFileAnnotations.AnnotationData injection : injections(method)) {
-                for (String target : injection.memberStrings("method")) {
-                    MemberRef ref = MemberRef.parse(target);
-                    if (ref == null) {
-                        failures.add(context + ": unparseable method target '" + target
-                                + "' on " + method.name());
-                        continue;
-                    }
-                    verified++;
-                    if (!memberExists(targetData, ref)) {
-                        failures.add(context + ": injection method target not found: '" + target + "'");
-                    }
-                }
-                ClassFileAnnotations.AnnotationData at = injection.memberAnnotation("at");
-                if (at != null) {
-                    String failure = verifyAt(context, method.name(), at);
-                    if (failure != null) failures.add(failure);
-                    else verified++;
-                }
+                verified += verifyInjection(context, method.name(), injection, targetData, group, groups, failures);
             }
 
             for (ClassFileAnnotations.AnnotationData shadow : ofType(method.annotations(), SHADOW)) {
@@ -185,6 +173,7 @@ class MixinTargetResolutionTest {
             }
         }
 
+        groups.forEach((name, group) -> group.verify(context, name, failures));
         for (ClassFileAnnotations.MemberData field : data.fields()) {
             for (ClassFileAnnotations.AnnotationData shadow : ofType(field.annotations(), SHADOW)) {
                 Set<String> names = new HashSet<>();
@@ -199,6 +188,80 @@ class MixinTargetResolutionTest {
             }
         }
         return verified;
+    }
+
+    private int verifyInjection(String context, String method, ClassFileAnnotations.AnnotationData injection,
+                                List<ClassFileAnnotations.ClassData> targets,
+                                ClassFileAnnotations.AnnotationData group,
+                                Map<String, InjectorGroupTargets> groups, List<String> failures) {
+        int require = injection.memberInt("require", -1);
+        int allow = injection.memberInt("allow", -1);
+        List<String> missing = new ArrayList<>();
+        int matchedMethods = 0;
+        for (String target : injection.memberStrings("method")) {
+            MemberRef ref = MemberRef.parse(target);
+            if (ref == null) {
+                failures.add(context + ": unparseable method target '" + target + "' on " + method);
+            } else if (memberExists(targets, ref)) {
+                matchedMethods++;
+            } else {
+                missing.add(context + ": injection method target not found: '" + target + "' on " + method);
+            }
+        }
+        // A selector list with an explicit single-injection contract can name alternate versions.
+        if (require == 1 && allow == 1 && matchedMethods > 0) {
+            missing.clear();
+        }
+
+        List<ClassFileAnnotations.AnnotationData> anchors = injection.memberAnnotations("at");
+        int matchedAnchors = 0;
+        for (ClassFileAnnotations.AnnotationData anchor : anchors) {
+            if (verifyAt(context, method, anchor, missing, failures)) {
+                matchedAnchors++;
+            }
+        }
+        String groupName = group == null ? null : group.memberString("name");
+        if (groupName != null && !groupName.isEmpty()) {
+            boolean resolves = matchedMethods > 0 && matchedAnchors == anchors.size() && missing.isEmpty();
+            groups.computeIfAbsent(groupName, key -> new InjectorGroupTargets())
+                    .add(group, resolves, missing);
+        }
+        // Only explicitly optional single-injection group members may omit unresolved targets.
+        if (groupName == null || groupName.isEmpty() || require != 0 || allow != 1) {
+            failures.addAll(missing);
+        }
+        return matchedMethods + matchedAnchors;
+    }
+
+    private static final class InjectorGroupTargets {
+        private final List<String> missing = new ArrayList<>();
+        private int minimum = 1;
+        private int maximum = Integer.MAX_VALUE;
+        private int resolved;
+
+        void add(ClassFileAnnotations.AnnotationData group, boolean resolves, List<String> missingTargets) {
+            minimum = Math.max(minimum, group.memberInt("min", -1));
+            int max = group.memberInt("max", -1);
+            if (max != -1) {
+                maximum = Math.min(maximum, max);
+            }
+            if (resolves) {
+                resolved++;
+            } else {
+                missing.addAll(missingTargets);
+            }
+        }
+
+        // Each version alternative in a group can contribute one injector. Runtime checks count sites.
+        void verify(String context, String name, List<String> failures) {
+            if (resolved < minimum || resolved > maximum) {
+                failures.add(context + ": @Group '" + name + "' has " + resolved
+                        + " resolvable injectors, expected " + minimum + " to " + maximum);
+                if (resolved < minimum) {
+                    failures.addAll(missing);
+                }
+            }
+        }
     }
 
     private static List<ClassFileAnnotations.AnnotationData> ofType(
@@ -236,26 +299,26 @@ class MixinTargetResolutionTest {
      * At member reference: INVOKE means a method (descriptor included), FIELD means a field. Other
      * shift types have no member.
      */
-    private String verifyAt(String context, String methodName, ClassFileAnnotations.AnnotationData at) {
+    private boolean verifyAt(String context, String methodName, ClassFileAnnotations.AnnotationData at,
+                             List<String> missing, List<String> failures) {
         String target = at.memberString("target");
         String value = at.memberString("value");
-        if (target == null || target.isBlank()) return null;
+        if (target == null || target.isBlank()) return true;
         if (value != null && INVOKE_ATS.contains(value)) {
             MemberRef ref = MemberRef.parse(target);
             if (ref == null) {
-                return context + ": unparseable @At INVOKE target '" + target + "' on " + methodName;
+                failures.add(context + ": unparseable @At INVOKE target '" + target + "' on " + methodName);
+                return false;
             }
-            List<ClassFileAnnotations.ClassData> owners = new ArrayList<>();
-            if (ref.owner() != null) {
-                ClassFileAnnotations.ClassData owner = targetClass(ref.owner());
-                if (owner == null) {
-                    return context + ": @At INVOKE owner not on classpath: '" + ref.owner() + "'";
-                }
-                owners.add(owner);
+            var owner = ref.owner() == null ? null : targetClass(ref.owner());
+            if (ref.owner() != null && owner == null) {
+                missing.add(context + ": @At INVOKE owner not on classpath: '" + ref.owner() + "'");
+                return false;
             }
-            return memberExists(owners, ref)
-                    ? null
-                    : context + ": @At INVOKE target not found: '" + target + "' on " + methodName;
+            if (owner == null || !invocationExists(owner, ref, new HashSet<>())) {
+                missing.add(context + ": @At INVOKE target not found: '" + target + "' on " + methodName);
+                return false;
+            }
         }
         if ("FIELD".equals(value)) {
             // Lowner;name:type or a bare field name
@@ -273,18 +336,31 @@ class MixinTargetResolutionTest {
             if (owner != null) {
                 ClassFileAnnotations.ClassData ownerData = targetClass(owner);
                 if (ownerData == null) {
-                    return context + ": @At FIELD owner not on classpath: '" + owner + "'";
+                    missing.add(context + ": @At FIELD owner not on classpath: '" + owner + "'");
+                    return false;
                 }
                 owners.add(ownerData);
             }
-            return anyTargetHasField(owners, name)
-                    ? null
-                    : context + ": @At FIELD target not found: '" + target + "' on " + methodName;
+            if (!anyTargetHasField(owners, name)) {
+                missing.add(context + ": @At FIELD target not found: '" + target + "' on " + methodName);
+                return false;
+            }
         }
-        return null;
+        return true;
     }
 
     // ==================== Target lookup ====================
+
+    private boolean invocationExists(ClassFileAnnotations.ClassData owner, MemberRef ref, Set<String> visited) {
+        if (!visited.add(owner.internalName())) return false;
+        if (memberExists(List.of(owner), ref)) return true;
+        if (ref.name().equals("<init>") || ref.name().equals("<clinit>")) return false;
+        for (String supertype : owner.supertypes()) {
+            var parent = targetClass(supertype);
+            if (parent != null && invocationExists(parent, ref, visited)) return true;
+        }
+        return false;
+    }
 
     private boolean memberExists(List<ClassFileAnnotations.ClassData> targets, MemberRef ref) {
         for (ClassFileAnnotations.ClassData target : targets) {

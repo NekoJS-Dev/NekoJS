@@ -19,9 +19,8 @@ import java.util.Map;
  * {@code getResourceAsStream} returns the raw file bytes, which the agent does not touch, and it
  * sees both RuntimeVisible and RuntimeInvisible (CLASS retention) annotations.
  *
- * <p>Only the annotation shapes the mixin checks need are supported: String / Class / enum /
- * nested annotation / arrays of those. Every other element_value type parses as null and is
- * skipped.
+ * <p>The parser reads strings, classes, enums, integers, nested annotations, and arrays of those.
+ * Other annotation values are skipped.
  */
 final class ClassFileAnnotations {
 
@@ -35,7 +34,11 @@ final class ClassFileAnnotations {
             return v instanceof String s ? s : null;
         }
 
-        @SuppressWarnings("unchecked")
+        int memberInt(String name, int fallback) {
+            Object v = values.get(name);
+            return v instanceof Integer number ? number : fallback;
+        }
+
         List<String> memberStrings(String name) {
             Object v = values.get(name);
             if (v instanceof List<?> list) {
@@ -46,15 +49,22 @@ final class ClassFileAnnotations {
             return List.of();
         }
 
-        AnnotationData memberAnnotation(String name) {
-            Object v = values.get(name);
-            return v instanceof AnnotationData a ? a : null;
+        List<AnnotationData> memberAnnotations(String name) {
+            Object value = values.get(name);
+            if (value instanceof AnnotationData annotation) {
+                return List.of(annotation);
+            }
+            if (value instanceof List<?> list) {
+                return list.stream().filter(AnnotationData.class::isInstance)
+                        .map(AnnotationData.class::cast).toList();
+            }
+            return List.of();
         }
     }
 
     record MemberData(String name, String descriptor, List<AnnotationData> annotations) {}
 
-    record ClassData(String internalName, List<AnnotationData> annotations,
+    record ClassData(String internalName, List<String> supertypes, List<AnnotationData> annotations,
                      List<MemberData> fields, List<MemberData> methods) {
 
         public List<AnnotationData> annotationsOfType(String internalName) {
@@ -72,35 +82,45 @@ final class ClassFileAnnotations {
         }
         d.readUnsignedShort(); // minor
         d.readUnsignedShort(); // major
-        String[] pool = readConstantPool(d);
+        Object[] pool = readConstantPool(d);
 
         d.readUnsignedShort(); // access flags
-        int thisClass = d.readUnsignedShort();
-        d.readUnsignedShort(); // super
+        String name = className(pool, d.readUnsignedShort());
+        int superClass = d.readUnsignedShort();
+        List<String> supertypes = new ArrayList<>();
+        if (superClass != 0) {
+            supertypes.add(className(pool, superClass));
+        }
         int interfaces = d.readUnsignedShort();
-        for (int i = 0; i < interfaces; i++) d.readUnsignedShort();
+        for (int i = 0; i < interfaces; i++) {
+            supertypes.add(className(pool, d.readUnsignedShort()));
+        }
 
         List<MemberData> fields = readMembers(d, pool);
         List<MemberData> methods = readMembers(d, pool);
         List<AnnotationData> classAnnotations = readClassAttributes(d, pool);
 
-        String name = pool[thisClass];
-        if (name != null && name.startsWith("L") && name.endsWith(";")) {
-            name = name.substring(1, name.length() - 1);
-        }
-        return new ClassData(name, classAnnotations, fields, methods);
+        return new ClassData(name, supertypes, classAnnotations, fields, methods);
     }
 
-    private static String[] readConstantPool(DataInputStream d) throws IOException {
+    private record ClassRef(int nameIndex) {}
+
+    private static String className(Object[] pool, int index) {
+        return (String) pool[((ClassRef) pool[index]).nameIndex()];
+    }
+
+    private static Object[] readConstantPool(DataInputStream d) throws IOException {
         int count = d.readUnsignedShort();
-        String[] pool = new String[count];
+        Object[] pool = new Object[count];
         for (int i = 1; i < count; i++) {
             int tag = d.readUnsignedByte();
             switch (tag) {
                 case 1 -> pool[i] = d.readUTF();
-                case 3, 4 -> d.skipBytes(4);            // Integer/Float
+                case 3 -> pool[i] = d.readInt();
+                case 4 -> d.skipBytes(4);                // Float
                 case 5, 6 -> { d.skipBytes(8); i++; }   // Long/Double take two constant pool slots
-                case 7, 8, 16, 19, 20 -> d.skipBytes(2); // Class/String/MethodType/Module/Package
+                case 7 -> pool[i] = new ClassRef(d.readUnsignedShort());
+                case 8, 16, 19, 20 -> d.skipBytes(2);    // String/MethodType/Module/Package
                 case 9, 10, 11, 12, 17, 18 -> d.skipBytes(4); // ref, NameAndType and Dynamic entries
                 case 15 -> d.skipBytes(3);              // MethodHandle
                 default -> throw new IOException("unknown constant pool tag " + tag);
@@ -109,33 +129,33 @@ final class ClassFileAnnotations {
         return pool;
     }
 
-    private static List<MemberData> readMembers(DataInputStream d, String[] pool) throws IOException {
+    private static List<MemberData> readMembers(DataInputStream d, Object[] pool) throws IOException {
         int count = d.readUnsignedShort();
         List<MemberData> out = new ArrayList<>(count);
         for (int i = 0; i < count; i++) {
             d.readUnsignedShort(); // access
-            String name = pool[d.readUnsignedShort()];
-            String descriptor = pool[d.readUnsignedShort()];
+            String name = (String) pool[d.readUnsignedShort()];
+            String descriptor = (String) pool[d.readUnsignedShort()];
             List<AnnotationData> annotations = readMemberAttributes(d, pool);
             out.add(new MemberData(name, descriptor, annotations));
         }
         return out;
     }
 
-    private static List<AnnotationData> readMemberAttributes(DataInputStream d, String[] pool) throws IOException {
+    private static List<AnnotationData> readMemberAttributes(DataInputStream d, Object[] pool) throws IOException {
         return readAttributes(d, pool, false);
     }
 
-    private static List<AnnotationData> readClassAttributes(DataInputStream d, String[] pool) throws IOException {
+    private static List<AnnotationData> readClassAttributes(DataInputStream d, Object[] pool) throws IOException {
         return readAttributes(d, pool, true);
     }
 
-    private static List<AnnotationData> readAttributes(DataInputStream d, String[] pool, boolean classLevel)
+    private static List<AnnotationData> readAttributes(DataInputStream d, Object[] pool, boolean classLevel)
             throws IOException {
         List<AnnotationData> out = new ArrayList<>();
         int count = d.readUnsignedShort();
         for (int i = 0; i < count; i++) {
-            String name = pool[d.readUnsignedShort()];
+            String name = (String) pool[d.readUnsignedShort()];
             int len = d.readInt();
             if (!classLevel && ("RuntimeVisibleAnnotations".equals(name) || "RuntimeInvisibleAnnotations".equals(name))) {
                 out.addAll(readAnnotationArray(new DataInputStream(
@@ -156,7 +176,7 @@ final class ClassFileAnnotations {
         return bytes;
     }
 
-    private static List<AnnotationData> readAnnotationArray(DataInputStream d, String[] pool) throws IOException {
+    private static List<AnnotationData> readAnnotationArray(DataInputStream d, Object[] pool) throws IOException {
         int count = d.readUnsignedShort();
         List<AnnotationData> out = new ArrayList<>(count);
         for (int i = 0; i < count; i++) {
@@ -166,21 +186,21 @@ final class ClassFileAnnotations {
         return out;
     }
 
-    private static AnnotationData readAnnotation(DataInputStream d, String[] pool) throws IOException {
-        String type = pool[d.readUnsignedShort()];
+    private static AnnotationData readAnnotation(DataInputStream d, Object[] pool) throws IOException {
+        String type = (String) pool[d.readUnsignedShort()];
         int pairs = d.readUnsignedShort();
         Map<String, Object> values = new LinkedHashMap<>();
         for (int i = 0; i < pairs; i++) {
-            String member = pool[d.readUnsignedShort()];
+            String member = (String) pool[d.readUnsignedShort()];
             values.put(member, readElementValue(d, pool));
         }
         return new AnnotationData(type, values);
     }
 
-    private static Object readElementValue(DataInputStream d, String[] pool) throws IOException {
+    private static Object readElementValue(DataInputStream d, Object[] pool) throws IOException {
         int tag = d.readUnsignedByte();
         return switch (tag) {
-            case 's' -> pool[d.readUnsignedShort()];
+            case 'I', 's' -> pool[d.readUnsignedShort()];
             case 'e' -> {
                 d.readUnsignedShort(); // enum type name
                 yield pool[d.readUnsignedShort()]; // enum constant name
@@ -193,9 +213,8 @@ final class ClassFileAnnotations {
                 for (int i = 0; i < n; i++) list.add(readElementValue(d, pool));
                 yield list;
             }
-            // B/C/D/F/I/J/S/Z: const_value_index is still a u2 and must be consumed or the stream desyncs
-            // (the Z values with remap=false land here)
-            case 'B', 'C', 'D', 'F', 'I', 'J', 'S', 'Z' -> {
+            // These unused primitive values still carry a constant pool index.
+            case 'B', 'C', 'D', 'F', 'J', 'S', 'Z' -> {
                 d.skipBytes(2);
                 yield null;
             }

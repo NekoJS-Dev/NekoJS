@@ -7,6 +7,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.regex.Pattern;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -42,6 +43,9 @@ class Ticket24GameplayEventPhaseTraceTest {
 
     private static final String MAIN = "src/main/java/com/tkisor/nekojs";
     private static final String FABRIC = "src/fabric/java/com/tkisor/nekojs";
+    private static final List<String> NEOFORGE_BLOCK_SOURCES = List.of(
+            MAIN + "/bindings/event/BlockEvents.java",
+            "versions/1.21.1/" + MAIN + "/bindings/event/BlockEvents.java");
 
     private static Path repoRoot() {
         Path dir = Path.of("").toAbsolutePath();
@@ -88,23 +92,40 @@ class Ticket24GameplayEventPhaseTraceTest {
 
     @Test
     void forgeBridgeBindsEveryPlatformBusOfEachFamilyExactlyOnce() {
-        assertEquals(8, count(code(MAIN + "/bindings/event/ItemEvents.java"), ".bind("),
-                "ItemEvents: 8 platform buses bound (modification is posted-object, not bridged)");
-        assertEquals(10, count(code(MAIN + "/bindings/event/LevelEvents.java"), ".bind("),
-                "LevelEvents: 10 platform buses bound (aliases included, one bind per bus)");
-        assertEquals(17, count(code(MAIN + "/bindings/event/PlayerEvents.java"), ".bind("),
-                "PlayerEvents: 17 platform buses bound (inventoryChanged is listener-posted, not bridged)");
-        assertEquals(2, count(code(MAIN + "/bindings/event/CommandEvents.java"), ".bind("),
-                "CommandEvents: register + command both bridged");
-        assertEquals(12, count(code(MAIN + "/bindings/event/EntityEvents.java"), ".bind("),
-                "EntityEvents: 12 plain binds + DAMAGE_PRE via bindCancellable (13 wired buses)");
-        assertEquals(1, count(code(MAIN + "/bindings/event/EntityEvents.java"), ".bindCancellable("),
-                "DAMAGE_PRE is the one entity bus cancelled through an adapter cancel action"
-                        + " (D4: Pre has no ICancellableEvent face; cancel maps to setNewDamage(0))");
-        assertEquals(12, count(code(MAIN + "/bindings/event/BlockEvents.java"), ".bind("),
-                "BlockEvents adapter: 12 plain binds + BROKEN via bindTransformed (13 wired buses)");
-        assertEquals(1, count(code(MAIN + "/bindings/event/BlockEvents.java"), ".bindTransformed("),
-                "BROKEN is the one transformed (neutral wrapper payload) block bus");
+        assertBridgeBuses(MAIN + "/bindings/event/ItemEvents.java", "bind",
+                "RIGHT_CLICKED", "TOOLTIP", "PICKED_UP_PRE", "PICKED_UP", "DROPPED", "ENTITY_INTERACTED", "FOOD_EATEN");
+        assertBridgeBuses(MAIN + "/bindings/event/ItemEvents.java", "bindCancellable", "CAN_PICK_UP");
+        assertBridgeBuses(MAIN + "/bindings/event/LevelEvents.java", "bind",
+                "LOADED", "UNLOADED", "SAVED", "TICK_PRE", "TICK_POST", "TICK", "EXPLOSION_START", "BEFORE_EXPLOSION",
+                "EXPLOSION_DETONATE", "AFTER_EXPLOSION");
+        assertBridgeBuses(MAIN + "/bindings/event/PlayerEvents.java", "bind",
+                "LOGGED_IN", "LOGGED_OUT", "CHAT", "TICK_POST", "TICK_PRE", "CLONED", "RESPAWNED", "CHANGED_DIMENSION",
+                "ADVANCEMENT", "CONTAINER_OPENED", "INVENTORY_OPENED", "CONTAINER_CLOSED", "INVENTORY_CLOSED",
+                "ENTITY_INTERACT", "CRAFTED", "SMELTED", "DESTROYED");
+        assertBridgeBuses(MAIN + "/bindings/event/CommandEvents.java", "bind", "REGISTER", "COMMAND");
+        assertBridgeBuses(MAIN + "/bindings/event/EntityEvents.java", "bind",
+                "DAMAGE_POST", "DEATH", "DROPS", "FINALIZE_SPAWN", "TICK_Pre", "TICK_Post", "JOIN_LEVEL", "LEAVE_LEVEL",
+                "USE_START", "USE_STOP", "USE_FINISHED", "USE_TICK");
+        assertBridgeBuses(MAIN + "/bindings/event/EntityEvents.java", "bindCancellable", "DAMAGE_PRE");
+        for (String blockSource : NEOFORGE_BLOCK_SOURCES) {
+            assertBridgeBuses(blockSource, "bind", "ENTITY_PLACED", "ENTITY_MULTI_PLACED", "NEIGHBOR_NOTIFY",
+                    "FARMLAND_TRAMPLE", "PORTAL_SPAWN", "TOOL_MODIFICATION", "RIGHT_CLICKED", "PLACED", "LEFT_CLICKED",
+                    "RANDOM_TICK", "BLOCK_ENTITY_TICK");
+            assertBridgeBuses(blockSource, "bindTransformed", "BROKEN");
+            assertEquals(1, count(code(blockSource), "NeoForgeSupplementalFluidPlacement::onNative"),
+                    "The native fluid placement hook must be registered once in " + blockSource);
+        }
+        String fluidPlacement = code(MAIN + "/bindings/event/NeoForgeSupplementalFluidPlacement.java");
+        assertTrue(fluidPlacement.contains("!event.getLevel().isClientSide() && BlockEvents.FLUID_PLACED.post(event)"),
+                "The native fluid placement hook posts its event on the logical server");
+    }
+
+    private static void assertBridgeBuses(String source, String method, String... expectedBuses) {
+        List<String> actual = Pattern.compile("\\." + method + "\\(\\s*(\\w+)").matcher(code(source)).results()
+                .map(match -> match.group(1))
+                .sorted()
+                .toList();
+        assertEquals(List.of(expectedBuses).stream().sorted().toList(), actual, method + " buses in " + source);
     }
 
     @Test
@@ -162,19 +183,35 @@ class Ticket24GameplayEventPhaseTraceTest {
 
     @Test
     void serverBoundBothSideEventsCarryTheClientInstanceFilter() {
-        assertEquals(2, count(code(MAIN + "/bindings/event/ItemEvents.java"), "isClientSide()"),
-                "ItemEvents: rightClicked + entityInteracted filter client instances");
-        assertEquals(3, count(code(MAIN + "/bindings/event/LevelEvents.java"), "isClientSide()"),
-                "LevelEvents: tickPre/tickPost/tick alias filter client instances");
-        assertEquals(3, count(code(MAIN + "/bindings/event/PlayerEvents.java"), "isClientSide()"),
-                "PlayerEvents: tickPre/tickPost/entityInteract filter client instances");
-        assertEquals(4, count(code(MAIN + "/bindings/event/EntityEvents.java"), "isClientSide()"),
-                "EntityEvents: tick/tickPre/joinLevel/leaveLevel filter client instances");
-        assertEquals(2, count(code(MAIN + "/bindings/event/BlockEvents.java"), "isClientSide()"),
-                "BlockEvents adapter: rightClicked/leftClicked filter client instances");
-        assertEquals(2, count(code("versions/1.21.1/src/main/java/com/tkisor/nekojs/bindings/event/BlockEvents.java"),
-                        "isClientSide()"),
-                "1.21.1 BlockEvents twin keeps the same client-instance filters");
+        assertServerBindings(MAIN + "/bindings/event/ItemEvents.java", "!e.getLevel().isClientSide()",
+                "RIGHT_CLICKED", "ENTITY_INTERACTED");
+        assertServerBindings(MAIN + "/bindings/event/ItemEvents.java", "e.getEntity().level() instanceof ServerLevel",
+                "FOOD_EATEN");
+        assertServerBindings(MAIN + "/bindings/event/LevelEvents.java", "!e.getLevel().isClientSide()",
+                "LOADED", "UNLOADED", "TICK_PRE", "TICK_POST", "TICK", "EXPLOSION_START", "BEFORE_EXPLOSION",
+                "EXPLOSION_DETONATE", "AFTER_EXPLOSION");
+        assertServerBindings(MAIN + "/bindings/event/PlayerEvents.java", "!e.getEntity().level().isClientSide()",
+                "TICK_PRE", "TICK_POST");
+        assertServerBindings(MAIN + "/bindings/event/PlayerEvents.java", "!e.getLevel().isClientSide()", "ENTITY_INTERACT");
+        String entitySource = MAIN + "/bindings/event/EntityEvents.java";
+        assertServerBindings(entitySource, "!e.getEntity().level().isClientSide()", "TICK_Pre", "TICK_Post");
+        assertServerBindings(entitySource, "!e.getEntity().level().isClientSide() || e.getLevel() instanceof ServerLevel",
+                "JOIN_LEVEL", "LEAVE_LEVEL");
+        assertEquals(2, count(code(entitySource), "api.versioned().when(event -> !event.getEntity().level().isClientSide())"),
+                "Versioned join and leave must filter client entities separately from stable delivery");
+        for (String blockSource : NEOFORGE_BLOCK_SOURCES) {
+            assertServerBindings(blockSource, "!e.getLevel().isClientSide()", "ENTITY_PLACED", "ENTITY_MULTI_PLACED",
+                    "NEIGHBOR_NOTIFY", "FARMLAND_TRAMPLE", "PORTAL_SPAWN", "TOOL_MODIFICATION", "RIGHT_CLICKED",
+                    "PLACED", "LEFT_CLICKED");
+        }
+    }
+
+    private static void assertServerBindings(String source, String predicate, String... buses) {
+        String text = code(source);
+        for (String bus : buses) {
+            assertEquals(1, count(text, ".bind(" + bus + ", e -> " + predicate + ")"),
+                    bus + " must filter client instances in " + source);
+        }
     }
 
     // ---- 3. fabric adapters and entity behavior mixins exist and carry the families ----
@@ -193,9 +230,29 @@ class Ticket24GameplayEventPhaseTraceTest {
         assertTrue(entityV2.contains("EntityEvents.LEAVE_LEVEL.post("),
                 "fabric leaveLevel posts the twin bus (join/leave lifecycle representative)");
         String entityBindings = code(FABRIC + "/fabric/event/FabricEntityEventBindings.java");
-        assertTrue(entityBindings.contains("DEATH.post(") && entityBindings.contains("DAMAGE_PRE.post(")
-                        && entityBindings.contains("DAMAGE_POST.post(") && entityBindings.contains("JOIN_LEVEL.post("),
-                "fabric death/damage/joinLevel post through ServerLivingEntityEvents/ServerEntityEvents");
+        assertTrue(entityBindings.contains("ServerLivingEntityEvents.ALLOW_DEATH.register(")
+                        && entityBindings.contains("!DEATH.post("),
+                "Fabric's native death callback posts its versioned event and honors cancellation");
+        assertTrue(entityBindings.contains("DEATH.postStableModuleCancellable(")
+                        && code(FABRIC + "/fabric/mixin/MixinLivingEntityDeath.java")
+                                .contains("FabricEntityEventBindings.postStableDeath("),
+                "Fabric's stable death uses its cancellable pre-death mixin route");
+        assertTrue(entityBindings.contains("DAMAGE_PRE.post(")
+                        && code(FABRIC + "/fabric/mixin/MixinLivingDamageEvents.java")
+                                .contains("FabricEntityEventBindings.filterDamage("),
+                "Fabric's damage pre hook posts via the adapter");
+        assertTrue(entityBindings.contains("DAMAGE_POST.post(")
+                        && code(FABRIC + "/fabric/mixin/MixinLivingDamagePost.java")
+                                .contains("FabricEntityEventBindings.withDamagePost("),
+                "Fabric's accepted damage posts via the adapter");
+        assertTrue(entityBindings.contains("JOIN_LEVEL.postStableModuleCancellable(")
+                        && code(FABRIC + "/fabric/mixin/MixinPersistentEntityJoin.java")
+                                .contains("FabricEntityEventBindings.postJoinLevelPre("),
+                "Fabric's stable join runs before insertion and can cancel");
+        assertTrue(entityBindings.contains("JOIN_LEVEL.postIgnoringCancellation(")
+                        && code(FABRIC + "/fabric/mixin/ServerLevelMixin.java")
+                                .contains("FabricEntityEventBindings.postVersionedJoinLevel("),
+                "Fabric's versioned join uses its notification route");
 
         assertTrue(Files.isRegularFile(repoRoot().resolve(FABRIC + "/fabric/mixin/MixinLivingEntityDeathDrops.java")),
                 "the fabric death-drops mixin exists (drops family source trace)");

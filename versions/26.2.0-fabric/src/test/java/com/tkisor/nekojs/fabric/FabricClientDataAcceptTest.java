@@ -2,6 +2,7 @@ package com.tkisor.nekojs.fabric;
 
 import com.tkisor.nekojs.network.ClientDataSyncPacket;
 import com.tkisor.nekojs.wrapper.clientdata.ClientDataStore;
+import net.fabricmc.fabric.api.networking.v1.PacketSender;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
@@ -14,12 +15,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
 /**
- * Fabric side of the receive path for the client-data feature (node-local; both Fabric nodes dispatch the same body):
- * {@code FabricPlayNetwork.acceptClientData}, the main-thread parse entry called by the client receiver after the
- * {@code context.client().execute()} hop, with the same semantics as the NeoForge ClientDataMessageHandler.
- * Valid JSON text is written over the SHARED store. Invalid JSON is dropped without throwing (the WARN record is
- * described in the feature report), nothing is written, and later packets are unaffected. The "hop to the main thread,
- * then parse" order is fixed by the source shape: Fabric receivers always use {@code context.client().execute(...)}.
+ * Verifies ordinary script data acceptance at the Fabric handler that runs on the client thread.
  */
 class FabricClientDataAcceptTest {
 
@@ -29,9 +25,11 @@ class FabricClientDataAcceptTest {
     }
 
     private static void accept(String key, String json) throws Exception {
-        Method method = FabricPlayNetwork.class.getDeclaredMethod("acceptClientData", ClientDataSyncPacket.class);
+        Method method = FabricPlayNetwork.class.getDeclaredMethod("acceptClientData",
+                ClientDataSyncPacket.class, PacketSender.class);
         method.setAccessible(true);
-        method.invoke(null, new ClientDataSyncPacket(key, json));
+        // The sender identifies the active session for packets on the reserved stage channel.
+        method.invoke(null, new ClientDataSyncPacket(key, json), null);
     }
 
     @Test

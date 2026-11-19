@@ -13,10 +13,14 @@ import net.minecraft.world.inventory.MenuType;
 import net.minecraft.world.inventory.SmithingMenu;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.RecipeHolder;
-import net.minecraft.world.item.crafting.SmithingRecipe;
+//? if <26 {
+/*import net.minecraft.world.item.crafting.SmithingRecipe;
+*///?}
 import org.jetbrains.annotations.Nullable;
 import org.spongepowered.asm.mixin.Mixin;
-import org.spongepowered.asm.mixin.Shadow;
+//? if <26 {
+/*import org.spongepowered.asm.mixin.Shadow;
+*///?}
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -32,9 +36,12 @@ public abstract class MixinSmithingMenuStageGate extends ItemCombinerMenu {
     @Unique
     private static final NekoId NEKOJS$SMITHING_TYPE = NekoId.of("minecraft", "smithing");
 
+//? if <26 {
+    /*// Legacy pickup checks this field independently of the result container.
     @Shadow
     @Nullable
     private RecipeHolder<SmithingRecipe> selectedRecipe;
+*///?}
 
 //? if >=26 {
     protected MixinSmithingMenuStageGate(
@@ -63,13 +70,19 @@ public abstract class MixinSmithingMenuStageGate extends ItemCombinerMenu {
             return;
         }
         ItemStack output = this.resultSlots.getItem(0);
-        RecipeHolder<SmithingRecipe> holder = this.selectedRecipe;
+//? if >=26 {
+        RecipeHolder<?> holder = this.resultSlots.getRecipeUsed();
+//?} else {
+        /*RecipeHolder<?> holder = this.selectedRecipe;
+*///?}
         if (output.isEmpty() && holder == null) {
             return;
         }
         NekoId recipeId = nekojs$extractRecipeId(holder);
         if (!StageGateEnforcer.allowAssembleRecipe(this.player, recipeId, NEKOJS$SMITHING_TYPE, output)) {
-            this.selectedRecipe = null;
+//? if <26 {
+            /*this.selectedRecipe = null;
+*///?}
             this.resultSlots.setRecipeUsed(null);
             this.resultSlots.setItem(0, ItemStack.EMPTY);
             this.broadcastChanges();

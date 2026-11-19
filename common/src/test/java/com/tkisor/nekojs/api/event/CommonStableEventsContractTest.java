@@ -26,11 +26,12 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class CommonStableEventsContractTest {
 
     @Test
-    void canonicalInventoryCoversEightyEventsAcrossEightGroupsWithPortableTypes() {
-        assertEquals(80, CommonStableEvents.ALL.size());
-        assertEquals(8, CommonStableEvents.BY_GROUP.size());
+    void canonicalInventoryCoversEightyEightEventsAcrossNineGroupsWithPortableTypes() {
+        assertEquals(88, CommonStableEvents.ALL.size());
+        assertEquals(9, CommonStableEvents.BY_GROUP.size());
 
-        assertEquals(10, CommonStableEvents.BY_GROUP.get("ServerEvents").size());
+        assertEquals(11, CommonStableEvents.BY_GROUP.get("ServerEvents").size());
+        assertEquals(7, CommonStableEvents.BY_GROUP.get("StageEvents").size());
         assertEquals(7, CommonStableEvents.BY_GROUP.get("LevelEvents").size());
         assertEquals(2, CommonStableEvents.BY_GROUP.get("CommandEvents").size());
         assertEquals(15, CommonStableEvents.BY_GROUP.get("PlayerEvents").size());
@@ -43,7 +44,7 @@ class CommonStableEventsContractTest {
                 .filter(CommonStableEvents.Spec::loaderOptionalCancel)
                 .map(spec -> spec.group() + "." + spec.event())
                 .toList();
-        assertEquals(List.of("ServerEvents.lootTableLoad", "EntityEvents.finalizeSpawn"), optionalCancelEvents);
+        assertEquals(List.of(), optionalCancelEvents);
 
         for (CommonStableEvents.Spec spec : CommonStableEvents.ALL) {
             assertDoesNotThrow(() -> ModulePublicTypes.validateStable(spec.payloadType(), false),
@@ -57,14 +58,31 @@ class CommonStableEventsContractTest {
     }
 
     @Test
-    void compliantModulesAndLoaderOptionalCancellationPassValidation() {
+    void compliantModulesAndLoaderOptionalCancellationPassValidation() throws ReflectiveOperationException {
         List<ModuleEventGroup> compliant = buildSyntheticModules(null, true);
         assertEquals(List.of(), CommonStableEvents.validate(compliant));
         assertDoesNotThrow(() -> CommonStableEvents.assertCompliant(compliant));
 
-        // Non-cancellable platform callbacks for loaderOptionalCancel specs (e.g. Fabric) also pass.
-        List<ModuleEventGroup> fabricStyleOptionalCancel = buildSyntheticModules(null, false);
-        assertEquals(List.of(), CommonStableEvents.validate(fabricStyleOptionalCancel));
+        // Exercise optional cancellation with a synthetic spec because every built-in event now has fixed cancellability.
+        var optional = new CommonStableEvents.Spec("ServerEvents", "lootTableLoad", ScriptType.SERVER,
+                StableLootTableLoadEvent.class, null, true, true);
+        var validateSpec = CommonStableEvents.class.getDeclaredMethod(
+                "validateEventSpec", ModuleEventGroup.class, CommonStableEvents.Spec.class, List.class);
+        validateSpec.setAccessible(true);
+        for (boolean cancellable : List.of(true, false)) {
+            var group = EventGroup.of(optional.group());
+            group.add(optional.event(), optional.scriptType(), EventBusJS.of(StableLootTableLoadEvent.class, cancellable),
+                    api -> api.stable().scriptTypes(ScriptType.SERVER));
+            var registry = new EventGroupRegistry.Impl().scopedTo("nekojs");
+            registry.register(group);
+            List<String> violations = new ArrayList<>();
+            validateSpec.invoke(null, registry.moduleGroups().getFirst(), optional, violations);
+            assertEquals(List.of(), violations);
+            if (!cancellable) {
+                assertTrue(CommonStableEvents.validate(registry.moduleGroups()).stream().anyMatch(message ->
+                        message.contains("Wrong cancellability for ServerEvents.lootTableLoad")));
+            }
+        }
 
         // Unrelated VERSION and third-party addon STABLE publications are ignored.
         List<ModuleEventGroup> withExtras = new ArrayList<>(compliant);

@@ -196,6 +196,12 @@ public final class PythonProbeBackend implements ProbeBackend {
             classR.reservePackageNames(entry.getKey(), names);
         }
 
+        // Allocate names touched by multiple modules in package order before their workers start.
+        Map<String, List<String>> metaclassImportsByPkg = new LinkedHashMap<>();
+        for (var entry : byPkg.entrySet()) {
+            metaclassImportsByPkg.put(entry.getKey(), collectMetaclassImports(entry.getKey(), entry.getValue(), classR));
+        }
+
         // _java/__init__.pyi (namespace marker)
         files.put("nekojs/_java/__init__.pyi", "# Auto-generated namespace marker.\n");
 
@@ -212,9 +218,10 @@ public final class PythonProbeBackend implements ProbeBackend {
                     pendingModules.put(pkgModule, null);
                 } else {
                     PythonImports importByName = cachedImports.get(pkg);
+                    List<String> metaclassImports = metaclassImportsByPkg.get(pkg);
                     List<AdapterCatalogEntry> pkgAdapters = adaptersByPkg.getOrDefault(pkg, List.of());
                     pendingModules.put(pkgModule, pool.submit(() -> renderPackageModule(
-                            pkg, classes, importByName, classR, typeR, availableFqns,
+                            pkg, classes, importByName, metaclassImports, classR, typeR, availableFqns,
                             adapterAliases, enumAliases, pkgAdapters, registries, namespaceInput)));
                 }
             }
@@ -281,7 +288,7 @@ public final class PythonProbeBackend implements ProbeBackend {
 
     /** Renders the __init__.pyi for a single Java package: cross-package imports + all classes in this package + adapter/enum input aliases for this package. */
     private String renderPackageModule(String javaPkg, List<TypeDecl> classes,
-                                       PythonImports importByName,
+                                       PythonImports importByName, List<String> metaclassImports,
                                        PythonClassRenderer classR, ApiTypeRefPyRenderer baseTypeR,
                                        Set<String> availableFqns, Map<String, PyAdapterAlias> adapterAliases,
                                        Map<String, PyAdapterAlias> enumAliases,
@@ -348,6 +355,18 @@ public final class PythonProbeBackend implements ProbeBackend {
           .append(usesProtocol ? ", Protocol" : "")
           .append("\n");
         importByName.appendTo(sb);
+        for (String statement : metaclassImports) sb.append(statement).append("\n");
+        sb.append("\n");
+        for (TypeDecl d : classes) {
+            String body = classR.render(d);
+            if (!body.isEmpty()) sb.append(body).append("\n");
+        }
+        for (String line : aliasLines) sb.append(line).append("\n");
+        return sb.toString();
+    }
+
+    private static List<String> collectMetaclassImports(String javaPkg, List<TypeDecl> classes,
+                                                        PythonClassRenderer classR) {
         Set<String> metaclassImports = new TreeSet<>();
         for (TypeDecl declaration : classes) {
             if (!classR.hasClassBindings(declaration)) continue;
@@ -359,14 +378,7 @@ public final class PythonProbeBackend implements ProbeBackend {
                         + original + (original.equals(local) ? "" : " as " + local));
             }
         }
-        for (String statement : metaclassImports) sb.append(statement).append("\n");
-        sb.append("\n");
-        for (TypeDecl d : classes) {
-            String body = classR.render(d);
-            if (!body.isEmpty()) sb.append(body).append("\n");
-        }
-        for (String line : aliasLines) sb.append(line).append("\n");
-        return sb.toString();
+        return List.copyOf(metaclassImports);
     }
 
     private static boolean needsAdapterReRender(List<AdapterCatalogEntry> pkgAdapters,

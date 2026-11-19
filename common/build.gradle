@@ -64,6 +64,7 @@ dependencies {
     testImplementation libs.junit.jupiter
     testImplementation libs.gson
     testImplementation libs.asm
+    testCompileOnly libs.jetbrains.annotations
     testRuntimeOnly libs.junit.platform.launcher
     // Export the Graal API and remapper SPI; platform nodes select their loader build.
     api(libs.graal)

@@ -3,8 +3,11 @@ package com.tkisor.nekojs.bindings.event;
 
 import com.tkisor.nekojs.api.ScriptType;
 import com.tkisor.nekojs.api.data.Binding;
+import com.tkisor.nekojs.api.data.BindingExposure;
 import com.tkisor.nekojs.api.event.EventBusJS;
 import com.tkisor.nekojs.api.event.EventGroup;
+import com.tkisor.nekojs.api.event.EventGroupRegistry;
+import com.tkisor.nekojs.api.event.ModuleEventGroup;
 import com.tkisor.nekojs.api.plugin.IPluginRuntime;
 import com.tkisor.nekojs.core.NekoCoreContext;
 import com.tkisor.nekojs.core.NekoSandboxFactory;
@@ -163,10 +166,26 @@ final class Ticket24GameplayEventReloadHarness implements AutoCloseable {
         }
 
         @Override
-        public List<com.tkisor.nekojs.api.event.ModuleEventGroup> moduleEventGroups() {
-            var registry = new com.tkisor.nekojs.api.event.EventGroupRegistry.Impl().scopedTo("nekojs");
+        public List<ModuleEventGroup> moduleEventGroups() {
+            var registry = new EventGroupRegistry.Impl().scopedTo("nekojs");
             groups.values().forEach(registry::register);
-            return registry.moduleGroups();
+            return registry.moduleGroups().stream().map(StubPluginRuntime::allowHeadlessEntityProbes).toList();
+        }
+
+        private static ModuleEventGroup allowHeadlessEntityProbes(ModuleEventGroup module) {
+            if (module.group() != EntityEvents.GROUP || module.category() != BindingExposure.Category.VERSION) {
+                return module;
+            }
+            // The reload test posts lists into the real buses. The native side predicates need a
+            // level and entity only available in the game JVM. Keep them for all native payloads.
+            var filters = new LinkedHashMap<>(module.deliveryFilters());
+            for (String name : List.of("joinLevel", "leaveLevel")) {
+                filters.computeIfPresent(name, (ignored, filter) ->
+                        event -> event instanceof List<?> || filter.test(event));
+            }
+            return new ModuleEventGroup(module.owner(), module.category(), module.group(), module.events(),
+                    module.views(), module.selectors(), module.scriptTypes(), module.eventScriptTypes(),
+                    filters, module.notificationOnlyEvents());
         }
 
         @Override public List<com.tkisor.nekojs.api.JSTypeAdapter<?>> adapters() { return List.of(); }

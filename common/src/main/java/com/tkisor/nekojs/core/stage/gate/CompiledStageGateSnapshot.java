@@ -42,14 +42,6 @@ import java.util.function.Predicate;
  */
 public final class CompiledStageGateSnapshot {
 
-    /** Empty gate snapshot where all actions are allowed and nothing is hidden. */
-    public static final CompiledStageGateSnapshot EMPTY = compile(
-            List.of(),
-            Set.of(),
-            Map.of(),
-            StageRegistryAccess.PERMISSIVE
-    );
-
     /**
      * Decision returned by {@link #filterLootItem} when evaluating loot drops.
      *
@@ -211,6 +203,15 @@ public final class CompiledStageGateSnapshot {
             .thenComparingInt(CompiledLootRule::order);
 
     private static final Comparator<NekoId> NEKO_ID_COMPARATOR = Comparator.comparing(NekoId::toString);
+
+    // Snapshot compilation uses the comparators above even when there are no rules.
+    /** Empty gate snapshot where all actions are allowed and nothing is hidden. */
+    public static final CompiledStageGateSnapshot EMPTY = compile(
+            List.of(),
+            Set.of(),
+            Map.of(),
+            StageRegistryAccess.PERMISSIVE
+    );
 
     private final List<StageGateDeclaration> rawDeclarations;
     private final List<StageGateDeclaration> sortedDeclarations;

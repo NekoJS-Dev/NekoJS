@@ -100,23 +100,35 @@ class RuntimeCommandLifecycleSourceTraceTest {
     @Test
     void startupCommandsAreRejectedAndPostCommitFailuresKeepCommitEvidence() {
         Path root = repoRoot();
+        Path fabricCommands = root.resolve("src/fabric/java/com/tkisor/nekojs/fabric/FabricNekoJSCommands.java");
         for (Path path : List.of(root.resolve("src/main/java/com/tkisor/nekojs/command/NekoJSCommands.java"),
                 root.resolve("versions/1.21.1/src/main/java/com/tkisor/nekojs/command/NekoJSCommands.java"),
-                root.resolve("src/fabric/java/com/tkisor/nekojs/fabric/FabricNekoJSCommands.java"))) {
+                fabricCommands)) {
             String source = read(path);
             assertTrue(source.contains("if (type == ScriptType.STARTUP)"),
                     path + " must refuse STARTUP reload outside its initialization owner");
             assertTrue(source.contains("restart the game/loader"),
                     path + " must tell the operator why STARTUP reload was rejected");
             int reloadCommit = source.indexOf("root.reload(type)");
-            int postFailureCatch = source.indexOf("catch (Exception postReloadFailure)");
-            assertTrue(reloadCommit >= 0 && postFailureCatch > reloadCommit,
-                    path + " must catch post-commit exceptions after root reload returns");
+            assertTrue(reloadCommit >= 0, path + " must reload through the runtime root");
+            if (path.equals(fabricCommands)) {
+                int replayFailure = source.indexOf(
+                        "if (result.success() && type == ScriptType.SERVER && !replay.succeeded())", reloadCommit);
+                int replayReport = source.indexOf(
+                        "return reportPostReloadFailure(source, root, result, \"recipe replay\", null);", replayFailure);
+                assertTrue(replayFailure > reloadCommit && replayReport > replayFailure,
+                        path + " must report a failed recipe replay with the committed SERVER result");
+            } else {
+                int postFailureCatch = source.indexOf("catch (Exception postReloadFailure)", reloadCommit);
+                int catchReport = source.indexOf(
+                        "return reportPostReloadFailure(source, root, reloadResult,", postFailureCatch);
+                assertTrue(postFailureCatch > reloadCommit && catchReport > postFailureCatch,
+                        path + " must catch recipe or pack exceptions and report the committed reload result");
+            }
             int postFailureReporter = source.indexOf("private static int reportPostReloadFailure");
             int committedResult = source.indexOf("reportReloadResult(source, root, result)", postFailureReporter);
-            assertTrue(source.contains("reportPostReloadFailure(source, root"),
-                    path + " must route post-commit exceptions to a separate result");
-            assertTrue(postFailureReporter >= 0 && committedResult > postFailureReporter,
+            int followUpFailure = source.indexOf("RuntimeCommandResultFormatter.postReloadFailure(", postFailureReporter);
+            assertTrue(postFailureReporter >= 0 && committedResult > postFailureReporter && followUpFailure > committedResult,
                     path + " must report the committed reload result before its follow-up failure");
             assertTrue(source.contains("STARTUP scripts cannot be reloaded from a runtime command"),
                     path + " must explicitly refuse command-thread STARTUP reload");

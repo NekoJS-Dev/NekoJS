@@ -12,6 +12,7 @@ import com.tkisor.nekojs.script.ScriptManager;
 import graal.graalvm.polyglot.Context;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.EnumMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -275,9 +276,14 @@ public final class PackActivationCoordinator implements AutoCloseable {
                 operationOwner = Thread.currentThread();
                 try {
                     assertEpoch(batch.epoch(), batch.candidates());
-                    var merged = mergedHandle(batch.type(), batch.candidates());
-                    for (var listener : merged.listenersOf(bus)) {
-                        if (listener.matchesCollectionKey(key)) merged.execute(listener, event);
+                    var listeners = batch.candidates().stream()
+                            .flatMap(candidate -> candidate.listeners().stream())
+                            .filter(listener -> listener.owner() == bus && listener.matchesCollectionKey(key))
+                            .sorted(Comparator.comparing((EventBusJS.PendingListener listener) -> !listener.matchesCollectionKey(null))
+                                    .thenComparingInt(listener -> -listener.priority()))
+                            .toList();
+                    for (var listener : listeners) {
+                        listener.executeForCollection(event);
                     }
                 } finally {
                     leaveOperation();

@@ -5,6 +5,7 @@ import com.tkisor.nekojs.api.data.BindingExposure;
 import com.tkisor.nekojs.api.event.EventGroupRegistry;
 import com.tkisor.nekojs.api.event.ModuleEventGroup;
 import com.tkisor.nekojs.api.event.StableServerTickEvent;
+import com.tkisor.nekojs.api.recipe.StableRecipeEvent;
 import com.tkisor.nekojs.core.api.ModuleEventGroupProxy;
 import com.tkisor.nekojs.script.ScriptContextRegistry;
 import graal.graalvm.polyglot.Context;
@@ -72,13 +73,15 @@ class StableServerEventsTest {
         assertEquals(java.util.Set.of(
                 "tickPre", "tickPost",
                 "aboutToStart", "starting", "started", "stopping", "stopped",
-                "datapackSync", "tagsUpdated", "lootTableLoad"), publication.events());
+                "datapackSync", "tagsUpdated", "lootTableLoad", "recipes"), publication.events());
         assertTrue(publication.available(ScriptType.SERVER));
         assertFalse(publication.available(ScriptType.CLIENT));
         assertFalse(publication.available(ScriptType.STARTUP));
         assertFalse(publication.available(ScriptType.TEST));
         assertEquals(StableServerTickEvent.class, publication.views().get("tickPre").type());
         assertEquals(StableServerTickEvent.class, publication.views().get("tickPost").type());
+        assertEquals(StableRecipeEvent.class, publication.views().get("recipes").type());
+        assertFalse(versioned.views().containsKey("recipes"));
         var raw = new ArrayList<Object>();
         try (var context = Context.newBuilder("js").allowAllAccess(true).build()) {
             ScriptContextRegistry.bind(context, ScriptType.SERVER);
@@ -101,6 +104,9 @@ class StableServerEventsTest {
                         versioned.tickPre(e => recordRaw(e));
                         """);
                 pre.post(prePayload);
+//? if fabric {
+                /*com.tkisor.nekojs.fabric.event.FabricServerEventBindings.postStableTickPre(server);
+*///?}
                 post.post(postPayload);
                 assertEquals("[37,\"undefined\",\"undefined\",37,37]", context.eval("js", "JSON.stringify(seen)").asString());
                 assertEquals(List.of(prePayload), raw);
@@ -114,11 +120,12 @@ class StableServerEventsTest {
 //? if neoforge {
                 starting.post(new net.neoforged.neoforge.event.server.ServerStartingEvent(server));
 //?} else {
-                /*starting.post(new com.tkisor.nekojs.wrapper.event.server.ServerLifecycleEventJS(server));
+                /*com.tkisor.nekojs.fabric.event.FabricServerEventBindings.postStableStarting(server);
 *///?}
                 assertEquals("[37,\"undefined\",\"undefined\",37,37,91,\"starting\",91]",
                         context.eval("js", "JSON.stringify(seen)").asString());
-                assertEquals("undefined", context.eval("js", "typeof stable.recipes").asString());
+                assertEquals("function", context.eval("js", "typeof stable.recipes").asString());
+                assertEquals("function", context.eval("js", "typeof versioned.recipes").asString());
             } finally {
                 publication.group().clearListeners(ScriptType.SERVER);
                 ScriptContextRegistry.unbind(context);
@@ -130,11 +137,14 @@ class StableServerEventsTest {
     }
 
     private static MinecraftServer nativeServer(int tick) throws Exception {
-        // Only getTickCount is exercised; no server thread or world is needed.
+        // The allocated server only needs its tick count and owner thread for event delivery.
         try (var metadata = nativeLoaderMetadata()) {
             var unsafeField = sun.misc.Unsafe.class.getDeclaredField("theUnsafe");
             unsafeField.setAccessible(true);
             var server = (DedicatedServer) ((sun.misc.Unsafe) unsafeField.get(null)).allocateInstance(DedicatedServer.class);
+            var thread = MinecraftServer.class.getDeclaredField("serverThread");
+            thread.setAccessible(true);
+            thread.set(server, Thread.currentThread());
             setNativeTick(server, tick);
             return server;
         }

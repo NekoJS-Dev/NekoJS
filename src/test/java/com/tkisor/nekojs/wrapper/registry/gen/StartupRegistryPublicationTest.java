@@ -73,6 +73,8 @@ class StartupRegistryPublicationTest {
         var closed = new MappedRegistry<>(CLOSED_MACHINES, Lifecycle.stable(), false);
         var preexisting = Identifier.parse("fixture:preexisting");
         Registry.register(closed, preexisting, "native");
+        // Vanilla binds standalone holder values when the registry freezes.
+        closed.freeze();
         assertEquals(Set.of(preexisting), closed.keySet());
         assertEquals(List.of("native"), closed.stream().toList());
         try (var script = new StartupRegistryScriptFixture(new NekoRegistryPointsPlugin(), new MachineRegistries())) {
@@ -102,6 +104,8 @@ class StartupRegistryPublicationTest {
                     Registry.register(machines, id, (String) supplier.get())).errors().isEmpty());
             assertTrue(runtime.drainFor(OTHER_MACHINES, (target, id, supplier) ->
                     Registry.register(other, id, (String) supplier.get())).errors().isEmpty());
+            machines.freeze();
+            other.freeze();
             assertEquals(Set.of(Identifier.parse("entries:shared")), machines.keySet());
             assertEquals(Set.of(Identifier.parse("entries:shared")), other.keySet());
             assertEquals(List.of("from builder"), machines.stream().toList());

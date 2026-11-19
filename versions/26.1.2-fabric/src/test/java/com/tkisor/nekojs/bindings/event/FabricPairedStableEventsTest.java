@@ -35,12 +35,13 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * End-to-end verification for {@code nekojs:event/stable} and {@code nekojs:event/versioned}
- * publications across all 8 built-in event families on Fabric.
+ * publications across the built-in event families on Fabric.
  */
 class FabricPairedStableEventsTest {
 
     private static final Set<String> PAIRED_FAMILIES = Set.of(
             "ServerEvents",
+            "StageEvents",
             "LevelEvents",
             "PlayerEvents",
             "CommandEvents",
@@ -129,7 +130,7 @@ class FabricPairedStableEventsTest {
                 .map(module -> module.group().name())
                 .collect(Collectors.toSet());
         assertEquals(PAIRED_FAMILIES, stableFamilies,
-                "Fabric must publish exactly the 8 canonical STABLE event families");
+                "Fabric must publish exactly the nine canonical STABLE event families");
 
         ModuleEventGroup clientVersioned = findPublication(modules, BindingExposure.Category.VERSION, "ClientEvents");
         ModuleEventGroup clientStable = findPublication(modules, BindingExposure.Category.STABLE, "ClientEvents");

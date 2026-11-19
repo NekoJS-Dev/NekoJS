@@ -191,8 +191,9 @@ class StageStorePersistenceTest {
         assertFalse(hooks.playerDeltas.isEmpty(), "Player mutations should emit player delta sync calls");
         assertFalse(hooks.serverDeltas.isEmpty(), "Server mutations should emit server delta sync calls");
 
+        assertEquals(1, hooks.fullSyncCount, "Explicit player sync should send one full snapshot");
         store.onPlayerJoin(PLAYER_UUID, "AlexOnline");
-        assertEquals(1, hooks.fullSyncCount);
+        assertEquals(2, hooks.fullSyncCount, "Player join should send another full snapshot");
     }
 
     private static void exerciseMutableStageHandle(StageHandle handle) {

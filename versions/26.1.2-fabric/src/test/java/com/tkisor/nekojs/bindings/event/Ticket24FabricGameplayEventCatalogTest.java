@@ -278,7 +278,7 @@ class Ticket24FabricGameplayEventCatalogTest {
                 new Expected("damagePre", LivingDamageEventJS.class, ScriptType.SERVER, EntityType.class, true),
                 new Expected("damagePost", LivingDamageEventJS.class, ScriptType.SERVER, EntityType.class, false),
                 new Expected("drops", LivingDropsEventJS.class, ScriptType.SERVER, EntityType.class, true),
-                new Expected("finalizeSpawn", MobFinalizeSpawnEventJS.class, ScriptType.SERVER, EntityType.class, false),
+                new Expected("finalizeSpawn", MobFinalizeSpawnEventJS.class, ScriptType.SERVER, EntityType.class, true),
                 new Expected("tickPre", EntityTickEventJS.class, ScriptType.SERVER, EntityType.class, false),
                 new Expected("tickPost", EntityTickEventJS.class, ScriptType.SERVER, EntityType.class, false),
                 new Expected("leaveLevel", EntityLeaveLevelEventJS.class, ScriptType.SERVER, EntityType.class, false),
