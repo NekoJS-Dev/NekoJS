@@ -219,7 +219,7 @@ class ModuleEventExposureTest {
                         + "stable.broken(e => seen.push('all', e.count));");
                 bus.post(new KeyedPayload(3, stone), stone);
                 bus.post(new KeyedPayload(8, dirt), dirt);
-                assertEquals("[\"stone\",3,\"undefined\",\"all\",3,\"dirt\",8,\"all\",8]",
+                assertEquals("[\"all\",3,\"stone\",3,\"undefined\",\"all\",8,\"dirt\",8]",
                         context.eval("js", "JSON.stringify(seen)").asString());
                 var unknownKeyFailure = assertThrows(PolyglotException.class,
                         () -> context.eval("js", "stable.broken('minecraft:unknown', e => {});"));

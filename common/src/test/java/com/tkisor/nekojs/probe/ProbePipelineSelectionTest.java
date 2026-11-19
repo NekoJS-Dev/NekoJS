@@ -131,7 +131,7 @@ class ProbePipelineSelectionTest {
                 """);
         assertFalse(coordinator.readConfig().enabled());
         var result = coordinator.runProbe(emptySnapshot(), request).getFirst();
-        var out = game.resolve(".scratch-probe/captured");
+        var out = game.toRealPath().resolve(".scratch-probe/captured");
         assertTrue(result.success(), result.message());
         assertEquals(out, result.outputDir());
         assertEquals(List.of("base-editor", "render:" + out, "editor:" + out), backend.trace);

@@ -1,6 +1,7 @@
 package com.tkisor.nekojs.probe;
 
 import java.io.IOException;
+import java.lang.invoke.VarHandle;
 import java.net.URISyntaxException;
 import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
@@ -20,6 +21,12 @@ import java.util.TreeSet;
  * whole regeneration run passes. Review the resource directory by hand afterwards and commit it.
  */
 final class ProbeGoldenSupport {
+    private static final String MIXIN_DECLARATIONS = "@mixin/index.d.ts";
+    private static final String ACCESS_MODE_SELECTOR_PREFIX =
+            "\"java.lang.invoke.VarHandle$AccessMode\": \"methodName()Ljava/lang/String;\""
+            + " | \"valueFromMethodName(Ljava/lang/String;)Ljava/lang/invoke/VarHandle$AccessMode;\"";
+    private static final String ACCESS_MODE_ORDINAL_SELECTOR =
+            " | \"valueFromOrdinal(I)Ljava/lang/invoke/VarHandle$AccessMode;\"";
 
     private ProbeGoldenSupport() {}
 
@@ -65,12 +72,28 @@ final class ProbeGoldenSupport {
     }
 
     /**
-     * Mirrors the whole file tree under {@code actualRoot} onto {@code goldenRoot}, keeping the
-     * structure and copying each file byte for byte, then deletes the files that no longer exist in
-     * actual and the directories that become empty. Mirroring makes regeneration idempotent: whichever
-     * golden test runs first, the resource directory ends up matching the actual output.
+     * Some JDK 21 patch releases declare an extra package-private mixin target on AccessMode.
+     * Adapt only that selector in the expected tree; all generated content is compared unchanged.
      */
-    static void mirrorTree(Path actualRoot, Path goldenRoot) throws IOException {
+    static String legacyExpectedContent(String relativePath, String content) {
+        if (!MIXIN_DECLARATIONS.equals(relativePath) || !hasAccessModeOrdinalSelector()) return content;
+        return content.replace(ACCESS_MODE_SELECTOR_PREFIX, ACCESS_MODE_SELECTOR_PREFIX + ACCESS_MODE_ORDINAL_SELECTOR);
+    }
+
+    private static boolean hasAccessModeOrdinalSelector() {
+        try {
+            return VarHandle.AccessMode.class.getDeclaredMethod("valueFromOrdinal", int.class)
+                    .getReturnType() == VarHandle.AccessMode.class;
+        } catch (NoSuchMethodException absent) {
+            return false;
+        }
+    }
+
+    /**
+     * Mirrors the legacy tree and removes stale entries. The checked-in mixin declaration always omits
+     * the JDK-dependent AccessMode selector so either runtime can regenerate the same baseline.
+     */
+    static void mirrorLegacyTree(Path actualRoot, Path goldenRoot) throws IOException {
         if (!Files.isDirectory(actualRoot)) {
             throw new IOException("actual tree missing: " + actualRoot);
         }
@@ -84,7 +107,13 @@ final class ProbeGoldenSupport {
                 actualRel.add(rel);
                 Path target = goldenRoot.resolve(rel);
                 Files.createDirectories(target.getParent());
-                Files.copy(file, target, StandardCopyOption.REPLACE_EXISTING);
+                if (MIXIN_DECLARATIONS.equals(rel)) {
+                    String content = Files.readString(file).replace(
+                            ACCESS_MODE_SELECTOR_PREFIX + ACCESS_MODE_ORDINAL_SELECTOR, ACCESS_MODE_SELECTOR_PREFIX);
+                    Files.writeString(target, content);
+                } else {
+                    Files.copy(file, target, StandardCopyOption.REPLACE_EXISTING);
+                }
                 return FileVisitResult.CONTINUE;
             }
         });

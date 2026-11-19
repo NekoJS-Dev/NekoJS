@@ -49,7 +49,7 @@ class ProbeOutputCompatibilityTest {
         if (ProbeGoldenSupport.regenerateEnabled()) {
             Path goldenDir = ProbeGoldenSupport.resourceDir(getClass(), GOLDEN_BASE_PATH);
             assertNotNull(goldenDir, "golden tree resources must resolve to a file: URL under " + GOLDEN_BASE_PATH);
-            ProbeGoldenSupport.mirrorTree(tempDir.resolve("probe-types"), goldenDir);
+            ProbeGoldenSupport.mirrorLegacyTree(tempDir.resolve("probe-types"), goldenDir);
             Assumptions.assumeTrue(false, "goldens regenerated; review and commit");
         }
 
@@ -163,7 +163,8 @@ class ProbeOutputCompatibilityTest {
             @Override
             public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
                 String rel = dir.relativize(file).toString().replace('\\', '/');
-                files.put(rel, normalize(Files.readString(file, StandardCharsets.UTF_8)));
+                String content = ProbeGoldenSupport.legacyExpectedContent(rel, Files.readString(file, StandardCharsets.UTF_8));
+                files.put(rel, normalize(content));
                 return FileVisitResult.CONTINUE;
             }
         });
