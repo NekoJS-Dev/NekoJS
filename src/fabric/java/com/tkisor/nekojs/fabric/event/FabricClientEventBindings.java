@@ -26,6 +26,7 @@ import net.fabricmc.fabric.api.client.rendering.v1.hud.VanillaHudElements;
 import net.fabricmc.fabric.api.client.screen.v1.ScreenEvents;
 import net.fabricmc.fabric.api.event.Event;
 import net.minecraft.client.DeltaTracker;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.multiplayer.ClientPacketListener;
@@ -318,10 +319,10 @@ public final class FabricClientEventBindings {
         }
     }
 
-    /** Hook entry for {@code MixinClientPacketListenerRespawn}: {@code ClientPacketListener#handleRespawn} TAIL. */
-    public static void postClientCloned(Player player) {
+    /** Posts after {@code ClientPacketListener#handleRespawn} installs the replacement player. */
+    public static void postClientCloned(Player player, Player originalPlayer) {
         if (player != null && CLONED.hasListeners() && ClientEventThread.isCurrent()) {
-            CLONED.post(FabricClientStableEventProjections.clientPlayer(player));
+            CLONED.post(FabricClientStableEventProjections.clientPlayer(player, originalPlayer));
         }
     }
 
@@ -336,8 +337,8 @@ public final class FabricClientEventBindings {
         if (!INTERACTION_KEY.hasListeners()) {
             return false;
         }
-        return INTERACTION_KEY.post(
-                FabricClientStableEventProjections.clientInteractionKey(attack, useItem, pickBlock, hand));
+        return INTERACTION_KEY.post(FabricClientStableEventProjections.clientInteractionKey(
+                attack, useItem, pickBlock, hand, Minecraft.getInstance().player));
     }
 
     private static void dispatchHud(GuiGraphicsExtractor graphics, DeltaTracker deltaTracker) {

@@ -1,11 +1,16 @@
 package com.tkisor.nekojs.api.event;
 
+import com.tkisor.nekojs.api.entity.StableEntity;
+import com.tkisor.nekojs.api.entity.StablePlayer;
 import com.tkisor.nekojs.core.api.BindingValueProxy;
 import com.tkisor.nekojs.core.api.ModulePublicTypes;
+import com.tkisor.nekojs.core.lifecycle.ScriptLifecycleGate;
 import graal.graalvm.polyglot.Context;
 import org.junit.jupiter.api.Test;
 
+import java.lang.reflect.Proxy;
 import java.util.List;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -298,7 +303,129 @@ class StableEventPayloadsPortabilityTest {
         }
     }
 
-    private static <T> void bind(Context context, T instance, Class<T> publicType) {
+    @Test
+    void entityRolesAreReadOnlyNullableBeanPropertiesAndDoNotChangeSnapshotValues() {
+        String dimension = "minecraft:overworld";
+        String playerName = "Alex";
+        String playerUuid = "00000000-0000-0000-0000-000000000001";
+        StablePlayer player = namedEntity(StablePlayer.class, playerName);
+        StablePlayer originalPlayer = namedEntity(StablePlayer.class, "Original Alex");
+        StableEntity actor = namedEntity(StableEntity.class, "Sheep");
+        StableEntity target = namedEntity(StableEntity.class, "Cow");
+        StableEntity damaged = namedEntity(StableEntity.class, "Zombie");
+        StableEntity source = namedEntity(StableEntity.class, "Skeleton");
+        StableEntity directSource = namedEntity(StableEntity.class, "Arrow");
+        StableEntity explosive = namedEntity(StableEntity.class, "TNT");
+
+        var legacyClient = StablePlayerEvent.forClient(playerName, playerUuid, dimension, 1, 2, 3);
+        var client = StablePlayerEvent.forClient(playerName, playerUuid, dimension, 1, 2, 3, player, originalPlayer, target);
+        assertTrue(legacyClient.clientSide());
+        assertTrue(client.clientSide());
+
+        var samples = List.of(
+                new RoleSample(
+                        new StablePlayerEvent(playerName, playerUuid, dimension, 1, 2, 3),
+                        new StablePlayerEvent(playerName, playerUuid, dimension, 1, 2, 3, player, originalPlayer, target),
+                        Map.of("player", playerName, "originalPlayer", "Original Alex", "target", "Cow")),
+                new RoleSample(legacyClient, client,
+                        Map.of("player", playerName, "originalPlayer", "Original Alex", "target", "Cow")),
+                new RoleSample(
+                        new StablePlayerChatEvent(playerName, playerUuid, "hi"),
+                        new StablePlayerChatEvent(playerName, playerUuid, "hi", player),
+                        Map.of("player", playerName)),
+                new RoleSample(
+                        new StablePlayerDimensionChangeEvent(playerName, playerUuid, dimension, "minecraft:the_nether"),
+                        new StablePlayerDimensionChangeEvent(playerName, playerUuid, dimension, "minecraft:the_nether", player),
+                        Map.of("player", playerName)),
+                new RoleSample(
+                        new StablePlayerAdvancementEvent(playerName, playerUuid, "minecraft:story/root"),
+                        new StablePlayerAdvancementEvent(playerName, playerUuid, "minecraft:story/root", player),
+                        Map.of("player", playerName)),
+                new RoleSample(
+                        new StablePlayerItemEvent(playerName, playerUuid, "minecraft:apple", 2),
+                        new StablePlayerItemEvent(playerName, playerUuid, "minecraft:apple", 2, player),
+                        Map.of("player", playerName)),
+                new RoleSample(
+                        new StableDatapackSyncEvent(playerName, 1, false),
+                        new StableDatapackSyncEvent(playerName, 1, false, player),
+                        Map.of("player", playerName)),
+                new RoleSample(
+                        new StableClientInputEvent(true, false, false, "MAIN_HAND"),
+                        new StableClientInputEvent(true, false, false, "MAIN_HAND", player),
+                        Map.of("player", playerName)),
+                new RoleSample(
+                        new StableBlockEvent(dimension, 1, 2, 3, "minecraft:grass_block", "Sheep"),
+                        new StableBlockEvent(dimension, 1, 2, 3, "minecraft:grass_block", "Sheep", actor),
+                        Map.of("actor", "Sheep")),
+                new RoleSample(
+                        new StableItemEvent("minecraft:apple", 2, playerName, dimension),
+                        new StableItemEvent("minecraft:apple", 2, playerName, dimension, player, target),
+                        Map.of("actor", playerName, "target", "Cow")),
+                new RoleSample(
+                        new StableEntityEvent("minecraft:zombie", "other-uuid", dimension, 1, 2, 3, 4.5f),
+                        new StableEntityEvent("minecraft:zombie", "other-uuid", dimension, 1, 2, 3, 4.5f,
+                                damaged, source, directSource),
+                        Map.of("entity", "Zombie", "sourceEntity", "Skeleton", "directSourceEntity", "Arrow")),
+                new RoleSample(
+                        new StableCommandExecuteEvent("/say hi", playerName),
+                        new StableCommandExecuteEvent("/say hi", playerName, player),
+                        Map.of("sourceEntity", playerName)),
+                new RoleSample(
+                        new StableExplosionEvent(dimension, 1, 2, 3, 4.5f, 6, 7),
+                        new StableExplosionEvent(dimension, 1, 2, 3, 4.5f, 6, 7, explosive, player),
+                        Map.of("directSourceEntity", "TNT", "indirectSourceEntity", playerName))
+        );
+
+        try (var context = Context.newBuilder("js").allowAllAccess(true).build()) {
+            context.enter();
+            try {
+                for (var sample : samples) {
+                    var type = sample.withRoles().getClass();
+                    assertEquals(sample.legacy(), sample.withRoles());
+                    assertEquals(sample.withRoles(), sample.legacy());
+                    assertEquals(sample.legacy().hashCode(), sample.withRoles().hashCode());
+                    assertEquals(sample.legacy().toString(), sample.withRoles().toString());
+
+                    bind(context, sample.legacy(), type);
+                    for (var role : sample.names().keySet()) {
+                        assertTrue(context.eval("js", "e." + role + " === null").asBoolean(),
+                                () -> type.getSimpleName() + "." + role + " should be null on the legacy snapshot");
+                    }
+
+                    ScriptLifecycleGate.enterCallback();
+                    try {
+                        bind(context, sample.withRoles(), type);
+                        for (var entry : sample.names().entrySet()) {
+                            String property = "e." + entry.getKey();
+                            String message = type.getSimpleName() + "." + entry.getKey();
+                            assertEquals(entry.getValue(), context.eval("js", property + ".name").asString(), message);
+                            assertThrows(RuntimeException.class,
+                                    () -> context.eval("js", "'use strict'; " + property + " = null"), message);
+                            assertEquals(entry.getValue(), context.eval("js", property + ".name").asString(), message);
+                        }
+                    } finally {
+                        ScriptLifecycleGate.exitCallback();
+                    }
+                }
+            } finally {
+                context.leave();
+            }
+        }
+    }
+
+    private record RoleSample(Object legacy, Object withRoles, Map<String, String> names) {}
+
+    private static <T extends StableEntity> T namedEntity(Class<T> type, String name) {
+        return type.cast(Proxy.newProxyInstance(type.getClassLoader(), new Class<?>[]{type},
+                (instance, method, args) -> switch (method.getName()) {
+                    case "getName", "toString" -> name;
+                    case "hashCode" -> System.identityHashCode(instance);
+                    case "equals" -> instance == args[0];
+                    default -> throw new AssertionError("Unexpected test entity method: " + method.getName());
+                }));
+    }
+
+    private static void bind(Context context, Object instance, Class<?> publicType) {
         var proxy = new BindingValueProxy(context.asValue(instance), publicType, false);
         context.getBindings("js").putMember("e", proxy);
         assertFalse(context.eval("js", "Object.keys(e).includes('getClass')").asBoolean());

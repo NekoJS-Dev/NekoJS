@@ -28,6 +28,7 @@ import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -88,6 +89,26 @@ class NeoForgeNativePairedStableEventsTest {
         plugin.registerEvents(registry);
         plugin.registerClientEvents(registry);
         return registry;
+    }
+
+    @Test
+    void missingNativeSubjectsRemainNullInStableSnapshots() {
+        var player = NeoForgeStableEventProjections.playerSnapshot(null);
+        assertNull(player.getPlayer());
+        assertNull(player.getOriginalPlayer());
+        assertNull(player.getTarget());
+        assertEquals("", player.getPlayerName());
+
+        var item = NeoForgeStableEventProjections.itemStackEvent(null, null, null);
+        assertNull(item.getActor());
+        assertNull(item.getTarget());
+        assertEquals("minecraft:air", item.getItemId());
+
+        var damage = NeoForgeStableEventProjections.entityDamage(null, null, 2.5f);
+        assertNull(damage.getEntity());
+        assertNull(damage.getSourceEntity());
+        assertNull(damage.getDirectSourceEntity());
+        assertEquals(2.5f, damage.getAmount());
     }
 
     @Test

@@ -39,6 +39,10 @@ public final class NeoForgeDamagePostRouting {
         return REPLAY.get() == event;
     }
 
+    static float amount(LivingDamageEvent.Post event) {
+        return event.getNewDamage();
+    }
+
     public static boolean afterHurt(LivingEntity entity, DamageSource source, BooleanSupplier operation) {
         if (entity.level().isClientSide() || !EntityEvents.DAMAGE_POST.hasListeners()) return operation.getAsBoolean();
         Frame enclosing = FRAME.get();

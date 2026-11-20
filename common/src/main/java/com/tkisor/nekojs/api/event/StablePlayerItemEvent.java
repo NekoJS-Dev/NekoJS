@@ -3,9 +3,13 @@ package com.tkisor.nekojs.api.event;
 import com.tkisor.nekojs.api.annotation.Doc;
 import com.tkisor.nekojs.api.annotation.Param;
 import com.tkisor.nekojs.api.annotation.Return;
+import com.tkisor.nekojs.api.annotation.ScriptInternalConstructor;
+import com.tkisor.nekojs.api.annotation.ScriptNullable;
+import com.tkisor.nekojs.api.entity.StablePlayer;
 import com.tkisor.nekojs.api.stage.StageHandle;
 import com.tkisor.nekojs.api.stage.StageHandleResolver;
 import com.tkisor.nekojs.api.stage.StagePlayerRef;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.Objects;
 
@@ -18,6 +22,7 @@ public final class StablePlayerItemEvent {
     private final String playerUuid;
     private final String itemId;
     private final int count;
+    private final @Nullable StablePlayer player;
 
     /**
      * Creates an immutable player item event snapshot.
@@ -33,10 +38,33 @@ public final class StablePlayerItemEvent {
     @Param(name = "itemId", value = "namespaced item id; null is normalized to an empty string")
     @Param(name = "count", value = "stack item count")
     public StablePlayerItemEvent(String playerName, String playerUuid, String itemId, int count) {
+        this(playerName, playerUuid, itemId, count, null);
+    }
+
+    @ScriptInternalConstructor
+    public StablePlayerItemEvent(
+            String playerName,
+            String playerUuid,
+            String itemId,
+            int count,
+            @Nullable StablePlayer player) {
         this.playerName = Objects.requireNonNullElse(playerName, "");
         this.playerUuid = Objects.requireNonNullElse(playerUuid, "");
         this.itemId = Objects.requireNonNullElse(itemId, "");
         this.count = count;
+        this.player = player;
+    }
+
+    /**
+     * Returns the player who picked up, crafted, or smelted the item.
+     *
+     * @return acting player, or null if unavailable
+     */
+    @Doc("Returns the player who picked up, crafted, or smelted the item.")
+    @Return("acting player, or null if unavailable")
+    @ScriptNullable
+    public @Nullable StablePlayer getPlayer() {
+        return player;
     }
 
     /**

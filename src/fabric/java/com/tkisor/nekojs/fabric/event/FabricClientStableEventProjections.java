@@ -4,6 +4,7 @@ import com.tkisor.nekojs.api.event.StableClientEvent;
 import com.tkisor.nekojs.api.event.StableClientInputEvent;
 import com.tkisor.nekojs.api.event.StableCommandRegistrationEvent;
 import com.tkisor.nekojs.api.event.StablePlayerEvent;
+import com.tkisor.nekojs.wrapper.entity.StableEntities;
 import com.tkisor.nekojs.wrapper.event.client.ClientCommandRegistryEventJS;
 import com.tkisor.nekojs.wrapper.event.client.ClientPlayerNetworkEventJS;
 import net.minecraft.world.InteractionHand;
@@ -22,8 +23,13 @@ public final class FabricClientStableEventProjections {
 
     /** Projects the local client {@link Player} into a {@link StablePlayerEvent} snapshot. */
     public static StablePlayerEvent clientPlayer(Player player) {
+        return clientPlayer(player, null);
+    }
+
+    static StablePlayerEvent clientPlayer(Player player, Player originalPlayer) {
+        var original = StableEntities.wrap(originalPlayer == player ? null : originalPlayer);
         if (player == null) {
-            return StablePlayerEvent.forClient("", "", "", 0.0, 0.0, 0.0);
+            return StablePlayerEvent.forClient("", "", "", 0.0, 0.0, 0.0, null, original, null);
         }
         return StablePlayerEvent.forClient(
                 player.getScoreboardName(),
@@ -31,7 +37,10 @@ public final class FabricClientStableEventProjections {
                 FabricStableEventProjections.dimensionOf(player.level()),
                 player.getX(),
                 player.getY(),
-                player.getZ());
+                player.getZ(),
+                StableEntities.wrap(player),
+                original,
+                null);
     }
 
     /** Projects a {@link ClientPlayerNetworkEventJS} login/logout wrapper into a {@link StablePlayerEvent}. */
@@ -44,9 +53,10 @@ public final class FabricClientStableEventProjections {
         return new StableCommandRegistrationEvent("CLIENT");
     }
 
-    /** Projects client interaction key input flags and hand into a {@link StableClientInputEvent}. */
+    /** Projects client interaction key input and the current local player. */
     public static StableClientInputEvent clientInteractionKey(
-            boolean attack, boolean useItem, boolean pickBlock, InteractionHand hand) {
-        return new StableClientInputEvent(attack, useItem, pickBlock, hand == null ? "" : hand.name());
+            boolean attack, boolean useItem, boolean pickBlock, InteractionHand hand, Player player) {
+        return new StableClientInputEvent(
+                attack, useItem, pickBlock, hand == null ? "" : hand.name(), StableEntities.wrap(player));
     }
 }

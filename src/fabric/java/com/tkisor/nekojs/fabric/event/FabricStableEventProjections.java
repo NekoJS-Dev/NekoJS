@@ -13,6 +13,7 @@ import com.tkisor.nekojs.api.event.StablePlayerChatEvent;
 import com.tkisor.nekojs.api.event.StablePlayerDimensionChangeEvent;
 import com.tkisor.nekojs.api.event.StablePlayerEvent;
 import com.tkisor.nekojs.api.event.StablePlayerItemEvent;
+import com.tkisor.nekojs.wrapper.entity.StableEntities;
 import com.tkisor.nekojs.wrapper.event.block.BlockBrokenEventJS;
 import com.tkisor.nekojs.wrapper.event.block.BlockEntityTickEventJS;
 import com.tkisor.nekojs.wrapper.event.block.BlockFarmlandTrampleEventJS;
@@ -53,6 +54,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
+import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
@@ -153,7 +155,8 @@ public final class FabricStableEventProjections {
         if (event == null) {
             return new StableExplosionEvent("", 0.0, 0.0, 0.0, 0.0f, 0, 0);
         }
-        boolean missingExplosion = event.getExplosion() == null && event.getClass() == LevelExplosionEventJS.class;
+        var explosion = event.getExplosion();
+        boolean missingExplosion = explosion == null && event.getClass() == LevelExplosionEventJS.class;
         Vec3 center = missingExplosion ? null : event.getCenter();
         float radius = missingExplosion ? 0.0f : event.getRadius();
         var detonation = event instanceof FabricLevelEventBindingsV2.ExplosionDetonation data ? data : null;
@@ -164,13 +167,21 @@ public final class FabricStableEventProjections {
                 center == null ? 0.0 : center.z,
                 radius,
                 detonation == null ? 0 : detonation.blockCount,
-                detonation == null ? 0 : detonation.entityCount);
+                detonation == null ? 0 : detonation.entityCount,
+                StableEntities.wrap(explosion == null ? null : explosion.getDirectSourceEntity()),
+                StableEntities.wrap(explosion == null ? null : explosion.getIndirectSourceEntity()));
     }
 
     /** Projects a {@link Player} into a {@link StablePlayerEvent} snapshot. */
     public static StablePlayerEvent playerSnapshot(Player player) {
+        return playerSnapshot(player, null, null);
+    }
+
+    private static StablePlayerEvent playerSnapshot(Player player, Player originalPlayer, Entity target) {
+        var original = StableEntities.wrap(originalPlayer == player ? null : originalPlayer);
+        var interactionTarget = StableEntities.wrap(target);
         if (player == null) {
-            return new StablePlayerEvent("", "", "", 0.0, 0.0, 0.0);
+            return new StablePlayerEvent("", "", "", 0.0, 0.0, 0.0, null, original, interactionTarget);
         }
         return new StablePlayerEvent(
                 player.getScoreboardName(),
@@ -178,7 +189,10 @@ public final class FabricStableEventProjections {
                 dimensionOf(player.level()),
                 player.getX(),
                 player.getY(),
-                player.getZ());
+                player.getZ(),
+                StableEntities.wrap(player),
+                original,
+                interactionTarget);
     }
 
     /** Projects a player login/logout wrapper event into a {@link StablePlayerEvent}. */
@@ -193,12 +207,12 @@ public final class FabricStableEventProjections {
 
     /** Projects a player clone wrapper event into a {@link StablePlayerEvent}. */
     public static StablePlayerEvent playerClone(PlayerCloneEventJS e) {
-        return playerSnapshot(e == null ? null : e.getPlayer());
+        return e == null ? playerSnapshot(null) : playerSnapshot(e.getPlayer(), e.getOriginal(), null);
     }
 
     /** Projects a player respawn wrapper event into a {@link StablePlayerEvent}. */
     public static StablePlayerEvent playerRespawn(PlayerRespawnEventJS e) {
-        return playerSnapshot(e == null ? null : e.getPlayer());
+        return e == null ? playerSnapshot(null) : playerSnapshot(e.getPlayer(), e.getOldPlayer(), null);
     }
 
     /** Projects a player container open/close wrapper event into a {@link StablePlayerEvent}. */
@@ -209,7 +223,7 @@ public final class FabricStableEventProjections {
     /** Projects a player entity interaction wrapper event into a {@link StablePlayerEvent}. */
     public static StablePlayerEvent playerEntityInteract(
             com.tkisor.nekojs.wrapper.event.player.PlayerEntityInteractEventJS e) {
-        return playerSnapshot(e == null ? null : e.getPlayer());
+        return e == null ? playerSnapshot(null) : playerSnapshot(e.getPlayer(), null, e.getTarget());
     }
 
     /** Projects a server chat wrapper event into a {@link StablePlayerChatEvent}. */
@@ -221,7 +235,8 @@ public final class FabricStableEventProjections {
         return new StablePlayerChatEvent(
                 e.getUsername(),
                 p == null ? "" : p.getStringUUID(),
-                e.getMessage());
+                e.getMessage(),
+                StableEntities.wrap(p));
     }
 
     /** Projects a player dimension change wrapper event into a {@link StablePlayerDimensionChangeEvent}. */
@@ -236,7 +251,8 @@ public final class FabricStableEventProjections {
                 p == null ? "" : p.getScoreboardName(),
                 p == null ? "" : p.getStringUUID(),
                 from == null ? "" : from.identifier().toString(),
-                to == null ? "" : to.identifier().toString());
+                to == null ? "" : to.identifier().toString(),
+                StableEntities.wrap(p));
     }
 
     /** Projects a player advancement wrapper event into a {@link StablePlayerAdvancementEvent}. */
@@ -249,7 +265,8 @@ public final class FabricStableEventProjections {
         return new StablePlayerAdvancementEvent(
                 p == null ? "" : p.getScoreboardName(),
                 p == null ? "" : p.getStringUUID(),
-                id == null ? "" : id.toString());
+                id == null ? "" : id.toString(),
+                StableEntities.wrap(p));
     }
 
     /** Projects a player and item stack pair into a {@link StablePlayerItemEvent}. */
@@ -262,7 +279,8 @@ public final class FabricStableEventProjections {
                 player == null ? "" : player.getScoreboardName(),
                 player == null ? "" : player.getStringUUID(),
                 itemId,
-                count);
+                count,
+                StableEntities.wrap(player));
     }
 
     /** Projects a crafting or smelting wrapper event into a {@link StablePlayerItemEvent}. */
@@ -287,12 +305,13 @@ public final class FabricStableEventProjections {
         String input = parseResults == null || parseResults.getReader() == null
                 ? command
                 : parseResults.getReader().getString();
-        String sourceName = parseResults == null
-                || parseResults.getContext() == null
-                || parseResults.getContext().getSource() == null
-                ? ""
-                : parseResults.getContext().getSource().getTextName();
-        return new StableCommandExecuteEvent(input, sourceName);
+        CommandSourceStack source = parseResults == null || parseResults.getContext() == null
+                ? null
+                : parseResults.getContext().getSource();
+        return new StableCommandExecuteEvent(
+                input,
+                source == null ? "" : source.getTextName(),
+                StableEntities.wrap(source == null ? null : source.getEntity()));
     }
 
     /** Projects block context fields into a {@link StableBlockEvent} snapshot. */
@@ -306,7 +325,8 @@ public final class FabricStableEventProjections {
                 pos == null ? 0 : pos.getY(),
                 pos == null ? 0 : pos.getZ(),
                 blockId,
-                actorName);
+                actorName,
+                StableEntities.wrap(actor));
     }
 
     /** Projects a block broken wrapper event into a {@link StableBlockEvent}. */
@@ -414,12 +434,17 @@ public final class FabricStableEventProjections {
 
     /** Projects an item stack, acting entity, and level into a {@link StableItemEvent}. */
     public static StableItemEvent itemStackEvent(ItemStack stack, Entity actor, Level level) {
+        return itemStackEvent(stack, actor, level, null);
+    }
+
+    private static StableItemEvent itemStackEvent(ItemStack stack, Entity actor, Level level, Entity target) {
         String itemId = stack == null || stack.isEmpty()
                 ? "minecraft:air"
                 : String.valueOf(BuiltInRegistries.ITEM.getKey(stack.getItem()));
         int count = stack == null ? 0 : stack.getCount();
         String actorName = actor == null ? "" : actor.getScoreboardName();
-        return new StableItemEvent(itemId, count, actorName, dimensionOf(level));
+        return new StableItemEvent(
+                itemId, count, actorName, dimensionOf(level), StableEntities.wrap(actor), StableEntities.wrap(target));
     }
 
     /** Projects an item right-click wrapper event into a {@link StableItemEvent}. */
@@ -469,7 +494,7 @@ public final class FabricStableEventProjections {
         Player player = e.getPlayer();
         Entity target = e.getTarget();
         Level level = player != null ? player.level() : (target == null ? null : target.level());
-        return itemStackEvent(e.getItem(), player, level);
+        return itemStackEvent(e.getItem(), player, level, target);
     }
 
     /** Projects a finished item use wrapper event into a {@link StableItemEvent}. */
@@ -483,12 +508,18 @@ public final class FabricStableEventProjections {
 
     /** Projects an entity and numeric amount into a {@link StableEntityEvent} snapshot. */
     public static StableEntityEvent entityEvent(Entity entity, float amount) {
-        return entityEvent(entity, entity == null ? null : entity.level(), amount);
+        return damageEvent(entity, amount, null);
     }
 
-    private static StableEntityEvent entityEvent(Entity entity, LevelAccessor level, float amount) {
+    private static StableEntityEvent damageEvent(Entity entity, float amount, DamageSource source) {
+        return entityEvent(entity, entity == null ? null : entity.level(), amount, source);
+    }
+
+    private static StableEntityEvent entityEvent(Entity entity, LevelAccessor level, float amount, DamageSource source) {
+        var sourceEntity = StableEntities.wrap(source == null ? null : source.getEntity());
+        var directSourceEntity = StableEntities.wrap(source == null ? null : source.getDirectEntity());
         if (entity == null) {
-            return new StableEntityEvent("", "", "", 0.0, 0.0, 0.0, amount);
+            return new StableEntityEvent("", "", "", 0.0, 0.0, 0.0, amount, null, sourceEntity, directSourceEntity);
         }
         Identifier key = BuiltInRegistries.ENTITY_TYPE.getKey(entity.getType());
         return new StableEntityEvent(
@@ -498,17 +529,20 @@ public final class FabricStableEventProjections {
                 entity.getX(),
                 entity.getY(),
                 entity.getZ(),
-                amount);
+                amount,
+                StableEntities.wrap(entity),
+                sourceEntity,
+                directSourceEntity);
     }
 
     /** Projects an entity join-level wrapper event into a {@link StableEntityEvent}. */
     public static StableEntityEvent entityJoin(EntityJoinLevelEventJS e) {
-        return e == null ? entityEvent(null, 0.0f) : entityEvent(e.getEntity(), e.getLevel(), 0.0f);
+        return e == null ? entityEvent(null, 0.0f) : entityEvent(e.getEntity(), e.getLevel(), 0.0f, null);
     }
 
     /** Projects an entity leave-level wrapper event into a {@link StableEntityEvent}. */
     public static StableEntityEvent entityLeave(EntityLeaveLevelEventJS e) {
-        return e == null ? entityEvent(null, 0.0f) : entityEvent(e.getEntity(), e.getLevel(), 0.0f);
+        return e == null ? entityEvent(null, 0.0f) : entityEvent(e.getEntity(), e.getLevel(), 0.0f, null);
     }
 
     /** Projects an entity tick wrapper event into a {@link StableEntityEvent}. */
@@ -518,17 +552,17 @@ public final class FabricStableEventProjections {
 
     /** Projects a living death wrapper event into a {@link StableEntityEvent}. */
     public static StableEntityEvent livingDeath(LivingDeathEventJS e) {
-        return entityEvent(e == null ? null : e.getEntity(), 0.0f);
+        return e == null ? entityEvent(null, 0.0f) : damageEvent(e.getEntity(), 0.0f, e.getSource());
     }
 
     /** Projects a living damage wrapper event into a {@link StableEntityEvent} using {@code e.getAmount()}. */
     public static StableEntityEvent livingDamage(LivingDamageEventJS e) {
-        return e == null ? entityEvent(null, 0.0f) : entityEvent(e.getEntity(), e.getAmount());
+        return e == null ? entityEvent(null, 0.0f) : damageEvent(e.getEntity(), e.getAmount(), e.getSource());
     }
 
     /** Projects a living drops wrapper event into a {@link StableEntityEvent}. */
     public static StableEntityEvent livingDrops(LivingDropsEventJS e) {
-        return entityEvent(e == null ? null : e.getEntity(), 0.0f);
+        return e == null ? entityEvent(null, 0.0f) : damageEvent(e.getEntity(), 0.0f, e.getSource());
     }
 
     /** Projects a mob finalize-spawn wrapper event into a {@link StableEntityEvent} using {@code e.getMob()}. */

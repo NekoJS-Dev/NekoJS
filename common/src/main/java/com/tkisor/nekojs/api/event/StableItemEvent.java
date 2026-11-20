@@ -3,6 +3,10 @@ package com.tkisor.nekojs.api.event;
 import com.tkisor.nekojs.api.annotation.Doc;
 import com.tkisor.nekojs.api.annotation.Param;
 import com.tkisor.nekojs.api.annotation.Return;
+import com.tkisor.nekojs.api.annotation.ScriptInternalConstructor;
+import com.tkisor.nekojs.api.annotation.ScriptNullable;
+import com.tkisor.nekojs.api.entity.StableEntity;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.Objects;
 
@@ -15,6 +19,8 @@ public final class StableItemEvent {
     private final int count;
     private final String actorName;
     private final String dimension;
+    private final @Nullable StableEntity actor;
+    private final @Nullable StableEntity target;
 
     /**
      * Creates an immutable item event snapshot.
@@ -30,10 +36,47 @@ public final class StableItemEvent {
     @Param(name = "actorName", value = "acting player or entity name when present; null becomes empty")
     @Param(name = "dimension", value = "namespaced dimension id; null is normalized to an empty string")
     public StableItemEvent(String itemId, int count, String actorName, String dimension) {
+        this(itemId, count, actorName, dimension, null, null);
+    }
+
+    @ScriptInternalConstructor
+    public StableItemEvent(
+            String itemId,
+            int count,
+            String actorName,
+            String dimension,
+            @Nullable StableEntity actor,
+            @Nullable StableEntity target) {
         this.itemId = Objects.requireNonNullElse(itemId, "");
         this.count = count;
         this.actorName = Objects.requireNonNullElse(actorName, "");
         this.dimension = Objects.requireNonNullElse(dimension, "");
+        this.actor = actor;
+        this.target = target;
+    }
+
+    /**
+     * Returns the entity that acted on the item.
+     *
+     * @return acting entity, or null if unavailable
+     */
+    @Doc("Returns the entity that acted on the item.")
+    @Return("acting entity, or null if unavailable")
+    @ScriptNullable
+    public @Nullable StableEntity getActor() {
+        return actor;
+    }
+
+    /**
+     * Returns the entity targeted by the item interaction.
+     *
+     * @return interaction target, or null if unavailable
+     */
+    @Doc("Returns the entity targeted by the item interaction.")
+    @Return("interaction target, or null if unavailable")
+    @ScriptNullable
+    public @Nullable StableEntity getTarget() {
+        return target;
     }
 
     /**

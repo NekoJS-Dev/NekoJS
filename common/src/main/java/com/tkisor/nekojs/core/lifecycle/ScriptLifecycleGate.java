@@ -62,9 +62,24 @@ public final class ScriptLifecycleGate {
 
     private static final ThreadLocal<Integer> CALLBACK_DEPTH = ThreadLocal.withInitial(() -> 0);
     private static final ThreadLocal<java.util.List<Runnable>> CALLBACK_RELEASES = new ThreadLocal<>();
+    private static final ThreadLocal<CallbackToken> CALLBACK_TOKEN = new ThreadLocal<>();
+
+    private record CallbackToken(int depth, CallbackToken parent) {}
 
     public static boolean isInCallback() {
         return CALLBACK_DEPTH.get() > 0;
+    }
+
+    /** Returns a thread-bound identity for the current callback, or null outside a callback. */
+    public static Object callbackToken() {
+        int depth = CALLBACK_DEPTH.get();
+        if (depth == 0) return null;
+        CallbackToken token = CALLBACK_TOKEN.get();
+        if (token == null || token.depth() != depth) {
+            token = new CallbackToken(depth, token);
+            CALLBACK_TOKEN.set(token);
+        }
+        return token;
     }
 
     /** Defer owner teardown until every nested guest callback has returned. */
@@ -89,7 +104,13 @@ public final class ScriptLifecycleGate {
 
     /** Leaves a managed callback; pairs with {@link #enterCallback()}. */
     public static void exitCallback() {
-        int remaining = CALLBACK_DEPTH.get() - 1;
+        int depth = CALLBACK_DEPTH.get();
+        CallbackToken token = CALLBACK_TOKEN.get();
+        if (token != null && token.depth() == depth) {
+            if (token.parent() == null) CALLBACK_TOKEN.remove();
+            else CALLBACK_TOKEN.set(token.parent());
+        }
+        int remaining = depth - 1;
         if (remaining <= 0) {
             CALLBACK_DEPTH.remove();
             var releases = CALLBACK_RELEASES.get();

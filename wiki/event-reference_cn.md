@@ -27,6 +27,8 @@ PlayerEvents.loggedIn(event => {
 });
 ```
 
+从 `nekojs:event/stable` 导入时，玩家事件通过 `event.player` 提供玩家对象，实体事件通过 `event.entity` 提供实体对象。在同步回调里读取实时属性，调用 `asServerPlayer()` 可得到服务端玩家视图或 `null`。在同一个回调里，可通过 `nekojs/api/stable` 的 `Native.entities.toNativeServerPlayer(view)` 取得同一个原生服务端玩家实例。
+
 ---
 
 <a id="wiki-section-3"></a>

@@ -6,6 +6,13 @@ import com.tkisor.nekojs.api.catalog.*;
 import com.tkisor.nekojs.api.data.BindingExposure;
 import com.tkisor.nekojs.api.facade.IdFacade;
 import com.tkisor.nekojs.api.data.NekoId;
+import com.tkisor.nekojs.api.entity.StableEntity;
+import com.tkisor.nekojs.api.entity.StableLivingEntity;
+import com.tkisor.nekojs.api.entity.StablePlayer;
+import com.tkisor.nekojs.api.entity.StableServerPlayer;
+import com.tkisor.nekojs.api.event.StablePlayerChatEvent;
+import com.tkisor.nekojs.api.event.StableServerTickEvent;
+import com.tkisor.nekojs.api.stage.StageHandle;
 import com.tkisor.nekojs.core.fs.NekoJSPaths;
 import com.tkisor.nekojs.probe.backend.typescript.TypeScriptProbeBackend;
 import com.tkisor.nekojs.probe.ir.TypeReflector;
@@ -33,19 +40,27 @@ class ApiModuleProbeDeclarationTest {
                 NekoId.class, null, false, false));
         var tick = new ModuleEventCatalogEntry("nekojs:event/stable", "nekojs", BindingExposure.Category.STABLE,
                 ScriptType.SERVER, EventCatalogEntry.of("ServerEvents", "tickPre", ScriptTypePredicate.exact(ScriptType.SERVER),
-                com.tkisor.nekojs.api.event.StableServerTickEvent.class, null, false, false));
-        var snapshot = new NekoScriptCatalogSnapshot(List.of(ScriptType.SERVER), List.of(), List.of(tick.event(),
+                StableServerTickEvent.class, null, false, false));
+        var chat = new ModuleEventCatalogEntry("nekojs:event/stable", "nekojs", BindingExposure.Category.STABLE,
+                ScriptType.SERVER, EventCatalogEntry.of("PlayerEvents", "chat", ScriptTypePredicate.exact(ScriptType.SERVER),
+                        StablePlayerChatEvent.class, null, true, false));
+        var snapshot = new NekoScriptCatalogSnapshot(List.of(ScriptType.SERVER), List.of(), List.of(tick.event(), chat.event(),
                 EventCatalogEntry.ofScriptEvent("CustomEvents", "changed", ScriptType.SERVER)), List.of(), List.of(),
                 List.of(), List.of(), List.of(), List.of(), List.of(), List.of(), List.of(), List.of(), null, Map.of(), List.of(),
-                List.of(), List.of(), List.of(binding, pluginBinding), List.of(event, tick));
+                List.of(), List.of(), List.of(binding, pluginBinding), List.of(event, tick, chat));
         var config = new ProbeConfig(true, ".neko_probe", new ProbeConfig.ScanConfig(
                 List.of("com.tkisor.nekojs.api"), List.of(), List.of(), List.of(), 1, "SMART"));
         var reflector = new TypeReflector();
-        var context = new ProbeContext.Of(snapshot, List.of(IdFacade.class, NekoId.class, com.tkisor.nekojs.api.event.StableServerTickEvent.class), config, NekoJSPaths.fromGameDir(output),
-                "typescript", output, List.of(reflector.reflect(IdFacade.class), reflector.reflect(NekoId.class), reflector.reflect(com.tkisor.nekojs.api.event.StableServerTickEvent.class)));
+        List<Class<?>> types = List.of(IdFacade.class, NekoId.class, StableServerTickEvent.class,
+                StablePlayerChatEvent.class, StableEntity.class, StableLivingEntity.class, StablePlayer.class,
+                StableServerPlayer.class, StageHandle.class);
+        var context = new ProbeContext.Of(snapshot, types, config, NekoJSPaths.fromGameDir(output),
+                "typescript", output, types.stream().map(reflector::reflect).toList());
         Map<String, String> files = new TypeScriptProbeBackend().render(context);
         var baseline = ApiModuleBaseline.fromJson(files.get("@special/api-modules.json"));
-        assertEquals(4, baseline.exports().size());
+        assertEquals(5, baseline.exports().size());
+        assertTrue(baseline.exports().get("SERVER:nekojs:event/stable:PlayerEvents.chat").facets().stream()
+                .anyMatch(facet -> facet.equals("payload.read:player:" + StablePlayer.class.getName())));
         assertTrue(baseline.exports().containsKey("SERVER:nekojs/plugins/events/api/stable:ID"));
         assertFalse(baseline.exports().containsKey("SERVER:nekojs:event/stable:ID"));
         assertTrue(LegacySurfaceAdapter.convert(snapshot).stream().anyMatch(symbol ->
@@ -78,7 +93,8 @@ class ApiModuleProbeDeclarationTest {
                 import { ID as EventModuleID } from 'nekojs:event/stable';
                 // @ts-expect-error Plugin Binding modules do not aggregate official event groups.
                 import { ServerEvents as PluginBindingEvents } from 'nekojs/plugins/events/api/stable';
-                import { ServerEvents } from 'nekojs:event/stable';
+                import { PlayerEvents, ServerEvents } from 'nekojs:event/stable';
+                import type { $StableEntity, $StablePlayer, $StableServerPlayer } from 'java:com/tkisor/nekojs/api/entity';
                 import { ServerEvents as AddonEvents } from 'nekojs:event/stable/addon';
                 // @ts-expect-error Events are not part of the Binding aggregate.
                 import { ServerEvents as OldServerEvents } from 'nekojs/api/stable';
@@ -90,6 +106,23 @@ class ApiModuleProbeDeclarationTest {
                     event.tick = tick + 1;
                     // @ts-expect-error No native server leaks into stable payloads.
                     event.server;
+                });
+                PlayerEvents.chat(event => {
+                    // @ts-expect-error The player role is nullable.
+                    const required: $StablePlayer = event.player;
+                    if (!event.player) return;
+                    const entity: $StableEntity = event.player;
+                    const name: string = entity.name;
+                    const health: number = event.player.health;
+                    const server: $StableServerPlayer | null = entity.asServerPlayer();
+                    const latency: number | undefined = server?.latency;
+                    // @ts-expect-error A base player does not declare server-only members.
+                    event.player.latency;
+                    // @ts-expect-error Native members are absent from stable entity views.
+                    event.player.connection;
+                    // @ts-expect-error The Bean property is read-only.
+                    event.player = null;
+                    void required; void name; void health; void latency;
                 });
                 // @ts-expect-error No unaudited native event is in the stable group.
                 ServerEvents.starting(() => {});

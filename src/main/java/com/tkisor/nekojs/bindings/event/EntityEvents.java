@@ -47,7 +47,8 @@ public interface EntityEvents {
                 api.versioned();
                 api.stable()
                         .when(event -> ServerLevelEventThread.isCurrent(event.getEntity().level()))
-                        .view(StableEntityEvent.class, e -> NeoForgeStableEventProjections.entityEvent(e.getEntity(), e.getNewDamage()))
+                        .view(StableEntityEvent.class,
+                                e -> NeoForgeStableEventProjections.entityDamage(e.getEntity(), e.getSource(), e.getNewDamage()))
                         .selector(String.class, NeoForgeStableEventProjections::resolveEntityTypeSelector)
                         .cancellable()
                         .scriptTypes(ScriptType.SERVER);
@@ -61,11 +62,8 @@ public interface EntityEvents {
                 api.stable()
                         .when(event -> ServerLevelEventThread.isCurrent(event.getEntity().level())
                                 && NeoForgeDamagePostRouting.stable(event))
-                        //? if >=26 {
-                        .view(StableEntityEvent.class, e -> NeoForgeStableEventProjections.entityEvent(e.getEntity(), e.getHealthDamage()))
-                        //?} else {
-                        /*.view(StableEntityEvent.class, e -> NeoForgeStableEventProjections.entityEvent(e.getEntity(), e.getNewDamage()))*/
-                        //?}
+                        .view(StableEntityEvent.class, e -> NeoForgeStableEventProjections.entityDamage(
+                                e.getEntity(), e.getSource(), NeoForgeDamagePostRouting.amount(e)))
                         .selector(String.class, NeoForgeStableEventProjections::resolveEntityTypeSelector)
                         .scriptTypes(ScriptType.SERVER);
             });
@@ -77,7 +75,8 @@ public interface EntityEvents {
                 api.versioned();
                 api.stable()
                         .when(event -> ServerLevelEventThread.isCurrent(event.getEntity().level()))
-                        .view(StableEntityEvent.class, e -> NeoForgeStableEventProjections.entityEvent(e.getEntity(), 0.0f))
+                        .view(StableEntityEvent.class,
+                                e -> NeoForgeStableEventProjections.entityDamage(e.getEntity(), e.getSource(), 0.0f))
                         .selector(String.class, NeoForgeStableEventProjections::resolveEntityTypeSelector)
                         .cancellable()
                         .scriptTypes(ScriptType.SERVER);
@@ -90,7 +89,8 @@ public interface EntityEvents {
                 api.versioned();
                 api.stable()
                         .when(event -> ServerLevelEventThread.isCurrent(event.getEntity().level()))
-                        .view(StableEntityEvent.class, e -> NeoForgeStableEventProjections.entityEvent(e.getEntity(), 0.0f))
+                        .view(StableEntityEvent.class,
+                                e -> NeoForgeStableEventProjections.entityDamage(e.getEntity(), e.getSource(), 0.0f))
                         .selector(String.class, NeoForgeStableEventProjections::resolveEntityTypeSelector)
                         .cancellable()
                         .scriptTypes(ScriptType.SERVER);

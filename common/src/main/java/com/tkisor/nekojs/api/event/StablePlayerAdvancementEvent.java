@@ -3,9 +3,13 @@ package com.tkisor.nekojs.api.event;
 import com.tkisor.nekojs.api.annotation.Doc;
 import com.tkisor.nekojs.api.annotation.Param;
 import com.tkisor.nekojs.api.annotation.Return;
+import com.tkisor.nekojs.api.annotation.ScriptInternalConstructor;
+import com.tkisor.nekojs.api.annotation.ScriptNullable;
+import com.tkisor.nekojs.api.entity.StablePlayer;
 import com.tkisor.nekojs.api.stage.StageHandle;
 import com.tkisor.nekojs.api.stage.StageHandleResolver;
 import com.tkisor.nekojs.api.stage.StagePlayerRef;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.Objects;
 
@@ -17,6 +21,7 @@ public final class StablePlayerAdvancementEvent {
     private final String playerName;
     private final String playerUuid;
     private final String advancementId;
+    private final @Nullable StablePlayer player;
 
     /**
      * Creates an immutable player advancement event snapshot.
@@ -30,9 +35,31 @@ public final class StablePlayerAdvancementEvent {
     @Param(name = "playerUuid", value = "canonical string representation of the player UUID; null becomes empty")
     @Param(name = "advancementId", value = "namespaced advancement id; null is normalized to an empty string")
     public StablePlayerAdvancementEvent(String playerName, String playerUuid, String advancementId) {
+        this(playerName, playerUuid, advancementId, null);
+    }
+
+    @ScriptInternalConstructor
+    public StablePlayerAdvancementEvent(
+            String playerName,
+            String playerUuid,
+            String advancementId,
+            @Nullable StablePlayer player) {
         this.playerName = Objects.requireNonNullElse(playerName, "");
         this.playerUuid = Objects.requireNonNullElse(playerUuid, "");
         this.advancementId = Objects.requireNonNullElse(advancementId, "");
+        this.player = player;
+    }
+
+    /**
+     * Returns the player whose advancement changed.
+     *
+     * @return player whose advancement changed, or null if unavailable
+     */
+    @Doc("Returns the player whose advancement changed.")
+    @Return("player whose advancement changed, or null if unavailable")
+    @ScriptNullable
+    public @Nullable StablePlayer getPlayer() {
+        return player;
     }
 
     /**

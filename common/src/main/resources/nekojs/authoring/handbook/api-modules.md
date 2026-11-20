@@ -28,6 +28,23 @@ Literal `require` routes are typed; an unknown string route returns `unknown`. A
 
 `Native.ids` converts in both directions using the selected node's actual native identifier class. Native bridge parameters and returns are intentionally profile-specific, not portable wrappers. This bridge does not fabricate loader objects or make arbitrary native APIs stable.
 
+## Native entity conversion
+
+`Native.entities` converts between a real Minecraft entity and its stable view during a synchronous script callback. `fromNative(entity)` selects the most specific supported wrapper. `toNative(view)` and the typed variants `toNativeLivingEntity(view)`, `toNativePlayer(view)` and `toNativeServerPlayer(view)` return the exact original Minecraft instance. Native types and methods depend on the active profile. Keep native access inside the callback. Invalid inputs and expired stable views are rejected with `NEKO-4067` or the ordinary API overload error.
+
+```ts
+import { Native } from "nekojs/api/stable";
+import { PlayerEvents } from "nekojs:event/stable";
+
+PlayerEvents.chat(event => {
+    const player = event.player?.asServerPlayer();
+    if (!player) return;
+    const nativePlayer = Native.entities.toNativeServerPlayer(player);
+    const stablePlayer = Native.entities.fromNative(nativePlayer).asServerPlayer();
+    console.info(stablePlayer?.uuid);
+});
+```
+
 ## Plugin publication
 
 In the existing binding hook, publish a public view explicitly:
@@ -111,6 +128,4 @@ ServerEvents.tickPost(event => {
 
 The immutable `StableServerTickEvent` payload has one read-only Bean property, `tick`. It snapshots the event server's native `getTickCount()` value; there is no script-owned clock or zero-based rebasing. Supported nodes increment the native count before pre, so the first ordinary tick is 1 and pre/post for the same tick see the same native count. Script reloads do not alter the server count. New-server initialization and integer overflow follow Minecraft rather than an additional counter. Callbacks run synchronously on the server owner thread, use normal event priority/order, and are not cancellable. Retaining the view retains only its numeric snapshot, not a server/native handle. The view exposes no `server` or native cancellation methods. There is no native unwrap for this snapshot.
 
-For native payload members, import `ServerEvents` from `nekojs:event/versioned` (use a local alias when also importing the stable group). Existing native handlers must migrate to this versioned path, not automatically to stable: the stable tick view deliberately omits native members. Other lifecycle events remain versioned-only. No legacy global or old aggregate event export is retained.
-
-Stable `NativeEvents` and `Native.unwrap` remain unpublished. NativeEvents needs thread-gate and candidate rollback/per-script cleanup guarantees. Unwrapping needs an audited, callback-scoped native-backed view; plain JavaScript objects are not native handles.
+For native tick payload members, import `ServerEvents` from `nekojs:event/versioned`. An import alias allows the stable and versioned Event Groups to coexist in one script. `NativeEvents` is available through the version Binding module on NeoForge in STARTUP scripts. The supported stable entity conversion methods are on `Native.entities`.

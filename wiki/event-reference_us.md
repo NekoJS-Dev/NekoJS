@@ -27,6 +27,8 @@ Listeners must be registered at the top level. Registering an event inside anoth
 
 The `event` argument is the event object. Read data with property syntax, such as `event.player` or `event.entity`, or call the matching method, such as `event.getPlayer()`. Being able to read a property does not mean you can assign it. To see which members an event has, run `/nekojs probe` and use code completion in your editor.
 
+In the stable event module, player callbacks expose `event.player`, and entity callbacks expose `event.entity`. Read entity properties inside the callback. `asServerPlayer()` returns the server-side view or `null`. During the callback, `Native.entities.toNativeServerPlayer(view)` from `nekojs/api/stable` retrieves the exact native server player instance.
+
 <a id="wiki-section-3"></a>
 ### Listening to one item, block or entity
 

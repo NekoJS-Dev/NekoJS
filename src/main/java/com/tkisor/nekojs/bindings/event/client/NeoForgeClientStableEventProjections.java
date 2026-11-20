@@ -7,13 +7,15 @@ import com.tkisor.nekojs.api.event.StableClientInputEvent;
 import com.tkisor.nekojs.api.event.StableCommandRegistrationEvent;
 import com.tkisor.nekojs.api.event.StablePlayerEvent;
 import com.tkisor.nekojs.bindings.event.NeoForgeStableEventProjections;
+import com.tkisor.nekojs.wrapper.entity.StableEntities;
+import net.minecraft.client.Minecraft;
 import net.minecraft.world.entity.player.Player;
 import net.neoforged.neoforge.client.event.ClientPlayerNetworkEvent;
 import net.neoforged.neoforge.client.event.InputEvent;
 import net.neoforged.neoforge.client.event.RegisterClientCommandsEvent;
 
 /**
- * Client-only projections from NeoForge client events to portable stable event snapshots.
+ * Client-only NeoForge projections for portable event snapshots and live player roles.
  */
 public final class NeoForgeClientStableEventProjections {
     private NeoForgeClientStableEventProjections() {}
@@ -23,8 +25,13 @@ public final class NeoForgeClientStableEventProjections {
     }
 
     public static StablePlayerEvent clientPlayer(Player player) {
+        return clientPlayer(player, null);
+    }
+
+    private static StablePlayerEvent clientPlayer(Player player, Player originalPlayer) {
+        var original = StableEntities.wrap(originalPlayer == player ? null : originalPlayer);
         if (player == null) {
-            return StablePlayerEvent.forClient("", "", "", 0.0, 0.0, 0.0);
+            return StablePlayerEvent.forClient("", "", "", 0.0, 0.0, 0.0, null, original, null);
         }
         return StablePlayerEvent.forClient(
                 player.getScoreboardName(),
@@ -32,7 +39,10 @@ public final class NeoForgeClientStableEventProjections {
                 NeoForgeStableEventProjections.dimensionOf(player.level()),
                 player.getX(),
                 player.getY(),
-                player.getZ());
+                player.getZ(),
+                StableEntities.wrap(player),
+                original,
+                null);
     }
 
     public static StablePlayerEvent clientLogin(ClientPlayerNetworkEvent.LoggingIn event) {
@@ -44,7 +54,7 @@ public final class NeoForgeClientStableEventProjections {
     }
 
     public static StablePlayerEvent clientClone(ClientPlayerNetworkEvent.Clone event) {
-        return clientPlayer(event.getNewPlayer());
+        return clientPlayer(event.getNewPlayer(), event.getOldPlayer());
     }
 
     public static StableCommandRegistrationEvent clientCommandRegistry(RegisterClientCommandsEvent event) {
@@ -52,11 +62,13 @@ public final class NeoForgeClientStableEventProjections {
     }
 
     public static StableClientInputEvent clientInteractionKey(InputEvent.InteractionKeyMappingTriggered event) {
+        Minecraft client = Minecraft.getInstance();
         return new StableClientInputEvent(
                 event.isAttack(),
                 event.isUseItem(),
                 event.isPickBlock(),
-                event.getHand() == null ? "" : event.getHand().name());
+                event.getHand() == null ? "" : event.getHand().name(),
+                StableEntities.wrap(client == null ? null : client.player));
     }
 }
 //?}

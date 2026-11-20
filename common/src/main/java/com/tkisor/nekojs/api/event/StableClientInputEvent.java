@@ -3,6 +3,10 @@ package com.tkisor.nekojs.api.event;
 import com.tkisor.nekojs.api.annotation.Doc;
 import com.tkisor.nekojs.api.annotation.Param;
 import com.tkisor.nekojs.api.annotation.Return;
+import com.tkisor.nekojs.api.annotation.ScriptInternalConstructor;
+import com.tkisor.nekojs.api.annotation.ScriptNullable;
+import com.tkisor.nekojs.api.entity.StablePlayer;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.Objects;
 
@@ -15,6 +19,7 @@ public final class StableClientInputEvent {
     private final boolean useItem;
     private final boolean pickBlock;
     private final String hand;
+    private final @Nullable StablePlayer player;
 
     /**
      * Creates an immutable client input event snapshot.
@@ -30,10 +35,33 @@ public final class StableClientInputEvent {
     @Param(name = "pickBlock", value = "true when the pick-block input triggered the event")
     @Param(name = "hand", value = "interaction hand name; null is normalized to an empty string")
     public StableClientInputEvent(boolean attack, boolean useItem, boolean pickBlock, String hand) {
+        this(attack, useItem, pickBlock, hand, null);
+    }
+
+    @ScriptInternalConstructor
+    public StableClientInputEvent(
+            boolean attack,
+            boolean useItem,
+            boolean pickBlock,
+            String hand,
+            @Nullable StablePlayer player) {
         this.attack = attack;
         this.useItem = useItem;
         this.pickBlock = pickBlock;
         this.hand = Objects.requireNonNullElse(hand, "");
+        this.player = player;
+    }
+
+    /**
+     * Returns the local player when the input occurred.
+     *
+     * @return local player, or null if unavailable
+     */
+    @Doc("Returns the local player when the input occurred.")
+    @Return("local player, or null if unavailable")
+    @ScriptNullable
+    public @Nullable StablePlayer getPlayer() {
+        return player;
     }
 
     /**

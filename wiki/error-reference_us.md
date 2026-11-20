@@ -151,6 +151,7 @@ NekoJS does not stop a script for running too long. An infinite loop or an `awai
 | `NEKO-4064` | Script output declaration rejected | A method's declared TypeScript return type is blank |
 | `NEKO-4065` | Script output view rejected | The view must be an implemented public non-generic interface |
 | `NEKO-4066` | Probe declaration retained with incomplete public members | A missing optional public signature prevents reflecting the full method list. Other members stay; see `incompleteMembers` |
+| `NEKO-4067` | Native entity conversion or access rejected | Use a native entity or a native-backed stable view in its synchronous callback |
 | `NEKO-4070` | Stage identifier, player reference or handle mutation rejected | Blank or invalid stage name, player UUID or notification option, or a write was called on a read-only client stage handle |
 | `NEKO-4071` | Stage customization or gate declaration rejected | Duplicate customization or gate rule ID, non-positive temporary ticks, unknown scope or target, empty target set, invalid region/age/level bounds, or a closed builder |
 | `NEKO-4072` | Stage persistence read or write failed | Corrupt JSON, invalid stage file schema or I/O failure under `<world>/nekojs/stages/` |

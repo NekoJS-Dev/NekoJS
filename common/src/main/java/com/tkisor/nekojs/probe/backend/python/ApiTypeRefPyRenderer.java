@@ -94,6 +94,7 @@ public final class ApiTypeRefPyRenderer {
             case "int", "byte", "short", "long" -> "int";
             case "float", "double", "number" -> "float";
             case "object" -> "Any";
+            case "null" -> "None";
             default -> "Any";
         };
     }

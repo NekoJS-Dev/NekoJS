@@ -1131,6 +1131,7 @@ public final class TypeScriptClassRenderer {
             case "int", "byte", "short", "long", "float", "double", "number" -> "number";
             case "char", "string" -> "string";
             case "void" -> "void";
+            case "null" -> "null";
             case "object" -> "object";
             case "unknown" -> "unknown";
             default -> "any";

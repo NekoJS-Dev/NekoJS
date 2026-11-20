@@ -16,6 +16,7 @@ import com.tkisor.nekojs.core.stage.gate.StageCandidatePlan;
 import com.tkisor.nekojs.fabric.FabricPDataSync;
 import com.tkisor.nekojs.fabric.FabricPlayNetwork;
 import com.tkisor.nekojs.stage.StageDomainOwner;
+import com.tkisor.nekojs.wrapper.entity.StableEntities;
 import com.tkisor.nekojs.wrapper.event.player.PlayerCloneEventJS;
 import com.tkisor.nekojs.wrapper.event.player.PlayerLifecycleEventJS;
 import com.tkisor.nekojs.wrapper.event.player.PlayerRespawnEventJS;
@@ -134,7 +135,8 @@ public final class FabricServerEventBindings {
                         .view(StableDatapackSyncEvent.class, e -> new StableDatapackSyncEvent(
                                 e.getPlayer() == null ? "" : e.getPlayer().getScoreboardName(),
                                 e.getPlayer() == null ? e.getPlayerList().getPlayers().size() : 1,
-                                e.getPlayer() == null))
+                                e.getPlayer() == null,
+                                StableEntities.wrap(e.getPlayer())))
                         .scriptTypes(ScriptType.SERVER);
             });
 

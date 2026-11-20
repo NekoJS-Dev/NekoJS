@@ -3,6 +3,10 @@ package com.tkisor.nekojs.api.event;
 import com.tkisor.nekojs.api.annotation.Doc;
 import com.tkisor.nekojs.api.annotation.Param;
 import com.tkisor.nekojs.api.annotation.Return;
+import com.tkisor.nekojs.api.annotation.ScriptInternalConstructor;
+import com.tkisor.nekojs.api.annotation.ScriptNullable;
+import com.tkisor.nekojs.api.entity.StableEntity;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.Objects;
 
@@ -17,6 +21,7 @@ public final class StableBlockEvent {
     private final int z;
     private final String blockId;
     private final String actorName;
+    private final @Nullable StableEntity actor;
 
     /**
      * Creates an immutable block event snapshot.
@@ -36,12 +41,37 @@ public final class StableBlockEvent {
     @Param(name = "blockId", value = "namespaced block id; null is normalized to an empty string")
     @Param(name = "actorName", value = "acting player or entity name when present; null becomes empty")
     public StableBlockEvent(String dimension, int x, int y, int z, String blockId, String actorName) {
+        this(dimension, x, y, z, blockId, actorName, null);
+    }
+
+    @ScriptInternalConstructor
+    public StableBlockEvent(
+            String dimension,
+            int x,
+            int y,
+            int z,
+            String blockId,
+            String actorName,
+            @Nullable StableEntity actor) {
         this.dimension = Objects.requireNonNullElse(dimension, "");
         this.x = x;
         this.y = y;
         this.z = z;
         this.blockId = Objects.requireNonNullElse(blockId, "");
         this.actorName = Objects.requireNonNullElse(actorName, "");
+        this.actor = actor;
+    }
+
+    /**
+     * Returns the entity responsible for the block interaction or modification.
+     *
+     * @return acting entity, or null if unavailable
+     */
+    @Doc("Returns the entity responsible for the block interaction or modification.")
+    @Return("acting entity, or null if unavailable")
+    @ScriptNullable
+    public @Nullable StableEntity getActor() {
+        return actor;
     }
 
     /**

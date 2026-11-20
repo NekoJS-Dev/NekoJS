@@ -3,9 +3,13 @@ package com.tkisor.nekojs.api.event;
 import com.tkisor.nekojs.api.annotation.Doc;
 import com.tkisor.nekojs.api.annotation.Param;
 import com.tkisor.nekojs.api.annotation.Return;
+import com.tkisor.nekojs.api.annotation.ScriptInternalConstructor;
+import com.tkisor.nekojs.api.annotation.ScriptNullable;
+import com.tkisor.nekojs.api.entity.StablePlayer;
 import com.tkisor.nekojs.api.stage.StageHandle;
 import com.tkisor.nekojs.api.stage.StageHandleResolver;
 import com.tkisor.nekojs.api.stage.StagePlayerRef;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.Objects;
 
@@ -18,6 +22,7 @@ public final class StablePlayerDimensionChangeEvent {
     private final String playerUuid;
     private final String fromDimension;
     private final String toDimension;
+    private final @Nullable StablePlayer player;
 
     /**
      * Creates an immutable player dimension change event snapshot.
@@ -33,10 +38,33 @@ public final class StablePlayerDimensionChangeEvent {
     @Param(name = "fromDimension", value = "origin dimension id; null is normalized to an empty string")
     @Param(name = "toDimension", value = "destination dimension id; null is normalized to an empty string")
     public StablePlayerDimensionChangeEvent(String playerName, String playerUuid, String fromDimension, String toDimension) {
+        this(playerName, playerUuid, fromDimension, toDimension, null);
+    }
+
+    @ScriptInternalConstructor
+    public StablePlayerDimensionChangeEvent(
+            String playerName,
+            String playerUuid,
+            String fromDimension,
+            String toDimension,
+            @Nullable StablePlayer player) {
         this.playerName = Objects.requireNonNullElse(playerName, "");
         this.playerUuid = Objects.requireNonNullElse(playerUuid, "");
         this.fromDimension = Objects.requireNonNullElse(fromDimension, "");
         this.toDimension = Objects.requireNonNullElse(toDimension, "");
+        this.player = player;
+    }
+
+    /**
+     * Returns the player who changed dimensions.
+     *
+     * @return traveling player, or null if unavailable
+     */
+    @Doc("Returns the player who changed dimensions.")
+    @Return("traveling player, or null if unavailable")
+    @ScriptNullable
+    public @Nullable StablePlayer getPlayer() {
+        return player;
     }
 
     /**

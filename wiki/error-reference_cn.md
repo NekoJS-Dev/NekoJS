@@ -151,6 +151,7 @@ NekoJS 不会因为脚本运行太久而中断它。死循环或永远不会完�
 | `NEKO-4064` | Script output declaration rejected | 方法声明的 TypeScript 返回类型为空 |
 | `NEKO-4065` | Script output view rejected | 输出视图必须是真正实现了的、公开的非泛型接口 |
 | `NEKO-4066` | Probe declaration retained with incomplete public members | 缺少可选的公共签名，无法反射完整的方法列表。其他成员仍保留；详见 `incompleteMembers` |
+| `NEKO-4067` | 原生实体转换或访问被拒绝 | 在同步回调中使用原生实体或由它包装的稳定视图 |
 | `NEKO-4070` | Stage identifier, player reference or handle mutation rejected | 阶段名、玩家 UUID 或通知选项为空或无效，或在只读的客户端阶段句柄上调用了修改方法 |
 | `NEKO-4071` | Stage customization or gate declaration rejected | 阶段定制或门禁规则 ID 重复、临时阶段 tick 非正数、作用域或目标未知、目标集合为空、区域/生长阶段/等级范围无效，或构建器已关闭 |
 | `NEKO-4072` | Stage persistence read or write failed | `<world>/nekojs/stages/` 下的阶段存档 JSON 损坏、结构无效或读写失败 |

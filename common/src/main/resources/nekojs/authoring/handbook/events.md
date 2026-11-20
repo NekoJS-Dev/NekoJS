@@ -1,6 +1,6 @@
 # Events
 
-Import a Java plugin or built-in Event Group before subscribing. Across both NeoForge and Fabric (and across supported Minecraft versions), all 8 built-in event families (`ServerEvents`, `LevelEvents`, `PlayerEvents`, `CommandEvents`, `BlockEvents`, `ItemEvents`, `EntityEvents`, and `ClientEvents`) publish the identical 80-event portable `"nekojs:event/stable"` contract (`CommonStableEvents`, with immutable `Stable*Event` snapshot views and string ID selectors), while `"nekojs:event/versioned"` exposes each loader's native or wrapper events and dispatch keys where natively supported by the loader API (and NeoForge also exports the raw bus bridge `NativeEvents` from `"nekojs/api/version"` in `STARTUP` scripts). For example, `import { ServerEvents } from "nekojs:event/stable"` selects the portable view, then `ServerEvents.tickPost(event => { ... })` subscribes; plugin event paths append their owner. See [API modules](api-modules.md). These groups are subscription namespaces rather than globals or Binding aggregate exports, and each callback receives an Event Object.
+Import a Java plugin or built-in Event Group before subscribing. NeoForge and Fabric publish the same built-in portable event signatures through `"nekojs:event/stable"`. Stable Event Objects expose portable entity roles. Use a string ID when subscribing to an event that takes a selector. `"nekojs:event/versioned"` exposes each loader's native or wrapper events and dispatch keys. NeoForge also exports `NativeEvents` from `"nekojs/api/version"` in STARTUP scripts. For example, `import { ServerEvents } from "nekojs:event/stable"` selects the portable view, then `ServerEvents.tickPost(event => { ... })` subscribes; plugin event paths append their owner. See [API modules](api-modules.md). These groups are subscription namespaces rather than globals or Binding aggregate exports, and each callback receives an Event Object.
 
 Script-created dynamic groups remain global; import their `ScriptEvents` registrar from `nekojs:event/versioned`.
 
@@ -14,4 +14,24 @@ Cancellation is specific to the event. For NekoJS cancelable listener contracts,
 
 For a player-login handler, recipe-event observation, or a generation-owned timer, follow the file paths, triggers and expected results in [scripting examples](scripting-examples.md).
 
-Keep callbacks bounded. Use an existing Binding for general helpers rather than attaching operations to an event object.
+## Stable player and entity roles
+
+`PlayerEvents` exposes `event.player`. A clone or respawn can also expose `event.originalPlayer` if the loader supplies a distinct previous instance. `PlayerEvents.entityInteract` exposes the interacted entity as `event.target`. Client player events and the interaction key event expose `event.player` when the client has a player.
+
+`EntityEvents` exposes `event.entity`. Damage-related payloads also expose `sourceEntity` and `directSourceEntity` when their native damage source names those entities. Block and item payloads expose `actor`. An item interaction with an entity also exposes `target`. Command execution exposes `sourceEntity`, explosions expose `directSourceEntity` and `indirectSourceEntity`, and a per-player datapack sync exposes `player`. A role is `null` when the event has no native entity for it. Stage change notifications describe stored stage state and identify a player by UUID when applicable.
+
+The portable hierarchy is `StableEntity` → `StableLivingEntity` → `StablePlayer` → `StableServerPlayer`, from general to specific. All entities have `name`, `uuid`, `typeId`, `dimension`, `x`, `y`, `z`, `alive` and `clientSide`. Living entities add `health` and `maxHealth`. Players add `creative`, `spectator` and `stages`. A server player adds `latency` in milliseconds. Use `asLivingEntity()`, `asPlayer()` or `asServerPlayer()` to narrow a role. These methods return `null` if the entity has a different type.
+
+```ts
+import { PlayerEvents } from "nekojs:event/stable";
+
+PlayerEvents.chat(event => {
+    const player = event.player;
+    if (!player) return;
+    console.info(player.name, player.health, event.message);
+    const serverPlayer = player.asServerPlayer();
+    if (serverPlayer) console.info(serverPlayer.latency);
+});
+```
+
+Scalar event properties such as `event.playerUuid` and `event.x` retain their captured values. Entity properties read live state during the synchronous callback. Copy the values you need before returning if you plan to use them later. For explicit native interoperation, see [Native entity conversion](api-modules.md#native-entity-conversion).

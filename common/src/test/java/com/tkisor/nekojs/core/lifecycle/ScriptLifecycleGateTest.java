@@ -4,6 +4,9 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -100,6 +103,32 @@ class ScriptLifecycleGateTest {
         assertEquals(ScriptLifecycleGate.Decision.EXECUTED,
                 gate.tryEnter(ScriptLifecycleGate.Operation.RELOAD));
         gate.exit(ScriptLifecycleGate.Operation.RELOAD);
+    }
+
+    @Test
+    void callbackIdentityTracksEachNestedDelivery() {
+        assertNull(ScriptLifecycleGate.callbackToken());
+        ScriptLifecycleGate.enterCallback();
+        try {
+            Object outer = ScriptLifecycleGate.callbackToken();
+            Object previousInner = null;
+            for (int delivery = 0; delivery < 2; delivery++) {
+                ScriptLifecycleGate.enterCallback();
+                try {
+                    Object inner = ScriptLifecycleGate.callbackToken();
+                    assertNotSame(outer, inner);
+                    assertNotSame(previousInner, inner);
+                    assertSame(inner, ScriptLifecycleGate.callbackToken());
+                    previousInner = inner;
+                } finally {
+                    ScriptLifecycleGate.exitCallback();
+                }
+                assertSame(outer, ScriptLifecycleGate.callbackToken());
+            }
+        } finally {
+            ScriptLifecycleGate.exitCallback();
+        }
+        assertNull(ScriptLifecycleGate.callbackToken());
     }
 
     @Test

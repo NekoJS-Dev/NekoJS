@@ -3,6 +3,10 @@ package com.tkisor.nekojs.api.event;
 import com.tkisor.nekojs.api.annotation.Doc;
 import com.tkisor.nekojs.api.annotation.Param;
 import com.tkisor.nekojs.api.annotation.Return;
+import com.tkisor.nekojs.api.annotation.ScriptInternalConstructor;
+import com.tkisor.nekojs.api.annotation.ScriptNullable;
+import com.tkisor.nekojs.api.entity.StableEntity;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.Objects;
 
@@ -18,6 +22,9 @@ public final class StableEntityEvent {
     private final double y;
     private final double z;
     private final float amount;
+    private final @Nullable StableEntity entity;
+    private final @Nullable StableEntity sourceEntity;
+    private final @Nullable StableEntity directSourceEntity;
 
     /**
      * Creates an immutable entity event snapshot.
@@ -39,6 +46,21 @@ public final class StableEntityEvent {
     @Param(name = "z", value = "entity Z coordinate")
     @Param(name = "amount", value = "event-specific numeric amount such as damage or heal value, or 0 when not applicable")
     public StableEntityEvent(String entityTypeId, String entityUuid, String dimension, double x, double y, double z, float amount) {
+        this(entityTypeId, entityUuid, dimension, x, y, z, amount, null, null, null);
+    }
+
+    @ScriptInternalConstructor
+    public StableEntityEvent(
+            String entityTypeId,
+            String entityUuid,
+            String dimension,
+            double x,
+            double y,
+            double z,
+            float amount,
+            @Nullable StableEntity entity,
+            @Nullable StableEntity sourceEntity,
+            @Nullable StableEntity directSourceEntity) {
         this.entityTypeId = Objects.requireNonNullElse(entityTypeId, "");
         this.entityUuid = Objects.requireNonNullElse(entityUuid, "");
         this.dimension = Objects.requireNonNullElse(dimension, "");
@@ -46,6 +68,45 @@ public final class StableEntityEvent {
         this.y = y;
         this.z = z;
         this.amount = amount;
+        this.entity = entity;
+        this.sourceEntity = sourceEntity;
+        this.directSourceEntity = directSourceEntity;
+    }
+
+    /**
+     * Returns the entity this event is about.
+     *
+     * @return event entity, or null if unavailable
+     */
+    @Doc("Returns the entity this event is about.")
+    @Return("event entity, or null if unavailable")
+    @ScriptNullable
+    public @Nullable StableEntity getEntity() {
+        return entity;
+    }
+
+    /**
+     * Returns the entity responsible for the damage.
+     *
+     * @return damage source entity, or null if unavailable
+     */
+    @Doc("Returns the entity responsible for the damage.")
+    @Return("damage source entity, or null if unavailable")
+    @ScriptNullable
+    public @Nullable StableEntity getSourceEntity() {
+        return sourceEntity;
+    }
+
+    /**
+     * Returns the entity that directly dealt the damage.
+     *
+     * @return direct damage source entity, or null if unavailable
+     */
+    @Doc("Returns the entity that directly dealt the damage.")
+    @Return("direct damage source entity, or null if unavailable")
+    @ScriptNullable
+    public @Nullable StableEntity getDirectSourceEntity() {
+        return directSourceEntity;
     }
 
     /**

@@ -16,4 +16,8 @@ final class NeoForgeDamagePostRouting {
     static boolean stable(LivingDamageEvent.Post event) {
         return !event.getEntity().level().isClientSide();
     }
+
+    static float amount(LivingDamageEvent.Post event) {
+        return event.getHealthDamage();
+    }
 }

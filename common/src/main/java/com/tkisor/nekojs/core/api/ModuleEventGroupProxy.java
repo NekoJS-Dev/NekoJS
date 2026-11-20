@@ -52,7 +52,7 @@ public final class ModuleEventGroupProxy implements ProxyObject {
                     } else if (view == null) {
                         // Scalars and arrays retain their value representation; host objects expose only the declared type.
                         payload = values[0].isHostObject() && !payloadType.isArray()
-                                ? new BindingValueProxy(values[0], payloadType, false) : values[0];
+                                ? BindingValueProxy.stableEvent(values[0], payloadType) : values[0];
                     } else {
                         if (values.length != 1 || !values[0].isHostObject()) {
                             throw new IllegalArgumentException("[NEKO-4057] Event view requires a host payload: "
@@ -62,7 +62,9 @@ public final class ModuleEventGroupProxy implements ProxyObject {
                         if (!payloadType.isInstance(projected)) {
                             throw new IllegalArgumentException("[NEKO-4057] Event converter returned an invalid public view: " + name);
                         }
-                        payload = new BindingValueProxy(context.asValue(projected), payloadType, false);
+                        Value projectedValue = context.asValue(projected);
+                        payload = stable ? BindingValueProxy.stableEvent(projectedValue, payloadType)
+                                : new BindingValueProxy(projectedValue, payloadType, false);
                     }
                     Value result = callback.execute(payload);
                     if ((view != null || stable)

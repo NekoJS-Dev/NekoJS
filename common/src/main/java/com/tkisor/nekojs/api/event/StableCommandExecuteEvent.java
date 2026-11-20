@@ -3,6 +3,10 @@ package com.tkisor.nekojs.api.event;
 import com.tkisor.nekojs.api.annotation.Doc;
 import com.tkisor.nekojs.api.annotation.Param;
 import com.tkisor.nekojs.api.annotation.Return;
+import com.tkisor.nekojs.api.annotation.ScriptInternalConstructor;
+import com.tkisor.nekojs.api.annotation.ScriptNullable;
+import com.tkisor.nekojs.api.entity.StableEntity;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.Objects;
 
@@ -13,6 +17,7 @@ import java.util.Objects;
 public final class StableCommandExecuteEvent {
     private final String input;
     private final String sourceName;
+    private final @Nullable StableEntity sourceEntity;
 
     /**
      * Creates an immutable command execution event snapshot.
@@ -24,8 +29,26 @@ public final class StableCommandExecuteEvent {
     @Param(name = "input", value = "raw command input string; null is normalized to an empty string")
     @Param(name = "sourceName", value = "command source text name; null is normalized to an empty string")
     public StableCommandExecuteEvent(String input, String sourceName) {
+        this(input, sourceName, null);
+    }
+
+    @ScriptInternalConstructor
+    public StableCommandExecuteEvent(String input, String sourceName, @Nullable StableEntity sourceEntity) {
         this.input = Objects.requireNonNullElse(input, "");
         this.sourceName = Objects.requireNonNullElse(sourceName, "");
+        this.sourceEntity = sourceEntity;
+    }
+
+    /**
+     * Returns the entity associated with the command source.
+     *
+     * @return command source entity, or null if unavailable
+     */
+    @Doc("Returns the entity associated with the command source.")
+    @Return("command source entity, or null if unavailable")
+    @ScriptNullable
+    public @Nullable StableEntity getSourceEntity() {
+        return sourceEntity;
     }
 
     /**

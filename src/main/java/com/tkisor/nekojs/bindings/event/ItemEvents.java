@@ -74,10 +74,7 @@ public interface ItemEvents {
                         api.versioned();
                         api.stable()
                                 .when(event -> ClientEventThread.isCurrent())
-                                .view(
-                                        StableItemEvent.class,
-                                        e -> NeoForgeStableEventProjections.itemStackEvent(
-                                                e.getItemStack(), null, null))
+                                .view(StableItemEvent.class, NeoForgeStableEventProjections::itemTooltip)
                                 .selector(String.class, NeoForgeStableEventProjections::resolveItemSelector)
                                 .scriptTypes(ScriptType.CLIENT);
                     });
@@ -166,7 +163,7 @@ public interface ItemEvents {
                                 .view(
                                         StableItemEvent.class,
                                         e -> NeoForgeStableEventProjections.itemStackEvent(
-                                                e.getItemStack(), e.getEntity(), e.getLevel()))
+                                                e.getItemStack(), e.getEntity(), e.getLevel(), e.getTarget()))
                                 .selector(String.class, NeoForgeStableEventProjections::resolveItemSelector)
                                 .cancellable()
                                 .scriptTypes(ScriptType.SERVER);

@@ -1,6 +1,8 @@
 package com.tkisor.nekojs.core.api;
 
 import com.tkisor.nekojs.api.JavaMemberIndex;
+import com.tkisor.nekojs.api.entity.StableEntity;
+import com.tkisor.nekojs.core.lifecycle.ScriptLifecycleGate;
 import graal.graalvm.polyglot.Value;
 import graal.graalvm.polyglot.proxy.ProxyExecutable;
 import graal.graalvm.polyglot.proxy.ProxyObject;
@@ -15,17 +17,37 @@ import java.util.Set;
 
 /** A Context-local view of a public type, with its Bean properties and overloads. */
 public final class BindingValueProxy implements ProxyObject {
+    private static final Object NO_CALLBACK = new Object();
+
     private final Value delegate;
     private final Object target;
     private final JavaMemberIndex.ExposedMembers members;
     private final boolean staticOnly;
+    private final boolean liveEntity;
+    private final Object callbackToken;
     private final Set<String> names;
 
     public BindingValueProxy(Value delegate, Class<?> publicType, boolean staticOnly) {
+        this(delegate, publicType, staticOnly, null);
+    }
+
+    static BindingValueProxy stableEvent(Value delegate, Class<?> payloadType) {
+        // Capture delivery time, not first access; retaining the event cannot renew its entity views.
+        return new BindingValueProxy(delegate, payloadType, false, captureCallback());
+    }
+
+    private static Object captureCallback() {
+        Object token = ScriptLifecycleGate.callbackToken();
+        return token == null ? NO_CALLBACK : token;
+    }
+
+    private BindingValueProxy(Value delegate, Class<?> publicType, boolean staticOnly, Object callbackToken) {
         this.delegate = delegate;
         this.target = staticOnly ? null : delegate.isHostObject() ? delegate.asHostObject() : null;
         this.members = JavaMemberIndex.exposedMembersOf(publicType);
         this.staticOnly = staticOnly;
+        this.liveEntity = !staticOnly && StableEntity.class.isAssignableFrom(publicType);
+        this.callbackToken = callbackToken == null && liveEntity ? captureCallback() : callbackToken;
         Set<String> exposed = new LinkedHashSet<>();
         members.methods().forEach((name, methods) -> {
             if (methods.stream().anyMatch(this::applicable)) exposed.add(name);
@@ -72,6 +94,7 @@ public final class BindingValueProxy implements ProxyObject {
     }
 
     private Object invoke(List<Method> methods, Value[] args) {
+        requireLiveEntityCallback();
         Method selected = null;
         Object[] converted = null;
         int best = Integer.MAX_VALUE;
@@ -122,20 +145,29 @@ public final class BindingValueProxy implements ProxyObject {
         }
     }
 
+    private void requireLiveEntityCallback() {
+        if (liveEntity && callbackToken != ScriptLifecycleGate.callbackToken()) {
+            throw new IllegalStateException("[NEKO-4067] Live entity view was accessed outside its delivering callback");
+        }
+    }
+
     private static Object convert(Value value, Class<?> type) {
         if (value.isProxyObject() && value.asProxyObject() instanceof BindingValueProxy view
-                && view.target != null && type.isInstance(view.target)) return view.target;
+                && view.target != null && type.isInstance(view.target)) {
+            view.requireLiveEntityCallback();
+            return view.target;
+        }
         return value.as(type);
     }
 
-    private static Object narrow(Value value, Class<?> type) {
+    private Object narrow(Value value, Class<?> type) {
         if (value == null || value.isNull()) return null;
         if (!type.isPrimitive() && type != Object.class && !type.isArray()
                 && !type.getPackageName().startsWith("java.") && !type.getPackageName().startsWith("graal.")
                 && !type.getPackageName().startsWith("net.minecraft.")
                 && !type.getPackageName().startsWith("net.neoforged.")
                 && !type.getPackageName().startsWith("net.fabricmc.")) {
-            return new BindingValueProxy(value, type, false);
+            return new BindingValueProxy(value, type, false, callbackToken);
         }
         return value;
     }

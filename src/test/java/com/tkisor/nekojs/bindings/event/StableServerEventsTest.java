@@ -138,7 +138,7 @@ class StableServerEventsTest {
 
     private static MinecraftServer nativeServer(int tick) throws Exception {
         // The allocated server only needs its tick count and owner thread for event delivery.
-        try (var metadata = nativeLoaderMetadata()) {
+        try (var metadata = com.tkisor.nekojs.testfixture.IsolatedNativeLoaderMetadata.open()) {
             var unsafeField = sun.misc.Unsafe.class.getDeclaredField("theUnsafe");
             unsafeField.setAccessible(true);
             var server = (DedicatedServer) ((sun.misc.Unsafe) unsafeField.get(null)).allocateInstance(DedicatedServer.class);
@@ -148,38 +148,6 @@ class StableServerEventsTest {
             setNativeTick(server, tick);
             return server;
         }
-    }
-
-    private static AutoCloseable nativeLoaderMetadata() throws Exception {
-        // NeoForge feature flags need an empty mod list before server class initialization.
-//? if neoforge {
-//? if <=1.21.1 {
-        /*if (net.neoforged.fml.loading.LoadingModList.get() != null) return () -> {};
-        var instance = net.neoforged.fml.loading.LoadingModList.class.getDeclaredField("INSTANCE");
-        instance.setAccessible(true);
-        net.neoforged.fml.loading.LoadingModList.of(List.of(), List.of(), List.of(), List.of(), java.util.Map.of());
-        return () -> instance.set(null, null);
-*///?} else {
-        if (net.neoforged.fml.loading.FMLLoader.getCurrentOrNull() != null) return () -> {};
-        var constructor = net.neoforged.fml.loading.FMLLoader.class.getDeclaredConstructor(
-                ClassLoader.class, String[].class, net.neoforged.api.distmarker.Dist.class, boolean.class, java.nio.file.Path.class);
-        constructor.setAccessible(true);
-        var loader = constructor.newInstance(StableServerEventsTest.class.getClassLoader(), new String[0],
-                net.neoforged.api.distmarker.Dist.DEDICATED_SERVER, false, java.nio.file.Path.of("."));
-        try {
-            var modList = net.neoforged.fml.loading.FMLLoader.class.getDeclaredField("loadingModList");
-            modList.setAccessible(true);
-            modList.set(loader, net.neoforged.fml.loading.LoadingModList.of(
-                    List.of(), List.of(), List.of(), List.of(), List.of(), java.util.Map.of()));
-            return loader;
-        } catch (Exception failure) {
-            loader.close();
-            throw failure;
-        }
-//?}
-//?} else {
-        /*return () -> {};
-*///?}
     }
 
     private static void setNativeTick(MinecraftServer server, int tick) throws Exception {

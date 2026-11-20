@@ -5,6 +5,7 @@ import com.tkisor.nekojs.api.JavaMemberIndex;
 import com.tkisor.nekojs.api.ScriptInputShapeProvider;
 import com.tkisor.nekojs.api.annotation.ScriptInput;
 import com.tkisor.nekojs.api.annotation.ScriptInternalConstructor;
+import com.tkisor.nekojs.api.annotation.ScriptNullable;
 import com.tkisor.nekojs.api.annotation.ScriptOutput;
 import com.tkisor.nekojs.api.surface.ApiTypeRef;
 import com.tkisor.nekojs.core.reflect.FunctionalInterfaceResolver;
@@ -488,13 +489,13 @@ public final class TypeReflector {
             return declaration;
         }
         Type result = interfaceReturnContract(cls, method, declaration.returnType.sourceType);
-        declaration.returnType = returnSlot(result, declaration.returnType);
+        declaration.returnType = returnSlot(result, declaration);
         return declaration;
     }
 
     private static void applySignature(MethodDecl declaration, FunctionalInterfaceResolver.Signature signature) {
         reflectTypeParameters(declaration, signature.typeParameters());
-        declaration.returnType = returnSlot(signature.returnType(), declaration.returnType);
+        declaration.returnType = returnSlot(signature.returnType(), declaration);
         for (int index = 0; index < declaration.params.size(); index++) {
             Type type = signature.parameterTypes().get(index);
             if (declaration.params.get(index).varargs) {
@@ -507,8 +508,12 @@ public final class TypeReflector {
         }
     }
 
-    private static TypeSlot outputSlot(Type type) {
-        return TypeSlot.of(type, outputRef(type));
+    private static TypeSlot outputSlot(Method method, Type type) {
+        ApiTypeRef ref = outputRef(type);
+        if (!method.getReturnType().isPrimitive() && method.isAnnotationPresent(ScriptNullable.class)) {
+            ref = ApiTypeRef.union(List.of(ref, ApiTypeRef.primitive("null")));
+        }
+        return TypeSlot.of(type, ref);
     }
 
     /** Projects direct returned objects only; container arguments and mutable arrays retain native acceptance. */
@@ -519,9 +524,9 @@ public final class TypeReflector {
         return toRef(type);
     }
 
-    private static TypeSlot returnSlot(Type type, TypeSlot previous) {
-        TypeSlot slot = outputSlot(type);
-        slot.outputTypeScript = previous.outputTypeScript;
+    private static TypeSlot returnSlot(Type type, MethodDecl declaration) {
+        TypeSlot slot = outputSlot(declaration.sourceMethod, type);
+        slot.outputTypeScript = declaration.returnType.outputTypeScript;
         return slot;
     }
 
@@ -703,7 +708,7 @@ public final class TypeReflector {
             m.renameTo = jsName;
         }
         m.isStatic = Modifier.isStatic(method.getModifiers());
-        m.returnType = outputSlot(method.getGenericReturnType());
+        m.returnType = outputSlot(method, method.getGenericReturnType());
         ScriptOutput output = method.getAnnotation(ScriptOutput.class);
         if (output != null) {
             if (output.value().isBlank()) {

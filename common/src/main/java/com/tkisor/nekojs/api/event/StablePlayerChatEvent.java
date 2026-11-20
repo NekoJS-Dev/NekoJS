@@ -3,9 +3,13 @@ package com.tkisor.nekojs.api.event;
 import com.tkisor.nekojs.api.annotation.Doc;
 import com.tkisor.nekojs.api.annotation.Param;
 import com.tkisor.nekojs.api.annotation.Return;
+import com.tkisor.nekojs.api.annotation.ScriptInternalConstructor;
+import com.tkisor.nekojs.api.annotation.ScriptNullable;
+import com.tkisor.nekojs.api.entity.StablePlayer;
 import com.tkisor.nekojs.api.stage.StageHandle;
 import com.tkisor.nekojs.api.stage.StageHandleResolver;
 import com.tkisor.nekojs.api.stage.StagePlayerRef;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.Objects;
 
@@ -17,6 +21,7 @@ public final class StablePlayerChatEvent {
     private final String playerName;
     private final String playerUuid;
     private final String message;
+    private final @Nullable StablePlayer player;
 
     /**
      * Creates an immutable player chat event snapshot.
@@ -30,9 +35,27 @@ public final class StablePlayerChatEvent {
     @Param(name = "playerUuid", value = "canonical string representation of the player UUID; null becomes empty")
     @Param(name = "message", value = "plain chat message text; null is normalized to an empty string")
     public StablePlayerChatEvent(String playerName, String playerUuid, String message) {
+        this(playerName, playerUuid, message, null);
+    }
+
+    @ScriptInternalConstructor
+    public StablePlayerChatEvent(String playerName, String playerUuid, String message, @Nullable StablePlayer player) {
         this.playerName = Objects.requireNonNullElse(playerName, "");
         this.playerUuid = Objects.requireNonNullElse(playerUuid, "");
         this.message = Objects.requireNonNullElse(message, "");
+        this.player = player;
+    }
+
+    /**
+     * Returns the player who sent the chat message.
+     *
+     * @return chatting player, or null if unavailable
+     */
+    @Doc("Returns the player who sent the chat message.")
+    @Return("chatting player, or null if unavailable")
+    @ScriptNullable
+    public @Nullable StablePlayer getPlayer() {
+        return player;
     }
 
     /**

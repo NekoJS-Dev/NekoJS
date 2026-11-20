@@ -4,9 +4,14 @@ import com.tkisor.nekojs.api.annotation.Doc;
 import com.tkisor.nekojs.api.annotation.HideFromJS;
 import com.tkisor.nekojs.api.annotation.Param;
 import com.tkisor.nekojs.api.annotation.Return;
+import com.tkisor.nekojs.api.annotation.ScriptInternalConstructor;
+import com.tkisor.nekojs.api.annotation.ScriptNullable;
+import com.tkisor.nekojs.api.entity.StableEntity;
+import com.tkisor.nekojs.api.entity.StablePlayer;
 import com.tkisor.nekojs.api.stage.StageHandle;
 import com.tkisor.nekojs.api.stage.StageHandleResolver;
 import com.tkisor.nekojs.api.stage.StagePlayerRef;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.Objects;
 
@@ -22,6 +27,9 @@ public final class StablePlayerEvent {
     private final double y;
     private final double z;
     private final boolean clientSide;
+    private final @Nullable StablePlayer player;
+    private final @Nullable StablePlayer originalPlayer;
+    private final @Nullable StableEntity target;
 
     /**
      * Creates an immutable player event snapshot.
@@ -41,17 +49,32 @@ public final class StablePlayerEvent {
     @Param(name = "y", value = "player Y coordinate")
     @Param(name = "z", value = "player Z coordinate")
     public StablePlayerEvent(String playerName, String playerUuid, String dimension, double x, double y, double z) {
-        this(playerName, playerUuid, dimension, x, y, z, false);
+        this(playerName, playerUuid, dimension, x, y, z, null, null, null);
+    }
+
+    @ScriptInternalConstructor
+    public StablePlayerEvent(
+            String playerName, String playerUuid, String dimension, double x, double y, double z,
+            @Nullable StablePlayer player, @Nullable StablePlayer originalPlayer, @Nullable StableEntity target) {
+        this(playerName, playerUuid, dimension, x, y, z, false, player, originalPlayer, target);
     }
 
     @HideFromJS
     public static StablePlayerEvent forClient(
             String playerName, String playerUuid, String dimension, double x, double y, double z) {
-        return new StablePlayerEvent(playerName, playerUuid, dimension, x, y, z, true);
+        return forClient(playerName, playerUuid, dimension, x, y, z, null, null, null);
+    }
+
+    @HideFromJS
+    public static StablePlayerEvent forClient(
+            String playerName, String playerUuid, String dimension, double x, double y, double z,
+            @Nullable StablePlayer player, @Nullable StablePlayer originalPlayer, @Nullable StableEntity target) {
+        return new StablePlayerEvent(playerName, playerUuid, dimension, x, y, z, true, player, originalPlayer, target);
     }
 
     private StablePlayerEvent(
-            String playerName, String playerUuid, String dimension, double x, double y, double z, boolean clientSide) {
+            String playerName, String playerUuid, String dimension, double x, double y, double z, boolean clientSide,
+            @Nullable StablePlayer player, @Nullable StablePlayer originalPlayer, @Nullable StableEntity target) {
         this.playerName = Objects.requireNonNullElse(playerName, "");
         this.playerUuid = Objects.requireNonNullElse(playerUuid, "");
         this.dimension = Objects.requireNonNullElse(dimension, "");
@@ -59,6 +82,45 @@ public final class StablePlayerEvent {
         this.y = y;
         this.z = z;
         this.clientSide = clientSide;
+        this.player = player;
+        this.originalPlayer = originalPlayer;
+        this.target = target;
+    }
+
+    /**
+     * Returns the player this event is about.
+     *
+     * @return event player, or null if unavailable
+     */
+    @Doc("Returns the player this event is about.")
+    @Return("event player, or null if unavailable")
+    @ScriptNullable
+    public @Nullable StablePlayer getPlayer() {
+        return player;
+    }
+
+    /**
+     * Returns the previous player instance when a clone or respawn replaces it.
+     *
+     * @return original player, or null if no different original player was supplied
+     */
+    @Doc("Returns the previous player instance when a clone or respawn replaces it.")
+    @Return("original player, or null if no different original player was supplied")
+    @ScriptNullable
+    public @Nullable StablePlayer getOriginalPlayer() {
+        return originalPlayer;
+    }
+
+    /**
+     * Returns the entity the player interacted with.
+     *
+     * @return interaction target, or null if unavailable
+     */
+    @Doc("Returns the entity the player interacted with.")
+    @Return("interaction target, or null if unavailable")
+    @ScriptNullable
+    public @Nullable StableEntity getTarget() {
+        return target;
     }
 
     /**

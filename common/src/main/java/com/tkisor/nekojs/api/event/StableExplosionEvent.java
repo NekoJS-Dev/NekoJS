@@ -3,6 +3,10 @@ package com.tkisor.nekojs.api.event;
 import com.tkisor.nekojs.api.annotation.Doc;
 import com.tkisor.nekojs.api.annotation.Param;
 import com.tkisor.nekojs.api.annotation.Return;
+import com.tkisor.nekojs.api.annotation.ScriptInternalConstructor;
+import com.tkisor.nekojs.api.annotation.ScriptNullable;
+import com.tkisor.nekojs.api.entity.StableEntity;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.Objects;
 
@@ -18,6 +22,8 @@ public final class StableExplosionEvent {
     private final float radius;
     private final int affectedBlockCount;
     private final int affectedEntityCount;
+    private final @Nullable StableEntity directSourceEntity;
+    private final @Nullable StableEntity indirectSourceEntity;
 
     /**
      * Creates an immutable explosion event snapshot.
@@ -39,6 +45,20 @@ public final class StableExplosionEvent {
     @Param(name = "affectedBlockCount", value = "number of blocks affected at snapshot time")
     @Param(name = "affectedEntityCount", value = "number of entities affected at snapshot time")
     public StableExplosionEvent(String dimension, double x, double y, double z, float radius, int affectedBlockCount, int affectedEntityCount) {
+        this(dimension, x, y, z, radius, affectedBlockCount, affectedEntityCount, null, null);
+    }
+
+    @ScriptInternalConstructor
+    public StableExplosionEvent(
+            String dimension,
+            double x,
+            double y,
+            double z,
+            float radius,
+            int affectedBlockCount,
+            int affectedEntityCount,
+            @Nullable StableEntity directSourceEntity,
+            @Nullable StableEntity indirectSourceEntity) {
         this.dimension = Objects.requireNonNullElse(dimension, "");
         this.x = x;
         this.y = y;
@@ -46,6 +66,32 @@ public final class StableExplosionEvent {
         this.radius = radius;
         this.affectedBlockCount = affectedBlockCount;
         this.affectedEntityCount = affectedEntityCount;
+        this.directSourceEntity = directSourceEntity;
+        this.indirectSourceEntity = indirectSourceEntity;
+    }
+
+    /**
+     * Returns the entity that directly caused the explosion.
+     *
+     * @return direct explosion source entity, or null if unavailable
+     */
+    @Doc("Returns the entity that directly caused the explosion.")
+    @Return("direct explosion source entity, or null if unavailable")
+    @ScriptNullable
+    public @Nullable StableEntity getDirectSourceEntity() {
+        return directSourceEntity;
+    }
+
+    /**
+     * Returns the entity indirectly responsible for the explosion.
+     *
+     * @return indirect explosion source entity, or null if unavailable
+     */
+    @Doc("Returns the entity indirectly responsible for the explosion.")
+    @Return("indirect explosion source entity, or null if unavailable")
+    @ScriptNullable
+    public @Nullable StableEntity getIndirectSourceEntity() {
+        return indirectSourceEntity;
     }
 
     /**

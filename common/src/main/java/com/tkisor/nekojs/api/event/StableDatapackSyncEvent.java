@@ -3,6 +3,10 @@ package com.tkisor.nekojs.api.event;
 import com.tkisor.nekojs.api.annotation.Doc;
 import com.tkisor.nekojs.api.annotation.Param;
 import com.tkisor.nekojs.api.annotation.Return;
+import com.tkisor.nekojs.api.annotation.ScriptInternalConstructor;
+import com.tkisor.nekojs.api.annotation.ScriptNullable;
+import com.tkisor.nekojs.api.entity.StablePlayer;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.Objects;
 
@@ -14,6 +18,7 @@ public final class StableDatapackSyncEvent {
     private final String playerName;
     private final int playerCount;
     private final boolean reloadSync;
+    private final @Nullable StablePlayer player;
 
     /**
      * Creates an immutable datapack synchronization event snapshot.
@@ -27,9 +32,31 @@ public final class StableDatapackSyncEvent {
     @Param(name = "playerCount", value = "number of players receiving the synchronized datapack contents")
     @Param(name = "reloadSync", value = "true when triggered by a server reload rather than initial player login")
     public StableDatapackSyncEvent(String playerName, int playerCount, boolean reloadSync) {
+        this(playerName, playerCount, reloadSync, null);
+    }
+
+    @ScriptInternalConstructor
+    public StableDatapackSyncEvent(
+            String playerName,
+            int playerCount,
+            boolean reloadSync,
+            @Nullable StablePlayer player) {
         this.playerName = Objects.requireNonNullElse(playerName, "");
         this.playerCount = playerCount;
         this.reloadSync = reloadSync;
+        this.player = player;
+    }
+
+    /**
+     * Returns the player targeted by a single-player datapack sync.
+     *
+     * @return target player, or null for a broadcast or when unavailable
+     */
+    @Doc("Returns the player targeted by a single-player datapack sync.")
+    @Return("target player, or null for a broadcast or when unavailable")
+    @ScriptNullable
+    public @Nullable StablePlayer getPlayer() {
+        return player;
     }
 
     /**
