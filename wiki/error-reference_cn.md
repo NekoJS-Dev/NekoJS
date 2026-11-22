@@ -174,6 +174,7 @@ NekoJS 不会因为脚本运行太久而中断它。死循环或永远不会完�
 | `NEKO-5001` | could not convert value to JSON | 无法转换为 JSON |
 | `NEKO-5002` | JSON must be an object | JSON 必须是对象 |
 | `NEKO-5003` | unknown recipe filter key | RecipeFilterAdapter: unknown key |
+| `NEKO-5004` | Skipped unreadable or invalid recipe type definition | 跳过无法读取或无效的配方类型定义。检查日志指出的 `recipe_types` 文件及其字段。 |
 | `NEKO-5200` | selected recipe method threw a checked exception; no overload or schema fallback | 所选配方方法抛出受检异常；保留原因，不再尝试其他重载 |
 | `NEKO-5201` | selected recipe method is inaccessible; invocation rejected | 已选配方方法不可访问，调用被拒绝 |
 | `NEKO-5202` | native type adapter acceptance or conversion failed; original cause preserved, not an overload mismatch | 原生类型适配器判断或转换失败；保留原始原因，不算作重载不匹配 |

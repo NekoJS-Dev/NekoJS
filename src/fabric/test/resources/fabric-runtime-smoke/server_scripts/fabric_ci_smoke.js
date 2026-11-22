@@ -1,5 +1,24 @@
 import { ServerEvents } from "nekojs:event/versioned"
 
+const schemaRecipeId = "fabric_ci:schema_smelting_result"
+
+ServerEvents.recipes(event => {
+  const recipe = event.recipes.fabric_ci.schema_smelting("minecraft:smooth_stone", "minecraft:andesite")
+    .id(schemaRecipeId)
+  const json = JSON.parse(recipe.json().toString())
+  if (json.type !== "minecraft:smelting" || json.cookingtime !== 73) {
+    throw new Error("Fabric recipe schema did not apply the serializer, field path, and default")
+  }
+  recipe.validate()
+})
+
+ServerEvents.afterRecipes(event => {
+  if (event.count({ id: schemaRecipeId }) !== 1) {
+    throw new Error("Fabric did not load the recipe created through the JSON schema")
+  }
+  console.info("FABRIC-CI-SMOKE: recipe JSON schema ok")
+})
+
 if (typeof ServerEvents.started !== "function") {
   throw new Error("Fabric smoke bindings are unavailable")
 }

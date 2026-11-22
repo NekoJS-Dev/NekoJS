@@ -319,11 +319,11 @@ ServerEvents.recipes(event => {
 <a id="wiki-section-13"></a>
 ## 给自定义配方类型写 schema
 
-schema 描述一种配方有哪些字段。NekoJS 启动时会自动扫描已安装的配方类型并生成 schema，所以大部分配方不用自己写。自动生成的结果不对或缺字段时，可以自己写一个 JSON 文件来补充或覆盖。
+schema 描述一种配方有哪些字段。NeoForge 以及两个 Fabric 版本节点（`26.1.2-fabric`、`26.2.0-fabric`）都支持数据包中的 JSON schema。
 
 有了 schema，就可以按位置传参、检查必填字段，`replaceInput` / `replaceOutput` 能认出这些字段，`/nekojs probe` 也能给出补全。
 
-这个功能目前只在 NeoForge 上可用。
+只有 NeoForge 会自动扫描已安装的配方类型并生成 schema。在任一加载器上，都可以用 JSON 文件新增或覆盖已有的 schema。
 
 <a id="wiki-section-14"></a>
 ### 文件位置和示例
@@ -345,7 +345,7 @@ schema 描述一种配方有哪些字段。NekoJS 启动时会自动扫描已安
 }
 ```
 
-写好后执行 `/reload` 或重新进入世界，再执行 `/nekojs probe` 刷新补全。之后就能写 `event.recipes.mymod.grinding('minecraft:gravel', 'minecraft:cobblestone')`。
+新增、修改或删除 schema 文件后，先执行原版 `/reload`，再执行 `/nekojs probe` 刷新补全。如果在 Fabric 上还改了服务端脚本文件，请另行执行 `/nekojs reload server`。上面的示例 schema 加载后，就能调用 `event.recipes.mymod.grinding('minecraft:gravel', 'minecraft:cobblestone')`。
 
 <a id="wiki-section-15"></a>
 ### 顶层字段
@@ -373,7 +373,7 @@ schema 描述一种配方有哪些字段。NekoJS 启动时会自动扫描已安
 <a id="wiki-section-17"></a>
 ### kind 的取值
 
-`json`、`string`、`int`、`number`、`boolean`、`ingredient`、`item_stack`、`fluid_stack`、`fluid_ingredient`、`sized_fluid_ingredient`。不区分大小写，也可以写成 `item-stack` 这样的形式。
+`json`、`string`、`int`、`number`、`boolean`、`ingredient`、`item_stack`、`fluid_stack`、`fluid_ingredient`、`sized_fluid_ingredient`。不区分大小写，也可以写成 `item-stack` 这样的形式。Fabric 仍不支持这三种流体字段类型。
 
 <a id="wiki-section-18"></a>
 ### 写错时会怎样
@@ -393,7 +393,7 @@ schema 描述一种配方有哪些字段。NekoJS 启动时会自动扫描已安
 
 同一种配方可能有多个 schema 来源，后面的覆盖前面的：
 
-1. 自动扫描生成的 schema。
+1. 自动扫描生成的 schema（仅 NeoForge）。
 2. 插件注册的 schema。
 3. 你写的 `recipe_types/*.json`。
 
@@ -440,10 +440,11 @@ NekuJS 是一个单独下载的插件，可以让 NekoJS 使用原本为 KubeJS 
 | 增删改配方、`/nekojs reload` 生效 | ✅ | ✅ | ✅ |
 | 流体字段（`.fluid(...)` 等） | ✅ | ✅ | ❌ |
 | 合成后保留或损耗原料 | ✅ | ❌ | ✅ |
-| 自动 schema 和 `recipe_types` JSON | ✅ | ✅ | ❌ |
+| `recipe_types` JSON schema | ✅ | ✅ | ✅ |
+| 自动扫描生成 schema | ✅ | ✅ | ❌ |
 | NekuJS 兼容插件 | ❌ | ✅ | ❌ |
 
-Fabric 上没有 schema，`event.recipes.<命名空间>.<类型>({...})` 会按“没有 schema 的配方类型”处理，传入完整字段的对象仍然可以用。
+在 Fabric 上，既没有注册 schema、也没有原生处理方法的配方类型，仍需传入一个包含全部配方字段的 JSON 对象。`event.recipes.minecraft.crafting_shaped` 和 `event.recipes.minecraft.crafting_shapeless` 等原生处理方法不受影响。
 
 <a id="wiki-section-23"></a>
 ## 下一步

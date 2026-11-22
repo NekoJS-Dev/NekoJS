@@ -335,14 +335,10 @@ jobs:
           set -euo pipefail
           node='${{ matrix.node }}'
           smoke_dir="versions/$node/run-server/nekojs"
-          # 共享 raw loader root（票 31 迁入 src/fabric；两 fabric 节点同一 fixture）。
-          # 注意：CI 直接 cp 不等于 Gradle test source set 挂载——该 fixture 目前仅
-          # CI 消费。
           fixture_dir=src/fabric/test/resources/fabric-runtime-smoke
           rm -rf "versions/$node/run-server"
-          mkdir -p "$smoke_dir/startup_scripts" "$smoke_dir/server_scripts"
-          cp "$fixture_dir/startup_scripts/fabric_ci_smoke.js" "$smoke_dir/startup_scripts/"
-          cp "$fixture_dir/server_scripts/fabric_ci_smoke.js" "$smoke_dir/server_scripts/"
+          mkdir -p "$smoke_dir"
+          cp -R "$fixture_dir/." "$smoke_dir/"
           printf 'eula=true\n' > "versions/$node/run-server/eula.txt"
 
       - name: Run Fabric development runtime smoke
@@ -352,17 +348,13 @@ jobs:
           node='${{ matrix.node }}'
           run_dir="versions/$node/run-server"
           log_file="fabric-runtime-smoke-$node.log"
+          smoke_logs=("$log_file" "$run_dir/logs")
           : > "$log_file"
           timeout --foreground --signal=TERM --kill-after=15s 180s \
             ./gradlew ":$node:runServer" --console=plain > "$log_file" 2>&1 &
           server_pid=$!
           found=0
           for _ in $(seq 1 180); do
-            if grep -R -q 'FABRIC-CI-SMOKE: server started' "$run_dir" 2>/dev/null; then
-              found=1
-              kill -TERM "$server_pid" 2>/dev/null || true
-              break
-            fi
             if grep -Eiq 'Critical injection|FAILED during|Mixin.*(failed|error)|Could not find required mod' \
                 "$log_file" "$run_dir/logs" 2>/dev/null; then
               echo 'Fabric runtime smoke found a startup or Mixin failure' >&2
@@ -371,6 +363,13 @@ jobs:
               cat "$log_file"
               exit 1
             fi
+            if grep -Rqs 'FABRIC-CI-SMOKE: server started$' "${smoke_logs[@]}" \
+                && grep -Rqs 'FABRIC-CI-SMOKE: spawnLightning ok' "${smoke_logs[@]}" \
+                && grep -Rqs 'FABRIC-CI-SMOKE: recipe JSON schema ok$' "${smoke_logs[@]}"; then
+              found=1
+              kill -TERM "$server_pid" 2>/dev/null || true
+              break
+            fi
             if ! kill -0 "$server_pid" 2>/dev/null; then
               break
             fi
@@ -378,15 +377,11 @@ jobs:
           done
           wait "$server_pid" 2>/dev/null || true
           if [[ "$found" != 1 ]]; then
-            echo 'Fabric runtime smoke did not reach the server-started marker' >&2
+            echo 'Fabric runtime smoke did not confirm server startup, spawnLightning, and recipe JSON schema.' >&2
             cat "$log_file"
             exit 1
           fi
-          grep -R -q 'FABRIC-CI-SMOKE: startup bindings ok' "$run_dir"
-          # 票 31：compat 面真调用标记（Level.spawnLightning → McVersionCompat provider）。
-          # provider 缺失时 fixture 打出 "spawnLightning rejected: ..." 并抛出——本行 grep
-          # 失败、上面 mixin/崩溃扫描也会命中，双重暴露。
-          grep -R -q 'FABRIC-CI-SMOKE: spawnLightning ok' "$run_dir"
+          grep -Rqs 'FABRIC-CI-SMOKE: startup bindings ok$' "${smoke_logs[@]}"
 
       - name: Upload Fabric smoke logs on failure
         if: ${{ !cancelled() && failure() }}

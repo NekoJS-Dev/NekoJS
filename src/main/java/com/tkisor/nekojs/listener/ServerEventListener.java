@@ -3,26 +3,21 @@
 //? if neoforge {
 package com.tkisor.nekojs.listener;
 
-import com.google.gson.JsonElement;
-import com.google.gson.JsonParser;
 import com.tkisor.nekojs.NekoJS;
 import com.tkisor.nekojs.api.recipe.definition.MinecraftRecipeSchemaScanner;
 import com.tkisor.nekojs.api.recipe.definition.RecipeSchemaAutoDiscovery;
-import com.tkisor.nekojs.api.recipe.definition.RecipeTypeDefinitionJsonLoader;
-import com.tkisor.nekojs.api.recipe.definition.RecipeTypeDefinitionRegistry;
 import com.tkisor.nekojs.api.recipe.definition.RecipeTypeDefinitionStorage;
 import com.tkisor.nekojs.api.ScriptType;
 import com.tkisor.nekojs.bindings.event.ServerEvents;
 import com.tkisor.nekojs.core.fs.NekoJSPaths;
 import com.tkisor.nekojs.core.lifecycle.NekoRuntimeRoot;
 import com.tkisor.nekojs.core.plugin.PluginGenerationHooks;
+import com.tkisor.nekojs.resource.RecipeTypeDefinitionResources;
 import com.tkisor.nekojs.resource.ScriptPackDataManager;
 import com.tkisor.nekojs.stage.StageDomainOwner;
 import com.tkisor.nekojs.wrapper.event.server.LootTableEventJS;
 import com.tkisor.nekojs.probe.ProbeCoordinator;
 import net.minecraft.resources.Identifier;
-import net.minecraft.server.packs.resources.Resource;
-import net.minecraft.server.packs.resources.ResourceManager;
 import net.minecraft.server.packs.resources.ResourceManagerReloadListener;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
@@ -33,8 +28,6 @@ import net.neoforged.neoforge.event.server.ServerStartedEvent;
 import net.neoforged.neoforge.event.server.ServerStoppedEvent;
 import net.neoforged.neoforge.event.server.ServerStoppingEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
-import java.io.Reader;
-import java.util.Map;
 
 /** NeoForge event subscriber forwarding server lifecycle, tick, datapack, and tag events to NekoJS. */
 @EventBusSubscriber(modid = NekoJS.MODID)
@@ -265,7 +258,9 @@ public class ServerEventListener {
             }
             schemaAutoDiscovered = true;
         }
-        event.addListener(Identifier.fromNamespaceAndPath(NekoJS.MODID, "recipe_type_definitions"), (ResourceManagerReloadListener) ServerEventListener::loadRecipeTypeDefinitions);
+        event.addListener(Identifier.fromNamespaceAndPath(NekoJS.MODID, "recipe_type_definitions"),
+                (ResourceManagerReloadListener) manager ->
+                        RecipeTypeDefinitionStorage.replace(RecipeTypeDefinitionResources.load(manager)));
         // Loot table JSON handling; the reload flow runs before loot parsing, so changes apply to this reload.
         var owner = stageDomain();
         if (owner != null) {
@@ -317,26 +312,6 @@ public class ServerEventListener {
             com.tkisor.nekojs.script.ScriptTypeEnv.logger(ScriptType.SERVER)
                     .error("generateData batch failed; nothing was published and the previous active data is retained: ", e);
         }
-    }
-
-    private static void loadRecipeTypeDefinitions(ResourceManager manager) {
-        RecipeTypeDefinitionRegistry.Builder builder = RecipeTypeDefinitionRegistry.builder();
-        for (Map.Entry<Identifier, Resource> entry : manager.listResources("nekojs/recipe_types", path -> path.getPath().endsWith(".json")).entrySet()) {
-            Identifier resourceId = entry.getKey();
-            String path = resourceId.getPath();
-            String prefix = "nekojs/recipe_types/";
-            String typeName = path.substring(prefix.length(), path.length() - ".json".length());
-            try (Reader reader = entry.getValue().openAsReader()) {
-                JsonElement json = JsonParser.parseReader(reader);
-                if (!json.isJsonObject()) {
-                    throw new IllegalArgumentException("Recipe type definition must be an object");
-                }
-                builder.add(RecipeTypeDefinitionJsonLoader.parse(resourceId.getNamespace(), typeName, json.getAsJsonObject()));
-            } catch (Exception e) {
-                NekoJS.LOGGER.error("Failed to load recipe type definition {}", resourceId, e);
-            }
-        }
-        RecipeTypeDefinitionStorage.replace(builder.build());
     }
 }
 //?}

@@ -28,6 +28,8 @@ NekoJS 支持 NeoForge 和 Fabric 两种加载器。NeoForge 版本功能最完�
 | 功能 | NeoForge | Fabric |
 |---|---|---|
 | 修改配方（`ServerEvents.recipes`） | ✅ | ✅ |
+| `recipe_types` 中的 [JSON 配方 schema](recipe-system_cn#wiki-recipe-schema-json) | ✅ | ✅ |
+| 自动扫描生成配方 schema | ✅ | ❌ |
 | 注册物品、方块、实体 | ✅ | ⚠️ 部分支持 |
 | 修改标签（`ServerEvents.tags`） | ✅ | ❌ |
 | 修改已有物品、方块属性（`ItemEvents.modification`、`BlockEvents.modification`） | ✅ | ✅ |
@@ -43,6 +45,8 @@ NekoJS 支持 NeoForge 和 Fabric 两种加载器。NeoForge 版本功能最完�
 | 能力系统（`Capabilities`） | ✅ | ✅ 实现方式不同，见下文 |
 | 错误面板（`/nekojs view_all_errors`） | ✅ 图形界面 | ⚠️ 聊天文本 |
 | 动态注册（`/nekojs registry`） | ✅ 仅 26.x，实验性 | ❌ |
+
+两个加载器都提供 `RECIPE_SCHEMA_AWARE` 能力标志（在 `Platform.capabilities()` 中为 `recipe-schema-aware`）。该标志涵盖 Fabric 的 JSON schema 支持，但不代表支持自动扫描。
 
 <a id="wiki-section-4"></a>
 ## 需要注意的差异
@@ -69,7 +73,7 @@ NekoJS 支持 NeoForge 和 Fabric 两种加载器。NeoForge 版本功能最完�
 <a id="wiki-section-8"></a>
 ### 原版 /reload 和 F3+T
 
-在 NeoForge 上，原版 `/reload` 会顺带重载服务端脚本，F3+T 会顺带重载客户端脚本。Fabric 上不会，请直接用 `/nekojs reload` 和 `/nekojs reload client`。
+在 NeoForge 上，原版 `/reload` 会顺带重载服务端脚本，F3+T 会顺带重载客户端脚本。Fabric 上不会，请直接用 `/nekojs reload` 和 `/nekojs reload client`。两个加载器上的原版 `/reload` 都会重新读取 `recipe_types` 中的 JSON。
 
 <a id="wiki-section-9"></a>
 ### 其他

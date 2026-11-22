@@ -1,0 +1,22 @@
+{
+  "type": "minecraft:smelting",
+  "constructors": [
+    [
+      "result",
+      "ingredient"
+    ]
+  ],
+  "fields": {
+    "result": {
+      "kind": "item_stack"
+    },
+    "ingredient": {
+      "kind": "ingredient"
+    },
+    "cookTicks": {
+      "kind": "int",
+      "path": "cookingtime",
+      "default": 73
+    }
+  }
+}

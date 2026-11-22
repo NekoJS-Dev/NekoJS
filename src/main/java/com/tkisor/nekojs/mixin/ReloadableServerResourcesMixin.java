@@ -5,6 +5,7 @@ import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import com.llamalad7.mixinextras.sugar.Local;
 import com.tkisor.nekojs.api.recipe.IRecipeManagerExtension;
+import com.tkisor.nekojs.resource.RecipeTypeDefinitionResources;
 import com.tkisor.nekojs.stage.StageDomainOwner;
 import java.util.List;
 import java.util.Map;
@@ -84,6 +85,9 @@ public abstract class ReloadableServerResourcesMixin {
     )
     private void onTagsUpdated(CallbackInfo ci) {
 *///?}
+        if (this.recipes instanceof RecipeTypeDefinitionResources.Prepared prepared) {
+            prepared.nekojs$publishDataPackSchemas();
+        }
         StageDomainOwner owner = StageDomainOwner.current();
         if (owner != null && owner.finishResourceScripts((ReloadableServerResources) (Object) this, this.recipes)) return;
         if (this.recipes instanceof IRecipeManagerExtension ext) {

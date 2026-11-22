@@ -19,11 +19,7 @@ import net.fabricmc.loader.api.FabricLoader;
  *   <li>{@code FMLPaths.GAMEDIR} → {@link FabricLoader#getGameDir()}</li>
  * </ul>
  *
- * <p>capabilities only declares the bits that already work on Fabric: TAGS / RESOURCE_PACKS /
- * NETWORK_CUSTOM_CHANNEL (script custom channels are registered in both directions). Recipe hot
- * reload and the recipe viewer stay dark until their Fabric implementations land. The
- * {@code IPlatform} default methods (nbtBinaryCodec / registryQueryService) keep their
- * not-implemented semantics, so scripts get empty results instead of a crash.
+ * <p>The recipe schema capability covers data-driven recipe type definitions on Fabric.
  */
 public final class FabricPlatform implements IPlatform {
     @Override
@@ -97,7 +93,8 @@ public final class FabricPlatform implements IPlatform {
     @Override
     public Set<PlatformCapability> capabilities() {
         return Set.of(PlatformCapability.TAGS, PlatformCapability.RESOURCE_PACKS,
-                PlatformCapability.NETWORK_CUSTOM_CHANNEL, PlatformCapability.CAPABILITIES);
+                PlatformCapability.RECIPE_SCHEMA_AWARE, PlatformCapability.NETWORK_CUSTOM_CHANNEL,
+                PlatformCapability.CAPABILITIES);
     }
 
     @Override

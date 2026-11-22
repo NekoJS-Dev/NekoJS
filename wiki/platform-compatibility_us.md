@@ -28,6 +28,8 @@ This table only lists features that differ between platforms or need a note. Com
 | Feature | NeoForge | Fabric |
 |---|---|---|
 | Changing recipes (`ServerEvents.recipes`) | ✅ | ✅ |
+| [JSON recipe schemas](recipe-system_us#wiki-recipe-schema-json) from `recipe_types` | ✅ | ✅ |
+| Automatic recipe schema discovery | ✅ | ❌ |
 | Registering items, blocks and entities | ✅ | ⚠️ Partial |
 | Changing tags (`ServerEvents.tags`) | ✅ | ❌ |
 | Changing existing item and block properties (`ItemEvents.modification`, `BlockEvents.modification`) | ✅ | ✅ |
@@ -43,6 +45,8 @@ This table only lists features that differ between platforms or need a note. Com
 | Capabilities (`Capabilities`) | ✅ | ✅ Works differently; see below |
 | Error panel (`/nekojs view_all_errors`) | ✅ Graphical | ⚠️ Chat text |
 | Dynamic registration (`/nekojs registry`) | ✅ 26.x only, experimental | ❌ |
+
+Both loaders report `RECIPE_SCHEMA_AWARE` (`recipe-schema-aware` in `Platform.capabilities()`). This includes JSON schemas on Fabric; it does not imply automatic discovery.
 
 <a id="wiki-section-4"></a>
 ## Differences to watch for
@@ -69,7 +73,7 @@ Script code looks the same on both platforms, but the underlying systems differ:
 <a id="wiki-section-8"></a>
 ### Vanilla /reload and F3+T
 
-On NeoForge, vanilla `/reload` also reloads server scripts, and F3+T also reloads client scripts. On Fabric they do not; use `/nekojs reload` and `/nekojs reload client` directly.
+On NeoForge, vanilla `/reload` also reloads server scripts, and F3+T also reloads client scripts. On Fabric they do not; use `/nekojs reload` and `/nekojs reload client` directly. Vanilla `/reload` rereads `recipe_types` JSON on both loaders.
 
 <a id="wiki-section-9"></a>
 ### Other

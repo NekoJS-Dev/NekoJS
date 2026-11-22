@@ -174,6 +174,7 @@ NekoJS does not stop a script for running too long. An infinite loop or an `awai
 | `NEKO-5001` | could not convert value to JSON | Chinese log text: 无法转换为 JSON |
 | `NEKO-5002` | JSON must be an object | Chinese log text: JSON 必须是对象 |
 | `NEKO-5003` | unknown recipe filter key | — |
+| `NEKO-5004` | Skipped unreadable or invalid recipe type definition | Check the JSON and field definitions in the logged `recipe_types` resource. |
 | `NEKO-5200` | selected recipe method threw a checked exception; no overload or schema fallback | — |
 | `NEKO-5201` | selected recipe method is inaccessible; invocation rejected | — |
 | `NEKO-5202` | native type adapter acceptance or conversion failed; original cause preserved, not an overload mismatch | — |

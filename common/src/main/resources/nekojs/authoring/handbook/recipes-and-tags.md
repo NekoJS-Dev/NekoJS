@@ -29,6 +29,14 @@ An item tag (`#namespace:path`) is not an item stack. Check which adapter accept
 
 For complete recipe and item/block-tag files with run commands and expected effects, start with [scripting examples](scripting-examples.md).
 
+## Data-pack recipe schemas
+
+NeoForge and both Fabric nodes (`26.1.2-fabric` and `26.2.0-fabric`) load JSON schemas from active data packs. For the NekoJS data directory, put the file at `nekojs/data/<namespace>/nekojs/recipe_types/<type>.json`. The namespace and file name select `event.recipes.<namespace>.<type>`. The schema describes arguments for an existing recipe serializer: `fields` defines the named values and their JSON paths, and `constructors` lists positional argument orders. An optional `type` can select a serializer ID different from the file ID.
+
+After adding, editing or removing a schema, run vanilla `/reload`, then `/nekojs probe` to refresh editor declarations. On Fabric, use `/nekojs reload server` separately for edits to server script files.
+
+Automatic schema discovery is NeoForge-only. On Fabric, pass a single object with all recipe fields if the recipe type has no registered schema or native handler. The `fluid_stack`, `fluid_ingredient` and `sized_fluid_ingredient` schema field kinds remain unsupported on Fabric.
+
 ## Optional NekuJS compatibility addon
 
 When NekuJS is installed on 1.21.1 NeoForge, supported original addon resource and Java schemas are translated into native NekoJS recipe definitions. Use the instance declarations to discover the supported constructors and fluent methods. NekuJS is a bounded API provider, not the upstream KubeJS/Rhino engine; its provider version satisfies loader ranges but does not certify every upstream addon or coercion. Explicitly unsupported profiles and forced programmatic constructor overrides remain failures. Treat isolated codec/builder checks, successful startup, and successful world reload as separate evidence.

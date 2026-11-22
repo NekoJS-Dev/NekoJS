@@ -319,11 +319,11 @@ Rules:
 <a id="wiki-section-13"></a>
 ## Writing a schema for a custom recipe type
 
-A schema describes the fields of a recipe type. NekoJS scans installed recipe types at startup and builds schemas automatically, so most recipes need nothing from you. When the scan gets a type wrong or misses fields, write a JSON file to add or override its schema.
+A schema describes the fields of a recipe type. Data-pack JSON schemas work on NeoForge and on both Fabric nodes (`26.1.2-fabric` and `26.2.0-fabric`).
 
 A schema lets you pass positional arguments, checks required fields, lets `replaceInput` / `replaceOutput` recognize the fields, and gives `/nekojs probe` the information for completion.
 
-This feature currently works on NeoForge only.
+Only NeoForge automatically discovers schemas from installed recipe types. On either loader, a JSON file can add a schema or override an existing definition.
 
 <a id="wiki-section-14"></a>
 ### File location and example
@@ -345,7 +345,7 @@ Put the file at `nekojs/data/<namespace>/nekojs/recipe_types/<type>.json`. For e
 }
 ```
 
-Run `/reload` or rejoin the world, then run `/nekojs probe` to refresh completion. You can then write `event.recipes.mymod.grinding('minecraft:gravel', 'minecraft:cobblestone')`.
+After adding, editing or removing a schema file, run vanilla `/reload`, then run `/nekojs probe` to refresh completion. On Fabric, use `/nekojs reload server` separately if you also edited server script files. With the example schema loaded, you can call `event.recipes.mymod.grinding('minecraft:gravel', 'minecraft:cobblestone')`.
 
 <a id="wiki-section-15"></a>
 ### Top-level keys
@@ -373,7 +373,7 @@ Run `/reload` or rejoin the world, then run `/nekojs probe` to refresh completio
 <a id="wiki-section-17"></a>
 ### Values for kind
 
-`json`, `string`, `int`, `number`, `boolean`, `ingredient`, `item_stack`, `fluid_stack`, `fluid_ingredient`, `sized_fluid_ingredient`. Case does not matter, and forms like `item-stack` also work.
+`json`, `string`, `int`, `number`, `boolean`, `ingredient`, `item_stack`, `fluid_stack`, `fluid_ingredient`, `sized_fluid_ingredient`. Case does not matter, and forms like `item-stack` also work. The three typed fluid field kinds remain unsupported on Fabric.
 
 <a id="wiki-section-18"></a>
 ### When the file is wrong
@@ -393,7 +393,7 @@ A misspelled `role` **does not** cause an error; the role is guessed from the fi
 
 A recipe type can get schemas from several places. Later ones override earlier ones:
 
-1. Schemas built by the automatic scan.
+1. Schemas built by the automatic scan (NeoForge only).
 2. Schemas registered by plugins.
 3. Your `recipe_types/*.json` files.
 
@@ -440,10 +440,11 @@ NekuJS is a separate download that lets NekoJS use recipe extensions written for
 | Add, remove and edit recipes; apply with `/nekojs reload` | ✅ | ✅ | ✅ |
 | Fluid fields (`.fluid(...)` and friends) | ✅ | ✅ | ❌ |
 | Keeping or damaging ingredients after crafting | ✅ | ❌ | ✅ |
-| Automatic schemas and `recipe_types` JSON | ✅ | ✅ | ❌ |
+| `recipe_types` JSON schemas | ✅ | ✅ | ✅ |
+| Automatic schema discovery | ✅ | ✅ | ❌ |
 | NekuJS compatibility addon | ❌ | ✅ | ❌ |
 
-Fabric has no schemas. `event.recipes.minecraft.crafting_shaped` and `crafting_shapeless` still work; other types are treated as recipe types without a schema and need a complete JSON object.
+On Fabric, a recipe type without a registered schema or native handler still takes one JSON object with all recipe fields. Native handlers such as `event.recipes.minecraft.crafting_shaped` and `event.recipes.minecraft.crafting_shapeless` still work.
 
 <a id="wiki-section-23"></a>
 ## Next steps

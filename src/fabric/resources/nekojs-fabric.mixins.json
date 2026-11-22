@@ -93,6 +93,7 @@
     "MixinServerLevelExplosion",
     "MixinServerStarting",
     "MixinReloadableServerResourcesTags",
+    "RecipeSchemaResourcesMixin",
     "MixinServerShutdown",
     "MixinSingleBlockPlace",
     "MixinLivingDamageEvents",
