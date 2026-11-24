@@ -128,8 +128,7 @@ public record NekoPluginExtensionPoint<P extends NekoJSPlugin, A, R>(
         }
 
         /// Chronological dependencies: points that must finish first.
-        @SafeVarargs
-        public final Builder<P, A, R> dependsOn(NekoPluginExtensionPoint<?, ?, ?>... points) {
+        public Builder<P, A, R> dependsOn(NekoPluginExtensionPoint<?, ?, ?>... points) {
             dependencies.addAll(List.of(points));
             return this;
         }
@@ -142,8 +141,7 @@ public record NekoPluginExtensionPoint<P extends NekoJSPlugin, A, R>(
 
         /// Optional dependencies: ordered before this point only when the target is registered, so
         /// a target that is absent in some environments is tolerated.
-        @SafeVarargs
-        public final Builder<P, A, R> dependsOnOptional(NekoPluginExtensionPoint<?, ?, ?>... points) {
+        public Builder<P, A, R> dependsOnOptional(NekoPluginExtensionPoint<?, ?, ?>... points) {
             optionalDependencies.addAll(List.of(points));
             return this;
         }
