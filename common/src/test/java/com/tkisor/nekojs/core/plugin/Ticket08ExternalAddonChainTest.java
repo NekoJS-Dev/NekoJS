@@ -8,6 +8,7 @@ import com.tkisor.nekojs.api.data.BindingExposure;
 import com.tkisor.nekojs.api.data.BindingRegistry;
 import com.tkisor.nekojs.api.event.EventGroup;
 import com.tkisor.nekojs.api.event.ModuleEventGroup;
+import com.tkisor.nekojs.api.plugin.NekoExtensionPoint;
 import com.tkisor.nekojs.api.plugin.OwnedPlugin;
 import com.tkisor.nekojs.api.plugin.PluginIdentity;
 import com.tkisor.nekojs.core.NekoCoreContext;
@@ -255,13 +256,11 @@ class Ticket08ExternalAddonChainTest {
         AtomicReference<NekoPluginExtensionHandle<Object>> captured = new AtomicReference<>();
         NekoPluginExtensionProvider provider = registry -> {
             // enabled=false → the point is skipped → its handle never finishes
-            captured.set(registry.register(NekoPluginExtensionPoint
-                    .<NekoJSPlugin, Object, Object>builder("t08:skipped", NekoJSPlugin.class)
-                    .merge(MergePolicy.append())
+            captured.set(registry.register(NekoExtensionPoint.builder("t08:skipped")
                     .enabledWhen(context -> false)
                     .initializer(context -> new Object())
                     .collector((plugin, acc) -> { })
-                    .finish(acc -> acc)
+                    .finisher(acc -> acc)
                     .build()));
         };
         NekoPluginBootstrap.bootstrap(List.of(provider), new ScriptPropertyRegistry.Impl());
@@ -469,14 +468,11 @@ class Ticket08ExternalAddonChainTest {
         IllegalStateException ex = assertThrows(IllegalStateException.class,
                 () -> NekoPluginRuntime.bootstrapOwned(
                         List.of(owned("owner://t08/typo", provider(registry -> registry.register(
-                                NekoPluginExtensionPoint
-                                        .<NekoJSPlugin, List<String>, List<String>>builder(
-                                                "t08:typo-point", NekoJSPlugin.class)
-                                        .merge(MergePolicy.append())
-                                        .dependsOnId("t08:does-not-exist")
+                                NekoExtensionPoint.builder("t08:typo-point")
+                                        .dependsOn("t08:does-not-exist")
                                         .initializer(context -> new ArrayList<String>())
                                         .collector((plugin, acc) -> { })
-                                        .finish(List::copyOf)
+                                        .finisher(List::copyOf)
                                         .build())))),
                         new ScriptPropertyRegistry.Impl(),
                         com.tkisor.nekojs.testfixture.CoreContractPreviews.emptyPortablePreview()));
@@ -530,13 +526,11 @@ class Ticket08ExternalAddonChainTest {
     }
 
     private static void registerPoint(NekoPluginExtensionRegistry registry, String id, String... dependsOn) {
-        registry.register(NekoPluginExtensionPoint
-                .<NekoJSPlugin, List<String>, List<String>>builder(id, NekoJSPlugin.class)
-                .merge(MergePolicy.append())
-                .dependsOnId(dependsOn)
+        registry.register(NekoExtensionPoint.builder(id)
+                .dependsOn(dependsOn)
                 .initializer(context -> new ArrayList<String>())
                 .collector((plugin, acc) -> { })
-                .finish(List::copyOf)
+                .finisher(List::copyOf)
                 .build());
     }
 

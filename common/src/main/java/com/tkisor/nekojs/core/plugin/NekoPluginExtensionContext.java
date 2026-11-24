@@ -1,5 +1,7 @@
 package com.tkisor.nekojs.core.plugin;
 
+import com.tkisor.nekojs.api.plugin.NekoExtensionPoint;
+
 /**
  * Bootstrap context available while extension points collect: environment information plus the
  * finished products of earlier points.
@@ -32,7 +34,7 @@ public interface NekoPluginExtensionContext {
      *         environment; throws {@link IllegalStateException} (with a fix hint) when the point
      *         is registered but has not finished yet
      */
-    <R> R result(NekoPluginExtensionPoint<?, ?, R> point);
+    <R> R result(NekoExtensionPoint<R> point);
 
     /**
      * Looks up the product of an earlier point by extension point id (optional dependency).
@@ -52,7 +54,7 @@ public interface NekoPluginExtensionContext {
      * @throws IllegalStateException the point is unregistered, skipped by the environment, or
      *                               not finished yet
      */
-    <R> R resultOrThrow(NekoPluginExtensionPoint<?, ?, R> point);
+    <R> R resultOrThrow(NekoExtensionPoint<R> point);
 
     /**
      * Looks up the product of an earlier point by extension point id (required dependency).

@@ -1,6 +1,7 @@
 package com.tkisor.nekojs.core.plugin;
 
 import com.tkisor.nekojs.api.NekoJSPlugin;
+import com.tkisor.nekojs.api.plugin.NekoExtensionPoint;
 import com.tkisor.nekojs.script.prop.ScriptPropertyRegistry;
 
 /**
@@ -29,13 +30,12 @@ public final class ScriptPropertiesPoint {
     }
 
     /** The extension point definition, built when the {@link NekoBuiltinPointsPlugin} list is registered. */
-    public static NekoPluginExtensionPoint<NekoJSPlugin, ScriptPropertyRegistry, ScriptPropertyRegistry> point(
+    public static NekoExtensionPoint<ScriptPropertyRegistry> point(
             ScriptPropertyRegistry scriptProperties) {
-        return NekoPluginExtensionPoint.<NekoJSPlugin, ScriptPropertyRegistry, ScriptPropertyRegistry>builder(ID, NekoJSPlugin.class)
-                .merge(MergePolicy.append())
+        return NekoExtensionPoint.builder(ID)
                 .initializer(context -> scriptProperties)
                 .collector(NekoJSPlugin::registerScriptProperty)
-                .finish(registry -> {
+                .finisher(registry -> {
                     if (registry instanceof ScriptPropertyRegistry.Impl impl) {
                         impl.freeze();
                     }

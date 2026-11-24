@@ -2,6 +2,7 @@ package com.tkisor.nekojs.core.plugin;
 
 import com.tkisor.nekojs.api.NekoJSPlugin;
 import com.tkisor.nekojs.api.ScriptType;
+import com.tkisor.nekojs.api.plugin.NekoExtensionPoint;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -112,11 +113,10 @@ public final class LifecyclePoint {
     }
 
     /** Extension point definition, registered by the {@link NekoBuiltinPointsPlugin} manifest. */
-    public static final NekoPluginExtensionPoint<NekoJSPlugin, Bucket, LifecycleHooks> POINT =
-            NekoPluginExtensionPoint.<NekoJSPlugin, Bucket, LifecycleHooks>builder(ID, NekoJSPlugin.class)
-                    .merge(MergePolicy.append())
+    public static final NekoExtensionPoint<LifecycleHooks> POINT =
+            NekoExtensionPoint.builder(ID)
                     .initializer(context -> new Bucket())
                     .collector(NekoJSPlugin::registerLifecycleHooks)
-                    .finish(Bucket::snapshot)
+                    .finisher(Bucket::snapshot)
                     .build();
 }

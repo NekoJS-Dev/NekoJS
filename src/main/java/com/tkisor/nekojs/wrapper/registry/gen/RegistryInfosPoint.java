@@ -2,8 +2,7 @@ package com.tkisor.nekojs.wrapper.registry.gen;
 //~ mc_legacy_api
 
 import com.tkisor.nekojs.api.NekoJSPlugin;
-import com.tkisor.nekojs.core.plugin.MergePolicy;
-import com.tkisor.nekojs.core.plugin.NekoPluginExtensionPoint;
+import com.tkisor.nekojs.api.plugin.NekoExtensionPoint;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
@@ -109,11 +108,10 @@ public final class RegistryInfosPoint {
     }
 
     /** The extension point definition; NekoRegistryPointsPlugin registers it. */
-    public static final NekoPluginExtensionPoint<Contributor, RegistryInfosCollector, RegistryInfos> POINT =
-            NekoPluginExtensionPoint.<Contributor, RegistryInfosCollector, RegistryInfos>builder(ID, Contributor.class)
-                    .merge(MergePolicy.append())
+    public static final NekoExtensionPoint<RegistryInfos> POINT =
+            NekoExtensionPoint.builder(ID).requirePluginType(Contributor.class)
                     .initializer(context -> new RegistryInfosCollector())
                     .collector(Contributor::registerRegistryInfos)
-                    .finish(RegistryInfosPoint::scan)
+                    .finisher(RegistryInfosPoint::scan)
                     .build();
 }

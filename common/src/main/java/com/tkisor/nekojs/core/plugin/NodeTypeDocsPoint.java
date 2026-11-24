@@ -1,6 +1,7 @@
 package com.tkisor.nekojs.core.plugin;
 
 import com.tkisor.nekojs.api.NekoJSPlugin;
+import com.tkisor.nekojs.api.plugin.NekoExtensionPoint;
 
 /**
  * Built-in extension point {@code nekojs:node_type_docs}, the twin of
@@ -32,11 +33,10 @@ public final class NodeTypeDocsPoint {
     }
 
     /** Extension point definition, registered by the {@link NekoBuiltinPointsPlugin} manifest. */
-    public static final NekoPluginExtensionPoint<NekoJSPlugin, TypeDocsPoint.Bucket, TypeDocsPoint.TypeDocsSnapshot> POINT =
-            NekoPluginExtensionPoint.<NekoJSPlugin, TypeDocsPoint.Bucket, TypeDocsPoint.TypeDocsSnapshot>builder(ID, NekoJSPlugin.class)
-                    .merge(MergePolicy.append())
+    public static final NekoExtensionPoint<TypeDocsPoint.TypeDocsSnapshot> POINT =
+            NekoExtensionPoint.builder(ID)
                     .initializer(context -> new TypeDocsPoint.Bucket())
                     .collector(NekoJSPlugin::registerNodeTypeDocs)
-                    .finish(TypeDocsPoint.Bucket::snapshot)
+                    .finisher(TypeDocsPoint.Bucket::snapshot)
                     .build();
 }

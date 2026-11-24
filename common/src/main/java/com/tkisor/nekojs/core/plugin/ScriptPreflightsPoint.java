@@ -1,6 +1,7 @@
 package com.tkisor.nekojs.core.plugin;
 
 import com.tkisor.nekojs.api.NekoJSPlugin;
+import com.tkisor.nekojs.api.plugin.NekoExtensionPoint;
 import com.tkisor.nekojs.api.preflight.ScriptPreflightRegistry;
 import com.tkisor.nekojs.core.preflight.ScriptPreflightCatalog;
 
@@ -15,12 +16,10 @@ public final class ScriptPreflightsPoint {
         void registerScriptPreflights(ScriptPreflightRegistry registry);
     }
 
-    public static final NekoPluginExtensionPoint<NekoJSPlugin, ScriptPreflightCatalog.Collector, ScriptPreflightCatalog> POINT =
-            NekoPluginExtensionPoint.<NekoJSPlugin, ScriptPreflightCatalog.Collector, ScriptPreflightCatalog>builder(
-                            ID, NekoJSPlugin.class)
-                    .merge(MergePolicy.failFast())
+    public static final NekoExtensionPoint<ScriptPreflightCatalog> POINT =
+            NekoExtensionPoint.builder(ID)
                     .initializer(context -> new ScriptPreflightCatalog.Collector())
                     .collector(NekoJSPlugin::registerScriptPreflights)
-                    .finish(ScriptPreflightCatalog.Collector::freeze)
+                    .finisher(ScriptPreflightCatalog.Collector::freeze)
                     .build();
 }

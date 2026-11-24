@@ -1,7 +1,9 @@
 package com.tkisor.nekojs.core.plugin;
 
+import com.tkisor.nekojs.api.JSTypeAdapter;
 import com.tkisor.nekojs.api.NekoJSPlugin;
 import com.tkisor.nekojs.api.data.JSTypeAdapterRegistry;
+import com.tkisor.nekojs.api.plugin.NekoExtensionPoint;
 
 import java.util.List;
 
@@ -32,11 +34,10 @@ public final class AdaptersPoint {
     }
 
     /** The extension point definition, registered by the {@link NekoBuiltinPointsPlugin} manifest. */
-    public static final NekoPluginExtensionPoint<NekoJSPlugin, JSTypeAdapterRegistry, List<Object>> POINT =
-            NekoPluginExtensionPoint.<NekoJSPlugin, JSTypeAdapterRegistry, List<Object>>builder(ID, NekoJSPlugin.class)
-                    .merge(MergePolicy.append())
+    public static final NekoExtensionPoint<List<JSTypeAdapter<?>>> POINT =
+            NekoExtensionPoint.builder(ID)
                     .initializer(context -> new JSTypeAdapterRegistry.Impl())
                     .collector(NekoJSPlugin::registerAdapters)
-                    .finish(registry -> List.copyOf(registry.view()))
+                    .finisher(registry -> List.copyOf(registry.view()))
                     .build();
 }

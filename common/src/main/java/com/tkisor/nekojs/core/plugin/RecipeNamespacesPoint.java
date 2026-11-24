@@ -1,6 +1,7 @@
 package com.tkisor.nekojs.core.plugin;
 
 import com.tkisor.nekojs.api.NekoJSPlugin;
+import com.tkisor.nekojs.api.plugin.NekoExtensionPoint;
 import com.tkisor.nekojs.api.recipe.RecipeNamespaceEntry;
 
 import java.util.Collections;
@@ -61,11 +62,10 @@ public final class RecipeNamespacesPoint {
     }
 
     /** The extension point definition, registered from the {@link NekoBuiltinPointsPlugin} list. */
-    public static final NekoPluginExtensionPoint<NekoJSPlugin, Bucket, Map<String, RecipeNamespaceEntry>> POINT =
-            NekoPluginExtensionPoint.<NekoJSPlugin, Bucket, Map<String, RecipeNamespaceEntry>>builder(ID, NekoJSPlugin.class)
-                    .merge(MergePolicy.failFast())
+    public static final NekoExtensionPoint<Map<String, RecipeNamespaceEntry>> POINT =
+            NekoExtensionPoint.builder(ID)
                     .initializer(context -> new Bucket())
                     .collector(NekoJSPlugin::registerRecipeNamespaces)
-                    .finish(Bucket::snapshot)
+                    .finisher(Bucket::snapshot)
                     .build();
 }

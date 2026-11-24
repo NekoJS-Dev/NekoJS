@@ -1,6 +1,7 @@
 package com.tkisor.nekojs.core.plugin;
 
 import com.tkisor.nekojs.api.NekoJSPlugin;
+import com.tkisor.nekojs.api.plugin.NekoExtensionPoint;
 import com.tkisor.nekojs.script.prop.ScriptPropertyRegistry;
 import org.junit.jupiter.api.Test;
 
@@ -86,7 +87,7 @@ class PluginHookPairingTest {
     @Test
     void builtinListMatchesPairingTable() {
         Set<String> ids = captureBuiltinRegistrations().stream()
-                .map(NekoPluginExtensionPoint::id)
+                .map(NekoExtensionPoint::id)
                 .collect(Collectors.toSet());
         assertEquals(CHANNELS.stream().map(Channel::pointId).collect(Collectors.toSet()), ids,
                 "内置清单注册的扩展点必须与配对表一致：三件套（Point 文件 + 基接口钩子 + 清单一行）缺一不可");
@@ -94,10 +95,10 @@ class PluginHookPairingTest {
 
     @Test
     void everyCollectedPointTargetsEveryPlugin() {
-        for (NekoPluginExtensionPoint<?, ?, ?> point : captureBuiltinRegistrations()) {
+        for (NekoExtensionPoint<?> point : captureBuiltinRegistrations()) {
             assertTrue(CHANNELS.stream().anyMatch(c -> c.pointId().equals(point.id())),
                     "未登记配对表的内置点: " + point.id());
-            assertSame(NekoJSPlugin.class, point.pluginType(),
+            assertSame(NekoJSPlugin.class, engine(point).pluginType(),
                     point.id() + " 的 pluginType 必须为 NekoJSPlugin.class（收集面 = 所有插件，覆写即参与）");
         }
     }
@@ -147,11 +148,11 @@ class PluginHookPairingTest {
      */
     @Test
     void collectorsAreDeclaredInTheirOwnPointFiles() {
-        Map<String, NekoPluginExtensionPoint<?, ?, ?>> byId = captureBuiltinRegistrations().stream()
-                .collect(Collectors.toMap(NekoPluginExtensionPoint::id, Function.identity()));
+        Map<String, NekoExtensionPoint<?>> byId = captureBuiltinRegistrations().stream()
+                .collect(Collectors.toMap(NekoExtensionPoint::id, Function.identity()));
         for (Channel channel : CHANNELS) {
-            NekoPluginExtensionPoint<?, ?, ?> point = byId.get(channel.pointId());
-            String lambdaClass = point.collector().getClass().getName();
+            NekoExtensionPoint<?> point = byId.get(channel.pointId());
+            String lambdaClass = engine(point).collector().getClass().getName();
             assertTrue(lambdaClass.contains("$Lambda"),
                     channel.pointId() + " 的 collector 应为 lambda/方法引用，实际: " + lambdaClass);
             String enclosing = lambdaClass.substring(0, lambdaClass.indexOf("$Lambda"));
@@ -166,13 +167,12 @@ class PluginHookPairingTest {
      * Captures every built-in point registered by the {@link NekoBuiltinPointsPlugin} list. The
      * handle slot returns null because nothing consumes it during collection.
      */
-    private static List<NekoPluginExtensionPoint<?, ?, ?>> captureBuiltinRegistrations() {
-        List<NekoPluginExtensionPoint<?, ?, ?>> captured = new ArrayList<>();
+    private static List<NekoExtensionPoint<?>> captureBuiltinRegistrations() {
+        List<NekoExtensionPoint<?>> captured = new ArrayList<>();
         // The SAM method declares generic type parameters, which a lambda cannot implement, so use an anonymous class
         NekoPluginExtensionRegistry registry = new NekoPluginExtensionRegistry() {
             @Override
-            public <P extends NekoJSPlugin, A, R> NekoPluginExtensionHandle<R> register(
-                    NekoPluginExtensionPoint<P, A, R> extensionPoint) {
+            public <R> NekoPluginExtensionHandle<R> register(NekoExtensionPoint<R> extensionPoint) {
                 captured.add(extensionPoint);
                 return null;
             }
@@ -180,6 +180,11 @@ class PluginHookPairingTest {
         new NekoBuiltinPointsPlugin(new ScriptPropertyRegistry.Impl(), false)
                 .registerPluginExtensionPoints(registry);
         return captured;
+    }
+
+    /// Engine view of a registered point, for the fields the public contract does not expose.
+    private static NekoExtensionPointImpl<?, ?, ?> engine(NekoExtensionPoint<?> point) {
+        return (NekoExtensionPointImpl<?, ?, ?>) point;
     }
 
     private static Method declaredHook(String name) {

@@ -1,6 +1,7 @@
 package com.tkisor.nekojs.core.plugin;
 
 import com.tkisor.nekojs.api.NekoJSPlugin;
+import com.tkisor.nekojs.api.plugin.NekoExtensionPoint;
 import com.tkisor.nekojs.probe.ProbeBackendRegistry;
 
 /**
@@ -38,12 +39,11 @@ public final class ProbeBackendsPoint {
     }
 
     /** The extension point definition, registered from the {@link NekoBuiltinPointsPlugin} list. */
-    public static final NekoPluginExtensionPoint<NekoJSPlugin, ProbeBackendRegistry, ProbeBackendRegistry> POINT =
-            NekoPluginExtensionPoint.<NekoJSPlugin, ProbeBackendRegistry, ProbeBackendRegistry>builder(ID, NekoJSPlugin.class)
-                    .merge(MergePolicy.failFast())
+    public static final NekoExtensionPoint<ProbeBackendRegistry> POINT =
+            NekoExtensionPoint.builder(ID)
                     .initializer(context -> new ProbeBackendRegistry())
                     .collector(NekoJSPlugin::registerProbeBackends)
-                    .finish(registry -> {
+                    .finisher(registry -> {
                         registry.lock();
                         ProbeBackendRegistry.setInstance(registry);
                         return registry;

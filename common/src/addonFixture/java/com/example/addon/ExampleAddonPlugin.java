@@ -7,10 +7,9 @@ import com.tkisor.nekojs.api.data.BindingRegistry;
 import com.tkisor.nekojs.api.event.EventBusJS;
 import com.tkisor.nekojs.api.event.EventGroup;
 import com.tkisor.nekojs.api.event.EventGroupRegistry;
-import com.tkisor.nekojs.core.plugin.MergePolicy;
+import com.tkisor.nekojs.api.plugin.NekoExtensionPoint;
 import com.tkisor.nekojs.core.plugin.NekoPluginExtensionContext;
 import com.tkisor.nekojs.core.plugin.NekoPluginExtensionHandle;
-import com.tkisor.nekojs.core.plugin.NekoPluginExtensionPoint;
 import com.tkisor.nekojs.core.plugin.NekoPluginExtensionProvider;
 import com.tkisor.nekojs.core.plugin.NekoPluginExtensionRegistry;
 import com.tkisor.nekojs.core.plugin.Sealable;
@@ -97,18 +96,16 @@ public final class ExampleAddonPlugin implements NekoPluginExtensionProvider, Gr
     public void registerPluginExtensionPoints(NekoPluginExtensionRegistry registry) {
         ExampleAddonSurface.get().noteRegistration();
         GREETINGS_HANDLE.set(registry.register(
-                NekoPluginExtensionPoint.<GreetingContributor, GreetingAccumulator, Greetings>builder(
-                        POINT_ID, GreetingContributor.class)
-                        .merge(MergePolicy.append())
+                NekoExtensionPoint.builder(POINT_ID).requirePluginType(GreetingContributor.class)
                         // timing dependency on the built-in bindings point: greetings must finish
                         // after nekojs:bindings so its initializer may read the frozen binding map
-                        .dependsOnId("nekojs:bindings")
+                        .dependsOn("nekojs:bindings")
                         .initializer(ExampleAddonPlugin::newAccumulator)
                         .collector((plugin, accumulator) -> {
                             LAST_ACCUMULATOR.set(accumulator);
                             accumulator.add(plugin.greeting());
                         })
-                        .finish(ExampleAddonPlugin::finishGreetings)
+                        .finisher(ExampleAddonPlugin::finishGreetings)
                         .build()));
     }
 

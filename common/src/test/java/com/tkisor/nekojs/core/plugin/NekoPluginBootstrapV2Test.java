@@ -1,6 +1,7 @@
 package com.tkisor.nekojs.core.plugin;
 
 import com.tkisor.nekojs.api.NekoJSPlugin;
+import com.tkisor.nekojs.api.plugin.NekoExtensionPoint;
 import com.tkisor.nekojs.script.prop.ScriptPropertyRegistry;
 import com.tkisor.nekojs.testfixture.TestPlatformInit;
 import org.junit.jupiter.api.BeforeAll;
@@ -39,18 +40,14 @@ class NekoPluginBootstrapV2Test {
     @Test
     void topoSortReordersRegisteredDependency() {
         NekoPluginExtensionProvider provider = registry -> {
-            NekoPluginExtensionPoint<NekoJSPlugin, List<String>, List<String>> dependency =
-                    NekoPluginExtensionPoint.<NekoJSPlugin, List<String>, List<String>>builder(
-                            "test:dep", NekoJSPlugin.class)
-                            .merge(MergePolicy.append())
+            NekoExtensionPoint<List<String>> dependency =
+                    NekoExtensionPoint.builder("test:dep")
                             .initializer(ctx -> new ArrayList<String>())
                             .collector((plugin, acc) -> acc.add("dep"))
-                            .finish(List::copyOf)
+                            .finisher(List::copyOf)
                             .build();
-            NekoPluginExtensionPoint<NekoJSPlugin, List<String>, List<String>> dependent =
-                    NekoPluginExtensionPoint.<NekoJSPlugin, List<String>, List<String>>builder(
-                            "test:dependent", NekoJSPlugin.class)
-                            .merge(MergePolicy.append())
+            NekoExtensionPoint<List<String>> dependent =
+                    NekoExtensionPoint.builder("test:dependent")
                             .dependsOn(dependency)
                             .initializer(ctx -> {
                                 List<String> acc = new ArrayList<>();
@@ -58,7 +55,7 @@ class NekoPluginBootstrapV2Test {
                                 return acc;
                             })
                             .collector((plugin, acc) -> { })
-                            .finish(List::copyOf)
+                            .finisher(List::copyOf)
                             .build();
             registry.register(dependent);
             registry.register(dependency);
@@ -73,21 +70,17 @@ class NekoPluginBootstrapV2Test {
     @Test
     void dependencyCycleFailsFastWithPath() {
         NekoPluginExtensionProvider provider = registry -> {
-            registry.register(NekoPluginExtensionPoint
-                    .<NekoJSPlugin, List<String>, List<String>>builder("test:a", NekoJSPlugin.class)
-                    .merge(MergePolicy.append())
-                    .dependsOnId("test:b")
+            registry.register(NekoExtensionPoint.builder("test:a")
+                    .dependsOn("test:b")
                     .initializer(ctx -> new ArrayList<String>())
                     .collector((plugin, acc) -> { })
-                    .finish(List::copyOf)
+                    .finisher(List::copyOf)
                     .build());
-            registry.register(NekoPluginExtensionPoint
-                    .<NekoJSPlugin, List<String>, List<String>>builder("test:b", NekoJSPlugin.class)
-                    .merge(MergePolicy.append())
-                    .dependsOnId("test:a")
+            registry.register(NekoExtensionPoint.builder("test:b")
+                    .dependsOn("test:a")
                     .initializer(ctx -> new ArrayList<String>())
                     .collector((plugin, acc) -> { })
-                    .finish(List::copyOf)
+                    .finisher(List::copyOf)
                     .build());
         };
 
@@ -101,13 +94,11 @@ class NekoPluginBootstrapV2Test {
     @Test
     void unknownDependencyIdFailsAtFreeze() {
         NekoPluginExtensionProvider provider = registry -> registry.register(
-                NekoPluginExtensionPoint
-                        .<NekoJSPlugin, List<String>, List<String>>builder("test:typo", NekoJSPlugin.class)
-                        .merge(MergePolicy.append())
-                        .dependsOnId("test:does-not-exist")
+                NekoExtensionPoint.builder("test:typo")
+                        .dependsOn("test:does-not-exist")
                         .initializer(ctx -> new ArrayList<String>())
                         .collector((plugin, acc) -> { })
-                        .finish(List::copyOf)
+                        .finisher(List::copyOf)
                         .build());
 
         IllegalStateException error = assertThrows(IllegalStateException.class,
@@ -119,23 +110,19 @@ class NekoPluginBootstrapV2Test {
     @Test
     void undeclaredDataDependencyThrowsAtReadSite() {
         NekoPluginExtensionProvider provider = registry -> {
-            registry.register(NekoPluginExtensionPoint
-                    .<NekoJSPlugin, List<String>, List<String>>builder("test:reader", NekoJSPlugin.class)
-                    .merge(MergePolicy.append())
+            registry.register(NekoExtensionPoint.builder("test:reader")
                     // Intentionally no dependsOn: reader registers and runs first, then reads the registered but unfinished late
                     .initializer(ctx -> {
                         ctx.resultOrThrow("test:late", List.class);
                         return new ArrayList<String>();
                     })
                     .collector((plugin, acc) -> { })
-                    .finish(List::copyOf)
+                    .finisher(List::copyOf)
                     .build());
-            registry.register(NekoPluginExtensionPoint
-                    .<NekoJSPlugin, List<String>, List<String>>builder("test:late", NekoJSPlugin.class)
-                    .merge(MergePolicy.append())
+            registry.register(NekoExtensionPoint.builder("test:late")
                     .initializer(ctx -> new ArrayList<String>())
                     .collector((plugin, acc) -> { })
-                    .finish(List::copyOf)
+                    .finisher(List::copyOf)
                     .build());
         };
 
@@ -150,9 +137,7 @@ class NekoPluginBootstrapV2Test {
     void accessTiersDifferOnUnregisteredPoint() {
         List<String> observed = new ArrayList<>();
         NekoPluginExtensionProvider provider = registry -> registry.register(
-                NekoPluginExtensionPoint
-                        .<NekoJSPlugin, List<String>, List<String>>builder("test:probe", NekoJSPlugin.class)
-                        .merge(MergePolicy.append())
+                NekoExtensionPoint.builder("test:probe")
                         .initializer(ctx -> {
                             observed.add("optional=" + ctx.result("test:missing", List.class));
                             try {
@@ -163,7 +148,7 @@ class NekoPluginBootstrapV2Test {
                             return new ArrayList<>(observed);
                         })
                         .collector((plugin, acc) -> { })
-                        .finish(List::copyOf)
+                        .finisher(List::copyOf)
                         .build());
 
         NekoPluginBootstrap.bootstrap(List.of(provider), new ScriptPropertyRegistry.Impl());
@@ -179,13 +164,11 @@ class NekoPluginBootstrapV2Test {
     @Test
     void optionalDependencyAbsentDoesNotFailFreeze() {
         NekoPluginExtensionProvider provider = registry -> registry.register(
-                NekoPluginExtensionPoint
-                        .<NekoJSPlugin, List<String>, List<String>>builder("test:reader", NekoJSPlugin.class)
-                        .merge(MergePolicy.append())
-                        .dependsOnOptionalId("test:absent")
+                NekoExtensionPoint.builder("test:reader")
+                        .dependsOnOptional("test:absent")
                         .initializer(ctx -> new ArrayList<String>())
                         .collector((plugin, acc) -> acc.add("ran"))
-                        .finish(List::copyOf)
+                        .finisher(List::copyOf)
                         .build());
 
         NekoPluginRuntime runtime = NekoPluginBootstrap.bootstrap(
@@ -200,24 +183,20 @@ class NekoPluginBootstrapV2Test {
     @Test
     void optionalDependencyPresentOrdersExecution() {
         NekoPluginExtensionProvider provider = registry -> {
-            registry.register(NekoPluginExtensionPoint
-                    .<NekoJSPlugin, List<String>, List<String>>builder("test:reader", NekoJSPlugin.class)
-                    .merge(MergePolicy.append())
-                    .dependsOnOptionalId("test:late")
+            registry.register(NekoExtensionPoint.builder("test:reader")
+                    .dependsOnOptional("test:late")
                     .initializer(ctx -> {
                         List<String> acc = new ArrayList<>();
                         acc.add("seen=" + ctx.resultOrThrow("test:late", List.class));
                         return acc;
                     })
                     .collector((plugin, acc) -> { })
-                    .finish(List::copyOf)
+                    .finisher(List::copyOf)
                     .build());
-            registry.register(NekoPluginExtensionPoint
-                    .<NekoJSPlugin, List<String>, List<String>>builder("test:late", NekoJSPlugin.class)
-                    .merge(MergePolicy.append())
+            registry.register(NekoExtensionPoint.builder("test:late")
                     .initializer(ctx -> new ArrayList<String>())
                     .collector((plugin, acc) -> acc.add("late"))
-                    .finish(List::copyOf)
+                    .finisher(List::copyOf)
                     .build());
         };
 
@@ -285,20 +264,16 @@ class NekoPluginBootstrapV2Test {
         @Override
         public void registerPluginExtensionPoints(NekoPluginExtensionRegistry registry) {
             if (!TypeDocsPoint.ID.equals(docPointId)) {
-                registry.register(NekoPluginExtensionPoint
-                        .<NekoJSPlugin, List<String>, List<String>>builder(docPointId, NekoJSPlugin.class)
-                        .merge(MergePolicy.append())
+                registry.register(NekoExtensionPoint.builder(docPointId)
                         .initializer(ctx -> new ArrayList<String>())
                         .collector((plugin, acc) -> ((LateReadPlugin) plugin).readTypes())
-                        .finish(List::copyOf)
+                        .finisher(List::copyOf)
                         .build());
             }
-            typesHandle = registry.register(NekoPluginExtensionPoint
-                    .<NekoJSPlugin, List<String>, List<String>>builder("nekojs:registry_types", NekoJSPlugin.class)
-                    .merge(MergePolicy.append())
+            typesHandle = registry.register(NekoExtensionPoint.builder("nekojs:registry_types")
                     .initializer(ctx -> new ArrayList<String>())
                     .collector((plugin, acc) -> acc.add("types"))
-                    .finish(List::copyOf)
+                    .finisher(List::copyOf)
                     .build());
         }
 
