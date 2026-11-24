@@ -41,78 +41,83 @@ import java.util.function.Supplier;
  * @param <A>         Accumulator type (mutable state during collection, created per bootstrap round)
  * @param <R>         Artifact type (immutable result produced by finisher)
  */
-public final class NekoPluginExtensionPoint<P extends NekoJSPlugin, A, R> {
-    private final String id;
-    private final Class<P> pluginType;
-    private final Predicate<NekoPluginExtensionContext> enabled;
-    private final Function<NekoPluginExtensionContext, A> initializer;
-    private final BiConsumer<P, A> collector;
-    private final Function<A, R> finisher;
-    private final List<Object> dependsOn;
-    private final List<Object> optionalDependsOn;
-    private final MergePolicy mergePolicy;
-
-    private NekoPluginExtensionPoint(
-            String id,
-            Class<P> pluginType,
-            Predicate<NekoPluginExtensionContext> enabled,
-            Function<NekoPluginExtensionContext, A> initializer,
-            BiConsumer<P, A> collector,
-            Function<A, R> finisher,
-            List<Object> dependsOn,
-            List<Object> optionalDependsOn,
-            MergePolicy mergePolicy) {
+public record NekoPluginExtensionPoint<P extends NekoJSPlugin, A, R>(
+    String id,
+    Class<P> pluginType,
+    Predicate<NekoPluginExtensionContext> enabled,
+    Function<NekoPluginExtensionContext, A> initializer,
+    BiConsumer<P, A> collector,
+    Function<A, R> finisher,
+    List<Object> dependsOn,
+    List<Object> optionalDependsOn,
+    MergePolicy mergePolicy
+) {
+    public NekoPluginExtensionPoint {
         if (id == null || id.isBlank()) {
             throw new IllegalArgumentException("Plugin extension point id must not be blank");
         }
-        Objects.requireNonNull(pluginType, "pluginType");
-        Objects.requireNonNull(enabled, "enabled");
-        Objects.requireNonNull(initializer, "initializer");
-        Objects.requireNonNull(collector, "collector");
-        Objects.requireNonNull(finisher, "finisher");
-        Objects.requireNonNull(mergePolicy, "mergePolicy");
-        this.id = id;
-        this.pluginType = pluginType;
-        this.enabled = enabled;
-        this.initializer = initializer;
-        this.collector = collector;
-        this.finisher = finisher;
-        this.dependsOn = List.copyOf(dependsOn);
-        this.optionalDependsOn = List.copyOf(optionalDependsOn);
-        this.mergePolicy = mergePolicy;
+        Objects.requireNonNull(pluginType, "pluginType required for an extension point");
+        Objects.requireNonNull(enabled, "enabled predicate required for an extension point");
+        Objects.requireNonNull(initializer, "initializer required for an extension point");
+        Objects.requireNonNull(collector, "collector required for an extension point");
+        Objects.requireNonNull(finisher, "finisher required for an extension point");
+        Objects.requireNonNull(mergePolicy, "mergePolicy required for an extension point");
+        dependsOn = List.copyOf(dependsOn);
+        optionalDependsOn = List.copyOf(optionalDependsOn);
     }
 
-    /** Extension point id (globally unique within the same bootstrap round). */
+    /**
+     * Extension point id (globally unique within the same bootstrap round).
+     */
+    @Override
     public String id() {
         return id;
     }
 
-    /** Target plugin type filter. */
+    /**
+     * Target plugin type filter.
+     */
+    @Override
     public Class<P> pluginType() {
         return pluginType;
     }
 
-    /** Environment predicate. */
+    /**
+     * Environment predicate.
+     */
+    @Override
     public Predicate<NekoPluginExtensionContext> enabled() {
         return enabled;
     }
 
-    /** Accumulator factory. */
+    /**
+     * Accumulator factory.
+     */
+    @Override
     public Function<NekoPluginExtensionContext, A> initializer() {
         return initializer;
     }
 
-    /** Collection callback. */
+    /**
+     * Collection callback.
+     */
+    @Override
     public BiConsumer<P, A> collector() {
         return collector;
     }
 
-    /** Finishing function. */
+    /**
+     * Finishing function.
+     */
+    @Override
     public Function<A, R> finisher() {
         return finisher;
     }
 
-    /** Dependency declarations (elements are extension point instances or String ids, immutable). */
+    /**
+     * Dependency declarations (elements are extension point instances or String ids, immutable).
+     */
+    @Override
     public List<Object> dependsOn() {
         return dependsOn;
     }
@@ -121,16 +126,22 @@ public final class NekoPluginExtensionPoint<P extends NekoJSPlugin, A, R> {
      * Optional chronological dependency declarations (elements are extension point instances or String ids, immutable): participates in topological sort only if the target is registered;
      * bootstrap without the target creates no edge (and no early-bang).
      */
+    @Override
     public List<Object> optionalDependsOn() {
         return optionalDependsOn;
     }
 
-    /** Merge policy. */
+    /**
+     * Merge policy.
+     */
+    @Override
     public MergePolicy mergePolicy() {
         return mergePolicy;
     }
 
-    /** Normalize dependency element ids (instance or String). */
+    /**
+     * Normalize dependency element ids (instance or String).
+     */
     static String dependencyId(Object dependency) {
         if (dependency instanceof NekoPluginExtensionPoint<?, ?, ?> point) {
             return point.id();
@@ -140,12 +151,16 @@ public final class NekoPluginExtensionPoint<P extends NekoJSPlugin, A, R> {
 
     // ---- V2 builder (ADR-0001: Sole recommended entry, merge required) ----
 
-    /** Create extension point builder. */
+    /**
+     * Create extension point builder.
+     */
     public static <P extends NekoJSPlugin, A, R> Builder<P, A, R> builder(String id, Class<P> pluginType) {
         return new Builder<>(id, pluginType);
     }
 
-    /** V2 extension point builder: {@code merge} is required (no default provided), dependencies can be declared via point instance or id. */
+    /**
+     * V2 extension point builder: {@code merge} is required (no default provided), dependencies can be declared via point instance or id.
+     */
     public static final class Builder<P extends NekoJSPlugin, A, R> {
         private final String id;
         private final Class<P> pluginType;
@@ -162,49 +177,65 @@ public final class NekoPluginExtensionPoint<P extends NekoJSPlugin, A, R> {
             this.pluginType = pluginType;
         }
 
-        /** Merge policy (required): select one of append, firstWin, overrideWarn, or failFast. */
+        /**
+         * Merge policy (required): select one of append, firstWin, overrideWarn, or failFast.
+         */
         public Builder<P, A, R> merge(MergePolicy policy) {
-            this.mergePolicy = Objects.requireNonNull(policy, "mergePolicy");
+            this.mergePolicy = policy;
             return this;
         }
 
-        /** Environment predicate (defaults to collection in all environments). */
+        /**
+         * Environment predicate (defaults to collection in all environments).
+         */
         public Builder<P, A, R> enabledWhen(Predicate<NekoPluginExtensionContext> predicate) {
-            this.enabled = Objects.requireNonNull(predicate, "predicate");
+            this.enabled = predicate;
             return this;
         }
 
-        /** Client-only collection (equivalent to {@code enabledWhen(NekoPluginExtensionContext::client)}). */
+        /**
+         * Client-only collection (equivalent to {@code enabledWhen(NekoPluginExtensionContext::client)}).
+         */
         public Builder<P, A, R> clientOnly() {
             return enabledWhen(NekoPluginExtensionContext::client);
         }
 
-        /** Accumulator factory (required). */
+        /**
+         * Accumulator factory (required).
+         */
         public Builder<P, A, R> initializer(Function<NekoPluginExtensionContext, A> initializer) {
-            this.initializer = Objects.requireNonNull(initializer, "initializer");
+            this.initializer = initializer;
             return this;
         }
 
-        /** Collection callback (required). */
+        /**
+         * Collection callback (required).
+         */
         public Builder<P, A, R> collector(BiConsumer<P, A> collector) {
-            this.collector = Objects.requireNonNull(collector, "collector");
+            this.collector = collector;
             return this;
         }
 
-        /** Finishing function (required). */
+        /**
+         * Finishing function (required).
+         */
         public Builder<P, A, R> finish(Function<A, R> finisher) {
-            this.finisher = Objects.requireNonNull(finisher, "finisher");
+            this.finisher = finisher;
             return this;
         }
 
-        /** Chronological dependencies: required extension point instances that must complete first (ADR-0002-1). */
+        /**
+         * Chronological dependencies: required extension point instances that must complete first (ADR-0002-1).
+         */
         @SafeVarargs
         public final Builder<P, A, R> dependsOn(NekoPluginExtensionPoint<?, ?, ?>... points) {
             dependencies.addAll(List.of(points));
             return this;
         }
 
-        /** Chronological dependencies: required extension point ids (for cases where static reference to the target instance is not possible). */
+        /**
+         * Chronological dependencies: required extension point ids (for cases where static reference to the target instance is not possible).
+         */
         public Builder<P, A, R> dependsOnId(String... pointIds) {
             dependencies.addAll(List.of(pointIds));
             return this;
@@ -220,30 +251,22 @@ public final class NekoPluginExtensionPoint<P extends NekoJSPlugin, A, R> {
             return this;
         }
 
-        /** Optional chronological dependency id form (the only feasible form when referencing targets across layers; see {@link #dependsOnOptional}). */
+        /**
+         * Optional chronological dependency id form (the only feasible form when referencing targets across layers; see {@link #dependsOnOptional}).
+         */
         public Builder<P, A, R> dependsOnOptionalId(String... pointIds) {
             optionalDependencies.addAll(List.of(pointIds));
             return this;
         }
 
-        /** Build extension point; throws {@link IllegalStateException} if merge, initializer, collector, or finisher is missing. */
+        /**
+         * Build extension point; required-field validation is performed by the constructor.
+         */
         public NekoPluginExtensionPoint<P, A, R> build() {
-            if (mergePolicy == null) {
-                throw new IllegalStateException("Plugin extension point '" + id
-                        + "' requires an explicit merge policy (append/firstWin/overrideWarn/failFast)");
-            }
-            if (initializer == null) {
-                throw new IllegalStateException("Plugin extension point '" + id + "' requires an initializer");
-            }
-            if (collector == null) {
-                throw new IllegalStateException("Plugin extension point '" + id + "' requires a collector");
-            }
-            if (finisher == null) {
-                throw new IllegalStateException("Plugin extension point '" + id + "' requires a finisher");
-            }
             return new NekoPluginExtensionPoint<>(
-                    id, pluginType, enabled, initializer, collector, finisher,
-                    dependencies, optionalDependencies, mergePolicy);
+                id, pluginType, enabled, initializer, collector, finisher,
+                dependencies, optionalDependencies, mergePolicy
+            );
         }
     }
 
