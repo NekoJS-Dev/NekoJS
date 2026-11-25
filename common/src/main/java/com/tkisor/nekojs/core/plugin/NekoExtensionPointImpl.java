@@ -102,9 +102,11 @@ public record NekoExtensionPointImpl<P extends NekoJSPlugin, A, R>(
         }
 
         @Override
-        public Builder<P, A, R> collector(BiConsumer<P, A> collector) {
-            this.collector = collector;
-            return this;
+        public Builder<P, A, A> collector(BiConsumer<P, A> collector) {
+            var builder = this.<P, A, A>castThis();
+            builder.collector = collector;
+            builder.finisher = Function.identity();
+            return builder;
         }
 
         @Override

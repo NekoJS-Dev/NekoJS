@@ -56,7 +56,7 @@ public interface NekoExtensionPoint<R> {
 
         <A_> Builder<P, A_, R> initializer(Function<NekoPluginExtensionContext, A_> initializer);
 
-        Builder<P, A, R> collector(BiConsumer<P, A> collector);
+        Builder<P, A, A> collector(BiConsumer<P, A> collector);
 
         <R_> Builder<P, A, R_> finisher(Function<A, R_> finisher);
 
