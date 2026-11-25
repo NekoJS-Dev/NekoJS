@@ -48,16 +48,26 @@ public interface NekoExtensionPoint<R> {
     Set<String> optionalDependencies();
 
     interface Builder<P extends NekoJSPlugin, A, R> {
+        /// Sets the condition on which this point should be enabled
         Builder<P, A, R> enabledWhen(Predicate<NekoPluginExtensionContext> predicate);
 
+        /// Only enable this point when in client. This will override any previous [#enabledWhen] call
         Builder<P, A, R> clientOnly();
 
+        /// Only plugins that are instances of this type will reach `collector`. When omitted, all
+        /// plugins are considered valid.
         <P_ extends NekoJSPlugin> Builder<P_, A, R> requirePluginType(Class<P_> pluginType);
 
+        /// Required. Initializer creates a mutable accumulator object for [#collector] to use. It
+        /// receives [NekoPluginExtensionContext] for reading result from previous points
         <A_> Builder<P, A_, R> initializer(Function<NekoPluginExtensionContext, A_> initializer);
 
+        /// Required. Defines how a plugin might contribute to accumulator
         Builder<P, A, A> collector(BiConsumer<P, A> collector);
 
+        /// Transform the accumulator to the final result, called after all plugins have been
+        /// [collected](#collector). When this is omitted, the accumulator itself will be considered
+        /// as the final result.
         <R_> Builder<P, A, R_> finisher(Function<A, R_> finisher);
 
         Builder<P, A, R> dependsOn(NekoExtensionPoint<?>... points);
