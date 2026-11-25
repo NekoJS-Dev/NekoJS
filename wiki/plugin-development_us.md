@@ -338,12 +338,12 @@ public final class MachinesPoint {
         default void registerMachines(MachineCollector collector) {}
     }
 
-    public static final NekoPluginExtensionPoint<Contributor, MachineCollector, List<Machine>> POINT =
-            NekoPluginExtensionPoint.<Contributor, MachineCollector, List<Machine>>builder(ID, Contributor.class)
-                    .merge(MergePolicy.append())
+    public static final NekoExtensionPoint<List<Machine>> POINT =
+            NekoExtensionPoint.builder(ID)
+                    .requirePluginType(Contributor.class)
                     .initializer(ctx -> new MachineCollector())
                     .collector(Contributor::registerMachines)
-                    .finish(MachineCollector::snapshot)
+                    .finisher(MachineCollector::snapshot)
                     .build();
 }
 ```
@@ -368,11 +368,12 @@ public class MyAddonPlugin implements NekoPluginExtensionProvider {
 
 Rules:
 
-- `initializer`, `collector`, `merge` and `finish` are all required; if one is missing, `build()` throws `IllegalStateException`.
-- `merge` has no default. Choose a conflict policy: `append()`, `firstWin()`, `overrideWarn()` or `failFast()`.
-- The ID must be globally unique, including against the built-in `nekojs:*` IDs; a duplicate throws `IllegalArgumentException`. Use `<your modid>:<name>`.
+- `initializer`, `collector` and `finisher` are all required; `build()` fails with a `NullPointerException` naming the missing one.
+- `builder(id)` collects from every plugin. Chain `requirePluginType(...)` before `collector(...)` to narrow it; the collector then receives your type.
+- The ID must be globally unique, including against the built-in `nekojs:*` IDs; a duplicate throws `IllegalArgumentException`. An empty or blank ID is rejected too. Use `<your modid>:<name>`.
 - Extension points can only be registered inside `registerPluginExtensionPoints`; registering later throws `IllegalStateException`.
-- If you need another point's result, declare it with `dependsOn(...)`.
+- If you need another point's result, declare it with `dependsOn(...)`; use `dependsOnOptional(...)` when the target may be absent in some environment. Both accept point instances or plain IDs.
+- Conflict handling is the accumulator's own business: a keyed accumulator decides inside its `register` method whether a duplicate wins, warns, or throws. There is no per-point policy switch.
 - `MachineCollector` and `Machine` are your own types, not NekoJS API.
 
 Each built-in hook corresponds to an `XxxPoint` in the `com.tkisor.nekojs.core.plugin` package. Overriding the `NekoJSPlugin` hook and implementing the matching `XxxPoint.Contributor` interface have exactly the same effect.
