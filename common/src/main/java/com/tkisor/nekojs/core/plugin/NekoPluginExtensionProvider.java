@@ -1,6 +1,7 @@
 package com.tkisor.nekojs.core.plugin;
 
 import com.tkisor.nekojs.api.NekoJSPlugin;
+import com.tkisor.nekojs.api.plugin.NekoExtensionPoint;
 
 /**
  * Lets third-party plugins define their own collection points, which run in the same batch as
@@ -8,7 +9,7 @@ import com.tkisor.nekojs.api.NekoJSPlugin;
  *
  * <p>A plugin that implements both {@link NekoJSPlugin} and this interface receives one
  * {@link #registerPluginExtensionPoints} callback during the extension point registration
- * phase of a bootstrap. There it registers any number of {@link NekoPluginExtensionPoint}
+ * phase of a bootstrap. There it registers any number of {@link NekoExtensionPoint}
  * instances with the {@link NekoPluginExtensionRegistry}; each registration returns a
  * {@link NekoPluginExtensionHandle} that fetches the point's finisher product once the
  * bootstrap completes. After registration ends (the registry freezes), every point, built-in

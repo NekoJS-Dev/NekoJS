@@ -1,6 +1,6 @@
 package com.tkisor.nekojs.core.plugin;
 
-import com.tkisor.nekojs.api.NekoJSPlugin;
+import com.tkisor.nekojs.api.plugin.NekoExtensionPoint;
 
 public interface NekoPluginExtensionRegistry {
     /**
@@ -8,7 +8,10 @@ public interface NekoPluginExtensionRegistry {
      * fetches its product after the bootstrap completes.
      *
      * @throws IllegalStateException    the registration window is closed (the registry has frozen)
-     * @throws IllegalArgumentException the extension point id is already used in this bootstrap
+     * @throws IllegalArgumentException the extension point id is already used in this bootstrap, or
+     *                                  the instance was not produced by
+     *                                  {@link NekoExtensionPoint#builder}, which the engine needs
+     *                                  to reach the collection callbacks
      */
-    <P extends NekoJSPlugin, A, R> NekoPluginExtensionHandle<R> register(NekoPluginExtensionPoint<P, A, R> extensionPoint);
+    <R> NekoPluginExtensionHandle<R> register(NekoExtensionPoint<R> extensionPoint);
 }

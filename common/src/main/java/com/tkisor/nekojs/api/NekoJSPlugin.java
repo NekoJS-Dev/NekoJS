@@ -26,7 +26,7 @@ import java.util.Set;
  * NekoJS plugin interface—the sole entry point for authors (dual-form model, ADR-0010).
  *
  * <p>The source of truth for each channel is a self-contained extension point ({@code XxxPoint} in the {@code core.plugin} package:
- * MergePolicy / initializer / finisher / dependsOn are all within the point file). Methods in this interface are
+ * initializer / collector / finisher / dependsOn are all within the point file). Methods in this interface are
  * facade projections of these points—overriding base interface hooks (recommended, simplest) and implementing {@code XxxPoint.Contributor}
  * (explicit form) are collected by the same point, with equivalent effects. Pairing invariants are guaranteed by
  * {@code PluginHookPairingTest}: <b>Methods added to this interface must be paired with a Point or included in the exemption list</b>,
@@ -62,7 +62,7 @@ public interface NekoJSPlugin {
     int CORE_PRIORITY = Integer.MAX_VALUE;
 
     // =====================================================================================
-    // Registration side (collection-based hooks): collected during bootstrap; conflicts are resolved by each channel's Point MergePolicy.
+    // Registration side (collection-based hooks): collected during bootstrap; conflicts are resolved by the accumulator each channel's Point builds.
     // =====================================================================================
 
     // ---- Event Groups ----

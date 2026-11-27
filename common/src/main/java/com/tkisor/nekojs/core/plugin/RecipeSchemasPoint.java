@@ -1,6 +1,7 @@
 package com.tkisor.nekojs.core.plugin;
 
 import com.tkisor.nekojs.api.NekoJSPlugin;
+import com.tkisor.nekojs.api.plugin.NekoExtensionPoint;
 import com.tkisor.nekojs.api.recipe.definition.RecipeTypeDefinition;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -74,11 +75,10 @@ public final class RecipeSchemasPoint {
     }
 
     /** The extension point definition, registered from the {@link NekoBuiltinPointsPlugin} list. */
-    public static final NekoPluginExtensionPoint<NekoJSPlugin, Bucket, Map<String, Map<String, RecipeTypeDefinition>>> POINT =
-            NekoPluginExtensionPoint.<NekoJSPlugin, Bucket, Map<String, Map<String, RecipeTypeDefinition>>>builder(ID, NekoJSPlugin.class)
-                    .merge(POLICY)
+    public static final NekoExtensionPoint<Map<String, Map<String, RecipeTypeDefinition>>> POINT =
+            NekoExtensionPoint.builder(ID)
                     .initializer(context -> new Bucket())
                     .collector(NekoJSPlugin::registerRecipeSchemas)
-                    .finish(Bucket::snapshot)
+                    .finisher(Bucket::snapshot)
                     .build();
 }

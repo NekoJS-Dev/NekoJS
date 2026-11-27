@@ -4,6 +4,7 @@ import com.tkisor.nekojs.api.NekoJSPlugin;
 import com.tkisor.nekojs.api.ScriptType;
 import com.tkisor.nekojs.api.data.Binding;
 import com.tkisor.nekojs.api.data.BindingRegistry;
+import com.tkisor.nekojs.api.plugin.NekoExtensionPoint;
 import com.tkisor.nekojs.script.ScriptTypedValue;
 
 import java.util.Map;
@@ -63,26 +64,25 @@ public final class BindingsPoint {
 
     /** The extension point definition, built when the {@link NekoBuiltinPointsPlugin} manifest
      * registers it. */
-    public static NekoPluginExtensionPoint<NekoJSPlugin, ScriptTypedValue<BindingRegistry>, Map<ScriptType, Map<String, Binding>>> point(
+    public static NekoExtensionPoint<Map<ScriptType, Map<String, Binding>>> point(
             boolean client) {
         return point(client, plugin -> PluginOwnerIds.resolve(null, plugin));
     }
 
-    static NekoPluginExtensionPoint<NekoJSPlugin, ScriptTypedValue<BindingRegistry>, Map<ScriptType, Map<String, Binding>>> point(
+    static NekoExtensionPoint<Map<ScriptType, Map<String, Binding>>> point(
             boolean client, java.util.function.Function<NekoJSPlugin, String> ownerResolver) {
         var predicate = NekoPluginBootstrap.bindingPredicate(client);
-        return NekoPluginExtensionPoint.<NekoJSPlugin, ScriptTypedValue<BindingRegistry>, Map<ScriptType, Map<String, Binding>>>builder(ID, NekoJSPlugin.class)
-                .merge(MergePolicy.append())
+        return NekoExtensionPoint.builder(ID)
                 .initializer(context -> ScriptTypedValue.of(BindingRegistry.BindingRegistryImpl::new))
                 .collector((plugin, registries) -> {
                     String owner = PluginOwnerIds.resolve(
                             ownerResolver != null ? ownerResolver.apply(plugin) : null, plugin);
                     predicate.streamMatched()
                             .map(registries::at)
-                            .map(registry -> ((BindingRegistry.BindingRegistryImpl) registry).scopedTo(owner))
+                            .map(registry -> registry.scopedTo(owner))
                             .forEach(plugin::registerBinding);
                 })
-                .finish(NekoPluginBootstrap::freezeBindings)
+                .finisher(NekoPluginBootstrap::freezeBindings)
                 .build();
     }
 }

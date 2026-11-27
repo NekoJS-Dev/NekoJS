@@ -1,6 +1,7 @@
 package com.tkisor.nekojs.core.plugin;
 
 import com.tkisor.nekojs.api.NekoJSPlugin;
+import com.tkisor.nekojs.api.plugin.NekoExtensionPoint;
 import com.tkisor.nekojs.api.recipe.RecipeLifecycleContext;
 
 import java.util.ArrayList;
@@ -80,11 +81,10 @@ public final class RecipeLifecyclePoint {
     }
 
     /** The extension point definition, registered from the {@link NekoBuiltinPointsPlugin} list. */
-    public static final NekoPluginExtensionPoint<NekoJSPlugin, Bucket, RecipeLifecycleHooks> POINT =
-            NekoPluginExtensionPoint.<NekoJSPlugin, Bucket, RecipeLifecycleHooks>builder(ID, NekoJSPlugin.class)
-                    .merge(MergePolicy.append())
+    public static final NekoExtensionPoint<RecipeLifecycleHooks> POINT =
+            NekoExtensionPoint.builder(ID)
                     .initializer(context -> new Bucket())
                     .collector(NekoJSPlugin::registerRecipeLifecycleHooks)
-                    .finish(Bucket::snapshot)
+                    .finisher(Bucket::snapshot)
                     .build();
 }

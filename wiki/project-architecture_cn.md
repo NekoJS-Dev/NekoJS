@@ -119,7 +119,7 @@ Fabric 没有全类路径注解扫描。新增一个没有平台守卫的内置�
 
 - **内置点先注册**。`NekoBuiltinPointsPlugin` 是全部内置扩展点的总清单，由 bootstrap 直接构造并最先执行，不受插件 priority 影响。新增内置扩展点 = 一个自包含的 `XxxPoint` 文件 + 这份清单里的一行。
 - **点之间可以有依赖**。后面的点可以读取前面点的产物。bootstrap 冻结时按依赖做拓扑排序，有环或依赖了未注册的点会立刻报错。
-- **第三方可以定义自己的扩展点**。实现 `NekoPluginExtensionProvider`，在 `registerPluginExtensionPoints` 里注册 `NekoPluginExtensionPoint`，返回的 handle 在引导完成后取产物。写法见 [插件开发](plugin-development_cn)。
+- **第三方可以定义自己的扩展点**。实现 `NekoPluginExtensionProvider`，在 `registerPluginExtensionPoints` 里注册 `NekoExtensionPoint`，返回的 handle 在引导完成后取产物。写法见 [插件开发](plugin-development_cn)。
 
 所有产物汇总到 `NekoPluginRuntime`。它在进程里只引导一次，之后只读。普通 reload 只切换脚本代，不会重新引导插件运行时，所以插件的产物（绑定、适配器、事件组、编译器等）在 reload 之间保持不变。
 

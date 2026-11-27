@@ -7,6 +7,7 @@ import com.tkisor.nekojs.api.event.EventBusJS;
 import com.tkisor.nekojs.api.event.EventGroup;
 import com.tkisor.nekojs.api.event.EventGroupRegistry;
 import com.tkisor.nekojs.api.event.ModuleEventGroup;
+import com.tkisor.nekojs.api.plugin.NekoExtensionPoint;
 import com.tkisor.nekojs.api.surface.LegacyGlobalReservation;
 import com.tkisor.nekojs.core.module.NodeModuleRegister;
 import com.tkisor.nekojs.platform.IPlatform;
@@ -65,23 +66,19 @@ class NekoPluginExtensionPointTest {
 
         @Override
         public void registerPluginExtensionPoints(NekoPluginExtensionRegistry registry) {
-            NekoPluginExtensionPoint<NekoJSPlugin, List<String>, List<String>> first =
-                    NekoPluginExtensionPoint.<NekoJSPlugin, List<String>, List<String>>builder(
-                            "test:first",
-                            NekoJSPlugin.class)
-                            .merge(MergePolicy.append())
+            NekoExtensionPoint<List<String>> first =
+                    NekoExtensionPoint.builder("test:first")
                             .initializer(context -> new ArrayList<String>())
                             .collector((plugin, acc) -> acc.add("first:" + plugin.getClass().getSimpleName()))
-                            .finish(acc -> List.copyOf(acc))
+                            .finisher(acc -> List.copyOf(acc))
                             .build();
             firstHandle = registry.register(first);
-            registry.register(NekoPluginExtensionPoint
-                    .<NekoJSPlugin, SecondAccumulator, List<String>>builder("test:second", NekoJSPlugin.class)
-                    .merge(MergePolicy.append())
+            registry.register(NekoExtensionPoint
+                    .builder("test:second")
                     .initializer(context -> new SecondAccumulator(context))
                     .collector((plugin, acc) -> acc.record("second:" + plugin.getClass().getSimpleName()
                             + ":firstProduct=" + acc.context().result("test:first", List.class)))
-                    .finish(acc -> List.copyOf(acc.records))
+                    .finisher(acc -> List.copyOf(acc.records))
                     .build());
         }
     }

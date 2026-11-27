@@ -119,7 +119,7 @@ The discovered classes go to `NekoJSBasePluginManager`, which filters them by `c
 
 - **Built-in points come first.** `NekoBuiltinPointsPlugin` is the full list of built-in Extension Points. Bootstrap constructs it directly and runs it first, regardless of plugin priority. Adding a built-in Extension Point means one self-contained `XxxPoint` file plus one line in that list.
 - **Points can depend on each other.** A later point can read an earlier point's result. When bootstrap freezes the point list it sorts the points by dependency; a cycle or a dependency on an unregistered point fails immediately.
-- **Third parties can define their own points.** Implement `NekoPluginExtensionProvider`, register a `NekoPluginExtensionPoint` in `registerPluginExtensionPoints`, and read the result from the returned handle after bootstrap. See [Plugin development](plugin-development_us).
+- **Third parties can define their own points.** Implement `NekoPluginExtensionProvider`, register a `NekoExtensionPoint` in `registerPluginExtensionPoints`, and read the result from the returned handle after bootstrap. See [Plugin development](plugin-development_us).
 
 All results end up in `NekoPluginRuntime`. It is bootstrapped once per process and is read-only afterwards. Ordinary reload only switches script generations and never bootstraps the Plugin Runtime again, so plugin products (Bindings, adapters, Event Groups, compilers and so on) stay the same across reloads.
 

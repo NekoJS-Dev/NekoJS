@@ -7,6 +7,7 @@ import com.tkisor.nekojs.api.contract.VerifiedApiContract;
 import com.tkisor.nekojs.api.contract.VerifiedContractSet;
 import com.tkisor.nekojs.api.data.Binding;
 import com.tkisor.nekojs.api.data.BindingRegistry;
+import com.tkisor.nekojs.api.plugin.NekoExtensionPoint;
 import com.tkisor.nekojs.api.plugin.OwnedPlugin;
 import com.tkisor.nekojs.api.surface.ApiContributionRegistry;
 import com.tkisor.nekojs.api.surface.ApiRuntimeProvider;
@@ -144,13 +145,13 @@ public final class NekoPluginBootstrap {
                 provider.registerPluginExtensionPoints(registry.scopedTo(label));
             }
         }
-        List<NekoPluginExtensionPoint<?, ?, ?>> extensionPoints = registry.freeze();
+        var extensionPoints = registry.freeze();
         context.registeredIds(extensionPoints.stream()
-                .map(NekoPluginExtensionPoint::id)
+                .map(NekoExtensionPoint::id)
                 .collect(Collectors.toList()));
 
         Map<String, Object> products = new LinkedHashMap<>();
-        for (NekoPluginExtensionPoint<?, ?, ?> extensionPoint : extensionPoints) {
+        for (var extensionPoint : extensionPoints) {
             if (!extensionPoint.enabled().test(context)) {
                 context.markSkipped(extensionPoint.id());
                 continue;
@@ -163,15 +164,18 @@ public final class NekoPluginBootstrap {
         return Collections.unmodifiableMap(products);
     }
 
-    /** Collection for a single extension point: init accumulator → iterate plugin collectors (in order) → finisher produces results → seal accumulator. */
+    /// Collection for a single point: init accumulator → run the plugin collectors in order → finisher
+    /// produces the product → seal. The wildcard engine view is refined to `P`/`A` here, the only
+    /// place that needs them.
     private static <P extends NekoJSPlugin, A> Object collectPoint(
-            NekoPluginExtensionPoint<P, A, ?> extensionPoint,
+            NekoExtensionPointImpl<P, A, ?> extensionPoint,
             List<NekoJSPlugin> plugins,
             NekoPluginExtensionContext context) {
         A accumulator = extensionPoint.initializer().apply(context);
+        Class<P> pluginType = extensionPoint.pluginType();
         for (NekoJSPlugin plugin : plugins) {
-            if (extensionPoint.pluginType().isInstance(plugin)) {
-                extensionPoint.collector().accept(extensionPoint.pluginType().cast(plugin), accumulator);
+            if (pluginType.isInstance(plugin)) {
+                extensionPoint.collector().accept(pluginType.cast(plugin), accumulator);
             }
         }
         Object product = extensionPoint.finisher().apply(accumulator);
@@ -214,7 +218,7 @@ public final class NekoPluginBootstrap {
         return List.copyOf(keys);
     }
 
-    static Map<ScriptType, Map<String, Binding>> freezeBindings(ScriptTypedValue<BindingRegistry> registries) {
+    static Map<ScriptType, Map<String, Binding>> freezeBindings(ScriptTypedValue<? extends BindingRegistry> registries) {
         Map<ScriptType, Map<String, Binding>> globals = registries.stream()
                 .collect(Collectors.toMap(BindingRegistry::scriptType, reg -> Map.copyOf(reg.viewRegistered())));
         var modules = registries.stream().flatMap(reg -> reg.moduleBindings().stream()).toList();
@@ -228,7 +232,7 @@ public final class NekoPluginBootstrap {
 
     /** Registration registry for a single bootstrap: registration window closes after freeze (synchronized with collection phase). */
     private static final class ExtensionRegistry {
-        private final Map<String, NekoPluginExtensionPoint<?, ?, ?>> extensionPoints = new LinkedHashMap<>();
+        private final Map<String, NekoExtensionPointImpl<?, ?, ?>> extensionPoints = new LinkedHashMap<>();
         private final Map<String, NekoPluginExtensionHandle<Object>> handles = new LinkedHashMap<>();
         /** Extension point id to the label of the addon that registered it, so failure output can name
          * the addon. */
@@ -243,8 +247,7 @@ public final class NekoPluginBootstrap {
         NekoPluginExtensionRegistry scopedTo(String ownerLabel) {
             return new NekoPluginExtensionRegistry() {
                 @Override
-                public <P extends NekoJSPlugin, A, R> NekoPluginExtensionHandle<R> register(
-                        NekoPluginExtensionPoint<P, A, R> extensionPoint) {
+                public <R> NekoPluginExtensionHandle<R> register(NekoExtensionPoint<R> extensionPoint) {
                     if (frozen) {
                         throw new IllegalStateException("Plugin extension registry is frozen after bootstrap"
                                 + " collection; late registration of '" + extensionPoint.id()
@@ -256,18 +259,23 @@ public final class NekoPluginBootstrap {
             };
         }
 
-        <P extends NekoJSPlugin, A, R> NekoPluginExtensionHandle<R> register(
-                NekoPluginExtensionPoint<P, A, R> extensionPoint, String ownerLabel) {
+        <R> NekoPluginExtensionHandle<R> register(NekoExtensionPoint<R> extensionPoint, String ownerLabel) {
+            Objects.requireNonNull(extensionPoint, "extensionPoint");
             if (frozen) {
                 throw new IllegalStateException("Plugin extension registry is frozen after bootstrap"
                         + " collection; registration of '" + extensionPoint.id() + "' is rejected");
+            }
+            if (!(extensionPoint instanceof NekoExtensionPointImpl<?, ?, ?> impl)) {
+                throw new IllegalArgumentException("Plugin extension point '" + extensionPoint.id()
+                        + "' (registered by plugin '" + ownerLabel + "') was not built through"
+                        + " NekoExtensionPoint.builder(...); the engine cannot reach its collection callbacks");
             }
             if (extensionPoints.containsKey(extensionPoint.id())) {
                 throw new IllegalArgumentException("Plugin extension point '" + extensionPoint.id()
                         + "' is already registered by plugin '" + registrants.get(extensionPoint.id())
                         + "'; duplicate registration by plugin '" + ownerLabel + "' is rejected");
             }
-            extensionPoints.put(extensionPoint.id(), extensionPoint);
+            extensionPoints.put(extensionPoint.id(), impl);
             registrants.put(extensionPoint.id(), ownerLabel);
             NekoPluginExtensionHandle<R> handle = new NekoPluginExtensionHandle<>(extensionPoint.id());
             @SuppressWarnings("unchecked")
@@ -276,14 +284,13 @@ public final class NekoPluginBootstrap {
             return handle;
         }
 
-        List<NekoPluginExtensionPoint<?, ?, ?>> freeze() {
+        List<NekoExtensionPointImpl<?, ?, ?>> freeze() {
             frozen = true;
             // ADR-0002 ①: Fail early on unregistered dependency IDs (typos exposed before collection starts). Optional dependencies
-            // (dependsOnOptionalId) do not trigger fail-early: bootstrap missing the other side (e.g., common tests without version tree
-            // plugins) do not build edges and do not error, see NekoPluginExtensionPoint javadoc ③
-            for (NekoPluginExtensionPoint<?, ?, ?> point : extensionPoints.values()) {
-                for (Object dependency : point.dependsOn()) {
-                    String depId = NekoPluginExtensionPoint.dependencyId(dependency);
+            // (dependsOnOptional) do not trigger fail-early: a bootstrap missing the other side (e.g., common tests without version tree
+            // plugins) does not build the edge and does not error, see NekoExtensionPoint#optionalDependencies
+            for (NekoExtensionPoint<?> point : extensionPoints.values()) {
+                for (String depId : point.dependencies()) {
                     if (!extensionPoints.containsKey(depId)) {
                         throw new IllegalStateException("Plugin extension point '" + point.id()
                                 + "' (registered by plugin '" + registrants.get(point.id())
@@ -299,21 +306,20 @@ public final class NekoPluginBootstrap {
                 inDegree.put(id, 0);
                 dependents.put(id, new ArrayList<>());
             }
-            for (NekoPluginExtensionPoint<?, ?, ?> point : extensionPoints.values()) {
-                for (Object dependency : point.dependsOn()) {
-                    dependents.get(NekoPluginExtensionPoint.dependencyId(dependency)).add(point.id());
+            for (NekoExtensionPoint<?> point : extensionPoints.values()) {
+                for (String depId : point.dependencies()) {
+                    dependents.get(depId).add(point.id());
                     inDegree.merge(point.id(), 1, Integer::sum);
                 }
                 // Optional temporal dependency: build edges only if the other side is registered (equivalent to hard dependency if present, includes cycle detection)
-                for (Object dependency : point.optionalDependsOn()) {
-                    String depId = NekoPluginExtensionPoint.dependencyId(dependency);
+                for (String depId : point.optionalDependencies()) {
                     if (extensionPoints.containsKey(depId)) {
                         dependents.get(depId).add(point.id());
                         inDegree.merge(point.id(), 1, Integer::sum);
                     }
                 }
             }
-            List<NekoPluginExtensionPoint<?, ?, ?>> order = new ArrayList<>();
+            List<NekoExtensionPointImpl<?, ?, ?>> order = new ArrayList<>();
             java.util.Deque<String> ready = new java.util.ArrayDeque<>();
             for (String id : extensionPoints.keySet()) {
                 if (inDegree.get(id) == 0) {
@@ -380,7 +386,7 @@ public final class NekoPluginBootstrap {
 
         @Override
         @SuppressWarnings("unchecked")
-        public <R> R result(NekoPluginExtensionPoint<?, ?, R> point) {
+        public <R> R result(NekoExtensionPoint<R> point) {
             return (R) lookup(point.id());
         }
 
@@ -395,7 +401,7 @@ public final class NekoPluginBootstrap {
 
         @Override
         @SuppressWarnings("unchecked")
-        public <R> R resultOrThrow(NekoPluginExtensionPoint<?, ?, R> point) {
+        public <R> R resultOrThrow(NekoExtensionPoint<R> point) {
             return (R) require(point.id());
         }
 

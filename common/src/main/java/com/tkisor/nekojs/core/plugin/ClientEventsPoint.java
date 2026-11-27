@@ -3,6 +3,7 @@ package com.tkisor.nekojs.core.plugin;
 import com.tkisor.nekojs.api.NekoJSPlugin;
 import com.tkisor.nekojs.api.event.EventGroup;
 import com.tkisor.nekojs.api.event.EventGroupRegistry;
+import com.tkisor.nekojs.api.plugin.NekoExtensionPoint;
 
 import java.util.Map;
 
@@ -41,13 +42,12 @@ public final class ClientEventsPoint {
     }
 
     /** The extension point definition, registered by the {@link NekoBuiltinPointsPlugin} manifest. */
-    public static final NekoPluginExtensionPoint<NekoJSPlugin, EventGroupRegistry, Map<String, EventGroup>> POINT =
+    public static final NekoExtensionPoint<Map<String, EventGroup>> POINT =
             point(plugin -> PluginOwnerIds.resolve(null, plugin));
 
-    static NekoPluginExtensionPoint<NekoJSPlugin, EventGroupRegistry, Map<String, EventGroup>> point(
+    static NekoExtensionPoint<Map<String, EventGroup>> point(
             java.util.function.Function<NekoJSPlugin, String> ownerResolver) {
-        return NekoPluginExtensionPoint.<NekoJSPlugin, EventGroupRegistry, Map<String, EventGroup>>builder(ID, NekoJSPlugin.class)
-                    .merge(MergePolicy.failFast())
+        return NekoExtensionPoint.builder(ID)
                     .clientOnly()
                     .dependsOn(EventsPoint.POINT)
                     .initializer(context -> {
@@ -72,7 +72,7 @@ public final class ClientEventsPoint {
                                 ownerResolver != null ? ownerResolver.apply(plugin) : null, plugin);
                         plugin.registerClientEvents(((EventGroupRegistry.Impl) accumulator).scopedTo(owner));
                     })
-                    .finish(EventsPoint::freezeEventGroups)
+                    .finisher(EventsPoint::freezeEventGroups)
                     .build();
     }
 }

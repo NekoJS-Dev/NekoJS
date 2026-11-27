@@ -7,6 +7,7 @@ import com.tkisor.nekojs.api.catalog.BeanAliasExclusionCatalogEntry;
 import com.tkisor.nekojs.api.catalog.BeanMethodProjectionCatalogEntry;
 import com.tkisor.nekojs.api.catalog.RegistryBuilderSurfaceEntry;
 import com.tkisor.nekojs.api.catalog.TypeDocCatalogEntry;
+import com.tkisor.nekojs.api.plugin.NekoExtensionPoint;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -126,12 +127,11 @@ public final class TypeDocsPoint {
     }
 
     /** The extension point definition, registered from the {@link NekoBuiltinPointsPlugin} list. */
-    public static final NekoPluginExtensionPoint<NekoJSPlugin, Bucket, TypeDocsSnapshot> POINT =
-            NekoPluginExtensionPoint.<NekoJSPlugin, Bucket, TypeDocsSnapshot>builder(ID, NekoJSPlugin.class)
-                    .merge(MergePolicy.append())
+    public static final NekoExtensionPoint<TypeDocsSnapshot> POINT =
+            NekoExtensionPoint.builder(ID)
                     .initializer(context -> new Bucket())
                     .collector(NekoJSPlugin::registerTypeDocs)
-                    .finish(Bucket::snapshot)
+                    .finisher(Bucket::snapshot)
                     // Optional ordering dependency. The version-tree plugin (NekoRegistryPointsPlugin) reads the
                     // registry_types output in registerTypeDocs to derive typed Builder entries, and that
                     // point is defined in the version tree, so common cannot reference its type here and
@@ -139,6 +139,6 @@ public final class TypeDocsPoint {
                     // the id stays unregistered and no edge is added. Without this edge, type_docs runs
                     // first because it is built in and registered earlier, and registry_types then throws
                     // "has not finished yet".
-                    .dependsOnOptionalId("nekojs:registry_types")
+                    .dependsOnOptional("nekojs:registry_types")
                     .build();
 }

@@ -8,10 +8,9 @@ import org.slf4j.Logger;
  * {@code overrideWarn} (the new value replaces the old one, plus a warning) and
  * {@code failFast} (a duplicate key throws immediately).
  *
- * <p>Each extension point declares its policy explicitly through the builder call
- * {@code merge(...)}; there is no default. A keyed accumulator calls {@link #resolveDuplicate}
- * when a second contribution arrives for the same key, and the policy decides whether the old
- * or the new value wins. A list-style (append) accumulator never calls it.
+ * <p>A keyed accumulator owns its tier and calls {@link #resolveDuplicate} when a second
+ * contribution arrives for the same key; the tier decides whether the old or the new value wins.
+ * A list-style accumulator never calls it.
  */
 public final class MergePolicy {
 

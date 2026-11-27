@@ -1,6 +1,7 @@
 package com.tkisor.nekojs.core.plugin;
 
 import com.tkisor.nekojs.api.NekoJSPlugin;
+import com.tkisor.nekojs.api.plugin.NekoExtensionPoint;
 import com.tkisor.nekojs.probe.ProbeBackendRegistry;
 import com.tkisor.nekojs.script.prop.ScriptPropertyRegistry;
 import com.tkisor.nekojs.testfixture.TestPlatformInit;
@@ -93,13 +94,12 @@ class NekoPluginExtensionProviderTest {
                 "registration window closes once collectExtensions freezes the registry");
     }
 
-    private static NekoPluginExtensionPoint<NekoJSPlugin, ?, ?> point(String id) {
-        return NekoPluginExtensionPoint.<NekoJSPlugin, NekoPluginExtensionContext, NekoPluginExtensionContext>builder(id, NekoJSPlugin.class)
-                .merge(MergePolicy.append())
+    private static NekoExtensionPoint<?> point(String id) {
+        return NekoExtensionPoint.builder(id)
                 .initializer(context -> context)
                 .collector((plugin, context) -> {
                 })
-                .finish(context -> context)
+                .finisher(context -> context)
                 .build();
     }
 
@@ -110,12 +110,10 @@ class NekoPluginExtensionProviderTest {
     private static final class RecordingProviderPlugin implements NekoPluginExtensionProvider {
         final List<String> collected = new ArrayList<>();
         public void registerPluginExtensionPoints(NekoPluginExtensionRegistry registry) {
-            registry.register(NekoPluginExtensionPoint
-                    .<NekoJSPlugin, NekoPluginExtensionContext, NekoPluginExtensionContext>builder("test:custom", NekoJSPlugin.class)
-                    .merge(MergePolicy.append())
+            registry.register(NekoExtensionPoint.builder("test:custom")
                     .initializer(context -> context)
                     .collector((plugin, context) -> collected.add(plugin.getClass().getSimpleName()))
-                    .finish(context -> context)
+                    .finisher(context -> context)
                     .build());
         }
     }
